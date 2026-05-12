@@ -1,0 +1,8 @@
+# Development and testing dependencies — not installed in production.
+# Usage: pip install -r requirements.txt -r requirements-dev.txt
+
+pytest==9.0.3
+pytest-asyncio==1.3.0        # async test support (mark tests with @pytest.mark.asyncio)
+httpx==0.28.1                # also serves as an async test client via ASGITransport
+coverage==7.14.0             # code coverage reporting
+ruff==0.15.12                # fast Python linter + formatter (replaces flake8/black)
