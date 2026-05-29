@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 from .network import Project
-from .config import ProjectConfig
+from .config import ModelConfiguration
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ class PropagationRequest(BaseModel):
     receives the resulting graph state and propagates cascading failures.
     """
     project: Project
-    config: ProjectConfig
+    config: ModelConfiguration
     scope: Literal["local", "global"]
     active_canvas_id: Optional[str] = Field(
         None, description="Canvas to restrict propagation when scope = local."
@@ -28,12 +28,25 @@ class PropagationRequest(BaseModel):
 
 
 class ElementUpdate(BaseModel):
+    """
+    Engine's update for a single Element (node or edge) after a Propagation.
+
+    `id` is a globally unique Element ID — look it up directly in
+    Project.nodes or Project.edges. No canvas_id needed.
+    """
     id: str
     functionality: int = Field(..., ge=1)
     functionality_time: Optional[int] = Field(None, ge=0)
     direct_damage: Optional[bool] = None
     expected_repair_time: Optional[int] = Field(None, ge=0)
-    direct_causes: Optional[list[str]] = None
+    responsibility_share: Optional[dict[str, float]] = Field(
+        None,
+        description=(
+            "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1. "
+            "Identifies which upstream Elements or Events are directly responsible "
+            "for this Element's degradation, and in what proportion."
+        ),
+    )
     properties: Optional[dict[str, Any]] = None
 
 
@@ -62,13 +75,13 @@ class RemoteProjectRecord(BaseModel):
 
 class SyncUploadRequest(BaseModel):
     project: Project
-    config: ProjectConfig
+    config: ModelConfiguration
 
 
 class SyncDownloadResponse(BaseModel):
     record: RemoteProjectRecord
     project: Project
-    config: ProjectConfig
+    config: ModelConfiguration
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +96,7 @@ class BatchPropagationItem(BaseModel):
     """
     item_id: str
     project: Project
-    config: ProjectConfig
+    config: ModelConfiguration
     scope: Literal["local", "global"]
     active_canvas_id: Optional[str] = Field(
         None, description="Canvas to restrict propagation when scope = local."
@@ -94,10 +107,32 @@ class BatchPropagationRequest(BaseModel):
     items: list[BatchPropagationItem] = Field(..., min_length=1)
 
 
+class BatchPropagationCreatedResponse(BaseModel):
+    """
+    Returned immediately by POST /api/propagate/batch.
+    The client should connect to `stream_url` to receive live SSE events.
+    Polling GET /api/propagate/batch/{job_id} is also supported for clients
+    that cannot use SSE.
+    """
+    job_id: str
+    status: Literal["queued"] = "queued"
+    total: int
+    stream_url: str  # e.g. /api/propagate/batch/{job_id}/stream
+
+
 class BatchPropagationJobStatus(BaseModel):
     """
-    Returned by GET /api/propagate/batch/{job_id} and streamed via SSE.
-    `results` and `errors` are populated incrementally as items complete.
+    Snapshot of a batch job's state.
+
+    Returned by GET /api/propagate/batch/{job_id} (polling) and streamed as
+    SSE events on GET /api/propagate/batch/{job_id}/stream.  Each SSE event
+    is a JSON-serialised instance of this model sent as:
+
+        data: <json>\n\n
+
+    The stream closes after the final event where status is "done" or "failed".
+    `results` and `errors` are populated incrementally as individual items
+    complete, so early events may carry partial data.
     """
     job_id: str
     status: Literal["queued", "running", "done", "failed"]
@@ -113,3 +148,13 @@ class BatchPropagationJobStatus(BaseModel):
         default_factory=dict,
         description="Keyed by item_id. Error message for failed items.",
     )
+
+
+# ---------------------------------------------------------------------------
+# Resolve forward references
+# ---------------------------------------------------------------------------
+
+# ScorecardEntry in network.py references PropagationResult via a forward
+# reference string. Rebuild after PropagationResult is defined here.
+from .network import ScorecardEntry  # noqa: E402
+ScorecardEntry.model_rebuild()

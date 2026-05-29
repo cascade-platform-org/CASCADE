@@ -5,8 +5,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-HazardKind = Literal["hazard", "disservice"]
-RuleKind = Literal["specific", "intracategorical", "intercategorical"]
+EventKind = Literal["hazard", "disservice"]
 
 
 class FunctionalityScaleLevel(BaseModel):
@@ -26,11 +25,10 @@ class DirectDamageEffect(BaseModel):
     # future: resources_needed
 
 
-class HazardDefinition(BaseModel):
+class EventDefinition(BaseModel):
     id: str
     label: str
-    type: HazardKind
-    affected: list[str] = Field(default_factory=list)
+    type: EventKind
     frequency_per_10y: float = Field(..., ge=0)
     expected_recovery_time: Optional[int] = Field(
         None, ge=0, description="Hours. Disservices only."
@@ -41,19 +39,53 @@ class HazardDefinition(BaseModel):
     attribute_mutations: dict[str, Any] = Field(
         default_factory=dict,
         description=(
-            'Keys are dot-notation strings "<elementId>.<propertyKey>". '
-            "Values are any JSON-serialisable type."
+            'Keys are dot-notation strings "<elementId>.<fieldName>". '
+            "Values are any JSON-serialisable type. May overwrite any Element field, "
+            "including first-class fields like `functionality` and `direct_damage`. "
+            "`direct_damage_effects` is kept as a typed, engine-recognised complement — "
+            "do not express physical damage solely via attribute_mutations."
         ),
     )
 
 
-class RuleDefinition(BaseModel):
+# ---------------------------------------------------------------------------
+# Graph-type heuristic pipeline configuration
+# ---------------------------------------------------------------------------
+
+class HeuristicConfig(BaseModel):
+    """
+    One heuristic step in a graph type's propagation pipeline.
+
+    `id` must match a heuristic known to the engine (see GET /api/engine/capabilities).
+    `params` is an open dict of heuristic-specific tuning parameters; the engine
+    validates keys and value ranges — the config layer treats them as opaque.
+    """
     id: str
-    type: RuleKind
-    expression: str
     enabled: bool = True
-    is_valid: Optional[bool] = None
-    is_applicable: Optional[bool] = None
+    params: Optional[dict[str, Any]] = Field(
+        None,
+        description="Heuristic-specific parameters. Keys and value ranges are engine-defined.",
+    )
+
+
+class GraphTypeConfig(BaseModel):
+    """
+    Per-graph-type override of the engine's default heuristic pipeline.
+
+    The engine uses this to select and order the heuristics it applies when
+    propagating across a canvas whose graph_type matches `name`.
+    If a canvas's graph_type has no entry here the engine falls back to its
+    built-in default pipeline for that type.
+
+    The ordered `heuristics` list is the full pipeline override — the engine
+    runs them in the declared order.  Disable individual steps via `enabled`
+    rather than removing them so the intent is legible in saved config files.
+    """
+    name: str = Field(..., description="Must match a Canvas.graph_type value used in the project.")
+    heuristics: list[HeuristicConfig] = Field(
+        ...,
+        description="Ordered heuristic pipeline for this graph type.",
+    )
 
 
 class ConfigMeta(BaseModel):
@@ -61,10 +93,19 @@ class ConfigMeta(BaseModel):
     description: Optional[str] = None
 
 
-class ProjectConfig(BaseModel):
+class ModelConfiguration(BaseModel):
     version: str
     meta: ConfigMeta
     functionality_scale: list[FunctionalityScaleLevel]
     categories: list[CategoryDefinition]
-    hazards: list[HazardDefinition] = Field(default_factory=list)
-    rules: list[RuleDefinition] = Field(default_factory=list)
+    events: list[EventDefinition] = Field(
+        default_factory=list,
+        description="Hazard and Disservice definitions. Both types are Events.",
+    )
+    graph_types: list[GraphTypeConfig] = Field(
+        default_factory=list,
+        description=(
+            "Per-graph-type heuristic pipeline overrides. "
+            "Absent entries use the engine's built-in defaults for that graph type."
+        ),
+    )

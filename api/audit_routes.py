@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
 
-from ..schemas.audit import ActivityLogUpload
-
-# from ..auth.dependencies import get_current_user, require_permission
-# from ..db import get_db
+from schemas.audit import ActivityLogUpload
+from auth.dependencies import require_permission
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
 
@@ -25,8 +23,7 @@ _MAX_ENTRIES_PER_UPLOAD = 1_000
 async def upload_activity_log(
     body: ActivityLogUpload,
     request: Request,
-    # user = Depends(require_permission("can_sync")),
-    # db   = Depends(get_db),
+    user=Depends(require_permission("can_sync")),
 ) -> dict:
     if len(body.entries) > _MAX_ENTRIES_PER_UPLOAD:
         from fastapi import HTTPException
