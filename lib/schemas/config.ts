@@ -1,6 +1,6 @@
 /**
  * Zod schemas for the project configuration (functionality scale, categories,
- * hazards, rules).
+ * events, graph-type heuristic pipelines).
  *
  * Canonical frontend types — inferred via z.infer<>. Mirrors
  * backend/schemas/config.py. Run `python backend/scripts/export_json_schema.py`
@@ -40,12 +40,10 @@ export const DirectDamageEffectSchema = z.object({
   expected_repair_time: z.number().int().min(0),
 });
 
-export const HazardDefinitionSchema = z.object({
+export const EventDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
   type: z.enum(["hazard", "disservice"]),
-  /** Node/edge IDs in scope for this event. */
-  affected: z.array(z.string()),
   /** Expected number of occurrences in a 10-year period. */
   frequency_per_10y: z.number().min(0),
   /** Hours until the disservice self-resolves. Disservices only. */
@@ -57,33 +55,48 @@ export const HazardDefinitionSchema = z.object({
    */
   direct_damage_effects: z.record(z.string(), DirectDamageEffectSchema).optional(),
   /**
-   * Attribute mutations applied to affected elements when this event is triggered.
-   * Keys are dot-notation strings: "<elementId>.<propertyKey>".
+   * Unrestricted field overwrites applied to Elements when this Event is triggered.
+   * Keys are dot-notation strings: "<elementId>.<fieldName>".
+   * May overwrite any Element field including first-class ones (functionality, direct_damage).
+   * direct_damage_effects is kept as a typed complement — do not express physical damage
+   * solely via attribute_mutations.
    */
-  attribute_mutations: z.record(z.string(), z.unknown()),
+  attribute_mutations: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ---------------------------------------------------------------------------
-// Rules
+// Graph-type heuristic pipeline configuration
 // ---------------------------------------------------------------------------
 
-export const RuleDefinitionSchema = z.object({
+/**
+ * One heuristic step in a graph type's propagation pipeline.
+ * `id` must match a heuristic known to the engine (GET /api/engine/capabilities).
+ * `params` is an opaque dict — keys and value ranges are engine-defined.
+ */
+export const HeuristicConfigSchema = z.object({
   id: z.string(),
-  type: z.enum(["specific", "intracategorical", "intercategorical"]),
-  /** Plain-text expression validated client-side; evaluated by the engine. */
-  expression: z.string(),
-  enabled: z.boolean(),
-  /** Set by the rule validator; undefined = not yet validated. */
-  is_valid: z.boolean().optional(),
-  /** Set at runtime; true when the rule's conditions are met in current state. */
-  is_applicable: z.boolean().optional(),
+  enabled: z.boolean().default(true),
+  /** Heuristic-specific tuning parameters. Validated by the engine, not the frontend. */
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
+ * Per-graph-type override of the engine's default heuristic pipeline.
+ *
+ * `name` must match a Canvas.graph_type value used in the project.
+ * `heuristics` is the full ordered pipeline — the engine runs them in this order.
+ * If a canvas's graph_type has no entry here the engine uses its built-in defaults.
+ */
+export const GraphTypeConfigSchema = z.object({
+  name: z.string(),
+  heuristics: z.array(HeuristicConfigSchema),
 });
 
 // ---------------------------------------------------------------------------
 // Project config root
 // ---------------------------------------------------------------------------
 
-export const ProjectConfigSchema = z.object({
+export const ModelConfigurationSchema = z.object({
   version: z.string(),
   meta: z.object({
     name: z.string(),
@@ -92,8 +105,13 @@ export const ProjectConfigSchema = z.object({
   /** Ordered 1..N. Index 0 = worst (critical), last = best (operational). */
   functionality_scale: z.array(FunctionalityScaleLevelSchema),
   categories: z.array(CategoryDefinitionSchema),
-  hazards: z.array(HazardDefinitionSchema).default([]),
-  rules: z.array(RuleDefinitionSchema).default([]),
+  /** Hazard and Disservice definitions. Both types are Events. */
+  events: z.array(EventDefinitionSchema).default([]),
+  /**
+   * Per-graph-type heuristic pipeline overrides.
+   * Absent entries use the engine's built-in defaults for that graph type.
+   */
+  graph_types: z.array(GraphTypeConfigSchema).default([]),
 });
 
 // ---------------------------------------------------------------------------
@@ -103,6 +121,7 @@ export const ProjectConfigSchema = z.object({
 export type FunctionalityScaleLevel = z.infer<typeof FunctionalityScaleLevelSchema>;
 export type CategoryDefinition = z.infer<typeof CategoryDefinitionSchema>;
 export type DirectDamageEffect = z.infer<typeof DirectDamageEffectSchema>;
-export type HazardDefinition = z.infer<typeof HazardDefinitionSchema>;
-export type RuleDefinition = z.infer<typeof RuleDefinitionSchema>;
-export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
+export type EventDefinition = z.infer<typeof EventDefinitionSchema>;
+export type HeuristicConfig = z.infer<typeof HeuristicConfigSchema>;
+export type GraphTypeConfig = z.infer<typeof GraphTypeConfigSchema>;
+export type ModelConfiguration = z.infer<typeof ModelConfigurationSchema>;

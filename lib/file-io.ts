@@ -10,7 +10,7 @@
  */
 import { z } from "zod";
 import { ProjectSchema, type Project } from "./schemas/network";
-import { ProjectConfigSchema, type ProjectConfig } from "./schemas/config";
+import { ModelConfigurationSchema, type ModelConfiguration } from "./schemas/config";
 
 // ---------------------------------------------------------------------------
 // Versioned save history (localStorage)
@@ -28,7 +28,7 @@ interface HistoryEntry {
 
 export interface ProjectBundle {
   project: Project;
-  config: ProjectConfig;
+  config: ModelConfiguration;
 }
 
 function loadHistory(): HistoryEntry[] {
@@ -55,8 +55,38 @@ export function getProjectHistory(): HistoryEntry[] {
 // Save (explicit — triggers browser download + history entry)
 // ---------------------------------------------------------------------------
 
-function triggerDownload(filename: string, content: string): void {
+// ---------------------------------------------------------------------------
+// Save helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Attempt to open the browser's native Save As picker (File System Access API).
+ * Falls back to the legacy <a download> trick when the API is unavailable
+ * (Firefox, Safari, or non-secure contexts).
+ */
+async function saveAs(filename: string, content: string): Promise<void> {
   const blob = new Blob([content], { type: "application/json" });
+
+  // Modern path: shows the OS file picker so the user can choose folder + name
+  if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
+    try {
+      const handle = await (window as Window & typeof globalThis & {
+        showSaveFilePicker: (opts: object) => Promise<FileSystemFileHandle>;
+      }).showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: "JSON file", accept: { "application/json": [".json"] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err) {
+      // User cancelled (AbortError) or API unavailable — fall through to legacy
+      if (err instanceof Error && err.name === "AbortError") return;
+    }
+  }
+
+  // Legacy fallback: automatic download to the browser's default download folder
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -65,9 +95,13 @@ function triggerDownload(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function saveBundle(bundle: ProjectBundle): void {
-  const filename = `${bundle.project.meta.name.replace(/\s+/g, "_")}_${Date.now()}.json`;
-  triggerDownload(filename, JSON.stringify(bundle, null, 2));
+function safeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_").slice(0, 60) || "cascade";
+}
+
+export async function saveBundle(bundle: ProjectBundle): Promise<void> {
+  const filename = `${safeName(bundle.project.meta.name)}.json`;
+  await saveAs(filename, JSON.stringify(bundle, null, 2));
   pushToHistory({
     saved_at: new Date().toISOString(),
     name: bundle.project.meta.name,
@@ -75,14 +109,14 @@ export function saveBundle(bundle: ProjectBundle): void {
   });
 }
 
-export function saveProject(project: Project): void {
-  const filename = `${project.meta.name.replace(/\s+/g, "_")}_project_${Date.now()}.json`;
-  triggerDownload(filename, JSON.stringify(project, null, 2));
+export async function saveProject(project: Project): Promise<void> {
+  const filename = `${safeName(project.meta.name)}_project.json`;
+  await saveAs(filename, JSON.stringify(project, null, 2));
 }
 
-export function saveConfig(config: ProjectConfig): void {
-  const filename = `${config.meta.name.replace(/\s+/g, "_")}_config_${Date.now()}.json`;
-  triggerDownload(filename, JSON.stringify(config, null, 2));
+export async function saveConfig(config: ModelConfiguration): Promise<void> {
+  const filename = `${safeName(config.meta.name)}_config.json`;
+  await saveAs(filename, JSON.stringify(config, null, 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -129,8 +163,8 @@ export function parseProject(raw: unknown): LoadResult<Project> {
 }
 
 /** Parse and validate a config JSON value. Returns a typed result. */
-export function parseConfig(raw: unknown): LoadResult<ProjectConfig> {
-  const result = ProjectConfigSchema.safeParse(raw);
+export function parseConfig(raw: unknown): LoadResult<ModelConfiguration> {
+  const result = ModelConfigurationSchema.safeParse(raw);
   if (result.success) return { ok: true, data: result.data };
   return { ok: false, error: formatZodError(result.error) };
 }
@@ -139,7 +173,7 @@ export function parseConfig(raw: unknown): LoadResult<ProjectConfig> {
 export function parseBundle(raw: unknown): ProjectBundle | null {
   const BundleSchema = z.object({
     project: ProjectSchema,
-    config: ProjectConfigSchema,
+    config: ModelConfigurationSchema,
   });
   const result = BundleSchema.safeParse(raw);
   return result.success ? result.data : null;
@@ -156,7 +190,7 @@ export async function loadProjectFile(file: File): Promise<LoadResult<Project>> 
 }
 
 /** Read a File object and validate its JSON as a config. */
-export async function loadConfigFile(file: File): Promise<LoadResult<ProjectConfig>> {
+export async function loadConfigFile(file: File): Promise<LoadResult<ModelConfiguration>> {
   try {
     const text = await file.text();
     return parseConfig(JSON.parse(text));

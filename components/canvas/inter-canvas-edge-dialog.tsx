@@ -25,17 +25,20 @@ import type { Canvas, Node } from "../../lib/schemas/network";
 type Step = "target-canvas" | "target-node" | "confirm";
 
 interface InterCanvasEdgeDialogProps {
-  sourceCanvas: Canvas;
-  sourceNode: Node;
+  tailCanvas: Canvas;
+  tailNode: Node;
   allCanvases: Canvas[];
+  /** Global node registry — used to resolve node_ids in any Canvas. */
+  nodeRegistry: Record<string, Node>;
   onConfirm: (targetCanvasId: string, targetNodeId: string) => void;
   onCancel: () => void;
 }
 
 export function InterCanvasEdgeDialog({
-  sourceCanvas,
-  sourceNode,
+  tailCanvas,
+  tailNode,
   allCanvases,
+  nodeRegistry,
   onConfirm,
   onCancel,
 }: InterCanvasEdgeDialogProps) {
@@ -43,7 +46,7 @@ export function InterCanvasEdgeDialog({
   const [targetCanvasId, setTargetCanvasId] = useState<string | null>(null);
   const [targetNodeId, setTargetNodeId] = useState<string | null>(null);
 
-  const otherCanvases = allCanvases.filter((c) => c.id !== sourceCanvas.id);
+  const otherCanvases = allCanvases.filter((c) => c.id !== tailCanvas.id);
 
   const canAdvance =
     (step === "target-canvas" && targetCanvasId !== null) ||
@@ -77,11 +80,11 @@ export function InterCanvasEdgeDialog({
         <p className="mb-1 text-sm text-zinc-500">
           From{" "}
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
-            {sourceNode.label ?? sourceNode.id}
+            {tailNode.label ?? tailNode.id}
           </span>{" "}
           on{" "}
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
-            {sourceCanvas.label ?? sourceCanvas.id}
+            {tailCanvas.label ?? tailCanvas.id}
           </span>
         </p>
         <p className="mb-6 text-xs text-zinc-400">{stepLabels[step]}</p>
@@ -98,6 +101,11 @@ export function InterCanvasEdgeDialog({
           {step === "target-node" && targetCanvasId && (
             <NodePicker
               canvas={allCanvases.find((c) => c.id === targetCanvasId)!}
+              nodes={allCanvases
+                .find((c) => c.id === targetCanvasId)
+                ?.graph.node_ids.flatMap((id) =>
+                  nodeRegistry[id] ? [nodeRegistry[id]] : [],
+                ) ?? []}
               selected={targetNodeId}
               onSelect={(id) => setTargetNodeId(id)}
             />
@@ -105,7 +113,7 @@ export function InterCanvasEdgeDialog({
           {step === "confirm" && (
             <p className="text-sm text-zinc-500">
               Confirm edge from{" "}
-              <strong>{sourceNode.label ?? sourceNode.id}</strong> →{" "}
+              <strong>{tailNode.label ?? tailNode.id}</strong> →{" "}
               <strong>{targetNodeId}</strong> (canvas{" "}
               <strong>{targetCanvasId}</strong>)
             </p>
@@ -185,14 +193,15 @@ function CanvasPicker({
 
 function NodePicker({
   canvas,
+  nodes,
   selected,
   onSelect,
 }: {
   canvas: Canvas;
+  nodes: Node[];
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
-  const nodes = canvas.nodes ?? [];
   if (nodes.length === 0) {
     return (
       <p className="text-sm text-zinc-400">

@@ -21,9 +21,9 @@ import { z } from "zod";
  */
 export const ActivityActionSchema = z.enum([
   "propagate",         // Sent payload to engine, received result
-  "apply_hazard",      // Applied a hazard/disservice to the network
-  "clear_hazard",      // Cleared active hazard effects
-  "timeline_step",     // Advanced the temporal simulation clock
+  "event_applied",     // Applied a Hazard or Disservice Event to the network
+  "event_cleared",     // Cleared the effects of an Event
+  "timeline_step",     // Advanced the Temporal Propagation Sequence clock
   "save_project",      // Explicit save (file download or server sync)
   "load_project",      // Loaded a project from file or server
   "sync_upload",       // Uploaded project to server

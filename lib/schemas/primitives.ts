@@ -15,18 +15,19 @@ export type Hours = number;
 /** Unique identifier for a node or edge. */
 export type ElementId = string;
 
-/** A category name — must match a name in ProjectConfig.categories */
+/** A category name — must match a name in ModelConfig.categories */
 export type CategoryName = string;
 
-/** A hazard or disservice ID — must match an id in ProjectConfig.hazards */
-export type HazardId = string;
+/** An Event (Hazard or Disservice) ID — must match an id in ModelConfiguration.events */
+export type EventId = string;
 
-/** "local" = current canvas only; "global" = all canvases + inter-canvas edges */
-export type SimulationScope = "local" | "global";
+/** "local" = current Canvas only; "global" = full multi-canvas */
+export type PropagationScope = "local" | "global";
 
 export type NodeType = "Source" | "Infrastructure" | "Service" | "Personnel";
 
-export type HazardKind = "hazard" | "disservice";
+/** Discriminates between the two Event subtypes. */
+export type EventKind = "hazard" | "disservice";
 
 export type RuleKind = "specific" | "intracategorical" | "intercategorical";
 
