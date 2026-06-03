@@ -41,7 +41,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { useCallback, useEffect, useMemo, memo, useState } from "react";
+import { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
 import { ChevronDown } from "lucide-react";
@@ -55,6 +55,7 @@ import { useClipboardStore } from "@/store/clipboard-store";
 import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
+import { pickHandles } from "@/lib/edge-routing";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -73,15 +74,13 @@ function nodeSize(importance: number | undefined): number {
 // Helpers — convert CASCADE nodes/edges → React Flow format
 // ---------------------------------------------------------------------------
 
-function toRFNode(node: CascadeNode): RFNode {
+function toRFNode(node: CascadeNode, selected: boolean): RFNode {
   return {
     id: node.id,
     type: (node.node_type?.toLowerCase() ?? "service") as string,
     position: node.position ?? { x: 0, y: 0 },
     data: { ...node },
-    // `selected` is managed entirely by React Flow — do NOT set it here.
-    // Setting it in the memo would cause rfNodes to change on every selection
-    // change, which triggers onSelectionChange, which updates store → loop.
+    selected,
   };
 }
 
@@ -565,8 +564,6 @@ export function FlowCanvas() {
   const addNodeToCanvas = useCanvasStore((s) => s.addNodeToCanvas);
   const addEdgeToCanvas = useCanvasStore((s) => s.addEdgeToCanvas);
   const pushUpdateEntry = useCanvasStore((s) => s.pushUpdateEntry);
-  const removeUpdateEntry = useCanvasStore((s) => s.removeUpdateEntry);
-  const restoreSnapshot = useCanvasStore((s) => s.restoreSnapshot);
   const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
@@ -581,7 +578,13 @@ export function FlowCanvas() {
   const clipboard = useClipboardStore((s) => s.contents);
   const copyToClipboard = useClipboardStore((s) => s.copy);
 
-  const { screenToFlowPosition, setNodes: setRfNodes } = useReactFlow();
+  const { screenToFlowPosition } = useReactFlow();
+
+  // When the lasso fires onSelect, React Flow also fires an onSelectionChange
+  // with an empty array (it sees the drag-end as a pane interaction and thinks
+  // everything was deselected). This ref prevents that spurious empty-deselect
+  // from wiping the selection the lasso just committed.
+  const lassoActiveRef = useRef(false);
 
   const activeTool = useUiStore((s) => s.activeTool);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
@@ -592,18 +595,19 @@ export function FlowCanvas() {
   const graphTypes = useConfigStore((s) => s.config.graph_types);
 
   // Build React Flow nodes/edges from store.
-  // selectedNodeIds is intentionally NOT in the memo deps — selection state
-  // is driven by React Flow's own `selected` prop update path (onNodeClick /
-  // onSelectionChange), avoiding the store→rfNodes→RF→onSelectionChange→store loop.
+  // selectedNodeIds IS included in deps so that attribute updates (which change
+  // allNodes) don't reset selection: the memo always stamps each node with its
+  // current `selected` state, preventing RF from losing the selection on re-render.
+  // The loop risk (store→rfNodes→onSelectionChange→store) is broken by the
+  // idempotency guard inside onSelectionChange.
   const rfNodes = useMemo<RFNode[]>(() => {
     if (!activeCanvas) return [];
     return activeCanvas.graph.node_ids.flatMap((id) => {
       const node = allNodes[id];
       if (!node) return [];
-      return [toRFNode(node)];
+      return [toRFNode(node, selectedNodeIds.has(id))];
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCanvas, allNodes]);
+  }, [activeCanvas, allNodes, selectedNodeIds]);
 
   const rfEdges = useMemo<RFEdge[]>(() => {
     if (!activeCanvas) return [];
@@ -621,7 +625,6 @@ export function FlowCanvas() {
       if (!edge) return [];
       const tailInActive = activeNodeIds.has(edge.source);
       const headInActive = activeNodeIds.has(edge.target);
-      // Only render if at least one endpoint is on this canvas
       if (!tailInActive && !headInActive) return [];
       const isInterCanvas = !tailInActive || !headInActive;
       const otherNodeId = isInterCanvas ? (tailInActive ? edge.target : edge.source) : null;
@@ -633,12 +636,11 @@ export function FlowCanvas() {
       const edgeColor = scaleLevels.find((l) => l.level === edge.functionality)?.color ?? "#94a3b8";
       return [{
         ...toRFEdge(edge, isInterCanvas, targetCanvas?.label),
-        // Let React Flow generate a per-colour marker in the SVG defs so the
-        // arrowhead always matches the edge stroke colour.
+        selected: selectedEdgeIds.has(id),
         markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor, width: 14, height: 10 },
       }];
     });
-  }, [activeCanvas, allEdges, allCanvases, scaleLevels]);
+  }, [activeCanvas, allEdges, allCanvases, scaleLevels, selectedEdgeIds]);
 
   // ── Node drag end → update position + push undoable history entry ──
   const onNodeDragStop = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
@@ -660,24 +662,17 @@ export function FlowCanvas() {
   // ── Click → select ──
   // Ctrl/Meta+click: XOR-toggle into a homogeneous selection (nodes only OR edges only).
   // Plain click: single selection as before.
+  // Ctrl/Meta+click: XOR-toggle. Plain click: single select.
+  // setRfNodes is no longer needed here — the rfNodes memo re-stamps `selected`
+  // from the store on every render, so the visual highlight follows automatically.
   const onNodeClick: NodeMouseHandler = useCallback((e, rfNode) => {
     if (e.ctrlKey || e.metaKey) {
-      // XOR toggle: must clear RF internal selection then sync from store
-      const ns = useNetworkStore.getState();
-      const willBeSelected = !ns.selectedNodeIds.has(rfNode.id);
       toggleNode(rfNode.id);
-      // Keep RF internal selection in sync so the visual highlight is correct.
-      setRfNodes((nodes) =>
-        nodes.map((n) => ({
-          ...n,
-          selected: n.id === rfNode.id ? willBeSelected : (ns.selectedNodeIds.has(n.id) && n.id !== rfNode.id),
-        })),
-      );
     } else {
       selectNode(rfNode.id);
     }
     setInspectorOpen(true);
-  }, [selectNode, toggleNode, setRfNodes, setInspectorOpen]);
+  }, [selectNode, toggleNode, setInspectorOpen]);
 
   const onEdgeClick = useCallback((e: React.MouseEvent, rfEdge: RFEdge) => {
     if (e.ctrlKey || e.metaKey) {
@@ -689,27 +684,53 @@ export function FlowCanvas() {
   }, [selectEdge, toggleEdge, setInspectorOpen]);
 
   const onPaneClick = useCallback(() => {
+    if (lassoActiveRef.current) {
+      lassoActiveRef.current = false;
+      return;
+    }
     clearSelection();
     setInspectorOpen(false);
   }, [clearSelection, setInspectorOpen]);
 
   // ── Rectangle / box select ──
-  // We sync our store selection here but guard against the loop:
-  // rfNodes no longer embeds `selected` in data, so updating selectedNodeIds
-  // does NOT invalidate the rfNodes memo → no re-render → no loop.
+  // Two guards here prevent looping:
+  //
+  // 1. Lasso guard: RF fires onSelectionChange({nodes:[], edges:[]}) when it
+  //    processes the drag-end as a pane interaction. Skip that while
+  //    lassoActiveRef is true.
+  //
+  // 2. Idempotency guard: since rfNodes/rfEdges now stamp `selected` from the
+  //    store, every store update causes the memo to recompute, which makes RF
+  //    fire onSelectionChange with the same set of IDs already in the store.
+  //    We detect that case and skip the redundant selectAll to stop the loop.
   const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes, edges }) => {
-    useNetworkStore.getState().selectAll(
-      nodes.map((n) => n.id),
-      edges.map((e) => e.id),
-    );
-    if (nodes.length > 0 || edges.length > 0) setInspectorOpen(true);
+    if (lassoActiveRef.current) {
+      if (nodes.length === 0 && edges.length === 0) {
+        // Spurious empty deselect from RF drag-end — consume it.
+        // Do NOT reset lassoActiveRef here: onPaneClick may fire after this and
+        // must still see the guard so it doesn't wipe the lasso result.
+        return;
+      }
+      // Non-empty: let fall through; keep ref raised.
+    }
+    const newNodeIds = nodes.map((n) => n.id);
+    const newEdgeIds = edges.map((e) => e.id);
+    const { selectedNodeIds: curN, selectedEdgeIds: curE } = useNetworkStore.getState();
+    if (
+      newNodeIds.length === curN.size &&
+      newEdgeIds.length === curE.size &&
+      newNodeIds.every((id) => curN.has(id)) &&
+      newEdgeIds.every((id) => curE.has(id))
+    ) return;
+    useNetworkStore.getState().selectAll(newNodeIds, newEdgeIds);
+    if (newNodeIds.length > 0 || newEdgeIds.length > 0) setInspectorOpen(true);
   }, [setInspectorOpen]);
 
   // ── Add edge on connect ──
-  // React Flow's Connection object also carries sourceHandle and targetHandle —
-  // the ids of the specific dots the user dragged from/to. We persist these on
-  // the CASCADE edge so that toRFEdge can restore them and React Flow routes the
-  // bezier curve from the correct dot instead of always defaulting to "tl".
+  // When the user drags from an explicit handle dot, RF provides sourceHandle /
+  // targetHandle. When they use connectOnClick (clicking anywhere on a node),
+  // handles are null — we fall back to the position-based heuristic that picks
+  // the handle whose hexagon sector faces the other node.
   const onConnect = useCallback((connection: {
     source: string | null;
     target: string | null;
@@ -718,12 +739,29 @@ export function FlowCanvas() {
   }) => {
     if (!connection.source || !connection.target || !activeCanvas) return;
     const before = toGraphSnapshot();
+
+    let sourceHandle = connection.sourceHandle ?? undefined;
+    let targetHandle = connection.targetHandle ?? undefined;
+
+    if (!sourceHandle || !targetHandle) {
+      const srcNode = allNodes[connection.source];
+      const tgtNode = allNodes[connection.target];
+      if (srcNode && tgtNode) {
+        const picked = pickHandles(
+          { position: srcNode.position ?? { x: 0, y: 0 } },
+          { position: tgtNode.position ?? { x: 0, y: 0 } },
+        );
+        sourceHandle = sourceHandle ?? picked.sourceHandle;
+        targetHandle = targetHandle ?? picked.targetHandle;
+      }
+    }
+
     const edge: CascadeEdge = {
       id: `edge-${nanoid(8)}`,
       source: connection.source,
       target: connection.target,
-      sourceHandle: connection.sourceHandle ?? undefined,
-      targetHandle: connection.targetHandle ?? undefined,
+      sourceHandle,
+      targetHandle,
       functionality: n,
     };
     upsertEdge(edge);
@@ -856,17 +894,11 @@ export function FlowCanvas() {
         return;
       }
 
-      // Escape / Ctrl+R — clear last Event (targeted revert, not standard undo).
-      // Removes the specific event_applied entry from history regardless of position,
-      // then clears the redo stack since history has been modified out of order.
-      if (e.key === "Escape" || (e.key === "r" && (e.ctrlKey || e.metaKey))) {
-        const s = useCanvasStore.getState();
-        const lastEvent = s.updateHistory.find((h) => h.update_type === "event_applied");
-        if (lastEvent) {
-          restoreSnapshot(lastEvent.before);
-          removeUpdateEntry(lastEvent.id);
-          s.clearRedoStack();
-        }
+      // Ctrl+R — clear most recent event (surgical field-by-field revert via mutation_reversal).
+      // Escape excluded: conflicts with modal/dialog close handlers.
+      if (e.key === "r" && (e.ctrlKey || e.metaKey)) {
+        const cleared = useCanvasStore.getState().clearEvent();
+        if (!cleared) pushToast({ message: "No event to clear", variant: "info", durationMs: 2000 });
         return;
       }
 
@@ -893,7 +925,7 @@ export function FlowCanvas() {
     selectedNodeIds, selectedEdgeIds, allNodes, allEdges,
     copyToClipboard, clipboard, upsertNode, upsertEdge,
     addNodeToCanvas, addEdgeToCanvas, pushUpdateEntry,
-    toGraphSnapshot, restoreSnapshot, removeUpdateEntry, pushToast,
+    toGraphSnapshot, pushToast,
   ]);
 
   // ── Double-click on pane → add node (when add-node tool active) ──
@@ -984,7 +1016,21 @@ export function FlowCanvas() {
         <NodeSearch />
         <ZoomSlider />
         {/* Freehand lasso — active in select tool, replaces rect-select */}
-        <Lasso active={activeTool === "select"} partial />
+        <Lasso
+          active={activeTool === "select"}
+          partial
+          onSelect={(nodeIds) => {
+            if (nodeIds.length > 0) {
+              // Raise the guard before updating the store so that RF's spurious
+              // empty onSelectionChange (fired on drag-end) is ignored.
+              lassoActiveRef.current = true;
+            }
+            selectAll(nodeIds, []);
+            // The rfNodes memo re-stamps `selected` from the store automatically,
+            // so no setRfNodes call is needed here.
+            if (nodeIds.length > 0) setInspectorOpen(true);
+          }}
+        />
       </ReactFlow>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms */}

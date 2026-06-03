@@ -14,6 +14,7 @@ import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
+import { pickHandles } from "@/lib/edge-routing";
 import type { Edge } from "@/lib/schemas/network";
 
 export function InterCanvasEdgeDialogWired() {
@@ -56,10 +57,17 @@ export function InterCanvasEdgeDialogWired() {
 
   function handleConfirm(targetCanvasId: string, targetNodeId: string) {
     const before = toGraphSnapshot();
+    const targetNode = allNodes[targetNodeId];
+    const { sourceHandle, targetHandle } = pickHandles(
+      { position: sourceNode!.position ?? { x: 0, y: 0 } },
+      { position: targetNode?.position ?? { x: 0, y: 0 } },
+    );
     const edge: Edge = {
       id: `edge-${nanoid(8)}`,
       source: sourceNode!.id,
       target: targetNodeId,
+      sourceHandle,
+      targetHandle,
       functionality: n,
     };
 

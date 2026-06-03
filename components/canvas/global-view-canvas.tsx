@@ -16,7 +16,6 @@ import { useMemo } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
   BackgroundVariant,
   ReactFlowProvider,
   MarkerType,
@@ -32,6 +31,7 @@ import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes } from "./flow-canvas";
+import { ZoomSlider } from "./zoom-slider";
 
 // ---------------------------------------------------------------------------
 // Group node — coloured background labelled with the canvas name
@@ -246,7 +246,7 @@ export function GlobalViewCanvas() {
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
-        <Controls showInteractive={false} />
+        <ZoomSlider />
       </ReactFlow>
 
       {/* Read-only badge */}

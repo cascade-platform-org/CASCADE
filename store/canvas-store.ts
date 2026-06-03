@@ -23,8 +23,9 @@ import type {
   GraphSnapshot,
   Node,
   Project,
+  ScorecardEntry,
 } from "@/lib/schemas";
-import type { ElementUpdate, PropagationResult } from "@/lib/schemas";
+import type { ElementUpdate, PropagationResult, EventDefinition } from "@/lib/schemas";
 
 const HISTORY_LIMIT = 20;
 
@@ -55,6 +56,8 @@ export interface CanvasState {
   redoStack: AnyUpdateEntry[];
   /** Project-level metadata (name, description). */
   projectMeta: { name: string; description?: string };
+  /** Saved Scorecard entries, ordered by created_at ascending. */
+  scorecard: import("@/lib/schemas").ScorecardEntry[];
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +118,28 @@ export interface CanvasActions {
    */
   redo: () => boolean;
 
+  // --- Event application ---
+  /**
+   * Apply an EventDefinition to the graph:
+   *   1. Captures pre-event values of all fields the event will touch.
+   *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_mutations.
+   *   3. Pushes an event_applied history entry with mutation_reversal populated.
+   * The caller supplies the event definition and the N scale value.
+   */
+  applyEvent: (event: import("@/lib/schemas").EventDefinition, n: number) => void;
+  /**
+   * Revert the most recent event_applied entry using mutation_reversal (field-by-field).
+   * Falls back to full snapshot restore for legacy entries that predate mutation_reversal.
+   * Removes the entry and clears the redo stack.
+   * Returns false when no event_applied entry exists.
+   */
+  clearEvent: () => boolean;
+
+  // --- Scorecard ---
+  addScorecardEntry: (entry: ScorecardEntry) => void;
+  updateScorecardEntry: (id: string, patch: Partial<ScorecardEntry>) => void;
+  removeScorecardEntry: (id: string) => void;
+
   // --- Project meta ---
   setProjectMeta: (meta: { name?: string; description?: string }) => void;
 
@@ -165,6 +190,7 @@ const emptyState: CanvasState = {
   updateHistory: [],
   redoStack: [],
   projectMeta: { name: "Untitled Project" },
+  scorecard: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -432,6 +458,186 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     // -------------------------------------------------------------------------
+    // Event application
+    // -------------------------------------------------------------------------
+
+    applyEvent(event: EventDefinition, n: number) {
+      const state = get();
+      const reversal: Record<string, unknown> = {};
+
+      // Helper: record pre-event value and return the elementId if the element exists.
+      function capture(elementId: string, field: string, value: unknown) {
+        reversal[`${elementId}.${field}`] = value;
+      }
+
+      const allElements: Array<{ id: string; el: Node | Edge }> = [
+        ...Object.values(state.nodes).map((el) => ({ id: el.id, el })),
+        ...Object.values(state.edges).map((el) => ({ id: el.id, el })),
+      ];
+
+      // ── 0. Temporal Jump — advance functionality_time, expire if ≤ 0 ──
+      const temporalExpired = new Map<string, { functionality: number; functionality_time: number }>();
+      if (event.type === "temporal_jump") {
+        const hours = event.duration_hours ?? 0;
+        for (const { id, el } of allElements) {
+          const ft = el.functionality_time ?? 0;
+          if (ft <= 0) continue;
+          capture(id, "functionality_time", ft);
+          const newFt = ft - hours;
+          if (newFt <= 0) {
+            capture(id, "functionality", el.functionality);
+            temporalExpired.set(id, { functionality: 1, functionality_time: 0 });
+          } else {
+            temporalExpired.set(id, { functionality: el.functionality ?? n, functionality_time: newFt });
+          }
+        }
+      }
+
+      // ── 1. vulnerability_levels drops → functionality ──
+      const vuln = new Map<string, number>();
+      for (const { id, el } of allElements) {
+        const level = el.vulnerability_levels?.[event.id] ?? 0;
+        if (level === 0) continue;
+        const imposed = Math.max(1, n - level);
+        if (imposed < (el.functionality ?? n)) {
+          capture(id, "functionality", el.functionality);
+          vuln.set(id, imposed);
+        }
+      }
+
+      // ── 2. direct_damage_effects ──
+      const damageEntries = Object.entries(event.direct_damage_effects ?? {});
+      for (const [elementId, effect] of damageEntries) {
+        const node = state.nodes[elementId];
+        const edge = state.edges[elementId];
+        const el: Node | Edge | undefined = node ?? edge;
+        if (!el) continue;
+        capture(elementId, "direct_damage", el.direct_damage ?? false);
+        capture(elementId, "expected_repair_time", el.expected_repair_time ?? null);
+      }
+
+      // ── 3. attribute_mutations ──
+      for (const [key, _newVal] of Object.entries(event.attribute_mutations ?? {})) {
+        const dotIdx = key.indexOf(".");
+        if (dotIdx === -1) continue;
+        const elementId = key.slice(0, dotIdx);
+        const field = key.slice(dotIdx + 1);
+        const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
+        if (!el) continue;
+        // Capture current value (may be undefined if field didn't exist before).
+        capture(elementId, field, (el as Record<string, unknown>)[field] ?? null);
+      }
+
+      // ── Apply everything ──
+      const before = state.toGraphSnapshot();
+
+      set((draft) => {
+        // temporal jump: update functionality_time and expire elements
+        for (const [id, { functionality, functionality_time }] of temporalExpired) {
+          if (draft.nodes[id]) {
+            draft.nodes[id].functionality_time = functionality_time;
+            draft.nodes[id].functionality = functionality;
+          } else if (draft.edges[id]) {
+            draft.edges[id].functionality_time = functionality_time;
+            draft.edges[id].functionality = functionality;
+          }
+        }
+        // vulnerability drops
+        for (const [id, imposed] of vuln) {
+          if (draft.nodes[id]) draft.nodes[id].functionality = imposed;
+          else if (draft.edges[id]) draft.edges[id].functionality = imposed;
+        }
+        // direct_damage_effects
+        for (const [elementId, effect] of damageEntries) {
+          if (draft.nodes[elementId]) {
+            draft.nodes[elementId].direct_damage = true;
+            draft.nodes[elementId].expected_repair_time = effect.expected_repair_time;
+          } else if (draft.edges[elementId]) {
+            draft.edges[elementId].direct_damage = true;
+            draft.edges[elementId].expected_repair_time = effect.expected_repair_time;
+          }
+        }
+        // attribute_mutations
+        for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {
+          const dotIdx = key.indexOf(".");
+          if (dotIdx === -1) continue;
+          const elementId = key.slice(0, dotIdx);
+          const field = key.slice(dotIdx + 1);
+          if (draft.nodes[elementId]) {
+            (draft.nodes[elementId] as Record<string, unknown>)[field] = newVal;
+          } else if (draft.edges[elementId]) {
+            (draft.edges[elementId] as Record<string, unknown>)[field] = newVal;
+          }
+        }
+      });
+
+      const after = get().toGraphSnapshot();
+
+      get().pushUpdateEntry({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        update_type: "event_applied",
+        label: `Apply event: ${event.label}`,
+        event_id: event.id,
+        before,
+        after,
+        mutation_reversal: reversal,
+      });
+    },
+
+    clearEvent() {
+      const state = get();
+      const entry = state.updateHistory.find((h) => h.update_type === "event_applied");
+      if (!entry) return false;
+
+      if (entry.mutation_reversal && Object.keys(entry.mutation_reversal).length > 0) {
+        // Surgical field-by-field revert: only touch the fields the event mutated.
+        set((draft) => {
+          for (const [key, oldVal] of Object.entries(entry.mutation_reversal!)) {
+            const dotIdx = key.indexOf(".");
+            if (dotIdx === -1) continue;
+            const elementId = key.slice(0, dotIdx);
+            const field = key.slice(dotIdx + 1);
+            if (draft.nodes[elementId]) {
+              (draft.nodes[elementId] as Record<string, unknown>)[field] = oldVal;
+            } else if (draft.edges[elementId]) {
+              (draft.edges[elementId] as Record<string, unknown>)[field] = oldVal;
+            }
+          }
+        });
+      } else {
+        // Legacy fallback: full snapshot restore for entries without mutation_reversal.
+        state.restoreSnapshot(entry.before);
+      }
+
+      state.removeUpdateEntry(entry.id);
+      state.clearRedoStack();
+      return true;
+    },
+
+    // -------------------------------------------------------------------------
+    // Scorecard
+    // -------------------------------------------------------------------------
+
+    addScorecardEntry(entry) {
+      set((state) => { state.scorecard.push(entry); });
+    },
+
+    updateScorecardEntry(id, patch) {
+      set((state) => {
+        const idx = state.scorecard.findIndex((e) => e.id === id);
+        if (idx !== -1) Object.assign(state.scorecard[idx], patch);
+      });
+    },
+
+    removeScorecardEntry(id) {
+      set((state) => {
+        const idx = state.scorecard.findIndex((e) => e.id === id);
+        if (idx !== -1) state.scorecard.splice(idx, 1);
+      });
+    },
+
+    // -------------------------------------------------------------------------
     // Serialisation
     // -------------------------------------------------------------------------
 
@@ -465,7 +671,7 @@ export const useCanvasStore = create<CanvasStore>()(
         edges: { ...state.edges },
         canvases: state.canvasOrder.map((id) => state.canvases[id]),
         update_history: state.updateHistory,
-        scorecard: [],
+        scorecard: state.scorecard,
       };
     },
 
@@ -483,6 +689,7 @@ export const useCanvasStore = create<CanvasStore>()(
         state.canvasOrder = canvasOrder;
         state.activeCanvasId = canvasOrder[0] ?? null;
         state.updateHistory = project.update_history ?? [];
+        state.scorecard = project.scorecard ?? [];
         // Redo stack is session-only — never restored from a project file.
         state.redoStack = [];
         state.projectMeta = {

@@ -222,6 +222,14 @@ export const AnyUpdateEntrySchema = z.object({
   before: GraphSnapshotSchema,
   after: GraphSnapshotSchema,
   propagation_meta: PropagationMetaSchema.optional(),
+  /**
+   * Populated only on event_applied entries.
+   * Keys: "<elementId>.<fieldName>" (dot-notation, same as attribute_mutations).
+   * Values: pre-event field values captured before the event was applied.
+   * Used by clearEvent() to revert only the mutated fields, preserving changes
+   * made to other fields after the event was applied.
+   */
+  mutation_reversal: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -229,37 +237,36 @@ export const AnyUpdateEntrySchema = z.object({
 // ---------------------------------------------------------------------------
 
 /**
- * One entry in the Scorecard: a named Scenario pair (before + after Propagation)
- * explicitly saved by the user.
+ * One Scorecard entry. The history pattern Event → Propagation → Temporal Jump →
+ * Propagation maps onto three optional snapshot fields.
  *
- * `scenario_before` — the GraphSnapshot fed to the engine (post-Event,
- *   post-manual-edit, or restored from history). Optional only for manually
- *   crafted entries that were never sent to the engine.
- * `scenario_after`  — the GraphSnapshot after the engine's updates have been
- *   merged into the registry. Stored explicitly so the UI can display both
- *   states directly without recomputing from the delta.
- * `propagation_result` — the raw engine delta (ElementUpdate list). Kept for
- *   causal analysis (responsibility_share) and warnings. Optional: absent when
- *   the entry was saved from a manual Scenario without running Propagation.
+ * `before_propagation`  — state just before the most recent Propagation
+ *   (post-Event, post-manual-edit). Always present.
+ * `after_propagation`   — state after the Propagation. Absent for Manual
+ *   What-If entries (no Propagation run).
+ * `after_temporal_jump` — state after Temporal Jump(s) + Propagation(s).
+ *   Absent when no Temporal Jump was run or requested.
+ * `temporal_jump_hours` — total hours elapsed across Temporal Jumps that
+ *   produced `after_temporal_jump`.
+ * `propagation_result`  — raw engine delta from the Propagation that produced
+ *   `after_propagation`. Absent for Manual What-If entries.
  *
- * Derived metrics (Operativity Score, cost, breakdown) are computed
- * client-side from the snapshots and are never stored here.
+ * Derived metrics are computed client-side; never stored.
  */
 export const ScorecardEntrySchema = z.object({
   id: z.string(),
   label: z.string(),
   created_at: z.string(),
-  /** Snapshot of the Scenario fed to the engine (the "before" state). */
-  scenario_before: GraphSnapshotSchema,
-  /**
-   * Snapshot after Propagation results have been applied (the "after" state).
-   * Absent when the entry was saved from a manual Scenario without Propagation.
-   */
-  scenario_after: GraphSnapshotSchema.optional(),
-  /**
-   * Lazy reference to PropagationResultSchema (defined in api.ts).
-   * Use z.lazy to avoid circular import issues at module load time.
-   */
+  /** EventDefinition.id that triggered this entry. Null for Manual What-If entries. */
+  event_id: z.string().optional(),
+  before_propagation: GraphSnapshotSchema,
+  after_propagation: GraphSnapshotSchema.optional(),
+  after_temporal_jump: GraphSnapshotSchema.optional(),
+  temporal_jump_hours: z.number().int().min(1).optional(),
+  /** Base64-encoded PNG of GlobalViewCanvas at each snapshot. Captured at save time. */
+  before_propagation_image: z.string().optional(),
+  after_propagation_image: z.string().optional(),
+  after_temporal_jump_image: z.string().optional(),
   propagation_result: z.lazy(() => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PropagationResultSchema } = require("./api");

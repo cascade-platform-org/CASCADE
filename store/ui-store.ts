@@ -57,6 +57,9 @@ export interface UiState {
   // --- Active Rules panel ---
   activeRulesPanelOpen: boolean;
 
+  // --- Scorecard panel ---
+  scorecardPanelOpen: boolean;
+
   // --- Inspector ---
   /** When false the inspector panel is fully collapsed. */
   inspectorOpen: boolean;
@@ -119,6 +122,10 @@ export interface UiActions {
   toggleActiveRulesPanel: () => void;
   closeActiveRulesPanel: () => void;
 
+  // --- Scorecard panel ---
+  toggleScorecardPanel: () => void;
+  closeScorecardPanel: () => void;
+
   // --- Inspector ---
   setInspectorOpen: (open: boolean) => void;
 
@@ -149,6 +156,7 @@ const initialState: UiState = {
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
   activeRulesPanelOpen: false,
+  scorecardPanelOpen: false,
   inspectorOpen: false,
   activeCategoryFilter: null,
   propagationWarnings: [],
@@ -252,6 +260,18 @@ export const useUiStore = create<UiStore>()(
 
     closeActiveRulesPanel() {
       set((state) => { state.activeRulesPanelOpen = false; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Scorecard panel
+    // -------------------------------------------------------------------------
+
+    toggleScorecardPanel() {
+      set((state) => { state.scorecardPanelOpen = !state.scorecardPanelOpen; });
+    },
+
+    closeScorecardPanel() {
+      set((state) => { state.scorecardPanelOpen = false; });
     },
 
     // -------------------------------------------------------------------------

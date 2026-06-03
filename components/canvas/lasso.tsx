@@ -3,27 +3,22 @@
 /**
  * Lasso — freehand polygon selection for the React Flow canvas.
  *
- * Must be rendered as a direct child of <ReactFlow> (needs the ReactFlowProvider
- * context for useReactFlow). Active only when the "select" tool is chosen.
+ * Rendered as a child of <ReactFlow>. Active only in "select" tool mode.
  *
- * How it works:
- *  1. Attaches a mousedown listener to the `.react-flow__pane` element (the canvas
- *     background). Clicks on nodes/edges target different elements, so the pane
- *     listener fires only when the user starts drawing on empty space.
- *  2. Tracks the freehand path in screen coordinates while the button is held.
- *  3. On mouseup, converts the screen polygon to flow coordinates via
- *     screenToFlowPosition, then tests each node's bounding box against it with a
- *     ray-casting point-in-polygon check.
- *  4. Calls setNodes to mark the matched nodes as selected inside React Flow's
- *     internal state. The parent's onSelectionChange handler will sync the result
- *     into the network-store automatically.
+ * Design:
+ *  - Listens on `window` for mousedown/mousemove/mouseup.
+ *  - `isCanvasBackground()` filters: only start a lasso when the click lands on
+ *    empty canvas space (not on a node, edge, handle, or panel).
+ *  - On mouseup the screen polygon is converted to flow coordinates via
+ *    `screenToFlowPosition`, each node's bounding box is tested with a
+ *    ray-casting point-in-polygon check, and `onSelect(hitIds)` is called.
+ *  - The parent (FlowCanvas) owns both the `network-store` update and the
+ *    React Flow `setNodes` sync — the Lasso is pure detection only.
  *
- * Conflict avoidance:
- *  - selectionOnDrag should be false on the <ReactFlow> component so the built-in
- *    rectangle-select doesn't compete.
- *  - panOnDrag={[1, 2]} (middle/right-click only) ensures left-drag is free.
- *  - Browsers suppress the click event after a drag, so onPaneClick (clear
- *    selection) will NOT fire after a lasso gesture — only after a real click.
+ * Rendering:
+ *  - The freehand polygon is portalled into `document.body` so it is NOT
+ *    subject to React Flow's viewport `transform`, which would otherwise make
+ *    `position:fixed` children invisible or misplaced.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -36,7 +31,6 @@ import { useReactFlow } from "@xyflow/react";
 
 interface Pt { x: number; y: number }
 
-/** Ray-casting point-in-polygon test. */
 function raycast(pt: Pt, poly: Pt[]): boolean {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -50,10 +44,6 @@ function raycast(pt: Pt, poly: Pt[]): boolean {
   return inside;
 }
 
-/**
- * Returns true when the axis-aligned rectangle [rx,ry,rw,rh] (in flow coords)
- * overlaps the polygon. Partial mode: any corner inside. Full mode: all corners.
- */
 function rectIntersectsPoly(rx: number, ry: number, rw: number, rh: number, poly: Pt[], partial: boolean): boolean {
   const corners: Pt[] = [
     { x: rx,      y: ry },
@@ -66,30 +56,44 @@ function rectIntersectsPoly(rx: number, ry: number, rw: number, rh: number, poly
 }
 
 // ---------------------------------------------------------------------------
-// Lasso component
+// Helper: decide whether a click started on empty canvas space
+// ---------------------------------------------------------------------------
+
+function isCanvasBackground(target: Element): boolean {
+  // Must be inside a ReactFlow instance
+  if (!target.closest(".react-flow")) return false;
+  // Must NOT land on a node, edge, handle, panel, or any overlay component
+  return !(
+    target.closest(".react-flow__node") ||
+    target.closest(".react-flow__edge") ||
+    target.closest(".react-flow__handle") ||
+    target.closest(".react-flow__panel") ||
+    target.closest(".react-flow__controls") ||
+    target.closest(".react-flow__minimap")
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Component
 // ---------------------------------------------------------------------------
 
 export interface LassoProps {
-  /** Only active in "select" tool mode. */
   active: boolean;
-  /**
-   * Partial mode (default): a node is selected if any of its four corners is
-   * inside the polygon — good for quick lasso.
-   * Full mode: every corner must be inside.
-   */
   partial?: boolean;
+  /** Called with the ids of nodes whose bounding boxes overlap the polygon. */
+  onSelect: (nodeIds: string[]) => void;
 }
 
-export function Lasso({ active, partial = true }: LassoProps) {
-  const { screenToFlowPosition, getNodes, setNodes } = useReactFlow();
+export function Lasso({ active, partial = true, onSelect }: LassoProps) {
+  const { screenToFlowPosition, getNodes } = useReactFlow();
 
-  // Screen-coordinate path used for drawing the SVG polygon.
   const [screenPath, setScreenPath] = useState<Pt[]>([]);
   const [drawing, setDrawing] = useState(false);
-
-  // Ref-based path avoids stale closures in the native event handlers.
   const pathRef = useRef<Pt[]>([]);
-  const anchorRef = useRef<HTMLDivElement>(null);
+  // Keep stable ref to onSelect so the effect doesn't re-run when the
+  // callback identity changes between renders.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   useEffect(() => {
     if (!active) {
@@ -98,33 +102,28 @@ export function Lasso({ active, partial = true }: LassoProps) {
       return;
     }
 
-    // Find the ReactFlow pane element relative to our anchor node.
-    const anchor = anchorRef.current;
-    if (!anchor) return;
-    const rfRoot = anchor.closest(".react-flow");
-    const pane = rfRoot?.querySelector(".react-flow__pane") as HTMLElement | null;
-    if (!pane) return;
-
     let dragging = false;
 
     function onMouseDown(e: MouseEvent) {
       if (e.button !== 0) return;
+      if (!isCanvasBackground(e.target as Element)) return;
       dragging = true;
-      pathRef.current = [{ x: e.clientX, y: e.clientY }];
-      setScreenPath([{ x: e.clientX, y: e.clientY }]);
+      const pt = { x: e.clientX, y: e.clientY };
+      pathRef.current = [pt];
       setDrawing(true);
+      setScreenPath([pt]);
     }
 
     function onMouseMove(e: MouseEvent) {
       if (!dragging) return;
       pathRef.current = [...pathRef.current, { x: e.clientX, y: e.clientY }];
-      // Throttle React state updates for performance (every 3 points).
-      if (pathRef.current.length % 3 === 0) {
+      // Throttle React state updates (every 2 points is enough for smooth drawing).
+      if (pathRef.current.length % 2 === 0) {
         setScreenPath([...pathRef.current]);
       }
     }
 
-    function onMouseUp() {
+    function onMouseUp(e: MouseEvent) {
       if (!dragging) return;
       dragging = false;
       setDrawing(false);
@@ -133,81 +132,69 @@ export function Lasso({ active, partial = true }: LassoProps) {
       const screenPts = pathRef.current;
       pathRef.current = [];
 
-      // Minimum gesture size: ignore tiny accidental drags.
-      if (screenPts.length < 4) return;
+      // Need at least a triangle to be meaningful.
+      if (screenPts.length < 3) return;
 
       // Convert screen polygon → flow coordinate space.
-      const flowPoly = screenPts.map((p) => screenToFlowPosition({ x: p.x, y: p.y }));
+      const flowPoly = screenPts.map((p) =>
+        screenToFlowPosition({ x: p.x, y: p.y }),
+      );
 
-      // Test each node's axis-aligned bounding box.
+      // Test each node's axis-aligned bounding box against the polygon.
       const rfNodes = getNodes();
-      const hitIds = new Set<string>();
+      const hitIds: string[] = [];
 
       for (const node of rfNodes) {
         const nx = node.position.x;
         const ny = node.position.y;
-        // Use measured dimensions when available (set by React Flow after first render).
-        const nw = (node.measured as { width?: number } | undefined)?.width ?? 80;
-        const nh = (node.measured as { height?: number } | undefined)?.height ?? 80;
+        // React Flow populates `measured` after first render via ResizeObserver.
+        const nw = (node.measured as { width?: number } | undefined)?.width  ?? 72;
+        const nh = (node.measured as { height?: number } | undefined)?.height ?? 72;
 
         if (rectIntersectsPoly(nx, ny, nw, nh, flowPoly, partial)) {
-          hitIds.add(node.id);
+          hitIds.push(node.id);
         }
       }
 
-      // Update React Flow's internal selection; parent's onSelectionChange syncs
-      // the result into the network-store.
-      setNodes((nodes) =>
-        nodes.map((n) => ({ ...n, selected: hitIds.has(n.id) })),
-      );
+      onSelectRef.current(hitIds);
     }
 
-    pane.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mouseup",   onMouseUp);
 
     return () => {
-      pane.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mouseup",   onMouseUp);
     };
-  }, [active, partial, screenToFlowPosition, getNodes, setNodes]);
+  }, [active, partial, screenToFlowPosition, getNodes]);
+  // Note: `onSelect` is excluded from deps deliberately — we use `onSelectRef` instead
+  // to avoid re-attaching all listeners whenever the parent re-renders.
 
-  return (
-    <>
-      {/* Invisible anchor node rendered inside ReactFlow — used to find the
-          .react-flow root so we can locate the pane element. */}
-      <div ref={anchorRef} style={{ display: "none" }} />
-
-      {/* Lasso polygon overlay.
-          IMPORTANT: React Flow's .react-flow__viewport carries a CSS transform
-          for pan/zoom. Any descendant with `position:fixed` is positioned
-          relative to that transformed ancestor, NOT the real viewport — it
-          becomes invisible or offset. We escape the transform context by
-          portalling the SVG directly into document.body. */}
-      {drawing && screenPath.length > 1 &&
-        createPortal(
-          <svg
-            style={{
-              position: "fixed",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-              zIndex: 9999,
-            }}
-          >
-            <polygon
-              points={screenPath.map((p) => `${p.x},${p.y}`).join(" ")}
-              fill="rgba(59, 130, 246, 0.08)"
-              stroke="#3b82f6"
-              strokeWidth={1.5}
-              strokeDasharray="5 3"
-              strokeLinejoin="round"
-            />
-          </svg>,
-          document.body,
-        )}
-    </>
-  );
+  // Portal the SVG into document.body to escape React Flow's viewport transform.
+  return drawing && screenPath.length >= 3
+    ? createPortal(
+        <svg
+          style={{
+            position: "fixed",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 9999,
+          }}
+        >
+          <polygon
+            points={screenPath.map((p) => `${p.x},${p.y}`).join(" ")}
+            fill="rgba(59, 130, 246, 0.08)"
+            stroke="#3b82f6"
+            strokeWidth={1.5}
+            strokeDasharray="5 3"
+            strokeLinejoin="round"
+          />
+        </svg>,
+        document.body,
+      )
+    : null;
 }

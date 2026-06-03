@@ -11,12 +11,14 @@ import { ConfigModal } from "@/components/controls/config-modal";
 import { FileIoPanel } from "@/components/controls/file-io-panel";
 import { ActiveRulesPanel } from "@/components/rules/active-rules-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
+import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { useUiStore } from "@/store/ui-store";
 
 export function EditorShell() {
   const configModalOpen = useUiStore((s) => s.configModalOpen);
   const fileIoPanelOpen = useUiStore((s) => s.fileIoPanelOpen);
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
+  const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
 
@@ -48,6 +50,7 @@ export function EditorShell() {
       {configModalOpen && <ConfigModal />}
       {fileIoPanelOpen && <FileIoPanel />}
       {activeRulesPanelOpen && <ActiveRulesPanel />}
+      {scorecardPanelOpen && <ScorecardPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
     </div>
   );

@@ -367,7 +367,7 @@ function EventButton({ event }: { event: EventDefinition }) {
   );
 }
 
-function EventIcon({ type, size }: { type: "hazard" | "disservice"; size: number }) {
+function EventIcon({ type, size }: { type: "hazard" | "disservice" | "temporal_jump"; size: number }) {
   return type === "hazard"
     ? <Zap size={size} />
     : <Waves size={size} />;

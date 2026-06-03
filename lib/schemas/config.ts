@@ -43,11 +43,16 @@ export const DirectDamageEffectSchema = z.object({
 export const EventDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  type: z.enum(["hazard", "disservice"]),
-  /** Expected number of occurrences in a 10-year period. */
-  frequency_per_10y: z.number().min(0),
+  type: z.enum(["hazard", "disservice", "temporal_jump"]),
+  /** Expected number of occurrences in a 10-year period. Not meaningful for temporal_jump. */
+  frequency_per_10y: z.number().min(0).default(0),
   /** Hours until the disservice self-resolves. Disservices only. */
   expected_recovery_time: z.number().int().min(0).optional(),
+  /**
+   * Hours to advance the clock. Temporal Jump events only.
+   * Used as the default duration when saving to Scorecard.
+   */
+  duration_hours: z.number().int().min(1).optional(),
   /**
    * Per-element repair times for physical damage. Hazards only.
    * Key = ElementId. Absence means no direct physical damage for that element
