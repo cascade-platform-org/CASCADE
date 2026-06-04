@@ -135,6 +135,24 @@ export interface CanvasActions {
    */
   clearEvent: () => boolean;
 
+  // --- Cross-canvas node operations ---
+  /**
+   * Copy selected nodes (and internal edges) to targetCanvasId.
+   * Nodes are referenced by ID — no new data created. Edges whose both endpoints
+   * are in nodeIds are also added to the target canvas. Edges with one endpoint
+   * outside nodeIds become inter-canvas edges at render time (no special type).
+   * Records a graph_update history entry.
+   */
+  copyNodesToCanvas: (nodeIds: string[], targetCanvasId: string) => void;
+  /**
+   * Move selected nodes (and internal edges) from sourceCanvasId to targetCanvasId.
+   * Nodes and internal edges are removed from the source canvas and added to the
+   * target canvas. Edges with one endpoint outside nodeIds are left in the source
+   * canvas and become inter-canvas edges at render time.
+   * Records a graph_update history entry.
+   */
+  moveNodesToCanvas: (nodeIds: string[], sourceCanvasId: string, targetCanvasId: string) => void;
+
   // --- Scorecard ---
   addScorecardEntry: (entry: ScorecardEntry) => void;
   updateScorecardEntry: (id: string, patch: Partial<ScorecardEntry>) => void;
@@ -613,6 +631,68 @@ export const useCanvasStore = create<CanvasStore>()(
       state.removeUpdateEntry(entry.id);
       state.clearRedoStack();
       return true;
+    },
+
+    // -------------------------------------------------------------------------
+    // Cross-canvas node operations
+    // -------------------------------------------------------------------------
+
+    copyNodesToCanvas(nodeIds, targetCanvasId) {
+      const state = get();
+      if (!state.canvases[targetCanvasId]) return;
+      const nodeSet = new Set(nodeIds);
+      const internalEdgeIds = Object.values(state.edges)
+        .filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
+        .map((e) => e.id);
+      const before = state.toGraphSnapshot();
+      set((draft) => {
+        const target = draft.canvases[targetCanvasId];
+        for (const id of nodeIds) {
+          if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
+        }
+        for (const id of internalEdgeIds) {
+          if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
+        }
+      });
+      get().pushUpdateEntry({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        update_type: "graph_update",
+        label: `Copy ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
+        before,
+        after: get().toGraphSnapshot(),
+      });
+    },
+
+    moveNodesToCanvas(nodeIds, sourceCanvasId, targetCanvasId) {
+      const state = get();
+      if (!state.canvases[sourceCanvasId] || !state.canvases[targetCanvasId]) return;
+      const nodeSet = new Set(nodeIds);
+      const internalEdgeIds = Object.values(state.edges)
+        .filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
+        .map((e) => e.id);
+      const internalEdgeSet = new Set(internalEdgeIds);
+      const before = state.toGraphSnapshot();
+      set((draft) => {
+        const source = draft.canvases[sourceCanvasId];
+        const target = draft.canvases[targetCanvasId];
+        source.graph.node_ids = source.graph.node_ids.filter((id) => !nodeSet.has(id));
+        source.graph.edge_ids = source.graph.edge_ids.filter((id) => !internalEdgeSet.has(id));
+        for (const id of nodeIds) {
+          if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
+        }
+        for (const id of internalEdgeIds) {
+          if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
+        }
+      });
+      get().pushUpdateEntry({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        update_type: "graph_update",
+        label: `Move ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
+        before,
+        after: get().toGraphSnapshot(),
+      });
     },
 
     // -------------------------------------------------------------------------

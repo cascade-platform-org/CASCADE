@@ -19,6 +19,7 @@ import {
   BackgroundVariant,
   ReactFlowProvider,
   MarkerType,
+  ConnectionMode,
   type Node as RFNode,
   type Edge as RFEdge,
   getBezierPath,
@@ -133,6 +134,9 @@ export function GlobalViewCanvas() {
     const nodes: RFNode[] = [];
     const edges: RFEdge[] = [];
     const renderedNodeIds = new Set<string>();
+    // Maps nodeId -> the canvasId of the group it was placed in.
+    // Used to decide isInterCanvas by visual position, not data-model membership.
+    const nodeGroupMap = new Map<string, string>();
 
     let groupOffsetX = 40;
 
@@ -179,20 +183,18 @@ export function GlobalViewCanvas() {
       });
 
       positioned.forEach(({ node, x, y }) => {
-        if (renderedNodeIds.has(node.id)) return; // shared node — render only once
+        if (renderedNodeIds.has(node.id)) return; // shared node — render only once in first canvas
         renderedNodeIds.add(node.id);
+        nodeGroupMap.set(node.id, canvas.id);
         nodes.push({
           id: node.id,
-          // Use the same type key as FlowCanvas so the shared node renderer applies
           type: node.node_type?.toLowerCase() ?? "service",
           parentId: `group-${canvas.id}`,
           extent: "parent",
-          // Position relative to the group's top-left corner, preserving layout
           position: {
             x: (x - minX) + GROUP_PADDING,
             y: (y - minY) + GROUP_PADDING,
           },
-          // Same data shape as FlowCanvas — the shared renderer reads node fields directly
           data: { ...node },
         });
       });
@@ -200,9 +202,10 @@ export function GlobalViewCanvas() {
       groupOffsetX += groupW + GROUP_COL_GAP;
     });
 
-    // Edges — deduplicated across canvases
+    // Edges — deduplicated across canvases.
+    // isInterCanvas is true when source and target land in different visual groups,
+    // regardless of which canvas's edge_ids the edge came from.
     const seenEdgeIds = new Set<string>();
-    const allCanvasNodeIdSets = canvases.map((c) => new Set(c.graph.node_ids));
 
     canvases.forEach((canvas) => {
       canvas.graph.edge_ids.forEach((eid) => {
@@ -210,16 +213,17 @@ export function GlobalViewCanvas() {
         seenEdgeIds.add(eid);
         const edge = allEdges[eid];
         if (!edge) return;
-        // Only render if both endpoints were placed
+        // Skip if either endpoint was never rendered
         if (!renderedNodeIds.has(edge.source) || !renderedNodeIds.has(edge.target)) return;
-        const isInterCanvas = !allCanvasNodeIdSets.some(
-          (s) => s.has(edge.source) && s.has(edge.target),
-        );
+        // Inter-canvas = endpoints are in different visual groups
+        const isInterCanvas = nodeGroupMap.get(edge.source) !== nodeGroupMap.get(edge.target);
         const edgeColor = levelColor(edge.functionality);
         edges.push({
           id: edge.id,
           source: edge.source,
           target: edge.target,
+          sourceHandle: edge.sourceHandle ?? null,
+          targetHandle: edge.targetHandle ?? null,
           type: "globalEdge",
           data: { isInterCanvas, color: edgeColor },
           markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor, width: 14, height: 10 },
@@ -239,6 +243,7 @@ export function GlobalViewCanvas() {
         edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
+        connectionMode={ConnectionMode.Loose}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}

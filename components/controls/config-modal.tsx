@@ -177,8 +177,8 @@ function TabFunctionalityScale() {
 function TabCategories() {
   const categories = useConfigStore(useShallow((s) => s.draft.categories));
   const addCategory = useConfigStore((s) => s.addCategory);
-  const removeCategory = useConfigStore((s) => s.removeCategory);
-  const updateCategory = useConfigStore((s) => s.updateCategory);
+  const removeCategoryAt = useConfigStore((s) => s.removeCategoryAt);
+  const updateCategoryAt = useConfigStore((s) => s.updateCategoryAt);
 
   return (
     <div>
@@ -191,22 +191,17 @@ function TabCategories() {
       )}
 
       <div className="space-y-2">
-        {categories.map((cat) => (
-          <div key={cat.name} className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
+        {categories.map((cat, i) => (
+          <div key={i} className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
             <TextInput
               value={cat.name}
-              onChange={(v) => {
-                if (v !== cat.name) {
-                  removeCategory(cat.name);
-                  addCategory({ ...cat, name: v });
-                }
-              }}
+              onChange={(v) => updateCategoryAt(i, { name: v })}
               className="w-28"
               placeholder="name"
             />
             <select
               value={cat.category_type}
-              onChange={(e) => updateCategory(cat.name, { category_type: e.target.value })}
+              onChange={(e) => updateCategoryAt(i, { category_type: e.target.value })}
               className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             >
               <option value="SourceToDemands">SourceToDemands</option>
@@ -215,10 +210,10 @@ function TabCategories() {
             <input
               type="color"
               value={cat.color ?? "#94a3b8"}
-              onChange={(e) => updateCategory(cat.name, { color: e.target.value })}
+              onChange={(e) => updateCategoryAt(i, { color: e.target.value })}
               className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
             />
-            <ColBtn variant="danger" onClick={() => removeCategory(cat.name)}>
+            <ColBtn variant="danger" onClick={() => removeCategoryAt(i)}>
               <Trash2 size={12} />
             </ColBtn>
           </div>

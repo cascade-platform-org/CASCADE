@@ -92,6 +92,8 @@ export interface ConfigActions {
   addCategory: (category: CategoryDefinition) => void;
   removeCategory: (name: string) => void;
   updateCategory: (name: string, patch: Partial<CategoryDefinition>) => void;
+  removeCategoryAt: (index: number) => void;
+  updateCategoryAt: (index: number, patch: Partial<CategoryDefinition>) => void;
 
   // --- Events (operate on draft) ---
   addEvent: (event: Omit<EventDefinition, "id">) => string;
@@ -237,7 +239,6 @@ export const useConfigStore = create<ConfigStore>()(
 
     addCategory(category) {
       set((state) => {
-        if (state.draft.categories.some((c) => c.name === category.name)) return;
         state.draft.categories.push(category);
         markDirty(state);
       });
@@ -253,6 +254,22 @@ export const useConfigStore = create<ConfigStore>()(
     updateCategory(name, patch) {
       set((state) => {
         const entry = state.draft.categories.find((c) => c.name === name);
+        if (!entry) return;
+        Object.assign(entry, patch);
+        markDirty(state);
+      });
+    },
+
+    removeCategoryAt(index) {
+      set((state) => {
+        state.draft.categories.splice(index, 1);
+        markDirty(state);
+      });
+    },
+
+    updateCategoryAt(index, patch) {
+      set((state) => {
+        const entry = state.draft.categories[index];
         if (!entry) return;
         Object.assign(entry, patch);
         markDirty(state);

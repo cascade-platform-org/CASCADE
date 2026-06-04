@@ -5,7 +5,7 @@
  */
 
 import { useRef, useState, useEffect } from "react";
-import { X, Download, Upload, History, RotateCcw } from "lucide-react";
+import { X, Download, Upload, History, RotateCcw, AlertTriangle } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
@@ -34,6 +34,7 @@ export function FileIoPanel() {
   const bundleInputRef = useRef<HTMLInputElement>(null);
 
   const [history, setHistory] = useState<ReturnType<typeof getProjectHistory>>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     setHistory(getProjectHistory());
@@ -70,9 +71,10 @@ export function FileIoPanel() {
   async function handleLoadBundle(file: File) {
     const result = await loadBundleFile(file);
     if (!result.ok) {
-      pushToast({ message: result.error, variant: "error", durationMs: 4000 });
+      setLoadError(`Bundle "${file.name}" rejected — ${result.error}`);
       return;
     }
+    setLoadError(null);
     loadProject(result.data.project);
     loadConfig(result.data.config);
     pushToast({ message: "Bundle loaded.", variant: "success", durationMs: 3000 });
@@ -82,9 +84,10 @@ export function FileIoPanel() {
   async function handleLoadProject(file: File) {
     const result = await loadProjectFile(file);
     if (!result.ok) {
-      pushToast({ message: `Invalid project: ${result.error}`, variant: "error", durationMs: 5000 });
+      setLoadError(`Project "${file.name}" rejected — ${result.error}`);
       return;
     }
+    setLoadError(null);
     loadProject(result.data);
     pushToast({ message: "Project loaded.", variant: "success", durationMs: 3000 });
     closeFileIoPanel();
@@ -93,9 +96,10 @@ export function FileIoPanel() {
   async function handleLoadConfig(file: File) {
     const result = await loadConfigFile(file);
     if (!result.ok) {
-      pushToast({ message: `Invalid config: ${result.error}`, variant: "error", durationMs: 5000 });
+      setLoadError(`Config "${file.name}" rejected — ${result.error}`);
       return;
     }
+    setLoadError(null);
     loadConfig(result.data);
     pushToast({ message: "Config loaded.", variant: "success", durationMs: 3000 });
     closeFileIoPanel();
@@ -127,6 +131,21 @@ export function FileIoPanel() {
             <X size={16} />
           </button>
         </div>
+
+        {/* Persistent load-error banner */}
+        {loadError && (
+          <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/40">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
+            <p className="flex-1 text-xs text-red-700 dark:text-red-300 break-words">{loadError}</p>
+            <button
+              onClick={() => setLoadError(null)}
+              className="shrink-0 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+              title="Dismiss"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {/* Save */}

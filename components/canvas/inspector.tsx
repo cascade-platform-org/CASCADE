@@ -10,10 +10,10 @@
  *   - Multi-select → count breakdown + batch delete
  */
 
-import { useState, useCallback } from "react";
-import { ChevronDown, ChevronRight, X, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { ChevronDown, ChevronRight, X, Plus, Trash2, AlertTriangle, Copy, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
+import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
@@ -181,6 +181,197 @@ function Toggle({
 }
 
 // ---------------------------------------------------------------------------
+// Canvas Membership section — shared by single-node and multi-select panels
+// ---------------------------------------------------------------------------
+
+function CanvasMembershipSection({ nodeIds }: { nodeIds: string[] }) {
+  const copyNodesToCanvas = useCanvasStore((s) => s.copyNodesToCanvas);
+  const moveNodesToCanvas = useCanvasStore((s) => s.moveNodesToCanvas);
+  const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
+  const orderedCanvases = useCanvasStore(useShallow(selectOrderedCanvases));
+  const clearSelection = useNetworkStore((s) => s.clearSelection);
+
+  const [targetCanvasId, setTargetCanvasId] = useState("");
+  const otherCanvases = orderedCanvases.filter((c) => c.id !== activeCanvasId);
+
+  if (otherCanvases.length === 0) return null;
+
+  return (
+    <Section title="Canvas Membership">
+      <p className="mb-2 text-[10px] leading-tight text-zinc-400">
+        Copy keeps nodes in this canvas too. Move removes them from this canvas
+        (edges crossing the boundary become inter-canvas edges).
+      </p>
+      <Field label="Target canvas">
+        <select
+          value={targetCanvasId}
+          onChange={(e) => setTargetCanvasId(e.target.value)}
+          className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+        >
+          <option value="">— select —</option>
+          {otherCanvases.map((c) => (
+            <option key={c.id} value={c.id}>{c.label ?? c.id}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="flex gap-2">
+        <button
+          disabled={!targetCanvasId}
+          onClick={() => {
+            if (!targetCanvasId) return;
+            copyNodesToCanvas(nodeIds, targetCanvasId);
+          }}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-50 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-40 dark:bg-blue-900/20 dark:text-blue-300"
+        >
+          <Copy size={11} />
+          Copy
+        </button>
+        <button
+          disabled={!targetCanvasId || !activeCanvasId}
+          onClick={() => {
+            if (!targetCanvasId || !activeCanvasId) return;
+            moveNodesToCanvas(nodeIds, activeCanvasId, targetCanvasId);
+            clearSelection();
+          }}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-violet-50 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-40 dark:bg-violet-900/20 dark:text-violet-300"
+        >
+          <ArrowRight size={11} />
+          Move
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Supply Capacity editor — free-text category name, editable value, removable rows
+// ---------------------------------------------------------------------------
+
+function SupplyCapacityEditor({
+  supply,
+  configCats,
+  onChange,
+}: {
+  supply: Record<string, number>;
+  configCats: string[];
+  onChange: (s: Record<string, number>) => void;
+}) {
+  const [rows, setRows] = useState<[string, number][]>(() => Object.entries(supply).map(([k, v]) => [k, v]));
+
+  const supplyKey = JSON.stringify(supply);
+  useEffect(() => {
+    setRows(Object.entries(supply).map(([k, v]) => [k, v]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplyKey]);
+
+  function commit(next: [string, number][]) {
+    setRows(next);
+    const obj: Record<string, number> = {};
+    for (const [k, v] of next) if (k !== "") obj[k] = v;
+    onChange(obj);
+  }
+
+  const inputClass = "rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200";
+
+  return (
+    <div className="space-y-1">
+      {rows.map(([cat, cap], i) => (
+        <div key={i} className="flex items-center gap-1">
+          {configCats.length > 0 ? (
+            <select
+              value={cat}
+              onChange={(e) => commit(rows.map((r, j): [string, number] => j === i ? [e.target.value, r[1]] : r))}
+              className={`w-28 ${inputClass}`}
+            >
+              {cat === "" && <option value="">— pick —</option>}
+              {configCats.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={cat}
+              onChange={(e) => commit(rows.map((r, j): [string, number] => j === i ? [e.target.value, r[1]] : r))}
+              placeholder="category"
+              className={`w-24 ${inputClass}`}
+            />
+          )}
+          <input
+            type="number"
+            min={0}
+            value={cap}
+            onChange={(e) => commit(rows.map((r, j): [string, number] => j === i ? [r[0], Number(e.target.value)] : r))}
+            className={`flex-1 ${inputClass}`}
+          />
+          <button onClick={() => commit(rows.filter((_, j) => j !== i))} className="text-zinc-300 hover:text-red-500">
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={() => commit([...rows, ["", 0]])}
+        className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
+      >
+        <Plus size={10} /> Add supply
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Categories editor — index-stable chips, free-text add, config shortcuts
+// ---------------------------------------------------------------------------
+
+function CategoriesEditor({
+  cats,
+  configCats,
+  onChange,
+}: {
+  cats: string[];
+  configCats: string[];
+  onChange: (cats: string[]) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {cats.map((cat, i) => (
+        <span
+          key={i}
+          className="flex items-center gap-0.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+        >
+          {cat}
+          <button
+            onClick={() => onChange(cats.filter((_, j) => j !== i))}
+            className="ml-0.5 text-blue-400 hover:text-blue-700"
+          >
+            <X size={10} />
+          </button>
+        </span>
+      ))}
+      {configCats.length > 0 ? (
+        <select
+          value=""
+          onChange={(e) => { if (e.target.value) onChange([...cats, e.target.value]); }}
+          className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-xs text-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
+        >
+          <option value="">+ add</option>
+          {configCats.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      ) : (
+        <button
+          onClick={() => onChange([...cats, ""])}
+          className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
+        >
+          <Plus size={10} /> Add category
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Node inspector
 // ---------------------------------------------------------------------------
 
@@ -230,46 +421,11 @@ function NodeInspector({ node }: { node: Node }) {
           </select>
         </Field>
         <Field label="Categories">
-          <div className="flex flex-wrap gap-1">
-            {(node.node_categories ?? []).map((cat) => (
-              <span
-                key={cat}
-                className="flex items-center gap-0.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-              >
-                {cat}
-                <button
-                  onClick={() =>
-                    patch({
-                      node_categories: (node.node_categories ?? []).filter((c) => c !== cat),
-                    })
-                  }
-                  className="ml-0.5 text-blue-400 hover:text-blue-700"
-                >
-                  <X size={10} />
-                </button>
-              </span>
-            ))}
-            {categories.length > 0 && (
-              <select
-                value=""
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  const current = node.node_categories ?? [];
-                  if (!current.includes(e.target.value)) {
-                    patch({ node_categories: [...current, e.target.value] });
-                  }
-                }}
-                className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-xs text-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
-              >
-                <option value="">+ add</option>
-                {categories
-                  .filter((c) => !(node.node_categories ?? []).includes(c.name))
-                  .map((c) => (
-                    <option key={c.name} value={c.name}>{c.name}</option>
-                  ))}
-              </select>
-            )}
-          </div>
+          <CategoriesEditor
+            cats={node.node_categories ?? []}
+            configCats={categories.map((c) => c.name)}
+            onChange={(cats) => patch({ node_categories: cats })}
+          />
         </Field>
       </Section>
 
@@ -334,43 +490,11 @@ function NodeInspector({ node }: { node: Node }) {
       {/* 3. Supply Capacity */}
       {(node.node_type === "Source" || node.node_categories?.length) && (
         <Section title="Supply Capacity">
-          <Field label="Supply capacity per category">
-            {Object.entries(node.supply_capacity ?? {}).map(([cat, cap]) => (
-              <div key={cat} className="mb-1 flex items-center gap-2">
-                <span className="w-20 truncate text-xs text-zinc-500">{cat}</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={cap}
-                  onChange={(e) =>
-                    patch({
-                      supply_capacity: {
-                        ...(node.supply_capacity ?? {}),
-                        [cat]: Number(e.target.value),
-                      },
-                    })
-                  }
-                  className="flex-1 rounded border border-zinc-200 bg-white px-2 py-0.5 text-xs focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                />
-              </div>
-            ))}
-            <button
-              onClick={() => {
-                if (!categories.length) return;
-                const unused = categories.find(
-                  (c) => (node.supply_capacity ?? {})[c.name] === undefined,
-                );
-                if (unused) {
-                  patch({
-                    supply_capacity: { ...(node.supply_capacity ?? {}), [unused.name]: 0 },
-                  });
-                }
-              }}
-              className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
-            >
-              <Plus size={10} /> Add supply
-            </button>
-          </Field>
+          <SupplyCapacityEditor
+            supply={node.supply_capacity ?? {}}
+            configCats={categories.map((c) => c.name)}
+            onChange={(s) => patch({ supply_capacity: s })}
+          />
         </Section>
       )}
 
@@ -542,6 +666,9 @@ function NodeInspector({ node }: { node: Node }) {
           onChange={(properties) => patch({ properties })}
         />
       </Section>
+
+      {/* 9. Canvas Membership */}
+      <CanvasMembershipSection nodeIds={[node.id]} />
     </div>
   );
 }
@@ -799,36 +926,44 @@ function PropertiesEditor({
   properties: Record<string, unknown>;
   onChange: (p: Record<string, unknown>) => void;
 }) {
-  const entries = Object.entries(properties);
+  // Index-stable rows so duplicate keys don't collapse and React keys stay unique
+  const [rows, setRows] = useState<[string, string][]>(() =>
+    Object.entries(properties).map(([k, v]) => [k, String(v ?? "")]),
+  );
+
+  const propKey = JSON.stringify(properties);
+  useEffect(() => {
+    setRows(Object.entries(properties).map(([k, v]) => [k, String(v ?? "")]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propKey]);
+
+  function commit(next: [string, string][]) {
+    setRows(next);
+    const obj: Record<string, unknown> = {};
+    for (const [k, v] of next) obj[k] = v;
+    onChange(obj);
+  }
+
   return (
     <div className="space-y-1">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center gap-1">
+      {rows.map(([k, v], i) => (
+        <div key={i} className="flex items-center gap-1">
           <input
             type="text"
             value={k}
-            onChange={(e) => {
-              const next = { ...properties };
-              delete next[k];
-              next[e.target.value] = v;
-              onChange(next);
-            }}
+            onChange={(e) => commit(rows.map((r, j): [string, string] => j === i ? [e.target.value, r[1]] : r))}
             className="w-1/3 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             placeholder="key"
           />
           <input
             type="text"
-            value={String(v ?? "")}
-            onChange={(e) => onChange({ ...properties, [k]: e.target.value })}
+            value={v}
+            onChange={(e) => commit(rows.map((r, j): [string, string] => j === i ? [r[0], e.target.value] : r))}
             className="flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             placeholder="value"
           />
           <button
-            onClick={() => {
-              const next = { ...properties };
-              delete next[k];
-              onChange(next);
-            }}
+            onClick={() => commit(rows.filter((_, j) => j !== i))}
             className="text-zinc-300 hover:text-red-500"
           >
             <X size={12} />
@@ -836,7 +971,7 @@ function PropertiesEditor({
         </div>
       ))}
       <button
-        onClick={() => onChange({ ...properties, "": "" })}
+        onClick={() => commit([...rows, ["", ""]])}
         className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
       >
         <Plus size={10} /> Add property
@@ -1464,6 +1599,9 @@ function MultiSelectPanel({
           ))}
         </Section>
       )}
+
+      {/* ── Canvas Membership (nodes only) ── */}
+      {isNodesOnly && <CanvasMembershipSection nodeIds={nodeIds} />}
 
       {/* ── Delete ── */}
       <div className="border-t border-zinc-100 p-3 dark:border-zinc-800">
