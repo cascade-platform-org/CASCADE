@@ -12,6 +12,7 @@ import { FileIoPanel } from "@/components/controls/file-io-panel";
 import { ActiveRulesPanel } from "@/components/rules/active-rules-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
+import { ToastContainer } from "./toast-container";
 import { useUiStore } from "@/store/ui-store";
 
 export function EditorShell() {
@@ -52,6 +53,8 @@ export function EditorShell() {
       {activeRulesPanelOpen && <ActiveRulesPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
+
+      <ToastContainer />
     </div>
   );
 }

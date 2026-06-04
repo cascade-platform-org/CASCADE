@@ -45,8 +45,8 @@ export interface CanvasState {
   canvases: Record<string, Canvas>;
   /** Currently visible Canvas. Null only before the first Canvas is created. */
   activeCanvasId: string | null;
-  /** Project-level metadata (name, description). */
-  projectMeta: { name: string; description?: string };
+  /** Project-level metadata (name, description, global graph type). */
+  projectMeta: { name: string; description?: string; global_graph_type?: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +133,8 @@ export interface CanvasActions {
 
   // --- Project meta ---
   setProjectMeta: (meta: { name?: string; description?: string }) => void;
+  /** Set the graph type for the Global view (all Canvases). Pass null to clear. */
+  setGlobalGraphType: (graphType: string | null) => void;
 
   // --- Serialisation ---
   toGraphSnapshot: () => GraphSnapshot;
@@ -615,6 +617,12 @@ export const useCanvasStore = create<CanvasStore>()(
       });
     },
 
+    setGlobalGraphType(graphType) {
+      set((state) => {
+        state.projectMeta.global_graph_type = graphType ?? undefined;
+      });
+    },
+
     // -------------------------------------------------------------------------
     // Serialisation
     // -------------------------------------------------------------------------
@@ -638,6 +646,7 @@ export const useCanvasStore = create<CanvasStore>()(
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
+        global_graph_type: state.projectMeta.global_graph_type,
         nodes: { ...state.nodes },
         edges: { ...state.edges },
         canvases: state.canvasOrder.map((id) => state.canvases[id]),
@@ -662,6 +671,7 @@ export const useCanvasStore = create<CanvasStore>()(
         state.projectMeta = {
           name: project.meta.name,
           description: project.meta.description,
+          global_graph_type: project.global_graph_type,
         };
       });
       useHistoryStore.getState().loadHistory(project.update_history ?? []);

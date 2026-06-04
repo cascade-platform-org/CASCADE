@@ -1104,6 +1104,19 @@
         "meta": {
           "$ref": "#/$defs/ProjectMeta"
         },
+        "global_graph_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Graph type assigned to the Global view (all Canvases rendered together). References a name in ModelConfiguration.graph_types. None means no type is assigned \u2014 the engine dispatches per-Canvas only.",
+          "title": "Global Graph Type"
+        },
         "nodes": {
           "additionalProperties": {
             "$ref": "#/$defs/Node"

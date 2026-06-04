@@ -288,6 +288,12 @@ export const ProjectMetaSchema = z.object({
 export const ProjectSchema = z.object({
   version: z.literal("2.0"),
   meta: ProjectMetaSchema,
+  /**
+   * Graph type assigned to the Global view (all Canvases rendered together).
+   * References a name in ModelConfiguration.graph_types.
+   * Absent means no type is assigned — engine dispatches per-Canvas only.
+   */
+  global_graph_type: z.string().optional(),
   /** Global node registry. Keys are globally unique node IDs. */
   nodes: z.record(z.string(), NodeSchema).default({}),
   /** Global edge registry. Keys are globally unique edge IDs. */

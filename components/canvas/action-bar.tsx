@@ -23,13 +23,18 @@ import {
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
+import { buildPropagationPayload } from "@/lib/propagation-payload";
+import { PropagationResultSchema } from "@/lib/schemas/api";
 import type { EventDefinition } from "@/lib/schemas/config";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export function ActionBar() {
   const scope = useUiStore((s) => s.propagationScope);
   const isPropagating = useUiStore((s) => s.isPropagating);
   const serverReachable = useUiStore((s) => s.serverReachable);
   const setPropagationScope = useUiStore((s) => s.setPropagationScope);
+  const setIsPropagating = useUiStore((s) => s.setIsPropagating);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
   const pushToast = useUiStore((s) => s.pushToast);
 
@@ -41,9 +46,85 @@ export function ActionBar() {
 
   const [moreOpen, setMoreOpen] = useState(false);
 
-  function handlePropagate() {
-    if (!serverReachable) return;
-    // Propagation implementation lives in propagation_routes; stub until wired
+  async function handlePropagate() {
+    if (!serverReachable || isPropagating) return;
+
+    const canvasState = useCanvasStore.getState();
+    const config = useConfigStore.getState().config;
+    const activeCanvasId = canvasState.activeCanvasId;
+
+    let payload;
+    try {
+      payload = buildPropagationPayload({
+        project: canvasState.toProject(),
+        config,
+        scope,
+        activeCanvasId,
+      });
+    } catch (err) {
+      pushToast({ message: `Cannot propagate: ${err instanceof Error ? err.message : String(err)}`, variant: "error", durationMs: 4000 });
+      return;
+    }
+
+    setIsPropagating(true);
+    const before = canvasState.toGraphSnapshot();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/propagate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => response.statusText);
+        throw new Error(`Server returned ${response.status}: ${detail}`);
+      }
+
+      const raw = await response.json();
+      const result = PropagationResultSchema.parse(raw);
+
+      canvasState.applyPropagationResult(result);
+
+      const after = useCanvasStore.getState().toGraphSnapshot();
+      useHistoryStore.getState().pushUpdateEntry({
+        id: nanoid(),
+        timestamp: new Date().toISOString(),
+        update_type: "propagation",
+        label: `Propagation (${scope})`,
+        scope,
+        canvas_id: activeCanvasId ?? undefined,
+        before,
+        after,
+      });
+
+      const count = result.updates.length;
+      const warnings = result.warnings ?? [];
+
+      if (warnings.length > 0) {
+        pushToast({
+          message: `Propagation complete — ${count} element${count !== 1 ? "s" : ""} updated. ⚠ ${warnings[0]}`,
+          variant: "warning",
+          durationMs: 5000,
+        });
+      } else {
+        pushToast({
+          message: count > 0
+            ? `Propagation complete — ${count} element${count !== 1 ? "s" : ""} updated`
+            : "Propagation complete — no changes",
+          variant: "success",
+          durationMs: 3500,
+        });
+      }
+    } catch (err) {
+      pushToast({
+        message: `Propagation failed — ${err instanceof Error ? err.message : "unexpected error"}`,
+        variant: "error",
+        durationMs: 5000,
+      });
+    } finally {
+      setIsPropagating(false);
+    }
   }
 
   function handleReset() {
@@ -345,7 +426,7 @@ function EventButton({ event }: { event: EventDefinition }) {
     pushToast({
       message: affected > 0
         ? `${event.label} applied — ${affected} element${affected > 1 ? "s" : ""} affected`
-        : `${event.label} applied — no elements have vulnerability set for this event`,
+        : `${event.label} applied — Elements with vulnerability to this event were not found or already affected`,
       variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
       durationMs: 3500,
     });
