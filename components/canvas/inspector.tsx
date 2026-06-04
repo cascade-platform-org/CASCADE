@@ -378,10 +378,26 @@ function CategoriesEditor({
 
 function NodeInspector({ node }: { node: Node }) {
   const updateNode = useCanvasStore((s) => s.updateNode);
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
   const categories = useConfigStore(useShallow((s) => s.config.categories));
   const events = useConfigStore(useShallow((s) => s.config.events));
+
+  // Categories for which to show a dependency profile:
+  // own categories + categories supplied by any parent node (edge.target === this node).
+  const ownCategories = new Set(node.node_categories ?? []);
+  const inboundCategories = new Set<string>();
+  for (const edge of Object.values(allEdges)) {
+    if (edge.target !== node.id) continue;
+    const sourceNode = allNodes[edge.source];
+    if (!sourceNode) continue;
+    for (const cat of sourceNode.node_categories ?? []) {
+      if (!ownCategories.has(cat)) inboundCategories.add(cat);
+    }
+  }
+  const profileCategories = [...ownCategories, ...inboundCategories];
 
   const patch = useCallback(
     (partial: Partial<Node>) => {
@@ -520,15 +536,23 @@ function NodeInspector({ node }: { node: Node }) {
       </Section>
 
       {/* 5. Category Dependency Profiles */}
-      {(node.node_categories ?? []).length > 0 && (
+      {profileCategories.length > 0 && (
         <Section title="Category Dependency Profiles">
-          {(node.node_categories ?? []).map((cat) => {
+          {profileCategories.map((cat) => {
             const profile: CategoryDependencyProfile = node.category_dependency_profiles?.[cat] ?? { dependency_level: n };
             const catDef = categories.find((c) => c.name === cat);
             const isStd = catDef?.category_type === "SourceToDemands";
+            const isInbound = inboundCategories.has(cat);
             return (
               <div key={cat} className="mb-3">
-                <div className="mb-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">{cat}</div>
+                <div className="mb-1 flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{cat}</span>
+                  {isInbound && (
+                    <span className="rounded bg-zinc-100 px-1 py-0.5 text-[10px] text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+                      via parent
+                    </span>
+                  )}
+                </div>
                 <Field label={`Dependency level (1–${n})`}>
                   <NumberInput
                     value={profile.dependency_level ?? n}
