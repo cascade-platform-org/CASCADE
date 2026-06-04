@@ -22,7 +22,7 @@ import {
   exportScorecardZip,
 } from "@/lib/scorecard-utils";
 import { SaveScorecardDialog } from "./operativity-scorecard";
-import type { ScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, ScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
@@ -261,26 +261,29 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
       {expanded && (
         <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-700">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <SnapshotImage
+            <SnapshotMiniGraph
               label="Before Propagation"
-              dataUrl={entry.before_propagation_image}
+              snapshot={entry.before_propagation}
+              imageDataUrl={entry.before_propagation_image}
               score={scoreBefore}
               config={config}
               n={n}
             />
             {entry.after_propagation && (
-              <SnapshotImage
+              <SnapshotMiniGraph
                 label="After Propagation"
-                dataUrl={entry.after_propagation_image}
+                snapshot={entry.after_propagation}
+                imageDataUrl={entry.after_propagation_image}
                 score={scoreAfter ?? 0}
                 config={config}
                 n={n}
               />
             )}
             {entry.after_temporal_jump && (
-              <SnapshotImage
+              <SnapshotMiniGraph
                 label={`After ${entry.temporal_jump_hours ?? "?"}h Temporal Jump`}
-                dataUrl={entry.after_temporal_jump_image}
+                snapshot={entry.after_temporal_jump}
+                imageDataUrl={entry.after_temporal_jump_image}
                 score={scoreTemporal ?? 0}
                 config={config}
                 n={n}
@@ -330,22 +333,26 @@ function ScorePill({
 }
 
 // ---------------------------------------------------------------------------
-// Snapshot image cell
+// Snapshot visualisation — renders node functionality as coloured dots
 // ---------------------------------------------------------------------------
 
-function SnapshotImage({
+function SnapshotMiniGraph({
   label,
-  dataUrl,
+  snapshot,
+  imageDataUrl,
   score,
   config,
   n,
 }: {
   label: string;
-  dataUrl: string | undefined;
+  snapshot: GraphSnapshot;
+  imageDataUrl?: string;
   score: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
   n: number;
 }) {
+  const nodes = Object.values(snapshot.nodes);
+
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       <div className="flex items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800">
@@ -357,16 +364,29 @@ function SnapshotImage({
           {score.toFixed(1)}%
         </span>
       </div>
-      {dataUrl ? (
+      {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={dataUrl}
-          alt={label}
-          className="h-40 w-full object-cover"
-        />
+        <img src={imageDataUrl} alt={label} className="h-40 w-full object-cover" />
       ) : (
-        <div className="flex h-40 items-center justify-center text-xs text-zinc-400">
-          No image captured
+        <div className="flex h-40 flex-wrap content-start gap-1.5 overflow-y-auto p-3">
+          {nodes.length === 0 && (
+            <span className="m-auto text-xs text-zinc-400">No nodes</span>
+          )}
+          {nodes.map((nd) => {
+            const level = config.functionality_scale.find((l) => l.level === nd.functionality);
+            const color = level?.color ?? "#94a3b8";
+            const pct = ((nd.functionality / n) * 100).toFixed(0);
+            return (
+              <div
+                key={nd.id}
+                title={`${nd.label ?? nd.id}: F${nd.functionality} (${pct}%)`}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ backgroundColor: color }}
+              >
+                {nd.functionality}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -376,8 +396,6 @@ function SnapshotImage({
 // ---------------------------------------------------------------------------
 // Impacted nodes table
 // ---------------------------------------------------------------------------
-
-import type { GraphSnapshot } from "@/lib/schemas/network";
 
 function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after: GraphSnapshot; n: number }) {
   const rows = Object.values(after.nodes)

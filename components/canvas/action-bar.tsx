@@ -13,6 +13,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
+import type { GraphSnapshot } from "@/lib/schemas/network";
 import { useUiStore } from "@/store/ui-store";
 import {
   useConfigStore,
@@ -359,74 +360,22 @@ function EventButton({ event }: { event: EventDefinition }) {
 
   function applyEvent() {
     const storeState = useCanvasStore.getState();
-    const configState = useConfigStore.getState();
-    const N = configState.getFunctionalityN();
-    const activeCanvasId = storeState.activeCanvasId;
-    if (!activeCanvasId) return;
+    if (!storeState.activeCanvasId) return;
 
-    const before = storeState.toGraphSnapshot();
+    const N = useConfigStore.getState().getFunctionalityN();
+    const snapshotBefore = storeState.toGraphSnapshot();
 
-    // Apply vulnerability formula to every element that has an entry for this event.
-    // imposed = N - vulnerability_level  (clamped to 1), only if it worsens.
-    let affected = 0;
+    // Delegate all application logic (vulnerability drops, direct_damage_effects,
+    // attribute_mutations, temporal jump, history push) to the store.
+    storeState.applyEvent(event, N);
 
-    Object.values(storeState.nodes).forEach((node) => {
-      const vulnLevel = node.vulnerability_levels?.[event.id];
-      if (vulnLevel === undefined) return;
-      const imposed = Math.max(1, N - vulnLevel);
-      if (imposed < node.functionality) {
-        const patch: Partial<typeof node> = { functionality: imposed };
-        if (event.type === "hazard") {
-          patch.direct_damage = true;
-          const eff = event.direct_damage_effects?.[node.id];
-          if (eff) patch.expected_repair_time = eff.expected_repair_time;
-        }
-        // Apply attribute_mutations
-        if (event.attribute_mutations) {
-          Object.entries(event.attribute_mutations).forEach(([key, val]) => {
-            const [elemId, field] = key.split(".");
-            if (elemId === node.id && field) (patch as Record<string, unknown>)[field] = val;
-          });
-        }
-        storeState.updateNode(node.id, patch);
-        affected++;
-      }
-    });
-
-    Object.values(storeState.edges).forEach((edge) => {
-      const vulnLevel = edge.vulnerability_levels?.[event.id];
-      if (vulnLevel === undefined) return;
-      const imposed = Math.max(1, N - vulnLevel);
-      if (imposed < edge.functionality) {
-        const patch: Partial<typeof edge> = { functionality: imposed };
-        if (event.type === "hazard") {
-          patch.direct_damage = true;
-          const eff = event.direct_damage_effects?.[edge.id];
-          if (eff) patch.expected_repair_time = eff.expected_repair_time;
-        }
-        storeState.updateEdge(edge.id, patch);
-        affected++;
-      }
-    });
-
-    // Events always apply to the full registry regardless of the scope toggle
-    // (CONTEXT.md: "Event application always writes to the global registry").
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "event_applied",
-      label: `Apply: ${event.label}`,
-      scope: "global",
-      canvas_id: activeCanvasId,
-      event_id: event.id,
-      before,
-      after: storeState.toGraphSnapshot(),
-    });
+    const snapshotAfter = useCanvasStore.getState().toGraphSnapshot();
+    const affected = countChangedElements(snapshotBefore, snapshotAfter);
 
     pushToast({
       message: affected > 0
         ? `${event.label} applied — ${affected} element${affected > 1 ? "s" : ""} affected`
-        : `${event.label} applied — Elements with vulnerability to this event were not found or already affected`,
+        : `${event.label} applied — no elements matched this event`,
       variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
       durationMs: 3500,
     });
@@ -447,6 +396,17 @@ function EventButton({ event }: { event: EventDefinition }) {
       <span className="max-w-[80px] truncate">{event.label}</span>
     </ActionButton>
   );
+}
+
+function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): number {
+  let count = 0;
+  for (const id of Object.keys(after.nodes)) {
+    if (before.nodes[id]?.functionality !== after.nodes[id]?.functionality) count++;
+  }
+  for (const id of Object.keys(after.edges)) {
+    if (before.edges[id]?.functionality !== after.edges[id]?.functionality) count++;
+  }
+  return count;
 }
 
 function EventIcon({ type, size }: { type: "hazard" | "disservice" | "temporal_jump"; size: number }) {

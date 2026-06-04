@@ -25,6 +25,8 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
+  getNodesBounds,
+  getViewportForBounds,
   Handle,
   Position,
   ConnectionMode,
@@ -578,7 +580,44 @@ export function FlowCanvas() {
   const clipboard = useClipboardStore((s) => s.contents);
   const copyToClipboard = useClipboardStore((s) => s.copy);
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodes } = useReactFlow();
+
+  // Register a capture function in ui-store so the Scorecard dialog can call it
+  // from outside the ReactFlow context. Captures whatever is currently rendered
+  // on screen — the user is responsible for being on the view they want to record.
+  // Uses html-to-image (handles CSS transforms and SVG edges correctly).
+  useEffect(() => {
+    const IMG_W = 1200;
+    const IMG_H = 800;
+
+    async function capture(): Promise<string | undefined> {
+      try {
+        const { toPng } = await import("html-to-image");
+        const nodes = getNodes();
+        const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
+        if (!viewport || nodes.length === 0) return undefined;
+
+        const bounds = getNodesBounds(nodes);
+        const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
+
+        return await toPng(viewport, {
+          backgroundColor: "#ffffff",
+          width: IMG_W,
+          height: IMG_H,
+          style: {
+            width: `${IMG_W}px`,
+            height: `${IMG_H}px`,
+            transform: `translate(${x}px, ${y}px) scale(${zoom})`,
+          },
+        });
+      } catch {
+        return undefined;
+      }
+    }
+
+    useUiStore.getState().registerCaptureCanvas(capture);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // register once — capture() reads live DOM state on every call
 
   // When the lasso fires onSelect, React Flow also fires an onSelectionChange
   // with an empty array (it sees the drag-end as a pane interaction and thinks

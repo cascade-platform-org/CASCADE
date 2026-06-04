@@ -78,6 +78,13 @@ export interface UiState {
 
   // --- Toast / notification queue ---
   toasts: Toast[];
+
+  // --- Canvas screenshot ---
+  /**
+   * Registered by FlowCanvas on mount. Captures the current global canvas view
+   * as a PNG data-URL. Null when no canvas is mounted.
+   */
+  captureCanvasFn: (() => Promise<string | undefined>) | null;
 }
 
 export interface Toast {
@@ -136,6 +143,9 @@ export interface UiActions {
   // --- Toasts ---
   pushToast: (toast: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
+
+  // --- Canvas screenshot ---
+  registerCaptureCanvas: (fn: () => Promise<string | undefined>) => void;
 }
 
 export type UiStore = UiState & UiActions;
@@ -161,6 +171,7 @@ const initialState: UiState = {
   activeCategoryFilter: null,
   propagationWarnings: [],
   toasts: [],
+  captureCanvasFn: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -309,6 +320,15 @@ export const useUiStore = create<UiStore>()(
       set((state) => {
         state.toasts = state.toasts.filter((t) => t.id !== id);
       });
+    },
+
+    // -------------------------------------------------------------------------
+    // Canvas screenshot
+    // -------------------------------------------------------------------------
+
+    registerCaptureCanvas(fn) {
+      // Immer cannot store functions in state — assign directly on the raw store object.
+      useUiStore.setState({ captureCanvasFn: fn });
     },
   })),
 );

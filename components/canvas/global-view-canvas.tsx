@@ -12,7 +12,7 @@
  * This view is read-only: no editing, no tool interactions.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -20,6 +20,9 @@ import {
   ReactFlowProvider,
   MarkerType,
   ConnectionMode,
+  useReactFlow,
+  getNodesBounds,
+  getViewportForBounds,
   type Node as RFNode,
   type Edge as RFEdge,
   getBezierPath,
@@ -30,6 +33,7 @@ import "@xyflow/react/dist/style.css";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes } from "./flow-canvas";
 import { ZoomSlider } from "./zoom-slider";
@@ -125,6 +129,43 @@ export function GlobalViewCanvas() {
   const allEdges = useCanvasStore((s) => s.edges);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
+
+  const { getNodes } = useReactFlow();
+
+  // Register capture while this canvas is mounted, overwriting the per-canvas
+  // registration from FlowCanvas (which is unmounted in global view).
+  useEffect(() => {
+    const IMG_W = 1200;
+    const IMG_H = 800;
+
+    async function capture(): Promise<string | undefined> {
+      try {
+        const { toPng } = await import("html-to-image");
+        const nodes = getNodes();
+        const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
+        if (!viewport || nodes.length === 0) return undefined;
+
+        const bounds = getNodesBounds(nodes);
+        const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
+
+        return await toPng(viewport, {
+          backgroundColor: "#ffffff",
+          width: IMG_W,
+          height: IMG_H,
+          style: {
+            width: `${IMG_W}px`,
+            height: `${IMG_H}px`,
+            transform: `translate(${x}px, ${y}px) scale(${zoom})`,
+          },
+        });
+      } catch {
+        return undefined;
+      }
+    }
+
+    useUiStore.getState().registerCaptureCanvas(capture);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // register once — capture() reads live DOM state on every call
 
   function levelColor(functionality: number): string {
     return scaleLevels.find((l) => l.level === functionality)?.color ?? "#94a3b8";

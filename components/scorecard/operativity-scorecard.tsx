@@ -6,7 +6,8 @@
  * Presents the user with:
  *  - A label input
  *  - Preview Operativity Scores for before_propagation and after_propagation
- *    (derived from the last propagation entry in update_history)
+ *    (derived from the last propagation entry in update_history, or from an
+ *    ephemeral propagation run triggered inside the dialog — no side effects)
  *  - Optional ephemeral Temporal Jump: enter hours → client-side preview
  *    (applies functionality_time countdown math only; no backend call, no side effects)
  *  - Saves the entry to the Scorecard, capturing canvas snapshots via html2canvas
@@ -15,7 +16,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { X, BookMarked, Clock, AlertTriangle, Check } from "lucide-react";
+import { X, BookMarked, Clock, AlertTriangle, Check, Play, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -28,7 +29,12 @@ import {
   operativityColor,
   hashSnapshot,
 } from "@/lib/scorecard-utils";
+import { buildPropagationPayload } from "@/lib/propagation-payload";
+import { PropagationResultSchema } from "@/lib/schemas/api";
+import type { ElementUpdate } from "@/lib/schemas/api";
 import type { GraphSnapshot, ScorecardEntry } from "@/lib/schemas/network";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
 // Ephemeral temporal jump math (client-side, no propagation call)
@@ -71,26 +77,81 @@ function applyTemporalJump(snapshot: GraphSnapshot, hours: number): GraphSnapsho
 }
 
 // ---------------------------------------------------------------------------
-// Canvas screenshot via html2canvas
+// Ephemeral propagation — calls the engine without touching any store
 // ---------------------------------------------------------------------------
 
-async function captureCanvasScreenshot(): Promise<string | undefined> {
-  try {
-    const { default: html2canvas } = await import("html2canvas");
-    // Target the ReactFlow canvas wrapper (first .react-flow element in DOM)
-    const el = document.querySelector<HTMLElement>(".react-flow");
-    if (!el) return undefined;
-    const canvas = await html2canvas(el, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 0.8,
-      logging: false,
-    });
-    return canvas.toDataURL("image/png");
-  } catch {
-    return undefined;
+/** Apply ElementUpdate[] onto a GraphSnapshot copy. Pure — does not mutate input. */
+function mergeUpdatesIntoSnapshot(
+  snapshot: GraphSnapshot,
+  updates: ElementUpdate[],
+): GraphSnapshot {
+  const nodes = { ...snapshot.nodes };
+  const edges = { ...snapshot.edges };
+  for (const u of updates) {
+    if (nodes[u.id]) {
+      nodes[u.id] = {
+        ...nodes[u.id],
+        functionality: u.functionality,
+        ...(u.functionality_time !== undefined ? { functionality_time: u.functionality_time } : {}),
+        ...(u.direct_damage !== undefined ? { direct_damage: u.direct_damage } : {}),
+        ...(u.expected_repair_time !== undefined ? { expected_repair_time: u.expected_repair_time } : {}),
+      };
+    } else if (edges[u.id]) {
+      edges[u.id] = {
+        ...edges[u.id],
+        functionality: u.functionality,
+        ...(u.functionality_time !== undefined ? { functionality_time: u.functionality_time } : {}),
+        ...(u.direct_damage !== undefined ? { direct_damage: u.direct_damage } : {}),
+        ...(u.expected_repair_time !== undefined ? { expected_repair_time: u.expected_repair_time } : {}),
+      };
+    }
   }
+  return { ...snapshot, nodes, edges };
 }
+
+/**
+ * Send `snapshot` to the engine and return the post-propagation snapshot.
+ * Writes nothing to any store — all side effects are contained to local state.
+ */
+async function runEphemeralPropagation(snapshot: GraphSnapshot): Promise<GraphSnapshot> {
+  const canvasState = useCanvasStore.getState();
+  const config = useConfigStore.getState().config;
+  const scope = useUiStore.getState().propagationScope;
+  const activeCanvasId = canvasState.activeCanvasId;
+
+  // Build a minimal Project from the snapshot so buildPropagationPayload can trim it.
+  const project = canvasState.toProject();
+  const snapshotProject = {
+    ...project,
+    nodes: snapshot.nodes,
+    edges: snapshot.edges,
+    update_history: [],
+    scorecard: [],
+  };
+
+  const payload = buildPropagationPayload({
+    project: snapshotProject,
+    config,
+    scope,
+    activeCanvasId,
+  });
+
+  const response = await fetch(`${API_BASE}/api/propagate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => response.statusText);
+    throw new Error(`Server returned ${response.status}: ${detail}`);
+  }
+
+  const raw = await response.json();
+  const result = PropagationResultSchema.parse(raw);
+  return mergeUpdatesIntoSnapshot(snapshot, result.updates);
+}
+
 
 // ---------------------------------------------------------------------------
 // Dialog
@@ -123,41 +184,63 @@ export function SaveScorecardDialog({
   const n = config.functionality_scale.length;
 
   // ---------------------------------------------------------------------------
-  // Resolve before/after synchronously so scores are correct on first render
+  // Resolve before/after synchronously so scores are correct on first render.
+  // `after` is kept in state so the ephemeral propagation button can update it
+  // without touching any store.
   // ---------------------------------------------------------------------------
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const { before, after, resolvedEventId } = useMemo(() => {
+  const { initialBefore, initialAfter, initialEventId } = useMemo(() => {
     if (beforeSnapshot) {
-      return { before: beforeSnapshot, after: afterSnapshot, resolvedEventId: eventId };
+      return { initialBefore: beforeSnapshot, initialAfter: afterSnapshot, initialEventId: eventId };
     }
     const propEntry = updateHistory.find((e) => e.update_type === "propagation");
     if (propEntry) {
       const propIdx = updateHistory.indexOf(propEntry);
-      const evEntry = !eventId && propIdx >= 0
-        ? updateHistory.slice(propIdx + 1).find((e) => e.update_type === "event_applied")
+      // History is newest-first (unshift). Entries before propIdx are newer —
+      // the event that triggered this propagation sits immediately before it.
+      const evEntry = !eventId && propIdx > 0
+        ? updateHistory.slice(0, propIdx).find((e) => e.update_type === "event_applied")
         : undefined;
       return {
-        before: propEntry.before,
-        after: propEntry.after as GraphSnapshot | undefined,
-        resolvedEventId: eventId ?? evEntry?.event_id,
+        initialBefore: propEntry.before,
+        initialAfter: propEntry.after as GraphSnapshot | undefined,
+        initialEventId: eventId ?? evEntry?.event_id,
       };
     }
     return {
-      before: useCanvasStore.getState().toGraphSnapshot(),
-      after: undefined as GraphSnapshot | undefined,
-      resolvedEventId: eventId,
+      initialBefore: useCanvasStore.getState().toGraphSnapshot(),
+      initialAfter: undefined as GraphSnapshot | undefined,
+      initialEventId: eventId,
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally stable — snapshots are immutable once the dialog opens
 
   // ---------------------------------------------------------------------------
   // Local state
   // ---------------------------------------------------------------------------
 
+  const before = initialBefore;
+  const resolvedEventId = initialEventId;
+  const [after, setAfter] = useState<GraphSnapshot | undefined>(initialAfter);
   const [label, setLabel] = useState(defaultLabel);
   const [temporalHours, setTemporalHours] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
+  const [ephemeralPropagating, setEphemeralPropagating] = useState(false);
+  const [ephemeralError, setEphemeralError] = useState<string | undefined>();
+
+  async function handleEphemeralPropagate() {
+    setEphemeralPropagating(true);
+    setEphemeralError(undefined);
+    try {
+      const result = await runEphemeralPropagation(before);
+      setAfter(result);
+    } catch (err) {
+      setEphemeralError(err instanceof Error ? err.message : "Propagation failed.");
+    } finally {
+      setEphemeralPropagating(false);
+    }
+  }
 
   const temporalJumpHours = temporalHours.trim() !== "" ? parseInt(temporalHours, 10) : undefined;
   const temporalValid = temporalJumpHours === undefined || (Number.isInteger(temporalJumpHours) && temporalJumpHours > 0);
@@ -194,8 +277,12 @@ export function SaveScorecardDialog({
     if (!label.trim() || saving || duplicate) return;
     setSaving(true);
     try {
-      // Capture screenshot of current canvas view
-      const image = await captureCanvasScreenshot();
+      const captureCanvas = useUiStore.getState().captureCanvasFn;
+
+      // One screenshot of whatever is currently on screen — the user frames the
+      // view they want before clicking Save. The same image is stored for every
+      // snapshot slot so the expanded entry always shows a consistent picture.
+      const image = captureCanvas ? await captureCanvas() : undefined;
 
       const entry: ScorecardEntry = {
         id: `sc-${nanoid(10)}`,
@@ -206,18 +293,16 @@ export function SaveScorecardDialog({
         after_propagation: after,
         after_temporal_jump: temporalSnapshot,
         temporal_jump_hours: temporalSnapshot ? temporalJumpHours : undefined,
-        // Only one screenshot is captured (current canvas state). Assigning the
-        // same image to before/after/temporal would be misleading — each field
-        // would claim to show a different state but display the same view.
         before_propagation_image: image,
+        after_propagation_image: after ? image : undefined,
+        after_temporal_jump_image: temporalSnapshot ? image : undefined,
       };
 
       addScorecardEntry(entry);
       pushToast({ message: `"${entry.label}" saved to Scorecard.`, variant: "success", durationMs: 3000 });
       onClose();
     } catch (err) {
-      console.error(err);
-      pushToast({ message: "Failed to save entry — see console for details.", variant: "error", durationMs: 4000 });
+      pushToast({ message: `Failed to save — ${err instanceof Error ? err.message : "unexpected error"}`, variant: "error", durationMs: 4000 });
     } finally {
       setSaving(false);
     }
@@ -278,7 +363,7 @@ export function SaveScorecardDialog({
           {/* Operativity preview */}
           <div>
             <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Operativity Score preview</p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <ScoreCard label="Before" score={scoreBefore} config={config} n={n} />
               {scoreAfter !== null && (
                 <>
@@ -288,10 +373,35 @@ export function SaveScorecardDialog({
               )}
               {scoreAfter === null && (
                 <span className="text-xs text-zinc-400 italic">
-                  No Propagation run — only the current Scenario will be stored.
+                  No Propagation run yet.
                 </span>
               )}
+              {scoreAfter !== null && Math.abs(scoreAfter - scoreBefore) < 0.01 && (
+                <span className="text-xs text-amber-500 italic">
+                  Propagation made no changes — canvas may already be fully degraded. Try Reset first.
+                </span>
+              )}
+              {/* Ephemeral propagation — runs against the engine without modifying the live canvas */}
+              <button
+                onClick={handleEphemeralPropagate}
+                disabled={ephemeralPropagating}
+                title="Run a propagation for this Scorecard entry only — does not affect the canvas"
+                className={cn(
+                  "ml-auto flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                  ephemeralPropagating
+                    ? "cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700"
+                    : "border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20",
+                )}
+              >
+                {ephemeralPropagating
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <Play size={12} />}
+                {ephemeralPropagating ? "Running…" : after ? "Re-run Propagation" : "Run Propagation"}
+              </button>
             </div>
+            {ephemeralError && (
+              <p className="mt-1.5 text-xs text-red-500">{ephemeralError}</p>
+            )}
           </div>
 
           {/* Temporal jump (optional) */}
