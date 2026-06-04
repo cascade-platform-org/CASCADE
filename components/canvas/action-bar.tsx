@@ -21,6 +21,7 @@ import {
   selectN,
 } from "@/store/config-store";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import type { EventDefinition } from "@/lib/schemas/config";
 
@@ -71,7 +72,7 @@ export function ActionBar() {
       });
     }
 
-    state.pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "manual_functionality_update",
@@ -329,7 +330,7 @@ function EventButton({ event }: { event: EventDefinition }) {
 
     // Events always apply to the full registry regardless of the scope toggle
     // (CONTEXT.md: "Event application always writes to the global registry").
-    storeState.pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "event_applied",

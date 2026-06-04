@@ -10,6 +10,7 @@
 import { nanoid } from "nanoid";
 import { InterCanvasEdgeDialog } from "./inter-canvas-edge-dialog";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
@@ -27,7 +28,6 @@ export function InterCanvasEdgeDialogWired() {
   const upsertEdge = useCanvasStore((s) => s.upsertEdge);
   const addEdgeToCanvas = useCanvasStore((s) => s.addEdgeToCanvas);
   const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
-  const pushUpdateEntry = useCanvasStore((s) => s.pushUpdateEntry);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const n = useConfigStore(selectN);
@@ -76,7 +76,7 @@ export function InterCanvasEdgeDialogWired() {
     addEdgeToCanvas(edge.id, activeCanvas!.id);
     addEdgeToCanvas(edge.id, targetCanvasId);
 
-    pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "graph_update",

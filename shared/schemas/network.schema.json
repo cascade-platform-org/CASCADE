@@ -1,0 +1,1156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CategoryDependencyProfile": {
+      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N where N = fully dependent (strict thresholds),\n1 = barely dependent (high tolerance). Inverse of the Functionality scale.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
+      "properties": {
+        "dependency_level": {
+          "minimum": 1,
+          "title": "Dependency Level",
+          "type": "integer"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum throughput for this category.",
+          "title": "Capacity"
+        },
+        "backup": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backup"
+        },
+        "backup_duration": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours. SourceToDemands only.",
+          "title": "Backup Duration"
+        },
+        "demand": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Resource amount requested. SourceToDemands only.",
+          "title": "Demand"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Flow allocation priority. SourceToDemands only.",
+          "title": "Priority"
+        }
+      },
+      "required": [
+        "dependency_level"
+      ],
+      "title": "CategoryDependencyProfile",
+      "type": "object"
+    },
+    "GeoCoords": {
+      "description": "Geographic point in the CRS declared by the parent Canvas.\nDefaults to WGS84 (EPSG:4326): lng/lat in decimal degrees,\nalt in metres on the WGS84 ellipsoid.",
+      "properties": {
+        "lng": {
+          "title": "Lng",
+          "type": "number"
+        },
+        "lat": {
+          "title": "Lat",
+          "type": "number"
+        },
+        "alt": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alt"
+        },
+        "crs": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the parent Canvas CRS for this point. Inherits Canvas.crs when absent.",
+          "title": "Crs"
+        }
+      },
+      "required": [
+        "lng",
+        "lat"
+      ],
+      "title": "GeoCoords",
+      "type": "object"
+    },
+    "Position": {
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "Node": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "functionality": {
+          "minimum": 1,
+          "title": "Functionality",
+          "type": "integer"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "node_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Type"
+        },
+        "node_categories": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Categories"
+        },
+        "functionality_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours",
+          "title": "Functionality Time"
+        },
+        "direct_damage": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direct Damage"
+        },
+        "expected_repair_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours",
+          "title": "Expected Repair Time"
+        },
+        "importance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Importance"
+        },
+        "cost_of_disservice_per_day": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Of Disservice Per Day"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Position"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "geo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoCoords"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "supply_capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supply Capacity"
+        },
+        "category_dependency_profiles": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/CategoryDependencyProfile"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category Dependency Profiles"
+        },
+        "vulnerability_levels": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vulnerability Levels"
+        },
+        "responsibility_share": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
+          "title": "Responsibility Share"
+        },
+        "rules": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rules"
+        },
+        "properties": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "id",
+        "functionality"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "Edge": {
+      "description": "Edges carry no category or category_dependency_profiles.\nThe engine infers which categories flow through an edge from the\nintersection of the source node's supply and the target node's demands.\n\nWhether an edge is \"inter-canvas\" is a UI concern only: an edge whose\ntarget node is not in the currently rendered Canvas's node_ids is drawn\nas an outbound inter-canvas edge. No special type or field is needed.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "functionality": {
+          "minimum": 1,
+          "title": "Functionality",
+          "type": "integer"
+        },
+        "functionality_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours",
+          "title": "Functionality Time"
+        },
+        "direct_damage": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direct Damage"
+        },
+        "expected_repair_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours",
+          "title": "Expected Repair Time"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capacity"
+        },
+        "vulnerability_levels": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vulnerability Levels"
+        },
+        "responsibility_share": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1.",
+          "title": "Responsibility Share"
+        },
+        "rules": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rules"
+        },
+        "properties": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "functionality"
+      ],
+      "title": "Edge",
+      "type": "object"
+    },
+    "Graph": {
+      "description": "The mathematical structure of one Entity: a typed set of element references.\n\n`graph_type` selects the engine's heuristic pipeline for this subgraph and\nassociates the Canvas with its Entity type.\n\n`node_ids` and `edge_ids` are references into the Project-level element\nregistry (Project.nodes / Project.edges). The same element ID may appear\nin multiple Graphs \u2014 the registry holds the single authoritative state.",
+      "properties": {
+        "graph_type": {
+          "description": "Engine-known graph type identifier (e.g. 'water', 'power', 'ict', 'organisation'). Available types are returned by GET /api/engine/capabilities.",
+          "title": "Graph Type",
+          "type": "string"
+        },
+        "node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Node Ids",
+          "type": "array"
+        },
+        "edge_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Edge Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "graph_type"
+      ],
+      "title": "Graph",
+      "type": "object"
+    },
+    "Canvas": {
+      "description": "Named UI container for a Graph. Carries display metadata only.\nThe backend identifies subgraphs via Canvas.id and dispatches heuristics\nvia Canvas.graph.graph_type.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hex colour string for canvas tabs and layer controls, e.g. '#3b82f6'.",
+          "title": "Color"
+        },
+        "crs": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "EPSG code for the CRS of node geo fields. Defaults to EPSG:4326.",
+          "title": "Crs"
+        },
+        "georeferenced": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Georeferenced"
+        },
+        "graph": {
+          "$ref": "#/$defs/Graph"
+        }
+      },
+      "required": [
+        "id",
+        "graph"
+      ],
+      "title": "Canvas",
+      "type": "object"
+    },
+    "GraphSnapshot": {
+      "description": "Point-in-time serialisation of the full project graph state.\nCaptures both the element registry and the Canvas membership structure.\nUsed as before/after state in AnyUpdateEntry.",
+      "properties": {
+        "nodes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Node"
+          },
+          "title": "Nodes",
+          "type": "object"
+        },
+        "edges": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Edge"
+          },
+          "title": "Edges",
+          "type": "object"
+        },
+        "canvases": {
+          "items": {
+            "$ref": "#/$defs/Canvas"
+          },
+          "title": "Canvases",
+          "type": "array"
+        }
+      },
+      "title": "GraphSnapshot",
+      "type": "object"
+    },
+    "PropagationMeta": {
+      "description": "Metadata from a Propagation run, stored alongside an AnyUpdateEntry.\nLighter than PropagationResult \u2014 no per-element updates, just run stats.",
+      "properties": {
+        "scope": {
+          "enum": [
+            "local",
+            "global"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "iterations": {
+          "minimum": 0,
+          "title": "Iterations",
+          "type": "integer"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "computed_at": {
+          "title": "Computed At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "iterations",
+        "computed_at"
+      ],
+      "title": "PropagationMeta",
+      "type": "object"
+    },
+    "AnyUpdateEntry": {
+      "description": "One entry in the Any Update history: a before/after GraphSnapshot pair.\n\nCreated for every Any Update. CTRL+Z pops from this list.\nCapped at 20 entries (latest first) by the store layer.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "update_type": {
+          "enum": [
+            "event_applied",
+            "event_cleared",
+            "propagation",
+            "manual_functionality_update",
+            "graph_update"
+          ],
+          "title": "Update Type",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "enum": [
+                "local",
+                "global"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "canvas_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canvas Id"
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
+        "before": {
+          "$ref": "#/$defs/GraphSnapshot"
+        },
+        "after": {
+          "$ref": "#/$defs/GraphSnapshot"
+        },
+        "propagation_meta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropagationMeta"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mutation_reversal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Populated only on event_applied entries. Keys are '<elementId>.<fieldName>' (same dot-notation as EventDefinition.attribute_mutations). Values are pre-event field values captured immediately before the event was applied. Covers all three effect channels: vulnerability_levels drops (\u2192 functionality), direct_damage_effects, and attribute_mutations. Used by clear-event to revert only the mutated fields, preserving changes made to other fields after the event was applied.",
+          "title": "Mutation Reversal"
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "update_type",
+        "label",
+        "before",
+        "after"
+      ],
+      "title": "AnyUpdateEntry",
+      "type": "object"
+    },
+    "ElementUpdate": {
+      "description": "Engine's update for a single Element (node or edge) after a Propagation.\n\n`id` is a globally unique Element ID \u2014 look it up directly in\nProject.nodes or Project.edges. No canvas_id needed.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "functionality": {
+          "minimum": 1,
+          "title": "Functionality",
+          "type": "integer"
+        },
+        "functionality_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Functionality Time"
+        },
+        "direct_damage": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direct Damage"
+        },
+        "expected_repair_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Repair Time"
+        },
+        "responsibility_share": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
+          "title": "Responsibility Share"
+        },
+        "properties": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "id",
+        "functionality"
+      ],
+      "title": "ElementUpdate",
+      "type": "object"
+    },
+    "PropagationResult": {
+      "properties": {
+        "scope": {
+          "enum": [
+            "local",
+            "global"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "updates": {
+          "items": {
+            "$ref": "#/$defs/ElementUpdate"
+          },
+          "title": "Updates",
+          "type": "array"
+        },
+        "computed_at": {
+          "format": "date-time",
+          "title": "Computed At",
+          "type": "string"
+        },
+        "iterations": {
+          "minimum": 0,
+          "title": "Iterations",
+          "type": "integer"
+        },
+        "warnings": {
+          "description": "Non-fatal engine warnings, e.g. convergence not reached.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scope",
+        "updates",
+        "computed_at",
+        "iterations"
+      ],
+      "title": "PropagationResult",
+      "type": "object"
+    },
+    "ScorecardEntry": {
+      "description": "One entry in the Scorecard: up to three Scenario snapshots explicitly saved\nby the user. The history pattern Event \u2192 Propagation \u2192 (Temporal Jump \u2192\nPropagation)* maps directly onto the three fields.\n\n`before_propagation`   \u2014 state just before the most recent Propagation\n    (post-Event, post-manual-edit). Always present.\n`after_propagation`    \u2014 state after the Propagation. Absent when no\n    Propagation has been run (Manual What-If entry).\n`after_temporal_jump`  \u2014 state after one or more Temporal Jump events +\n    Propagations. Absent when no Temporal Jump was run or requested.\n`temporal_jump_hours`  \u2014 total hours elapsed across all Temporal Jumps that\n    produced `after_temporal_jump`. Absent when `after_temporal_jump` is absent.\n`propagation_result`   \u2014 raw engine delta from the Propagation that produced\n    `after_propagation`. Absent for Manual What-If entries.\n\nDerived metrics are computed client-side from the snapshots; never stored.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
+        "before_propagation": {
+          "$ref": "#/$defs/GraphSnapshot"
+        },
+        "after_propagation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "after_temporal_jump": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "temporal_jump_hours": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Jump Hours"
+        },
+        "propagation_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropagationResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "before_propagation_image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before Propagation Image"
+        },
+        "after_propagation_image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Propagation Image"
+        },
+        "after_temporal_jump_image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Temporal Jump Image"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "created_at",
+        "before_propagation"
+      ],
+      "title": "ScorecardEntry",
+      "type": "object"
+    },
+    "ProjectMeta": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ProjectMeta",
+      "type": "object"
+    },
+    "Project": {
+      "properties": {
+        "version": {
+          "const": "2.0",
+          "title": "Version",
+          "type": "string"
+        },
+        "meta": {
+          "$ref": "#/$defs/ProjectMeta"
+        },
+        "nodes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Node"
+          },
+          "description": "Global element registry. Keys are globally unique node IDs.",
+          "title": "Nodes",
+          "type": "object"
+        },
+        "edges": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Edge"
+          },
+          "description": "Global element registry. Keys are globally unique edge IDs.",
+          "title": "Edges",
+          "type": "object"
+        },
+        "canvases": {
+          "description": "Each Canvas holds a Graph whose node_ids/edge_ids reference the global registry. An element may appear in multiple Canvases.",
+          "items": {
+            "$ref": "#/$defs/Canvas"
+          },
+          "title": "Canvases",
+          "type": "array"
+        },
+        "update_history": {
+          "description": "Ring buffer of Any Update entries (before/after GraphSnapshots), latest first. CTRL+Z pops from this list. Capped at 20 entries by the store layer.",
+          "items": {
+            "$ref": "#/$defs/AnyUpdateEntry"
+          },
+          "title": "Update History",
+          "type": "array"
+        },
+        "scorecard": {
+          "description": "User-curated atlas of named Scenarios and their Propagation results. Persisted in the project file. Derived metrics are computed client-side from each entry's snapshot and never stored here.",
+          "items": {
+            "$ref": "#/$defs/ScorecardEntry"
+          },
+          "title": "Scorecard",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "meta"
+      ],
+      "title": "Project",
+      "type": "object"
+    }
+  }
+}

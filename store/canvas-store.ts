@@ -1,5 +1,5 @@
 /**
- * canvas-store.ts — Single source of truth for all graph data.
+ * canvas-store.ts — Global element registry and Canvas lifecycle.
  *
  * Data shape (ADR-0001):
  *   Project.nodes  = Record<id, Node>   ← global registry
@@ -10,24 +10,25 @@
  * (node_ids lists) without duplication — the registry is the single source of truth.
  * "Inter-canvas edge" is a UI render-time concept only (no field in the data model).
  *
- * network-store.ts is intentionally thin: it holds UI selection state only.
+ * Concerns intentionally NOT in this store:
+ *   - update_history / redo stack → history-store.ts
+ *   - scorecard entries           → scorecard-store.ts
+ *   - UI selection / hover        → network-store.ts
  */
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type {
-  AnyUpdateEntry,
   Canvas,
   Edge,
   Graph,
   GraphSnapshot,
   Node,
   Project,
-  ScorecardEntry,
 } from "@/lib/schemas";
 import type { ElementUpdate, PropagationResult, EventDefinition } from "@/lib/schemas";
-
-const HISTORY_LIMIT = 20;
+import { useHistoryStore } from "@/store/history-store";
+import { useScorecardStore } from "@/store/scorecard-store";
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -44,20 +45,8 @@ export interface CanvasState {
   canvases: Record<string, Canvas>;
   /** Currently visible Canvas. Null only before the first Canvas is created. */
   activeCanvasId: string | null;
-  /**
-   * Ring buffer of Any Update entries, latest first.
-   * CTRL+Z pops from this list.
-   */
-  updateHistory: AnyUpdateEntry[];
-  /**
-   * Ephemeral redo stack — populated by undo(), drained by redo(), cleared by
-   * any new pushUpdateEntry(). Never persisted to the project file.
-   */
-  redoStack: AnyUpdateEntry[];
   /** Project-level metadata (name, description). */
   projectMeta: { name: string; description?: string };
-  /** Saved Scorecard entries, ordered by created_at ascending. */
-  scorecard: import("@/lib/schemas").ScorecardEntry[];
 }
 
 // ---------------------------------------------------------------------------
@@ -96,16 +85,11 @@ export interface CanvasActions {
    */
   applyPropagationResult: (result: PropagationResult) => void;
 
-  // --- Any Update history ---
-  pushUpdateEntry: (entry: AnyUpdateEntry) => void;
-  /** Pop the most recent update entry. Reads committed state before mutating — no proxy bug. */
-  popUpdateEntry: () => AnyUpdateEntry | undefined;
-  /** Remove a specific entry by id (used by event-clear). */
-  removeUpdateEntry: (id: string) => void;
-  /** Restore a GraphSnapshot (undo/redo). Touches only nodes/edges/canvases. */
+  // --- Snapshot restore (used by undo/redo) ---
+  /** Restore a GraphSnapshot. Touches only nodes/edges/canvases. */
   restoreSnapshot: (snapshot: GraphSnapshot) => void;
-  /** Clear the ephemeral redo stack (call after any out-of-band history mutation). */
-  clearRedoStack: () => void;
+
+  // --- Undo / Redo (coordinate registry + history-store) ---
   /**
    * Undo the most recent Any Graph Update. Moves the entry to the redo stack and
    * restores the entry's `before` snapshot. Returns false when history is empty.
@@ -113,8 +97,8 @@ export interface CanvasActions {
   undo: () => boolean;
   /**
    * Redo the most recently undone Any Graph Update. Moves the entry back to the
-   * undo history and restores the entry's `after` snapshot. Returns false when the
-   * redo stack is empty.
+   * undo history and restores the entry's `after` snapshot. Returns false when
+   * the redo stack is empty.
    */
   redo: () => boolean;
 
@@ -123,14 +107,12 @@ export interface CanvasActions {
    * Apply an EventDefinition to the graph:
    *   1. Captures pre-event values of all fields the event will touch.
    *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_mutations.
-   *   3. Pushes an event_applied history entry with mutation_reversal populated.
-   * The caller supplies the event definition and the N scale value.
+   *   3. Pushes an event_applied history entry (via history-store) with mutation_reversal populated.
    */
-  applyEvent: (event: import("@/lib/schemas").EventDefinition, n: number) => void;
+  applyEvent: (event: EventDefinition, n: number) => void;
   /**
    * Revert the most recent event_applied entry using mutation_reversal (field-by-field).
    * Falls back to full snapshot restore for legacy entries that predate mutation_reversal.
-   * Removes the entry and clears the redo stack.
    * Returns false when no event_applied entry exists.
    */
   clearEvent: () => boolean;
@@ -139,24 +121,15 @@ export interface CanvasActions {
   /**
    * Copy selected nodes (and internal edges) to targetCanvasId.
    * Nodes are referenced by ID — no new data created. Edges whose both endpoints
-   * are in nodeIds are also added to the target canvas. Edges with one endpoint
-   * outside nodeIds become inter-canvas edges at render time (no special type).
+   * are in nodeIds are also added to the target canvas.
    * Records a graph_update history entry.
    */
   copyNodesToCanvas: (nodeIds: string[], targetCanvasId: string) => void;
   /**
    * Move selected nodes (and internal edges) from sourceCanvasId to targetCanvasId.
-   * Nodes and internal edges are removed from the source canvas and added to the
-   * target canvas. Edges with one endpoint outside nodeIds are left in the source
-   * canvas and become inter-canvas edges at render time.
    * Records a graph_update history entry.
    */
   moveNodesToCanvas: (nodeIds: string[], sourceCanvasId: string, targetCanvasId: string) => void;
-
-  // --- Scorecard ---
-  addScorecardEntry: (entry: ScorecardEntry) => void;
-  updateScorecardEntry: (id: string, patch: Partial<ScorecardEntry>) => void;
-  removeScorecardEntry: (id: string) => void;
 
   // --- Project meta ---
   setProjectMeta: (meta: { name?: string; description?: string }) => void;
@@ -205,10 +178,7 @@ const emptyState: CanvasState = {
   canvasOrder: [],
   canvases: {},
   activeCanvasId: null,
-  updateHistory: [],
-  redoStack: [],
   projectMeta: { name: "Untitled Project" },
-  scorecard: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -230,10 +200,8 @@ export const useCanvasStore = create<CanvasStore>()(
     removeNode(nodeId) {
       set((state) => {
         delete state.nodes[nodeId];
-        // Remove from all Canvas memberships
         for (const canvas of Object.values(state.canvases)) {
           canvas.graph.node_ids = canvas.graph.node_ids.filter((id) => id !== nodeId);
-          // Also remove edges whose source/target was this node
           const affectedEdgeIds = canvas.graph.edge_ids.filter((eid) => {
             const e = state.edges[eid];
             return e && (e.source === nodeId || e.target === nodeId);
@@ -298,7 +266,6 @@ export const useCanvasStore = create<CanvasStore>()(
         if (state.activeCanvasId === canvasId) {
           state.activeCanvasId = state.canvasOrder[0] ?? null;
         }
-        // Note: elements in the registry are NOT deleted — they may belong to other Canvases
       });
     },
 
@@ -372,7 +339,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     // -------------------------------------------------------------------------
-    // Propagation result — update global registry directly by ID
+    // Propagation result
     // -------------------------------------------------------------------------
 
     applyPropagationResult(result) {
@@ -388,36 +355,8 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     // -------------------------------------------------------------------------
-    // Any Update history
+    // Snapshot restore
     // -------------------------------------------------------------------------
-
-    pushUpdateEntry(entry) {
-      set((state) => {
-        state.updateHistory.unshift(entry);
-        if (state.updateHistory.length > HISTORY_LIMIT) {
-          state.updateHistory.length = HISTORY_LIMIT;
-        }
-        // Any new action invalidates the redo stack.
-        state.redoStack = [];
-      });
-    },
-
-    popUpdateEntry() {
-      // Read from the committed state BEFORE mutating — avoids the revoked Immer
-      // proxy that would be returned if we read `state.updateHistory[0]` inside set().
-      const entry = get().updateHistory[0];
-      if (entry !== undefined) {
-        set((state) => { state.updateHistory.splice(0, 1); });
-      }
-      return entry;
-    },
-
-    removeUpdateEntry(id) {
-      set((state) => {
-        const idx = state.updateHistory.findIndex((e) => e.id === id);
-        if (idx !== -1) state.updateHistory.splice(idx, 1);
-      });
-    },
 
     restoreSnapshot(snapshot) {
       set((state) => {
@@ -437,41 +376,21 @@ export const useCanvasStore = create<CanvasStore>()(
       });
     },
 
-    clearRedoStack() {
-      set((state) => { state.redoStack = []; });
-    },
+    // -------------------------------------------------------------------------
+    // Undo / Redo — coordinate registry with history-store
+    // -------------------------------------------------------------------------
 
     undo() {
-      // Read from committed state to get plain objects — no proxy involved.
-      const current = get();
-      const entry = current.updateHistory[0];
+      const entry = useHistoryStore.getState().shiftToRedo();
       if (!entry) return false;
-      set((draft) => {
-        draft.updateHistory.splice(0, 1);
-        draft.redoStack.unshift(entry);
-        if (draft.redoStack.length > HISTORY_LIMIT) {
-          draft.redoStack.length = HISTORY_LIMIT;
-        }
-      });
-      // restoreSnapshot calls set() internally; it reads get() for the canvas
-      // membership check, so it always sees the post-splice state above.
-      current.restoreSnapshot(entry.before);
+      get().restoreSnapshot(entry.before);
       return true;
     },
 
     redo() {
-      const current = get();
-      const entry = current.redoStack[0];
+      const entry = useHistoryStore.getState().shiftFromRedo();
       if (!entry) return false;
-      set((draft) => {
-        draft.redoStack.splice(0, 1);
-        draft.updateHistory.unshift(entry);
-        if (draft.updateHistory.length > HISTORY_LIMIT) {
-          draft.updateHistory.length = HISTORY_LIMIT;
-        }
-        // Do NOT clear redoStack here — remaining entries must survive.
-      });
-      current.restoreSnapshot(entry.after);
+      get().restoreSnapshot(entry.after);
       return true;
     },
 
@@ -483,7 +402,6 @@ export const useCanvasStore = create<CanvasStore>()(
       const state = get();
       const reversal: Record<string, unknown> = {};
 
-      // Helper: record pre-event value and return the elementId if the element exists.
       function capture(elementId: string, field: string, value: unknown) {
         reversal[`${elementId}.${field}`] = value;
       }
@@ -526,9 +444,7 @@ export const useCanvasStore = create<CanvasStore>()(
       // ── 2. direct_damage_effects ──
       const damageEntries = Object.entries(event.direct_damage_effects ?? {});
       for (const [elementId, effect] of damageEntries) {
-        const node = state.nodes[elementId];
-        const edge = state.edges[elementId];
-        const el: Node | Edge | undefined = node ?? edge;
+        const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
         if (!el) continue;
         capture(elementId, "direct_damage", el.direct_damage ?? false);
         capture(elementId, "expected_repair_time", el.expected_repair_time ?? null);
@@ -542,7 +458,6 @@ export const useCanvasStore = create<CanvasStore>()(
         const field = key.slice(dotIdx + 1);
         const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
         if (!el) continue;
-        // Capture current value (may be undefined if field didn't exist before).
         capture(elementId, field, (el as Record<string, unknown>)[field] ?? null);
       }
 
@@ -550,7 +465,6 @@ export const useCanvasStore = create<CanvasStore>()(
       const before = state.toGraphSnapshot();
 
       set((draft) => {
-        // temporal jump: update functionality_time and expire elements
         for (const [id, { functionality, functionality_time }] of temporalExpired) {
           if (draft.nodes[id]) {
             draft.nodes[id].functionality_time = functionality_time;
@@ -560,12 +474,10 @@ export const useCanvasStore = create<CanvasStore>()(
             draft.edges[id].functionality = functionality;
           }
         }
-        // vulnerability drops
         for (const [id, imposed] of vuln) {
           if (draft.nodes[id]) draft.nodes[id].functionality = imposed;
           else if (draft.edges[id]) draft.edges[id].functionality = imposed;
         }
-        // direct_damage_effects
         for (const [elementId, effect] of damageEntries) {
           if (draft.nodes[elementId]) {
             draft.nodes[elementId].direct_damage = true;
@@ -575,7 +487,6 @@ export const useCanvasStore = create<CanvasStore>()(
             draft.edges[elementId].expected_repair_time = effect.expected_repair_time;
           }
         }
-        // attribute_mutations
         for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {
           const dotIdx = key.indexOf(".");
           if (dotIdx === -1) continue;
@@ -591,7 +502,7 @@ export const useCanvasStore = create<CanvasStore>()(
 
       const after = get().toGraphSnapshot();
 
-      get().pushUpdateEntry({
+      useHistoryStore.getState().pushUpdateEntry({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         update_type: "event_applied",
@@ -604,12 +515,11 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     clearEvent() {
-      const state = get();
-      const entry = state.updateHistory.find((h) => h.update_type === "event_applied");
+      const historyState = useHistoryStore.getState();
+      const entry = historyState.updateHistory.find((h) => h.update_type === "event_applied");
       if (!entry) return false;
 
       if (entry.mutation_reversal && Object.keys(entry.mutation_reversal).length > 0) {
-        // Surgical field-by-field revert: only touch the fields the event mutated.
         set((draft) => {
           for (const [key, oldVal] of Object.entries(entry.mutation_reversal!)) {
             const dotIdx = key.indexOf(".");
@@ -624,12 +534,11 @@ export const useCanvasStore = create<CanvasStore>()(
           }
         });
       } else {
-        // Legacy fallback: full snapshot restore for entries without mutation_reversal.
-        state.restoreSnapshot(entry.before);
+        get().restoreSnapshot(entry.before);
       }
 
-      state.removeUpdateEntry(entry.id);
-      state.clearRedoStack();
+      historyState.removeUpdateEntry(entry.id);
+      historyState.clearRedoStack();
       return true;
     },
 
@@ -654,7 +563,7 @@ export const useCanvasStore = create<CanvasStore>()(
           if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
         }
       });
-      get().pushUpdateEntry({
+      useHistoryStore.getState().pushUpdateEntry({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         update_type: "graph_update",
@@ -685,7 +594,7 @@ export const useCanvasStore = create<CanvasStore>()(
           if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
         }
       });
-      get().pushUpdateEntry({
+      useHistoryStore.getState().pushUpdateEntry({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         update_type: "graph_update",
@@ -696,24 +605,13 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     // -------------------------------------------------------------------------
-    // Scorecard
+    // Project meta
     // -------------------------------------------------------------------------
 
-    addScorecardEntry(entry) {
-      set((state) => { state.scorecard.push(entry); });
-    },
-
-    updateScorecardEntry(id, patch) {
+    setProjectMeta(meta) {
       set((state) => {
-        const idx = state.scorecard.findIndex((e) => e.id === id);
-        if (idx !== -1) Object.assign(state.scorecard[idx], patch);
-      });
-    },
-
-    removeScorecardEntry(id) {
-      set((state) => {
-        const idx = state.scorecard.findIndex((e) => e.id === id);
-        if (idx !== -1) state.scorecard.splice(idx, 1);
+        if (meta.name !== undefined) state.projectMeta.name = meta.name;
+        if (meta.description !== undefined) state.projectMeta.description = meta.description;
       });
     },
 
@@ -730,13 +628,6 @@ export const useCanvasStore = create<CanvasStore>()(
       };
     },
 
-    setProjectMeta(meta) {
-      set((state) => {
-        if (meta.name !== undefined) state.projectMeta.name = meta.name;
-        if (meta.description !== undefined) state.projectMeta.description = meta.description;
-      });
-    },
-
     toProject(): Project {
       const state = get();
       return {
@@ -750,8 +641,8 @@ export const useCanvasStore = create<CanvasStore>()(
         nodes: { ...state.nodes },
         edges: { ...state.edges },
         canvases: state.canvasOrder.map((id) => state.canvases[id]),
-        update_history: state.updateHistory,
-        scorecard: state.scorecard,
+        update_history: useHistoryStore.getState().updateHistory,
+        scorecard: useScorecardStore.getState().scorecard,
       };
     },
 
@@ -768,15 +659,13 @@ export const useCanvasStore = create<CanvasStore>()(
         state.canvases = canvases;
         state.canvasOrder = canvasOrder;
         state.activeCanvasId = canvasOrder[0] ?? null;
-        state.updateHistory = project.update_history ?? [];
-        state.scorecard = project.scorecard ?? [];
-        // Redo stack is session-only — never restored from a project file.
-        state.redoStack = [];
         state.projectMeta = {
           name: project.meta.name,
           description: project.meta.description,
         };
       });
+      useHistoryStore.getState().loadHistory(project.update_history ?? []);
+      useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
     },
 
     loadProject(project) {
@@ -785,6 +674,8 @@ export const useCanvasStore = create<CanvasStore>()(
 
     reset() {
       set(() => ({ ...emptyState }));
+      useHistoryStore.getState().reset();
+      useScorecardStore.getState().reset();
     },
   })),
 );

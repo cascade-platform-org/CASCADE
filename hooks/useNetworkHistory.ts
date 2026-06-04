@@ -7,11 +7,12 @@
 
 import { useCallback } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { useUiStore } from "@/store/ui-store";
 
 export function useNetworkHistory() {
-  const canUndo = useCanvasStore((s) => s.updateHistory.length > 0);
-  const canRedo = useCanvasStore((s) => s.redoStack.length > 0);
+  const canUndo = useHistoryStore((s) => s.updateHistory.length > 0);
+  const canRedo = useHistoryStore((s) => s.redoStack.length > 0);
 
   const undo = useCallback(() => {
     const undone = useCanvasStore.getState().undo();

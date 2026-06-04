@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect } from "react";
 import { ChevronDown, ChevronRight, X, Plus, Trash2, AlertTriangle, Copy, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
@@ -41,7 +42,7 @@ function withHistory(
   // Re-read via getState() after the mutation so the `after` snapshot reflects
   // the committed state, not the object captured before updateFn ran.
   const after = useCanvasStore.getState().toGraphSnapshot();
-  store.pushUpdateEntry({
+  useHistoryStore.getState().pushUpdateEntry({
     id: nanoid(),
     timestamp: new Date().toISOString(),
     update_type,

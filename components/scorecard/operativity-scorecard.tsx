@@ -19,6 +19,8 @@ import { X, BookMarked, Clock, AlertTriangle, Check } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
+import { useScorecardStore } from "@/store/scorecard-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import {
@@ -112,9 +114,9 @@ export function SaveScorecardDialog({
   defaultLabel = "",
   eventId,
 }: SaveScorecardDialogProps) {
-  const updateHistory = useCanvasStore((s) => s.updateHistory);
-  const scorecard = useCanvasStore((s) => s.scorecard);
-  const addScorecardEntry = useCanvasStore((s) => s.addScorecardEntry);
+  const updateHistory = useHistoryStore((s) => s.updateHistory);
+  const scorecard = useScorecardStore((s) => s.scorecard);
+  const addScorecardEntry = useScorecardStore((s) => s.addScorecardEntry);
   const config = useConfigStore((s) => s.config);
   const pushToast = useUiStore((s) => s.pushToast);
 

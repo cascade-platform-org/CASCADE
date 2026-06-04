@@ -47,6 +47,7 @@ import { nanoid } from "nanoid";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { NodeSearch } from "./node-search";
 import { ZoomSlider } from "./zoom-slider";
 import { Lasso } from "./lasso";
@@ -563,7 +564,6 @@ export function FlowCanvas() {
   const removeEdge = useCanvasStore((s) => s.removeEdge);
   const addNodeToCanvas = useCanvasStore((s) => s.addNodeToCanvas);
   const addEdgeToCanvas = useCanvasStore((s) => s.addEdgeToCanvas);
-  const pushUpdateEntry = useCanvasStore((s) => s.pushUpdateEntry);
   const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
@@ -648,7 +648,7 @@ export function FlowCanvas() {
     const before = toGraphSnapshot();
     updateNode(rfNode.id, { position: rfNode.position });
     // toGraphSnapshot reads get() internally — sees the post-update state here.
-    pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "graph_update",
@@ -657,7 +657,7 @@ export function FlowCanvas() {
       before,
       after: toGraphSnapshot(),
     });
-  }, [updateNode, toGraphSnapshot, pushUpdateEntry, activeCanvas]);
+  }, [updateNode, toGraphSnapshot, activeCanvas]);
 
   // ── Click → select ──
   // Ctrl/Meta+click: XOR-toggle into a homogeneous selection (nodes only OR edges only).
@@ -766,7 +766,7 @@ export function FlowCanvas() {
     };
     upsertEdge(edge);
     addEdgeToCanvas(edge.id, activeCanvas.id);
-    pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "graph_update",
@@ -775,7 +775,7 @@ export function FlowCanvas() {
       before,
       after: toGraphSnapshot(),
     });
-  }, [activeCanvas, n, upsertEdge, addEdgeToCanvas, pushUpdateEntry, toGraphSnapshot]);
+  }, [activeCanvas, n, upsertEdge, addEdgeToCanvas, toGraphSnapshot]);
 
   // ── Delete selected ──
   const deleteSelected = useCallback(() => {
@@ -792,7 +792,7 @@ export function FlowCanvas() {
     selectedEdgeIds.forEach((id) => removeEdge(id));
     clearSelection();
     if (!activeCanvas) return;
-    pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "graph_update",
@@ -801,7 +801,7 @@ export function FlowCanvas() {
       before,
       after: toGraphSnapshot(),
     });
-  }, [selectedNodeIds, selectedEdgeIds, removeNode, removeEdge, clearSelection, toGraphSnapshot, pushUpdateEntry, activeCanvas]);
+  }, [selectedNodeIds, selectedEdgeIds, removeNode, removeEdge, clearSelection, toGraphSnapshot, activeCanvas]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
@@ -865,7 +865,7 @@ export function FlowCanvas() {
           addEdgeToCanvas(newId, activeCanvas.id);
         });
 
-        pushUpdateEntry({
+        useHistoryStore.getState().pushUpdateEntry({
           id: nanoid(),
           timestamp: new Date().toISOString(),
           update_type: "graph_update",
@@ -924,7 +924,7 @@ export function FlowCanvas() {
     deleteSelected, activeCanvas, selectAll, setInspectorOpen,
     selectedNodeIds, selectedEdgeIds, allNodes, allEdges,
     copyToClipboard, clipboard, upsertNode, upsertEdge,
-    addNodeToCanvas, addEdgeToCanvas, pushUpdateEntry,
+    addNodeToCanvas, addEdgeToCanvas,
     toGraphSnapshot, pushToast,
   ]);
 
@@ -943,7 +943,7 @@ export function FlowCanvas() {
     };
     upsertNode(node);
     addNodeToCanvas(node.id, activeCanvas.id);
-    pushUpdateEntry({
+    useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "graph_update",
@@ -954,7 +954,7 @@ export function FlowCanvas() {
     });
     selectNode(node.id);
     setInspectorOpen(true);
-  }, [activeTool, activeCanvas, n, screenToFlowPosition, upsertNode, addNodeToCanvas, pushUpdateEntry, toGraphSnapshot, selectNode, setInspectorOpen]);
+  }, [activeTool, activeCanvas, n, screenToFlowPosition, upsertNode, addNodeToCanvas, toGraphSnapshot, selectNode, setInspectorOpen]);
 
   // ── Right-click on node → context menu (stub) ──
   const onNodeContextMenu = useCallback((_: React.MouseEvent, rfNode: RFNode) => {

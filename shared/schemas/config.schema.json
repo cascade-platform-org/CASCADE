@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "FunctionalityScaleLevel": {
+      "properties": {
+        "level": {
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "color": {
+          "title": "Color",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "label",
+        "color"
+      ],
+      "title": "FunctionalityScaleLevel",
+      "type": "object"
+    },
+    "CategoryDefinition": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "category_type": {
+          "title": "Category Type",
+          "type": "string"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        }
+      },
+      "required": [
+        "name",
+        "category_type"
+      ],
+      "title": "CategoryDefinition",
+      "type": "object"
+    },
+    "DirectDamageEffect": {
+      "properties": {
+        "expected_repair_time": {
+          "description": "Hours",
+          "minimum": 0,
+          "title": "Expected Repair Time",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expected_repair_time"
+      ],
+      "title": "DirectDamageEffect",
+      "type": "object"
+    },
+    "EventDefinition": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "hazard",
+            "disservice",
+            "temporal_jump"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "frequency_per_10y": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Frequency Per 10Y",
+          "type": "number"
+        },
+        "expected_recovery_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours until self-resolution. Disservices only.",
+          "title": "Expected Recovery Time"
+        },
+        "duration_hours": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hours to advance the clock. Temporal Jump events only. Used as the default when saving to Scorecard.",
+          "title": "Duration Hours"
+        },
+        "direct_damage_effects": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/DirectDamageEffect"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-element effects. Hazards only. Key = ElementId.",
+          "title": "Direct Damage Effects"
+        },
+        "attribute_mutations": {
+          "additionalProperties": true,
+          "description": "Keys are dot-notation strings \"<elementId>.<fieldName>\". Values are any JSON-serialisable type. May overwrite any Element field, including first-class fields like `functionality` and `direct_damage`. `direct_damage_effects` is kept as a typed, engine-recognised complement \u2014 do not express physical damage solely via attribute_mutations.",
+          "title": "Attribute Mutations",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type"
+      ],
+      "title": "EventDefinition",
+      "type": "object"
+    },
+    "HeuristicConfig": {
+      "description": "One heuristic step in a graph type's propagation pipeline.\n\n`id` must match a heuristic known to the engine (see GET /api/engine/capabilities).\n`params` is an open dict of heuristic-specific tuning parameters; the engine\nvalidates keys and value ranges \u2014 the config layer treats them as opaque.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heuristic-specific parameters. Keys and value ranges are engine-defined.",
+          "title": "Params"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "HeuristicConfig",
+      "type": "object"
+    },
+    "GraphTypeConfig": {
+      "description": "Per-graph-type override of the engine's default heuristic pipeline.\n\nThe engine uses this to select and order the heuristics it applies when\npropagating across a canvas whose graph_type matches `name`.\nIf a canvas's graph_type has no entry here the engine falls back to its\nbuilt-in default pipeline for that type.\n\nThe ordered `heuristics` list is the full pipeline override \u2014 the engine\nruns them in the declared order.  Disable individual steps via `enabled`\nrather than removing them so the intent is legible in saved config files.",
+      "properties": {
+        "name": {
+          "description": "Must match a Canvas.graph_type value used in the project.",
+          "title": "Name",
+          "type": "string"
+        },
+        "heuristics": {
+          "description": "Ordered heuristic pipeline for this graph type.",
+          "items": {
+            "$ref": "#/$defs/HeuristicConfig"
+          },
+          "title": "Heuristics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "heuristics"
+      ],
+      "title": "GraphTypeConfig",
+      "type": "object"
+    },
+    "ConfigMeta": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ConfigMeta",
+      "type": "object"
+    },
+    "ModelConfiguration": {
+      "properties": {
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "meta": {
+          "$ref": "#/$defs/ConfigMeta"
+        },
+        "functionality_scale": {
+          "items": {
+            "$ref": "#/$defs/FunctionalityScaleLevel"
+          },
+          "title": "Functionality Scale",
+          "type": "array"
+        },
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/CategoryDefinition"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "events": {
+          "description": "Hazard and Disservice definitions. Both types are Events.",
+          "items": {
+            "$ref": "#/$defs/EventDefinition"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "graph_types": {
+          "description": "Per-graph-type heuristic pipeline overrides. Absent entries use the engine's built-in defaults for that graph type.",
+          "items": {
+            "$ref": "#/$defs/GraphTypeConfig"
+          },
+          "title": "Graph Types",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "meta",
+        "functionality_scale",
+        "categories"
+      ],
+      "title": "ModelConfiguration",
+      "type": "object"
+    }
+  }
+}

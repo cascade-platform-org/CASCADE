@@ -13,6 +13,7 @@ import { useState } from "react";
 import { X, Download, Trash2, ChevronDown, BookMarked, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useScorecardStore } from "@/store/scorecard-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import {
@@ -25,8 +26,8 @@ import type { ScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
-  const scorecard = useCanvasStore((s) => s.scorecard);
-  const removeScorecardEntry = useCanvasStore((s) => s.removeScorecardEntry);
+  const scorecard = useScorecardStore((s) => s.scorecard);
+  const removeScorecardEntry = useScorecardStore((s) => s.removeScorecardEntry);
   const projectMeta = useCanvasStore((s) => s.projectMeta);
   const config = useConfigStore((s) => s.config);
   const pushToast = useUiStore((s) => s.pushToast);
