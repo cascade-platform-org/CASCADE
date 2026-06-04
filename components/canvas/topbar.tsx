@@ -25,12 +25,7 @@ const CANVAS_COLORS = [
 // ---------------------------------------------------------------------------
 
 export function Topbar() {
-  const meta = useCanvasStore((s) => s.nodes); // used only to detect project loaded
-  const projectName = useCanvasStore((s) =>
-    // project name lives in canvasStore meta — we need to access it differently
-    // For now read from a selector; we'll add proper meta storage
-    "CASCADE Project"
-  );
+  const hasUnsavedChanges = useUiStore((s) => s.hasUnsavedChanges);
 
   return (
     <header className="flex h-11 shrink-0 items-center border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -74,7 +69,12 @@ export function Topbar() {
           label="File"
           onClick={() => useUiStore.getState().toggleFileIoPanel()}
         >
-          <Save size={15} />
+          <div className="relative">
+            <Save size={15} />
+            {hasUnsavedChanges && (
+              <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-amber-400" />
+            )}
+          </div>
         </TopbarIconButton>
 
         <TopbarIconButton label="User" onClick={() => {}}>
@@ -302,10 +302,6 @@ function CanvasTab({ canvas, active, onActivate, onDragStart, onDrop }: CanvasTa
           <span className="max-w-[120px] truncate">{canvas.label ?? canvas.id}</span>
         )}
 
-        {/* Unsaved dot — placeholder, wired to dirty state later */}
-        {active && (
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 opacity-0" />
-        )}
       </div>
 
       {/* Context menu */}

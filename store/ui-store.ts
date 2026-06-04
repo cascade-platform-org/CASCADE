@@ -79,6 +79,13 @@ export interface UiState {
   // --- Toast / notification queue ---
   toasts: Toast[];
 
+  // --- Node template selection ---
+  /** Key into config.node_defaults. Null = blank node (no template). */
+  selectedNodeTemplate: string | null;
+
+  // --- Unsaved changes ---
+  hasUnsavedChanges: boolean;
+
   // --- Canvas screenshot ---
   /**
    * Registered by FlowCanvas on mount. Captures the current global canvas view
@@ -144,6 +151,13 @@ export interface UiActions {
   pushToast: (toast: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
 
+  // --- Node template selection ---
+  setSelectedNodeTemplate: (key: string | null) => void;
+
+  // --- Unsaved changes ---
+  markDirty: () => void;
+  markSaved: () => void;
+
   // --- Canvas screenshot ---
   registerCaptureCanvas: (fn: () => Promise<string | undefined>) => void;
 }
@@ -172,6 +186,8 @@ const initialState: UiState = {
   propagationWarnings: [],
   toasts: [],
   captureCanvasFn: null,
+  hasUnsavedChanges: false,
+  selectedNodeTemplate: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -329,6 +345,22 @@ export const useUiStore = create<UiStore>()(
     registerCaptureCanvas(fn) {
       // Immer cannot store functions in state — assign directly on the raw store object.
       useUiStore.setState({ captureCanvasFn: fn });
+    },
+
+    // -------------------------------------------------------------------------
+    // Unsaved changes
+    // -------------------------------------------------------------------------
+
+    setSelectedNodeTemplate(key) {
+      set((state) => { state.selectedNodeTemplate = key; });
+    },
+
+    markDirty() {
+      set((state) => { state.hasUnsavedChanges = true; });
+    },
+
+    markSaved() {
+      set((state) => { state.hasUnsavedChanges = false; });
     },
   })),
 );

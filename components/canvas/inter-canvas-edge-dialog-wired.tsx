@@ -25,6 +25,7 @@ export function InterCanvasEdgeDialogWired() {
   const activeCanvas = useCanvasStore(selectActiveCanvas);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
   const upsertEdge = useCanvasStore((s) => s.upsertEdge);
   const addEdgeToCanvas = useCanvasStore((s) => s.addEdgeToCanvas);
   const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
@@ -89,12 +90,18 @@ export function InterCanvasEdgeDialogWired() {
     closeInterCanvasEdgeDialog();
   }
 
+  const existingEdges = Object.values(allEdges).map((e) => ({
+    source: e.source,
+    target: e.target,
+  }));
+
   return (
     <InterCanvasEdgeDialog
       tailCanvas={activeCanvas}
       tailNode={sourceNode}
       allCanvases={canvases}
       nodeRegistry={allNodes}
+      existingEdges={existingEdges}
       onConfirm={handleConfirm}
       onCancel={closeInterCanvasEdgeDialog}
     />

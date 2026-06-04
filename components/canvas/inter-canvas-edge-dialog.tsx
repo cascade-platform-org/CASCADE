@@ -15,11 +15,9 @@
  * with the two canvas/node IDs and lets the caller (canvas-manager or a hook)
  * do the actual write, so this component stays testable without store setup.
  *
- * TODO: implement step bodies, node search/filter, attribute form, and
- *       validation (no self-loops, no duplicate cross-canvas edges).
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Canvas, Node } from "../../lib/schemas/network";
 
 type Step = "target-canvas" | "target-node" | "confirm";
@@ -30,6 +28,8 @@ interface InterCanvasEdgeDialogProps {
   allCanvases: Canvas[];
   /** Global node registry — used to resolve node_ids in any Canvas. */
   nodeRegistry: Record<string, Node>;
+  /** Existing inter-canvas edges — used to prevent duplicates. */
+  existingEdges?: Array<{ source: string; target: string }>;
   onConfirm: (targetCanvasId: string, targetNodeId: string) => void;
   onCancel: () => void;
 }
@@ -39,6 +39,7 @@ export function InterCanvasEdgeDialog({
   tailNode,
   allCanvases,
   nodeRegistry,
+  existingEdges = [],
   onConfirm,
   onCancel,
 }: InterCanvasEdgeDialogProps) {
@@ -46,11 +47,25 @@ export function InterCanvasEdgeDialog({
   const [targetCanvasId, setTargetCanvasId] = useState<string | null>(null);
   const [targetNodeId, setTargetNodeId] = useState<string | null>(null);
 
+  const targetNode = targetNodeId ? nodeRegistry[targetNodeId] : null;
+
+  const validationError = useMemo(() => {
+    if (!targetNodeId) return null;
+    if (targetNodeId === tailNode.id) return "Cannot connect a node to itself.";
+    const duplicate = existingEdges.some(
+      (e) =>
+        (e.source === tailNode.id && e.target === targetNodeId) ||
+        (e.source === targetNodeId && e.target === tailNode.id),
+    );
+    if (duplicate) return "An edge between these nodes already exists.";
+    return null;
+  }, [targetNodeId, tailNode.id, existingEdges]);
+
   const otherCanvases = allCanvases.filter((c) => c.id !== tailCanvas.id);
 
   const canAdvance =
     (step === "target-canvas" && targetCanvasId !== null) ||
-    (step === "target-node" && targetNodeId !== null) ||
+    (step === "target-node" && targetNodeId !== null && validationError === null) ||
     step === "confirm";
 
   function advance() {
@@ -99,24 +114,37 @@ export function InterCanvasEdgeDialog({
             />
           )}
           {step === "target-node" && targetCanvasId && (
-            <NodePicker
-              canvas={allCanvases.find((c) => c.id === targetCanvasId)!}
-              nodes={allCanvases
-                .find((c) => c.id === targetCanvasId)
-                ?.graph.node_ids.flatMap((id) =>
-                  nodeRegistry[id] ? [nodeRegistry[id]] : [],
-                ) ?? []}
-              selected={targetNodeId}
-              onSelect={(id) => setTargetNodeId(id)}
-            />
+            <>
+              <NodePicker
+                canvas={allCanvases.find((c) => c.id === targetCanvasId)!}
+                nodes={allCanvases
+                  .find((c) => c.id === targetCanvasId)
+                  ?.graph.node_ids.flatMap((id) =>
+                    nodeRegistry[id] ? [nodeRegistry[id]] : [],
+                  ) ?? []}
+                selected={targetNodeId}
+                onSelect={(id) => setTargetNodeId(id)}
+              />
+              {validationError && (
+                <p className="mt-2 text-xs text-red-500">{validationError}</p>
+              )}
+            </>
           )}
           {step === "confirm" && (
-            <p className="text-sm text-zinc-500">
-              Confirm edge from{" "}
-              <strong>{tailNode.label ?? tailNode.id}</strong> →{" "}
-              <strong>{targetNodeId}</strong> (canvas{" "}
-              <strong>{targetCanvasId}</strong>)
-            </p>
+            <div className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">From</span>
+                <span>{tailNode.label ?? tailNode.id}</span>
+                <span className="text-zinc-400">on</span>
+                <span>{tailCanvas.label ?? tailCanvas.id}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">To</span>
+                <span>{targetNode?.label ?? targetNodeId}</span>
+                <span className="text-zinc-400">on</span>
+                <span>{allCanvases.find((c) => c.id === targetCanvasId)?.label ?? targetCanvasId}</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -152,7 +180,7 @@ export function InterCanvasEdgeDialog({
 }
 
 // ---------------------------------------------------------------------------
-// Step sub-components (TODO: replace placeholders with real implementations)
+// Step sub-components
 // ---------------------------------------------------------------------------
 
 function CanvasPicker({
@@ -202,29 +230,51 @@ function NodePicker({
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+
   if (nodes.length === 0) {
     return (
       <p className="text-sm text-zinc-400">
-        No nodes on canvas "{canvas.label ?? canvas.id}".
+        No nodes on canvas &ldquo;{canvas.label ?? canvas.id}&rdquo;.
       </p>
     );
   }
+
+  const filtered = query.trim()
+    ? nodes.filter((n) =>
+        (n.label ?? n.id).toLowerCase().includes(query.toLowerCase()),
+      )
+    : nodes;
+
   return (
-    <ul className="max-h-48 space-y-1 overflow-y-auto">
-      {nodes.map((n) => (
-        <li key={n.id}>
-          <button
-            onClick={() => onSelect(n.id)}
-            className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-              selected === n.id
-                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
-            }`}
-          >
-            {n.label ?? n.id}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-2">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search nodes…"
+        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+      />
+      {filtered.length === 0 ? (
+        <p className="text-sm text-zinc-400">No nodes match &ldquo;{query}&rdquo;.</p>
+      ) : (
+        <ul className="max-h-40 space-y-1 overflow-y-auto">
+          {filtered.map((n) => (
+            <li key={n.id}>
+              <button
+                onClick={() => onSelect(n.id)}
+                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  selected === n.id
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                }`}
+              >
+                {n.label ?? n.id}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

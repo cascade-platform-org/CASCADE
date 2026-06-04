@@ -14,8 +14,8 @@
  *   5. Node Defaults
  */
 
-import { useEffect } from "react";
-import { X, Plus, Trash2, GripVertical } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { X, Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
@@ -307,6 +307,11 @@ function TabEvents() {
                 </div>
               )}
             </div>
+
+            <AttributeMutationsEditor
+              mutations={ev.attribute_mutations ?? {}}
+              onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
+            />
           </div>
         ))}
       </div>
@@ -324,6 +329,267 @@ function TabEvents() {
       >
         <Plus size={12} /> Add event
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Attribute Mutations Editor
+// ---------------------------------------------------------------------------
+
+/**
+ * Known fields offered as quick-pick shortcuts in the field name dropdown.
+ * Users can still type any custom field name.
+ */
+const KNOWN_FIELDS = [
+  { value: "expected_repair_time", label: "Repair time (h)", kind: "number" },
+  { value: "functionality",        label: "Functionality level", kind: "number" },
+  { value: "direct_damage",        label: "Direct damage (true/false)", kind: "boolean" },
+  { value: "backup_duration",      label: "Backup duration (h)", kind: "number" },
+  { value: "importance",           label: "Importance", kind: "number" },
+] as const;
+
+function coerceValue(raw: string, fieldName: string): unknown {
+  const known = KNOWN_FIELDS.find((f) => f.value === fieldName);
+  if (known?.kind === "boolean") return raw === "true";
+  if (known?.kind === "number") {
+    const n = Number(raw);
+    return isNaN(n) ? raw : n;
+  }
+  const n = Number(raw);
+  if (!isNaN(n) && raw.trim() !== "") return n;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return raw;
+}
+
+interface AttributeMutationsEditorProps {
+  /** Current attribute_mutations map: `"<elementId>.<field>"` → value */
+  mutations: Record<string, unknown>;
+  onChange: (next: Record<string, unknown>) => void;
+}
+
+/**
+ * Groups the flat `"<elementId>.<field>"` map by element so the user
+ * sees one expandable row per element rather than raw dot-notation keys.
+ */
+function AttributeMutationsEditor({ mutations, onChange }: AttributeMutationsEditorProps) {
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
+  // Elements added via the picker but with no mutations saved yet
+  const [openElements, setOpenElements] = useState<Set<string>>(new Set());
+  const [newFieldFor, setNewFieldFor] = useState<Record<string, string>>({});
+  const [newValueFor, setNewValueFor] = useState<Record<string, string>>({});
+  const [customFieldFor, setCustomFieldFor] = useState<Record<string, string>>({});
+  const [nodeSearch, setNodeSearch] = useState("");
+
+  const labelOf = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const [id, n] of Object.entries(allNodes)) map[id] = n.label ?? id;
+    for (const [id, e] of Object.entries(allEdges)) {
+      const src = allNodes[e.source]?.label ?? e.source;
+      const tgt = allNodes[e.target]?.label ?? e.target;
+      map[id] = `${src} → ${tgt}`;
+    }
+    return map;
+  }, [allNodes, allEdges]);
+
+  const byElement = useMemo(() => {
+    const groups: Record<string, Record<string, unknown>> = {};
+    for (const [key, val] of Object.entries(mutations)) {
+      const dot = key.indexOf(".");
+      if (dot === -1) continue;
+      const elemId = key.slice(0, dot);
+      const field = key.slice(dot + 1);
+      if (!groups[elemId]) groups[elemId] = {};
+      groups[elemId][field] = val;
+    }
+    return groups;
+  }, [mutations]);
+
+  // All element ids to render: those with saved mutations + those just opened
+  const allElementIds = useMemo(() => {
+    const ids = new Set([...Object.keys(byElement), ...openElements]);
+    return [...ids];
+  }, [byElement, openElements]);
+
+  const availableElements = useMemo(() => {
+    const taken = new Set(allElementIds);
+    return [
+      ...Object.keys(allNodes).map((id) => ({ id, label: labelOf[id] ?? id, kind: "node" as const })),
+      ...Object.keys(allEdges).map((id) => ({ id, label: labelOf[id] ?? id, kind: "edge" as const })),
+    ].filter((e) => !taken.has(e.id));
+  }, [allNodes, allEdges, allElementIds, labelOf]);
+
+  const filteredAvailable = nodeSearch.trim()
+    ? availableElements.filter((e) => e.label.toLowerCase().includes(nodeSearch.toLowerCase()))
+    : availableElements;
+
+  function removeField(elemId: string, field: string) {
+    const next = { ...mutations };
+    delete next[`${elemId}.${field}`];
+    onChange(next);
+  }
+
+  function resolvedField(elemId: string): string {
+    const sel = newFieldFor[elemId] ?? "";
+    return sel === "__custom__" ? (customFieldFor[elemId] ?? "").trim() : sel;
+  }
+
+  function addField(elemId: string) {
+    const field = resolvedField(elemId);
+    const rawVal = newValueFor[elemId]?.trim() ?? "";
+    if (!field) return;
+    onChange({ ...mutations, [`${elemId}.${field}`]: coerceValue(rawVal, field) });
+    setNewFieldFor((p) => ({ ...p, [elemId]: "" }));
+    setNewValueFor((p) => ({ ...p, [elemId]: "" }));
+    setCustomFieldFor((p) => ({ ...p, [elemId]: "" }));
+  }
+
+  function addElement(elemId: string) {
+    setOpenElements((p) => new Set([...p, elemId]));
+    setNodeSearch("");
+  }
+
+  function removeElement(elemId: string) {
+    const next = { ...mutations };
+    for (const key of Object.keys(next)) {
+      if (key.startsWith(`${elemId}.`)) delete next[key];
+    }
+    onChange(next);
+    setOpenElements((p) => { const s = new Set(p); s.delete(elemId); return s; });
+  }
+
+  return (
+    <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+      <p className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        Element overrides
+      </p>
+
+      {allElementIds.length === 0 && (
+        <p className="mb-2 text-xs text-zinc-400 italic">
+          No overrides yet. Search for a node or edge below to add one.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        {allElementIds.map((elemId) => {
+          const fields = byElement[elemId] ?? {};
+          const fieldCount = Object.keys(fields).length;
+          const selectedField = newFieldFor[elemId] ?? "";
+          return (
+            <div key={elemId} className="rounded-md border border-zinc-200 dark:border-zinc-700">
+              {/* Element header */}
+              <div className="flex items-center justify-between bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  {labelOf[elemId] ?? elemId}
+                  {fieldCount > 0 && (
+                    <span className="ml-1.5 text-zinc-400">
+                      ({fieldCount} override{fieldCount !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </span>
+                <button
+                  onClick={() => removeElement(elemId)}
+                  className="text-zinc-400 hover:text-red-500"
+                  title="Remove all overrides for this element"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+
+              <div className="px-3 pb-3 pt-2">
+                {/* Saved fields */}
+                {Object.entries(fields).map(([field, val]) => (
+                  <div key={field} className="mb-1.5 flex items-center gap-2 text-xs">
+                    <span className="w-40 shrink-0 font-mono text-zinc-500">{field}</span>
+                    <span className="flex-1 text-zinc-700 dark:text-zinc-200">{String(val)}</span>
+                    <button onClick={() => removeField(elemId, field)} className="text-zinc-300 hover:text-red-500">
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add field row */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <select
+                    value={selectedField}
+                    onChange={(e) => setNewFieldFor((p) => ({ ...p, [elemId]: e.target.value }))}
+                    className="rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <option value="">— pick field —</option>
+                    {KNOWN_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                    <option value="__custom__">custom field…</option>
+                  </select>
+
+                  {selectedField === "__custom__" && (
+                    <input
+                      type="text"
+                      placeholder="field name"
+                      value={customFieldFor[elemId] ?? ""}
+                      onChange={(e) => setCustomFieldFor((p) => ({ ...p, [elemId]: e.target.value }))}
+                      className="w-28 rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+                    />
+                  )}
+
+                  {selectedField && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="value"
+                        value={newValueFor[elemId] ?? ""}
+                        onChange={(e) => setNewValueFor((p) => ({ ...p, [elemId]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") addField(elemId); }}
+                        className="w-20 rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+                      />
+                      <button
+                        onClick={() => addField(elemId)}
+                        className="flex items-center gap-0.5 text-xs text-blue-500 hover:text-blue-700"
+                      >
+                        <Plus size={11} /> Add
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Element picker */}
+      {availableElements.length > 0 && (
+        <div className="relative mt-2">
+          <input
+            type="text"
+            value={nodeSearch}
+            onChange={(e) => setNodeSearch(e.target.value)}
+            placeholder="+ Add element override…"
+            className="w-full rounded border border-dashed border-zinc-300 bg-transparent px-2 py-1.5 text-xs text-zinc-600 placeholder-zinc-400 focus:border-blue-400 focus:outline-none dark:border-zinc-600 dark:text-zinc-300"
+          />
+          {nodeSearch.trim() && (
+            <ul className="absolute z-10 mt-0.5 max-h-36 w-full overflow-y-auto rounded border border-zinc-200 bg-white shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+              {filteredAvailable.length === 0 ? (
+                <li className="px-3 py-2 text-xs text-zinc-400">No match</li>
+              ) : (
+                filteredAvailable.slice(0, 8).map((e) => (
+                  <li key={e.id}>
+                    <button
+                      onClick={() => addElement(e.id)}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    >
+                      <span className="text-zinc-700 dark:text-zinc-300">{e.label}</span>
+                      <span className="text-zinc-400">{e.kind}</span>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -501,12 +767,222 @@ function TabGraphTypes() {
 // ---------------------------------------------------------------------------
 
 function TabNodeDefaults() {
+  const nodeDefaults = useConfigStore(useShallow((s) => s.draft.node_defaults ?? {}));
+  const categories = useConfigStore(useShallow((s) => s.draft.categories));
+  const events = useConfigStore(useShallow((s) => s.draft.events));
+  const n = useConfigStore((s) => s.draft.functionality_scale.length);
+  const addNodeDefault = useConfigStore((s) => s.addNodeDefault);
+  const removeNodeDefault = useConfigStore((s) => s.removeNodeDefault);
+  const renameNodeDefault = useConfigStore((s) => s.renameNodeDefault);
+  const updateNodeDefault = useConfigStore((s) => s.updateNodeDefault);
+  const [newName, setNewName] = useState("");
+
+  const NODE_TYPE_OPTIONS = ["Source", "Infrastructure", "Service", "Personnel"];
+
+  function handleAdd() {
+    const name = newName.trim();
+    if (!name || nodeDefaults[name]) return;
+    addNodeDefault(name);
+    setNewName("");
+  }
+
+  function toggleCategory(tplName: string, tpl: Partial<import("@/lib/schemas/network").Node>, catName: string) {
+    const current = tpl.node_categories ?? [];
+    const active = current.includes(catName);
+    const next = active ? current.filter((c) => c !== catName) : [...current, catName];
+    const profiles = { ...(tpl.category_dependency_profiles ?? {}) } as import("@/lib/schemas/network").CategoryDependencyProfiles;
+    if (active) delete profiles[catName];
+    else if (!profiles[catName]) profiles[catName] = { dependency_level: 1 };
+    updateNodeDefault(tplName, { node_categories: next, category_dependency_profiles: profiles });
+  }
+
+  function updateProfile(
+    tplName: string,
+    tpl: Partial<import("@/lib/schemas/network").Node>,
+    catName: string,
+    patch: Partial<import("@/lib/schemas/network").CategoryDependencyProfile>,
+  ) {
+    const profiles = { ...(tpl.category_dependency_profiles ?? {}) } as import("@/lib/schemas/network").CategoryDependencyProfiles;
+    profiles[catName] = { ...profiles[catName], ...patch } as import("@/lib/schemas/network").CategoryDependencyProfile;
+    updateNodeDefault(tplName, { category_dependency_profiles: profiles });
+  }
+
   return (
     <div>
-      <p className="text-xs text-zinc-400 italic">
-        Node default templates will pre-fill the Inspector when you place a new node.
-        This tab will be expanded in a future update.
+      <p className="mb-3 text-xs text-zinc-500">
+        Named templates pre-fill new nodes at placement time. Pick one by hovering the <strong>+</strong> tool.
       </p>
+
+      {Object.keys(nodeDefaults).length === 0 && (
+        <p className="mb-3 text-xs text-zinc-400 italic">No templates yet.</p>
+      )}
+
+      <div className="space-y-3">
+        {Object.entries(nodeDefaults).map(([name, tpl]) => {
+          const selectedCats = tpl.node_categories ?? [];
+          return (
+            <div key={name} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+
+              {/* Name + delete */}
+              <div className="mb-3 flex items-center gap-2">
+                <input
+                  type="text"
+                  defaultValue={name}
+                  onBlur={(e) => renameNodeDefault(name, e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+                <ColBtn variant="danger" onClick={() => removeNodeDefault(name)}>
+                  <Trash2 size={12} />
+                </ColBtn>
+              </div>
+
+              {/* Node type + base fields */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Node type</label>
+                  <select
+                    value={tpl.node_type ?? ""}
+                    onChange={(e) => updateNodeDefault(name, { node_type: e.target.value || undefined })}
+                    className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <option value="">— any —</option>
+                    {NODE_TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Importance</label>
+                  <NumberInput value={tpl.importance} min={0} className="w-full"
+                    onChange={(v) => updateNodeDefault(name, { importance: v })} />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Cost / day (€)</label>
+                  <NumberInput value={tpl.cost_of_disservice_per_day} min={0} className="w-full"
+                    onChange={(v) => updateNodeDefault(name, { cost_of_disservice_per_day: v })} />
+                </div>
+              </div>
+
+              {/* Categories */}
+              {categories.length > 0 && (
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs text-zinc-400">Categories</label>
+                  <div className="flex flex-wrap gap-1">
+                    {categories.map((cat) => {
+                      const active = selectedCats.includes(cat.name);
+                      return (
+                        <button
+                          key={cat.name}
+                          onClick={() => toggleCategory(name, tpl, cat.name)}
+                          className={cn(
+                            "rounded px-2 py-0.5 text-xs transition-colors",
+                            active ? "text-white" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+                          )}
+                          style={active ? { backgroundColor: cat.color ?? "#6b7280" } : undefined}
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Category dependency profiles — one block per selected category */}
+              {selectedCats.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <label className="block text-xs text-zinc-400">Category dependency profiles</label>
+                  {selectedCats.map((catName) => {
+                    const prof = tpl.category_dependency_profiles?.[catName] ?? { dependency_level: 1 };
+                    return (
+                      <div key={catName} className="rounded border border-zinc-100 p-2 dark:border-zinc-800">
+                        <p className="mb-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">{catName}</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <label className="mb-0.5 block text-xs text-zinc-400">Dependency level</label>
+                            <NumberInput value={prof.dependency_level} min={1} max={n} className="w-full"
+                              onChange={(v) => updateProfile(name, tpl, catName, { dependency_level: v })} />
+                          </div>
+                          <div>
+                            <label className="mb-0.5 block text-xs text-zinc-400">Demand</label>
+                            <NumberInput value={prof.demand} min={0} className="w-full"
+                              onChange={(v) => updateProfile(name, tpl, catName, { demand: v })} />
+                          </div>
+                          <div>
+                            <label className="mb-0.5 block text-xs text-zinc-400">Priority (1–10)</label>
+                            <NumberInput value={prof.priority} min={1} max={10} className="w-full"
+                              onChange={(v) => updateProfile(name, tpl, catName, { priority: v })} />
+                          </div>
+                          <div>
+                            <label className="mb-0.5 block text-xs text-zinc-400">Backup duration (h)</label>
+                            <NumberInput value={prof.backup_duration} min={0} className="w-full"
+                              onChange={(v) => updateProfile(name, tpl, catName, { backup_duration: v })} />
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <input
+                              type="checkbox"
+                              id={`backup-${name}-${catName}`}
+                              checked={prof.backup ?? false}
+                              onChange={(e) => updateProfile(name, tpl, catName, { backup: e.target.checked })}
+                              className="h-3 w-3"
+                            />
+                            <label htmlFor={`backup-${name}-${catName}`} className="text-xs text-zinc-400">
+                              Has backup
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Vulnerability levels per event */}
+              {events.length > 0 && (
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs text-zinc-400">Vulnerability levels</label>
+                  <div className="space-y-1">
+                    {events.map((ev) => (
+                      <div key={ev.id} className="flex items-center gap-2">
+                        <span className="w-28 truncate text-xs text-zinc-500">{ev.label}</span>
+                        <NumberInput
+                          value={tpl.vulnerability_levels?.[ev.id]}
+                          min={1}
+                          max={n}
+                          className="w-16"
+                          onChange={(v) => updateNodeDefault(name, {
+                            vulnerability_levels: { ...tpl.vulnerability_levels, [ev.id]: v },
+                          })}
+                        />
+                        <span className="text-xs text-zinc-400">/ {n}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add template */}
+      <div className="mt-3 flex gap-2">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          placeholder="template name…"
+          className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newName.trim() || !!nodeDefaults[newName.trim()]}
+          className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 disabled:opacity-40"
+        >
+          <Plus size={12} /> Add
+        </button>
+      </div>
     </div>
   );
 }

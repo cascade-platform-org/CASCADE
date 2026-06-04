@@ -716,3 +716,17 @@ export const selectActiveEdges = (state: CanvasStore): Edge[] => {
 
 export const selectOrderedCanvases = (state: CanvasStore): Canvas[] =>
   state.canvasOrder.map((id) => state.canvases[id]);
+
+// Mark the project dirty whenever nodes, edges, or canvases change.
+// Import is deferred to avoid a circular dependency at module load time.
+if (typeof window !== "undefined") {
+  let prev = useCanvasStore.getState();
+  useCanvasStore.subscribe((state) => {
+    if (state.nodes !== prev.nodes || state.edges !== prev.edges || state.canvases !== prev.canvases) {
+      import("@/store/ui-store").then(({ useUiStore }) => {
+        useUiStore.getState().markDirty();
+      });
+    }
+    prev = state;
+  });
+}

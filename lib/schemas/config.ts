@@ -7,6 +7,7 @@
  * after changing the Pydantic models.
  */
 import { z } from "zod";
+import { NodeSchema } from "./network";
 
 // ---------------------------------------------------------------------------
 // Functionality scale
@@ -117,6 +118,11 @@ export const ModelConfigurationSchema = z.object({
    * Absent entries use the engine's built-in defaults for that graph type.
    */
   graph_types: z.array(GraphTypeConfigSchema).default([]),
+  /**
+   * Named node templates. Key = user-chosen name.
+   * Applied at node creation time; any Node field except id and position can be preset.
+   */
+  node_defaults: z.record(z.string(), NodeSchema.partial()).default({}),
 });
 
 // ---------------------------------------------------------------------------

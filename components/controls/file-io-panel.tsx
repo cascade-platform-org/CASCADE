@@ -23,6 +23,7 @@ import {
 export function FileIoPanel() {
   const closeFileIoPanel = useUiStore((s) => s.closeFileIoPanel);
   const pushToast = useUiStore((s) => s.pushToast);
+  const markSaved = useUiStore((s) => s.markSaved);
 
   const toProject = useCanvasStore((s) => s.toProject);
   const loadProject = useCanvasStore((s) => s.loadProject);
@@ -49,6 +50,7 @@ export function FileIoPanel() {
   async function handleSaveBundle() {
     try {
       await saveBundle(currentBundle());
+      markSaved();
       pushToast({ message: "Bundle saved.", variant: "success", durationMs: 3000 });
       setHistory(getProjectHistory());
     } catch {
@@ -58,11 +60,13 @@ export function FileIoPanel() {
 
   async function handleSaveProject() {
     await saveProject(toProject());
+    markSaved();
     pushToast({ message: "project.json saved.", variant: "success", durationMs: 3000 });
   }
 
   async function handleSaveConfig() {
     await saveConfig(config);
+    markSaved();
     pushToast({ message: "config.json saved.", variant: "success", durationMs: 3000 });
   }
 

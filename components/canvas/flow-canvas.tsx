@@ -628,10 +628,12 @@ export function FlowCanvas() {
   const activeTool = useUiStore((s) => s.activeTool);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
   const pushToast = useUiStore((s) => s.pushToast);
+  const selectedNodeTemplate = useUiStore((s) => s.selectedNodeTemplate);
 
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
   const graphTypes = useConfigStore((s) => s.config.graph_types);
+  const nodeDefaults = useConfigStore(useShallow((s) => s.config.node_defaults ?? {}));
 
   // Build React Flow nodes/edges from store.
   // selectedNodeIds IS included in deps so that attribute updates (which change
@@ -973,10 +975,12 @@ export function FlowCanvas() {
     e.preventDefault();
     const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
     const before = toGraphSnapshot();
+    const tpl = selectedNodeTemplate ? (nodeDefaults[selectedNodeTemplate] ?? {}) : {};
     const node: CascadeNode = {
+      ...tpl,
       id: `node-${nanoid(8)}`,
-      label: "New Node",
-      node_type: "Service",
+      label: tpl.label ?? selectedNodeTemplate ?? "New Node",
+      node_type: tpl.node_type ?? "Service",
       functionality: n,
       position,
     };
@@ -993,7 +997,7 @@ export function FlowCanvas() {
     });
     selectNode(node.id);
     setInspectorOpen(true);
-  }, [activeTool, activeCanvas, n, screenToFlowPosition, upsertNode, addNodeToCanvas, toGraphSnapshot, selectNode, setInspectorOpen]);
+  }, [activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition, upsertNode, addNodeToCanvas, toGraphSnapshot, selectNode, setInspectorOpen]);
 
   // ── Right-click on node → context menu (stub) ──
   const onNodeContextMenu = useCallback((_: React.MouseEvent, rfNode: RFNode) => {

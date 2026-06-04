@@ -22,6 +22,7 @@ import type {
   HeuristicConfig,
   ModelConfiguration,
 } from "@/lib/schemas";
+import type { Node } from "@/lib/schemas/network";
 import type { EngineAlgorithms } from "@/lib/schemas/api";
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export const DEFAULT_CONFIG: ModelConfiguration = {
   categories: [],
   events: [],
   graph_types: [],
+  node_defaults: {},
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,12 @@ export interface ConfigActions {
   removeAlgorithm: (graphTypeName: string, algorithmId: string) => void;
   updateAlgorithm: (graphTypeName: string, algorithmId: string, patch: Partial<HeuristicConfig>) => void;
   reorderAlgorithms: (graphTypeName: string, orderedIds: string[]) => void;
+
+  // --- Node defaults (templates) ---
+  addNodeDefault: (name: string) => void;
+  removeNodeDefault: (name: string) => void;
+  renameNodeDefault: (oldName: string, newName: string) => void;
+  updateNodeDefault: (name: string, patch: Partial<Node>) => void;
 
   // --- Engine algorithms ---
   /**
@@ -376,6 +384,45 @@ export const useConfigStore = create<ConfigStore>()(
         if (!gt) return;
         const map = new Map(gt.heuristics.map((h) => [h.id, h]));
         gt.heuristics = orderedIds.map((id) => map.get(id)!).filter(Boolean);
+        markDirty(state);
+      });
+    },
+
+    // -------------------------------------------------------------------------
+    // Node defaults (templates)
+    // -------------------------------------------------------------------------
+
+    addNodeDefault(name) {
+      set((state) => {
+        if (!state.draft.node_defaults) state.draft.node_defaults = {};
+        state.draft.node_defaults[name] = {};
+        markDirty(state);
+      });
+    },
+
+    removeNodeDefault(name) {
+      set((state) => {
+        if (state.draft.node_defaults) {
+          delete state.draft.node_defaults[name];
+          markDirty(state);
+        }
+      });
+    },
+
+    renameNodeDefault(oldName, newName) {
+      set((state) => {
+        if (!state.draft.node_defaults || !newName.trim() || newName === oldName) return;
+        const val = state.draft.node_defaults[oldName] ?? {};
+        delete state.draft.node_defaults[oldName];
+        state.draft.node_defaults[newName] = val;
+        markDirty(state);
+      });
+    },
+
+    updateNodeDefault(name, patch) {
+      set((state) => {
+        if (!state.draft.node_defaults) state.draft.node_defaults = {};
+        state.draft.node_defaults[name] = { ...state.draft.node_defaults[name], ...patch };
         markDirty(state);
       });
     },
