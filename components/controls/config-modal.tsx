@@ -308,19 +308,39 @@ function TabEvents() {
               )}
             </div>
 
+            <CollapsibleSection
+              label="Vulnerability levels"
+              badgeFromStore={ev.id}
+            >
+              <VulnerabilityLevelsEditor eventId={ev.id} />
+            </CollapsibleSection>
+
             {ev.type === "hazard" && (
-              <DirectDamageEditor
-                defaultRepairTime={ev.default_repair_time}
-                effects={ev.direct_damage_effects ?? {}}
-                onChangeDefault={(v) => updateEvent(ev.id, { default_repair_time: v })}
-                onChangeEffects={(next) => updateEvent(ev.id, { direct_damage_effects: next })}
-              />
+              <CollapsibleSection
+                label="Direct damage"
+                badge={
+                  (ev.default_repair_time !== undefined ? 1 : 0) +
+                  Object.keys(ev.direct_damage_effects ?? {}).length || undefined
+                }
+              >
+                <DirectDamageEditor
+                  defaultRepairTime={ev.default_repair_time}
+                  effects={ev.direct_damage_effects ?? {}}
+                  onChangeDefault={(v) => updateEvent(ev.id, { default_repair_time: v })}
+                  onChangeEffects={(next) => updateEvent(ev.id, { direct_damage_effects: next })}
+                />
+              </CollapsibleSection>
             )}
 
-            <AttributeMutationsEditor
-              mutations={ev.attribute_mutations ?? {}}
-              onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
-            />
+            <CollapsibleSection
+              label="Attribute mutations"
+              badge={Object.keys(ev.attribute_mutations ?? {}).length || undefined}
+            >
+              <AttributeMutationsEditor
+                mutations={ev.attribute_mutations ?? {}}
+                onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
+              />
+            </CollapsibleSection>
           </div>
         ))}
       </div>
@@ -430,9 +450,7 @@ function DirectDamageEditor({ defaultRepairTime, effects, onChangeDefault, onCha
   );
 
   return (
-    <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-      <p className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">Direct damage</p>
-
+    <div>
       {/* Default repair time */}
       <div className="mb-3 flex items-center gap-2">
         <label className="text-xs text-zinc-500 w-36 shrink-0">Default repair time</label>
@@ -537,6 +555,250 @@ function DirectDamageEditor({ defaultRepairTime, effects, onChangeDefault, onCha
                         />
                         {override !== undefined && (
                           <button onClick={() => setElementRepairTime(el.id, undefined)} className="text-zinc-300 hover:text-red-500">
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible section wrapper used inside each event card
+// ---------------------------------------------------------------------------
+
+function CollapsibleSection({
+  label,
+  badge,
+  badgeFromStore,
+  children,
+}: {
+  label: string;
+  badge?: number;
+  /** When set, reads the vulnerability level count for this eventId from canvas store. */
+  badgeFromStore?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Count elements that have a non-zero vulnerability level for this event
+  const vulnCount = useCanvasStore((s) => {
+    if (!badgeFromStore) return 0;
+    let count = 0;
+    for (const nd of Object.values(s.nodes)) {
+      if ((nd.vulnerability_levels?.[badgeFromStore] ?? 0) > 0) count++;
+    }
+    for (const e of Object.values(s.edges)) {
+      if ((e.vulnerability_levels?.[badgeFromStore] ?? 0) > 0) count++;
+    }
+    return count;
+  });
+
+  const displayBadge = badgeFromStore !== undefined ? vulnCount : badge;
+
+  return (
+    <div className="mt-2 border-t border-zinc-100 dark:border-zinc-800">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1.5 py-2 text-left"
+      >
+        {open
+          ? <ChevronDown size={13} className="shrink-0 text-zinc-400" />
+          : <ChevronRight size={13} className="shrink-0 text-zinc-400" />
+        }
+        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{label}</span>
+        {displayBadge !== undefined && displayBadge > 0 && (
+          <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+            {displayBadge}
+          </span>
+        )}
+      </button>
+      {open && <div className="pb-2">{children}</div>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vulnerability Levels Editor
+// ---------------------------------------------------------------------------
+
+function VulnerabilityLevelsEditor({ eventId }: { eventId: string }) {
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
+  const updateNode = useCanvasStore((s) => s.updateNode);
+  const updateEdge = useCanvasStore((s) => s.updateEdge);
+  const categories = useConfigStore(useShallow((s) => s.draft.categories));
+  const n = useConfigStore((s) => s.draft.functionality_scale.length);
+
+  const [filterName, setFilterName] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "nodes" | "edges">("all");
+  const [filterCat, setFilterCat] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLevel, setBulkLevel] = useState("");
+
+  const allElements = useMemo(() => [
+    ...Object.values(allNodes).map((nd) => ({
+      id: nd.id,
+      label: nd.label ?? nd.id,
+      kind: "node" as const,
+      categories: nd.node_categories ?? [],
+      level: nd.vulnerability_levels?.[eventId] ?? 0,
+    })),
+    ...Object.values(allEdges).map((e) => ({
+      id: e.id,
+      label: `${allNodes[e.source]?.label ?? e.source} → ${allNodes[e.target]?.label ?? e.target}`,
+      kind: "edge" as const,
+      categories: [] as string[],
+      level: e.vulnerability_levels?.[eventId] ?? 0,
+    })),
+  ], [allNodes, allEdges, eventId]);
+
+  const filtered = useMemo(() => allElements.filter((el) => {
+    if (filterType === "nodes" && el.kind !== "node") return false;
+    if (filterType === "edges" && el.kind !== "edge") return false;
+    if (filterCat && !el.categories.includes(filterCat)) return false;
+    if (filterName.trim() && !el.label.toLowerCase().includes(filterName.toLowerCase())) return false;
+    return true;
+  }), [allElements, filterType, filterCat, filterName]);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((el) => selected.has(el.id));
+
+  function toggleSelect(id: string) {
+    setSelected((s) => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelected((s) => { const next = new Set(s); filtered.forEach((el) => next.delete(el.id)); return next; });
+    } else {
+      setSelected((s) => { const next = new Set(s); filtered.forEach((el) => next.add(el.id)); return next; });
+    }
+  }
+
+  function setLevel(id: string, isNode: boolean, level: number) {
+    const clamped = Math.min(n - 1, Math.max(0, Math.round(level)));
+    if (isNode) {
+      const vulns = { ...(allNodes[id]?.vulnerability_levels ?? {}) };
+      if (clamped === 0) delete vulns[eventId]; else vulns[eventId] = clamped;
+      updateNode(id, { vulnerability_levels: vulns });
+    } else {
+      const vulns = { ...(allEdges[id]?.vulnerability_levels ?? {}) };
+      if (clamped === 0) delete vulns[eventId]; else vulns[eventId] = clamped;
+      updateEdge(id, { vulnerability_levels: vulns });
+    }
+  }
+
+  function applyBulk() {
+    const v = parseInt(bulkLevel, 10);
+    if (isNaN(v)) return;
+    for (const id of selected) {
+      const el = allElements.find((e) => e.id === id);
+      if (el) setLevel(id, el.kind === "node", v);
+    }
+    setBulkLevel("");
+  }
+
+  if (allElements.length === 0) return (
+    <p className="mt-2 text-xs text-zinc-400 italic">No nodes or edges in project yet.</p>
+  );
+
+  return (
+    <div>
+      <p className="mb-2 text-[10px] text-zinc-400">0 = immune · 1–{n - 1} = progressively more affected</p>
+
+      {/* Filters */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        {(["all", "nodes", "edges"] as const).map((opt) => (
+          <button key={opt} onClick={() => setFilterType(opt)}
+            className={cn("rounded px-2 py-0.5 text-xs transition-colors",
+              filterType === opt ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            )}>
+            {opt === "all" ? "All" : opt === "nodes" ? "Nodes" : "Edges"}
+          </button>
+        ))}
+        {categories.map((cat) => (
+          <button key={cat.name} onClick={() => setFilterCat(filterCat === cat.name ? null : cat.name)}
+            className={cn("rounded px-2 py-0.5 text-xs transition-colors",
+              filterCat === cat.name ? "text-white" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            )}
+            style={filterCat === cat.name ? { backgroundColor: cat.color ?? "#6b7280" } : undefined}>
+            {cat.name}
+          </button>
+        ))}
+        <input type="text" value={filterName} onChange={(e) => setFilterName(e.target.value)}
+          placeholder="name…"
+          className="w-24 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200" />
+      </div>
+
+      {/* Bulk edit */}
+      {selected.size > 0 && (
+        <div className="mb-2 flex items-center gap-2 rounded bg-blue-50 px-2 py-1.5 dark:bg-blue-900/20">
+          <span className="text-xs text-blue-700 dark:text-blue-300">{selected.size} selected</span>
+          <input type="number" min={0} max={n - 1} value={bulkLevel} onChange={(e) => setBulkLevel(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") applyBulk(); }}
+            placeholder={`0–${n - 1}`}
+            className="w-16 rounded border border-blue-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-blue-800 dark:bg-zinc-800 dark:text-zinc-200" />
+          <button onClick={applyBulk} className="text-xs text-blue-600 hover:text-blue-800">Apply</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-zinc-400 hover:text-zinc-600">Clear</button>
+        </div>
+      )}
+
+      {/* Element table */}
+      <div className="max-h-52 overflow-y-auto rounded border border-zinc-100 dark:border-zinc-800">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-zinc-400 italic">No elements match filter.</p>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <th className="w-6 px-2 py-1 text-left">
+                  <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="h-3 w-3" />
+                </th>
+                <th className="px-2 py-1 text-left font-medium text-zinc-500">Element</th>
+                <th className="w-24 px-2 py-1 text-left font-medium text-zinc-500">Level (0–{n - 1})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((el) => {
+                const isSelected = selected.has(el.id);
+                const hasLevel = el.level > 0;
+                return (
+                  <tr key={el.id} className={cn("border-b border-zinc-50 dark:border-zinc-800/50", isSelected && "bg-blue-50/50 dark:bg-blue-900/10")}>
+                    <td className="px-2 py-1">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(el.id)} className="h-3 w-3" />
+                    </td>
+                    <td className="px-2 py-1">
+                      <span className="text-zinc-700 dark:text-zinc-300">{el.label}</span>
+                      {el.kind === "edge" && <span className="ml-1 text-zinc-400">(edge)</span>}
+                    </td>
+                    <td className="px-2 py-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={n - 1}
+                          value={el.level}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!isNaN(v)) setLevel(el.id, el.kind === "node", v);
+                          }}
+                          className={cn(
+                            "w-14 rounded border px-1.5 py-0.5 text-xs focus:outline-none dark:bg-zinc-800 dark:text-zinc-200",
+                            hasLevel
+                              ? "border-orange-300 dark:border-orange-700"
+                              : "border-zinc-200 text-zinc-400 dark:border-zinc-700",
+                          )}
+                        />
+                        {hasLevel && (
+                          <button onClick={() => setLevel(el.id, el.kind === "node", 0)} className="text-zinc-300 hover:text-red-500" title="Reset to 0 (immune)">
                             <Trash2 size={10} />
                           </button>
                         )}
@@ -681,11 +943,7 @@ function AttributeMutationsEditor({ mutations, onChange }: AttributeMutationsEdi
   }
 
   return (
-    <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-      <p className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Element overrides
-      </p>
-
+    <div>
       {allElementIds.length === 0 && (
         <p className="mb-2 text-xs text-zinc-400 italic">
           No overrides yet. Search for a node or edge below to add one.
