@@ -443,13 +443,25 @@ export const useCanvasStore = create<CanvasStore>()(
         }
       }
 
-      // ── 2. direct_damage_effects ──
-      const damageEntries = Object.entries(event.direct_damage_effects ?? {});
+      // ── 2. direct_damage_effects + default_repair_time ──
+      // Per-element overrides take precedence; default_repair_time covers everything else.
+      const explicitEffects = event.direct_damage_effects ?? {};
+      const damageEntries = Object.entries(explicitEffects);
       for (const [elementId, effect] of damageEntries) {
         const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
         if (!el) continue;
         capture(elementId, "direct_damage", el.direct_damage ?? false);
         capture(elementId, "expected_repair_time", el.expected_repair_time ?? null);
+      }
+      // Elements covered by the global default but not individually overridden
+      const defaultRepairTime = event.type === "hazard" ? event.default_repair_time : undefined;
+      const defaultDamageElements: Array<{ id: string; el: Node | Edge }> =
+        defaultRepairTime !== undefined
+          ? allElements.filter(({ id }) => !(id in explicitEffects))
+          : [];
+      for (const { id, el } of defaultDamageElements) {
+        capture(id, "direct_damage", el.direct_damage ?? false);
+        capture(id, "expected_repair_time", el.expected_repair_time ?? null);
       }
 
       // ── 3. attribute_mutations ──
@@ -487,6 +499,15 @@ export const useCanvasStore = create<CanvasStore>()(
           } else if (draft.edges[elementId]) {
             draft.edges[elementId].direct_damage = true;
             draft.edges[elementId].expected_repair_time = effect.expected_repair_time;
+          }
+        }
+        for (const { id } of defaultDamageElements) {
+          if (draft.nodes[id]) {
+            draft.nodes[id].direct_damage = true;
+            draft.nodes[id].expected_repair_time = defaultRepairTime;
+          } else if (draft.edges[id]) {
+            draft.edges[id].direct_damage = true;
+            draft.edges[id].expected_repair_time = defaultRepairTime;
           }
         }
         for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {

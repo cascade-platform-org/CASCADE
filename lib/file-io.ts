@@ -18,6 +18,10 @@ import { ModelConfigurationSchema, type ModelConfiguration } from "./schemas/con
 
 const HISTORY_KEY = "cascade:project:history";
 const MAX_HISTORY = 10;
+const BEFOREUNLOAD_KEY = "cascade:beforeunload";
+
+/** Last file handle from a successful save — used as `startIn` for the next picker. */
+let lastSaveHandle: FileSystemFileHandle | null = null;
 
 interface HistoryEntry {
   saved_at: string;
@@ -74,11 +78,14 @@ async function saveAs(filename: string, content: string): Promise<void> {
         showSaveFilePicker: (opts: object) => Promise<FileSystemFileHandle>;
       }).showSaveFilePicker({
         suggestedName: filename,
+        // Suggest the same folder as the last save when available
+        ...(lastSaveHandle ? { startIn: lastSaveHandle } : {}),
         types: [{ description: "JSON file", accept: { "application/json": [".json"] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
+      lastSaveHandle = handle;
       return;
     } catch (err) {
       // User cancelled (AbortError) or API unavailable — fall through to legacy
@@ -97,6 +104,75 @@ async function saveAs(filename: string, content: string): Promise<void> {
 
 function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_").slice(0, 60) || "cascade";
+}
+
+// ---------------------------------------------------------------------------
+// beforeunload save / restore (no download, no history entry)
+// ---------------------------------------------------------------------------
+
+export interface BeforeUnloadSave {
+  saved_at: string;
+  bundle: ProjectBundle;
+  /** Folder name shown in the restore prompt, if saved to a real file. */
+  folder_name?: string;
+  /** Filename used for the recovery file, if saved to a real file. */
+  recovery_filename?: string;
+}
+
+/** Writes the bundle to localStorage (always) and to the recovery directory (if set). */
+export function saveBeforeUnload(
+  bundle: ProjectBundle,
+  recoveryDir?: FileSystemDirectoryHandle | null,
+): void {
+  const filename = `cascade-recovery-${safeName(bundle.project.meta.name)}.json`;
+  const entry: BeforeUnloadSave = {
+    saved_at: new Date().toISOString(),
+    bundle,
+  };
+
+  // Write to the recovery directory if one is set
+  if (recoveryDir) {
+    entry.folder_name = recoveryDir.name;
+    entry.recovery_filename = filename;
+    try {
+      // File System Access API writes are async but beforeunload is sync.
+      // We fire-and-forget: modern browsers give a short grace period for async work.
+      recoveryDir.getFileHandle(filename, { create: true }).then((fh) =>
+        fh.createWritable().then((w) =>
+          w.write(JSON.stringify(entry, null, 2)).then(() => w.close())
+        )
+      );
+    } catch {
+      // silently ignore
+    }
+  }
+
+  // Always write to localStorage as a fallback
+  try {
+    localStorage.setItem(BEFOREUNLOAD_KEY, JSON.stringify(entry));
+  } catch {
+    // localStorage may be full or unavailable — silently ignore
+  }
+}
+
+/** Returns the beforeunload save if it exists and is newer than the last manual save. */
+export function getBeforeUnloadSave(): BeforeUnloadSave | null {
+  try {
+    const raw = localStorage.getItem(BEFOREUNLOAD_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as BeforeUnloadSave;
+  } catch {
+    return null;
+  }
+}
+
+/** Clears the beforeunload save (call after the user restores or dismisses it). */
+export function clearBeforeUnloadSave(): void {
+  try {
+    localStorage.removeItem(BEFOREUNLOAD_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 export async function saveBundle(bundle: ProjectBundle): Promise<void> {

@@ -65,9 +65,10 @@ export function Toolbox() {
               )}
             </button>
 
-            {/* Template popover */}
+            {/* Template popover — no gap so the cursor doesn't leave the hover zone */}
             {isAddNode && templatePopoverOpen && (
-              <div className="absolute left-full top-0 z-50 ml-1 w-44 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="absolute left-full top-0 z-50 w-44 pl-1">
+              <div className="rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                 <p className="px-3 pb-1 pt-1.5 text-xs font-semibold text-zinc-400">
                   Node template
                 </p>
@@ -106,6 +107,7 @@ export function Toolbox() {
                     No templates — add in Config → Node Defaults
                   </p>
                 )}
+              </div>
               </div>
             )}
           </div>

@@ -308,6 +308,15 @@ function TabEvents() {
               )}
             </div>
 
+            {ev.type === "hazard" && (
+              <DirectDamageEditor
+                defaultRepairTime={ev.default_repair_time}
+                effects={ev.direct_damage_effects ?? {}}
+                onChangeDefault={(v) => updateEvent(ev.id, { default_repair_time: v })}
+                onChangeEffects={(next) => updateEvent(ev.id, { direct_damage_effects: next })}
+              />
+            )}
+
             <AttributeMutationsEditor
               mutations={ev.attribute_mutations ?? {}}
               onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
@@ -329,6 +338,217 @@ function TabEvents() {
       >
         <Plus size={12} /> Add event
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Direct Damage Editor (hazard events only)
+// ---------------------------------------------------------------------------
+
+interface DirectDamageEditorProps {
+  defaultRepairTime: number | undefined;
+  effects: Record<string, { expected_repair_time: number }>;
+  onChangeDefault: (v: number | undefined) => void;
+  onChangeEffects: (next: Record<string, { expected_repair_time: number }>) => void;
+}
+
+function DirectDamageEditor({ defaultRepairTime, effects, onChangeDefault, onChangeEffects }: DirectDamageEditorProps) {
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
+  const categories = useConfigStore(useShallow((s) => s.draft.categories));
+
+  const [filterName, setFilterName] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "nodes" | "edges">("all");
+  const [filterCat, setFilterCat] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkValue, setBulkValue] = useState("");
+
+  const NODE_TYPE_OPTIONS = ["Source", "Infrastructure", "Service", "Personnel"];
+
+  const allElements = useMemo(() => [
+    ...Object.values(allNodes).map((n) => ({
+      id: n.id,
+      label: n.label ?? n.id,
+      kind: "node" as const,
+      node_type: n.node_type,
+      categories: n.node_categories ?? [],
+    })),
+    ...Object.values(allEdges).map((e) => ({
+      id: e.id,
+      label: `${allNodes[e.source]?.label ?? e.source} → ${allNodes[e.target]?.label ?? e.target}`,
+      kind: "edge" as const,
+      node_type: undefined,
+      categories: [] as string[],
+    })),
+  ], [allNodes, allEdges]);
+
+  const filtered = useMemo(() => allElements.filter((el) => {
+    if (filterType === "nodes" && el.kind !== "node") return false;
+    if (filterType === "edges" && el.kind !== "edge") return false;
+    if (filterCat && !el.categories.includes(filterCat)) return false;
+    if (filterName.trim() && !el.label.toLowerCase().includes(filterName.toLowerCase())) return false;
+    return true;
+  }), [allElements, filterType, filterCat, filterName]);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((el) => selected.has(el.id));
+
+  function toggleSelect(id: string) {
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelected((s) => { const n = new Set(s); filtered.forEach((el) => n.delete(el.id)); return n; });
+    } else {
+      setSelected((s) => { const n = new Set(s); filtered.forEach((el) => n.add(el.id)); return n; });
+    }
+  }
+
+  function applyBulk() {
+    const v = parseInt(bulkValue, 10);
+    if (isNaN(v) || v < 0) return;
+    const next = { ...effects };
+    for (const id of selected) next[id] = { expected_repair_time: v };
+    onChangeEffects(next);
+    setBulkValue("");
+  }
+
+  function setElementRepairTime(id: string, v: number | undefined) {
+    const next = { ...effects };
+    if (v === undefined) delete next[id];
+    else next[id] = { expected_repair_time: v };
+    onChangeEffects(next);
+  }
+
+  function repairTimeFor(id: string): number | undefined {
+    return effects[id]?.expected_repair_time;
+  }
+
+  if (allElements.length === 0) return (
+    <p className="mt-2 text-xs text-zinc-400 italic">No nodes or edges in project yet.</p>
+  );
+
+  return (
+    <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+      <p className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">Direct damage</p>
+
+      {/* Default repair time */}
+      <div className="mb-3 flex items-center gap-2">
+        <label className="text-xs text-zinc-500 w-36 shrink-0">Default repair time</label>
+        <NumberInput
+          value={defaultRepairTime}
+          min={0}
+          className="w-20"
+          onChange={(v) => onChangeDefault(v)}
+        />
+        <span className="text-xs text-zinc-400">h &nbsp;(blank = no damage by default)</span>
+        {defaultRepairTime !== undefined && (
+          <button onClick={() => onChangeDefault(undefined)} className="text-xs text-zinc-400 hover:text-red-500">
+            <Trash2 size={11} />
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        {/* Nodes / Edges toggle */}
+        {(["all", "nodes", "edges"] as const).map((opt) => (
+          <button key={opt} onClick={() => setFilterType(opt)}
+            className={cn("rounded px-2 py-0.5 text-xs transition-colors",
+              filterType === opt ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            )}>
+            {opt === "all" ? "All" : opt === "nodes" ? "Nodes" : "Edges"}
+          </button>
+        ))}
+        {/* Category filter */}
+        {categories.map((cat) => (
+          <button key={cat.name} onClick={() => setFilterCat(filterCat === cat.name ? null : cat.name)}
+            className={cn("rounded px-2 py-0.5 text-xs transition-colors",
+              filterCat === cat.name ? "text-white" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            )}
+            style={filterCat === cat.name ? { backgroundColor: cat.color ?? "#6b7280" } : undefined}>
+            {cat.name}
+          </button>
+        ))}
+        {/* Name search */}
+        <input type="text" value={filterName} onChange={(e) => setFilterName(e.target.value)}
+          placeholder="name…"
+          className="w-24 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200" />
+      </div>
+
+      {/* Bulk edit bar — shown when something is selected */}
+      {selected.size > 0 && (
+        <div className="mb-2 flex items-center gap-2 rounded bg-blue-50 px-2 py-1.5 dark:bg-blue-900/20">
+          <span className="text-xs text-blue-700 dark:text-blue-300">{selected.size} selected</span>
+          <input type="number" min={0} value={bulkValue} onChange={(e) => setBulkValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") applyBulk(); }}
+            placeholder="repair time (h)"
+            className="w-28 rounded border border-blue-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-blue-800 dark:bg-zinc-800 dark:text-zinc-200" />
+          <button onClick={applyBulk} className="text-xs text-blue-600 hover:text-blue-800">Apply</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-zinc-400 hover:text-zinc-600">Clear</button>
+        </div>
+      )}
+
+      {/* Element list */}
+      <div className="max-h-52 overflow-y-auto rounded border border-zinc-100 dark:border-zinc-800">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-zinc-400 italic">No elements match filter.</p>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <th className="w-6 px-2 py-1 text-left">
+                  <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="h-3 w-3" />
+                </th>
+                <th className="px-2 py-1 text-left font-medium text-zinc-500">Element</th>
+                <th className="w-28 px-2 py-1 text-left font-medium text-zinc-500">Repair time (h)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((el) => {
+                const override = repairTimeFor(el.id);
+                const isSelected = selected.has(el.id);
+                return (
+                  <tr key={el.id} className={cn("border-b border-zinc-50 dark:border-zinc-800/50", isSelected && "bg-blue-50/50 dark:bg-blue-900/10")}>
+                    <td className="px-2 py-1">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(el.id)} className="h-3 w-3" />
+                    </td>
+                    <td className="px-2 py-1">
+                      <span className="text-zinc-700 dark:text-zinc-300">{el.label}</span>
+                      {el.kind === "edge" && <span className="ml-1 text-zinc-400">(edge)</span>}
+                    </td>
+                    <td className="px-2 py-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          value={override !== undefined ? override : (defaultRepairTime ?? "")}
+                          onChange={(e) => {
+                            const v = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+                            setElementRepairTime(el.id, isNaN(v as number) ? undefined : v);
+                          }}
+                          className={cn(
+                            "w-16 rounded border px-1.5 py-0.5 text-xs focus:outline-none dark:bg-zinc-800 dark:text-zinc-200",
+                            override !== undefined
+                              ? "border-blue-300 dark:border-blue-700"
+                              : "border-zinc-200 text-zinc-400 dark:border-zinc-700",
+                          )}
+                        />
+                        {override !== undefined && (
+                          <button onClick={() => setElementRepairTime(el.id, undefined)} className="text-zinc-300 hover:text-red-500">
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Topbar } from "./topbar";
 import { ActionBar } from "./action-bar";
 import { StatusBar } from "./status-bar";
@@ -14,6 +15,10 @@ import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { ToastContainer } from "./toast-container";
 import { useUiStore } from "@/store/ui-store";
+import { useCanvasStore } from "@/store/canvas-store";
+import { useConfigStore } from "@/store/config-store";
+import { saveBeforeUnload } from "@/lib/file-io";
+import { loadRecoveryDir } from "@/lib/recovery-dir";
 
 export function EditorShell() {
   const configModalOpen = useUiStore((s) => s.configModalOpen);
@@ -22,6 +27,22 @@ export function EditorShell() {
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
+
+  const recoveryDirRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  useEffect(() => {
+    loadRecoveryDir().then((dir) => { recoveryDirRef.current = dir; });
+  }, []);
+
+  useEffect(() => {
+    function handleBeforeUnload() {
+      const project = useCanvasStore.getState().toProject();
+      const config = useConfigStore.getState().config;
+      saveBeforeUnload({ project, config }, recoveryDirRef.current);
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   return (
     <div className="flex flex-col bg-zinc-50 dark:bg-zinc-950" style={{ height: "100dvh" }}>

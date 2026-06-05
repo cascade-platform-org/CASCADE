@@ -59,6 +59,12 @@ export const EventDefinitionSchema = z.object({
    * Key = ElementId. Absence means no direct physical damage for that element
    * (functionality drop only, no direct_damage flag).
    */
+  /**
+   * Global default repair time (hours) applied to ALL elements when this hazard fires,
+   * unless the element has a specific entry in direct_damage_effects.
+   * When undefined, only elements listed in direct_damage_effects receive direct_damage.
+   */
+  default_repair_time: z.number().int().min(0).optional(),
   direct_damage_effects: z.record(z.string(), DirectDamageEffectSchema).optional(),
   /**
    * Unrestricted field overwrites applied to Elements when this Event is triggered.
