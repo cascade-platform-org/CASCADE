@@ -6,6 +6,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { GraphSnapshot } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,6 +60,8 @@ export interface UiState {
 
   // --- Scorecard panel ---
   scorecardPanelOpen: boolean;
+  /** When true, the Save-to-Scorecard dialog is open independently of the Scorecard panel. */
+  scorecardSaveDialogOpen: boolean;
 
   // --- Inspector ---
   /** When false the inspector panel is fully collapsed. */
@@ -78,6 +81,21 @@ export interface UiState {
 
   // --- Toast / notification queue ---
   toasts: Toast[];
+
+  // --- Temporal Jump ---
+  /**
+   * When true, applying a Temporal Jump automatically triggers a Propagation
+   * using the current propagationScope. When false, only the client-side
+   * functionality_time math runs (no engine call).
+   */
+  temporalAutoPropagate: boolean;
+  /**
+   * Graph state captured before the first temporal jump in the current session.
+   * Non-null as soon as one jump has been applied. Cleared by revert or page reload.
+   */
+  temporalJumpRevertSnapshot: GraphSnapshot | null;
+  /** Cumulative hours advanced by temporal jumps since the revert snapshot was saved. */
+  temporalJumpElapsedHours: number;
 
   // --- Node template selection ---
   /** Key into config.node_defaults. Null = blank node (no template). */
@@ -101,6 +119,8 @@ export interface Toast {
   variant?: "info" | "success" | "warning" | "error";
   /** Auto-dismiss after ms. Undefined = persistent until dismissed. */
   durationMs?: number;
+  /** Optional inline action button shown in the toast. */
+  action?: { label: string; onClick: () => void };
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +159,8 @@ export interface UiActions {
   // --- Scorecard panel ---
   toggleScorecardPanel: () => void;
   closeScorecardPanel: () => void;
+  openScorecardSaveDialog: () => void;
+  closeScorecardSaveDialog: () => void;
 
   // --- Inspector ---
   setInspectorOpen: (open: boolean) => void;
@@ -150,6 +172,15 @@ export interface UiActions {
   // --- Toasts ---
   pushToast: (toast: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
+
+  // --- Temporal Jump ---
+  setTemporalAutoPropagate: (value: boolean) => void;
+  /** Called before the first jump — saves the snapshot to enable revert. */
+  saveTemporalRevertSnapshot: (snapshot: GraphSnapshot) => void;
+  /** Adds hours to the elapsed counter after each jump. */
+  addTemporalElapsedHours: (hours: number) => void;
+  /** Clears both the revert snapshot and elapsed counter (after revert or manual reset). */
+  clearTemporalJumpProgress: () => void;
 
   // --- Node template selection ---
   setSelectedNodeTemplate: (key: string | null) => void;
@@ -171,7 +202,7 @@ export type UiStore = UiState & UiActions;
 const initialState: UiState = {
   propagationScope: "local",
   isPropagating: false,
-  serverReachable: true,
+  serverReachable: false,
   globalViewActive: false,
   activeTool: "select",
   configModalOpen: false,
@@ -181,6 +212,10 @@ const initialState: UiState = {
   interCanvasEdgeSourceNodeId: null,
   activeRulesPanelOpen: false,
   scorecardPanelOpen: false,
+  scorecardSaveDialogOpen: false,
+  temporalAutoPropagate: true,
+  temporalJumpRevertSnapshot: null,
+  temporalJumpElapsedHours: 0,
   inspectorOpen: false,
   activeCategoryFilter: null,
   propagationWarnings: [],
@@ -301,6 +336,14 @@ export const useUiStore = create<UiStore>()(
       set((state) => { state.scorecardPanelOpen = false; });
     },
 
+    openScorecardSaveDialog() {
+      set((state) => { state.scorecardSaveDialogOpen = true; });
+    },
+
+    closeScorecardSaveDialog() {
+      set((state) => { state.scorecardSaveDialogOpen = false; });
+    },
+
     // -------------------------------------------------------------------------
     // Inspector
     // -------------------------------------------------------------------------
@@ -350,6 +393,25 @@ export const useUiStore = create<UiStore>()(
     // -------------------------------------------------------------------------
     // Unsaved changes
     // -------------------------------------------------------------------------
+
+    setTemporalAutoPropagate(value) {
+      set((state) => { state.temporalAutoPropagate = value; });
+    },
+
+    saveTemporalRevertSnapshot(snapshot) {
+      set((state) => { state.temporalJumpRevertSnapshot = snapshot; });
+    },
+
+    addTemporalElapsedHours(hours) {
+      set((state) => { state.temporalJumpElapsedHours += hours; });
+    },
+
+    clearTemporalJumpProgress() {
+      set((state) => {
+        state.temporalJumpRevertSnapshot = null;
+        state.temporalJumpElapsedHours = 0;
+      });
+    },
 
     setSelectedNodeTemplate(key) {
       set((state) => { state.selectedNodeTemplate = key; });

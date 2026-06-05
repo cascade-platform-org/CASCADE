@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { NewProjectWizard } from "@/components/onboarding/new-project-wizard";
 import { EditorShell } from "@/components/canvas/editor-shell";
+import { ErrorBoundary } from "@/components/canvas/error-boundary";
 import { getBeforeUnloadSave, clearBeforeUnloadSave, type BeforeUnloadSave } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -112,5 +113,9 @@ export default function Home() {
     );
   }
 
-  return <div className="h-full"><EditorShell /></div>;
+  return (
+    <ErrorBoundary>
+      <div className="h-full"><EditorShell /></div>
+    </ErrorBoundary>
+  );
 }

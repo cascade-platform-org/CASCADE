@@ -91,7 +91,15 @@ export interface UnsavedRun {
 
 /**
  * Type 1: event_applied + propagation pairs in history not yet in Scorecard.
- * Matches each propagation entry's `before` snapshot hash against saved entries.
+ *
+ * A "session" is the slice of history between two consecutive propagations
+ * (or between the start of history and the first propagation).
+ * History is newest-first (entries are unshifted), so entries after index i
+ * are older.
+ *
+ * A propagation is only flagged when its session contains at least one
+ * event_applied entry. Pure manual edits (reset, manual functionality change)
+ * without an event are not flagged — those are not domain events.
  */
 export async function findUnsavedRuns(
   history: AnyUpdateEntry[],
@@ -105,15 +113,26 @@ export async function findUnsavedRuns(
   for (let i = 0; i < history.length; i++) {
     const entry = history[i];
     if (entry.update_type !== "propagation") continue;
+
+    // "Session" = entries older than this propagation, up to (not including)
+    // the next older propagation.
+    const olderEntries = history.slice(i + 1);
+    const prevPropIdx = olderEntries.findIndex((e) => e.update_type === "propagation");
+    const sessionEntries = prevPropIdx === -1
+      ? olderEntries
+      : olderEntries.slice(0, prevPropIdx);
+
+    // Only flag if an event was actually applied in this session.
+    const eventEntry = sessionEntries.find((e) => e.update_type === "event_applied");
+    if (!eventEntry) continue;
+
     const hash = await hashSnapshot(entry.before);
     if (savedHashes.has(hash)) continue;
 
-    // Find the nearest event_applied entry before this propagation
-    const eventEntry = history.slice(i + 1).find((h) => h.update_type === "event_applied");
     runs.push({
       eventEntryId: entry.id,
-      eventId: eventEntry?.event_id ?? undefined,
-      eventLabel: eventEntry?.label ?? "Manual What-If Scenario",
+      eventId: eventEntry.event_id ?? undefined,
+      eventLabel: eventEntry.label,
       beforeSnapshot: entry.before,
       afterSnapshot: entry.after,
     });

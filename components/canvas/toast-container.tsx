@@ -44,6 +44,14 @@ function ToastItem({ toast }: { toast: Toast }) {
     >
       {VARIANT_ICONS[variant]}
       <span className="flex-1 leading-snug">{toast.message}</span>
+      {toast.action && (
+        <button
+          onClick={() => { toast.action!.onClick(); dismissToast(toast.id); }}
+          className="ml-1 shrink-0 rounded bg-white/20 px-2 py-0.5 text-xs font-medium hover:bg-white/30 transition-colors whitespace-nowrap"
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         onClick={() => dismissToast(toast.id)}
         className="ml-1 shrink-0 opacity-70 hover:opacity-100 transition-opacity"

@@ -9,30 +9,80 @@
  * from here (or from the ActionBar after a Propagation).
  */
 
-import { useState } from "react";
-import { X, Download, Trash2, ChevronDown, BookMarked, PlusCircle } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { X, Download, Trash2, ChevronDown, BookMarked, PlusCircle, AlertTriangle, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
+import { useHistoryStore } from "@/store/history-store";
 import {
   computeOperativityScore,
   operativityColor,
   exportScorecardZip,
+  findUnsavedRuns,
+  findUncoveredEvents,
+  type UnsavedRun,
+  type UncoveredEvent,
 } from "@/lib/scorecard-utils";
+import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { resetFunctionality } from "@/lib/network-utils";
 import { SaveScorecardDialog } from "./operativity-scorecard";
+import { SnapshotFlowView } from "./snapshot-flow-view";
 import type { GraphSnapshot, ScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
   const scorecard = useScorecardStore((s) => s.scorecard);
+  const updateScorecardEntry = useScorecardStore((s) => s.updateScorecardEntry);
   const removeScorecardEntry = useScorecardStore((s) => s.removeScorecardEntry);
   const projectMeta = useCanvasStore((s) => s.projectMeta);
   const config = useConfigStore((s) => s.config);
+  const updateHistory = useHistoryStore((s) => s.updateHistory);
   const pushToast = useUiStore((s) => s.pushToast);
+  const serverReachable = useUiStore((s) => s.serverReachable);
+  const scope = useUiStore((s) => s.propagationScope);
+  const globalViewActive = useUiStore((s) => s.globalViewActive);
+
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveDialogProps, setSaveDialogProps] = useState<{
+    beforeSnapshot?: GraphSnapshot;
+    afterSnapshot?: GraphSnapshot;
+    defaultLabel?: string;
+    eventId?: string;
+  }>({});
   const [exporting, setExporting] = useState(false);
+
+  // Gap detection (async — SHA-256 hashing)
+  const [unsavedRuns, setUnsavedRuns] = useState<UnsavedRun[]>([]);
+  const [computingGaps, setComputingGaps] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setComputingGaps(true);
+    findUnsavedRuns(updateHistory, scorecard).then((runs) => {
+      if (!cancelled) { setUnsavedRuns(runs); setComputingGaps(false); }
+    });
+    return () => { cancelled = true; };
+  }, [updateHistory, scorecard]);
+
+  const uncoveredEvents = useMemo(
+    () => findUncoveredEvents(config, scorecard),
+    [config, scorecard],
+  );
+
+  const incompleteEntries = useMemo(
+    () => scorecard.filter((e) => !e.after_propagation),
+    [scorecard],
+  );
+
+  const hasGaps = unsavedRuns.length > 0 || incompleteEntries.length > 0 || uncoveredEvents.length > 0;
+
+  function openSaveDialog(props: typeof saveDialogProps = {}) {
+    setSaveDialogProps(props);
+    setSaveDialogOpen(true);
+  }
 
   const n = config.functionality_scale.length;
 
@@ -67,7 +117,7 @@ export function ScorecardPanel() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSaveDialogOpen(true)}
+              onClick={() => openSaveDialog()}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
             >
               <PlusCircle size={14} />
@@ -100,8 +150,54 @@ export function ScorecardPanel() {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {/* Gap detection */}
+          {(hasGaps || computingGaps) && (
+            <GapsSection
+              unsavedRuns={unsavedRuns}
+              incompleteEntries={incompleteEntries}
+              uncoveredEvents={uncoveredEvents}
+              loading={computingGaps}
+              serverReachable={serverReachable}
+              config={config}
+              onSaveRun={(run) => openSaveDialog({
+                beforeSnapshot: run.beforeSnapshot,
+                afterSnapshot: run.afterSnapshot,
+                defaultLabel: run.eventLabel,
+                eventId: run.eventId,
+              })}
+              onComputeEntry={async (entry) => {
+                if (!serverReachable) return;
+                try {
+                  const after = await runEphemeralPropagation(entry.before_propagation);
+                  updateScorecardEntry(entry.id, { after_propagation: after });
+                  pushToast({ message: `"${entry.label}" updated with propagation result.`, variant: "success", durationMs: 3000 });
+                } catch (err) {
+                  pushToast({ message: `Compute failed — ${err instanceof Error ? err.message : "error"}`, variant: "error", durationMs: 4000 });
+                }
+              }}
+              onRunEvent={(ev) => {
+                const n = config.functionality_scale.length;
+                // 1. Reset canvas (globalViewActive → always global)
+                resetFunctionality({ n, scope, globalViewActive });
+                // 2. Apply the event on the live canvas
+                const eventDef = config.events.find((e) => e.id === ev.eventId);
+                if (eventDef) {
+                  useCanvasStore.getState().applyEvent(eventDef, n);
+                }
+                // 3. Snapshot AFTER event — this is "before propagation" in the scorecard
+                const afterEvent = useCanvasStore.getState().toGraphSnapshot();
+                // 4. Open save dialog; user can optionally run propagation then save
+                openSaveDialog({
+                  beforeSnapshot: afterEvent,
+                  defaultLabel: ev.eventLabel,
+                  eventId: ev.eventId,
+                });
+              }}
+            />
+          )}
+
           {scorecard.length === 0 ? (
-            <EmptyState onSave={() => setSaveDialogOpen(true)} />
+            <EmptyState onSave={() => openSaveDialog()} />
           ) : (
             <div className="space-y-4">
               {scorecard.map((entry) => (
@@ -119,7 +215,10 @@ export function ScorecardPanel() {
       </div>
 
       {saveDialogOpen && (
-        <SaveScorecardDialog onClose={() => setSaveDialogOpen(false)} />
+        <SaveScorecardDialog
+          onClose={() => setSaveDialogOpen(false)}
+          {...saveDialogProps}
+        />
       )}
     </div>
   );
@@ -151,6 +250,177 @@ function EmptyState({ onSave }: { onSave: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
+// Gap detection section
+// ---------------------------------------------------------------------------
+
+interface GapsSectionProps {
+  unsavedRuns: UnsavedRun[];
+  incompleteEntries: ScorecardEntry[];
+  uncoveredEvents: UncoveredEvent[];
+  loading: boolean;
+  serverReachable: boolean;
+  config: ReturnType<typeof useConfigStore.getState>["config"];
+  onSaveRun: (run: UnsavedRun) => void;
+  onComputeEntry: (entry: ScorecardEntry) => Promise<void>;
+  onRunEvent: (ev: UncoveredEvent) => void;
+}
+
+function GapsSection({
+  unsavedRuns,
+  incompleteEntries,
+  uncoveredEvents,
+  loading,
+  serverReachable,
+  onSaveRun,
+  onComputeEntry,
+  onRunEvent,
+}: GapsSectionProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [computingIds, setComputingIds] = useState<Set<string>>(new Set());
+  // IDs of unsaved runs the user has manually dismissed (session-only).
+  const [dismissedRunIds, setDismissedRunIds] = useState<Set<string>>(new Set());
+
+  const visibleRuns = unsavedRuns.filter((r) => !dismissedRunIds.has(r.eventEntryId));
+  const total = visibleRuns.length + incompleteEntries.length + uncoveredEvents.length;
+
+  function dismissRun(id: string) {
+    setDismissedRunIds((s) => new Set(s).add(id));
+  }
+  function dismissAllRuns() {
+    setDismissedRunIds(new Set(unsavedRuns.map((r) => r.eventEntryId)));
+  }
+
+  async function handleCompute(entry: ScorecardEntry) {
+    setComputingIds((s) => new Set(s).add(entry.id));
+    await onComputeEntry(entry);
+    setComputingIds((s) => { const n = new Set(s); n.delete(entry.id); return n; });
+  }
+
+  if (loading || total === 0) return null;
+
+  return (
+    <div className="mb-5 overflow-hidden rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-900/10">
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
+      >
+        <AlertTriangle size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+        <span className="flex-1 text-sm font-medium text-amber-800 dark:text-amber-300">
+          {total} gap{total !== 1 ? "s" : ""} detected
+        </span>
+        <ChevronDown size={14} className={cn("text-amber-500 transition-transform", collapsed && "rotate-180")} />
+      </button>
+
+      {!collapsed && (
+        <div className="border-t border-amber-200 dark:border-amber-800/40">
+          {/* Type 1 — Unsaved runs */}
+          {visibleRuns.length > 0 && (
+            <div className="px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-500">
+                  Unrecorded propagation runs
+                </p>
+                {visibleRuns.length > 1 && (
+                  <button
+                    onClick={dismissAllRuns}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  >
+                    Dismiss all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                {visibleRuns.map((run) => (
+                  <div key={run.eventEntryId} className="flex items-center justify-between gap-3">
+                    <span className="truncate text-xs text-zinc-700 dark:text-zinc-300">{run.eventLabel}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => onSaveRun(run)}
+                        className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                      >
+                        <PlusCircle size={11} />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => dismissRun(run.eventEntryId)}
+                        title="Dismiss"
+                        className="rounded p-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Type 2 — Incomplete entries */}
+          {incompleteEntries.length > 0 && (
+            <div className={cn("px-4 py-3", visibleRuns.length > 0 && "border-t border-amber-200 dark:border-amber-800/40")}>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-500">
+                Missing propagation results
+              </p>
+              <div className="space-y-1.5">
+                {incompleteEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3">
+                    <span className="truncate text-xs text-zinc-700 dark:text-zinc-300">{entry.label}</span>
+                    <button
+                      onClick={() => handleCompute(entry)}
+                      disabled={!serverReachable || computingIds.has(entry.id)}
+                      title={!serverReachable ? "Server unreachable" : "Run ephemeral propagation"}
+                      className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-300 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      {computingIds.has(entry.id)
+                        ? <Loader2 size={11} className="animate-spin" />
+                        : <Play size={11} />}
+                      Compute
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Type 3 — Uncovered events */}
+          {uncoveredEvents.length > 0 && (
+            <div className={cn("px-4 py-3", (visibleRuns.length > 0 || incompleteEntries.length > 0) && "border-t border-amber-200 dark:border-amber-800/40")}>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-500">
+                Never covered events
+              </p>
+              <div className="space-y-1.5">
+                {uncoveredEvents.map((ev) => (
+                  <div key={ev.eventId} className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={cn(
+                        "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                        ev.eventType === "hazard"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+                      )}>
+                        {ev.eventType}
+                      </span>
+                      <span className="truncate text-xs text-zinc-700 dark:text-zinc-300">{ev.eventLabel}</span>
+                    </div>
+                    <button
+                      onClick={() => onRunEvent(ev)}
+                      className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-300 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      <Play size={11} />
+                      Run
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Entry card
 // ---------------------------------------------------------------------------
 
@@ -164,6 +434,11 @@ interface EntryCardProps {
 function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Resolve event name: look up in config, fall back to entry label
+  const eventLabel = entry.event_id
+    ? (config.events.find((e) => e.id === entry.event_id)?.label ?? entry.label)
+    : entry.label;
 
   const scoreBefore = computeOperativityScore(entry.before_propagation, n);
   const scoreAfter = entry.after_propagation
@@ -262,7 +537,7 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
         <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-700">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <SnapshotMiniGraph
-              label="Before Propagation"
+              label={eventLabel}
               snapshot={entry.before_propagation}
               imageDataUrl={entry.before_propagation_image}
               score={scoreBefore}
@@ -281,7 +556,7 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
             )}
             {entry.after_temporal_jump && (
               <SnapshotMiniGraph
-                label={`After ${entry.temporal_jump_hours ?? "?"}h Temporal Jump`}
+                label={`+${entry.temporal_jump_hours ?? "?"}h Temporal Jump`}
                 snapshot={entry.after_temporal_jump}
                 imageDataUrl={entry.after_temporal_jump_image}
                 score={scoreTemporal ?? 0}
@@ -333,62 +608,34 @@ function ScorePill({
 }
 
 // ---------------------------------------------------------------------------
-// Snapshot visualisation — renders node functionality as coloured dots
+// Snapshot visualisation — interactive pannable/zoomable React Flow view
 // ---------------------------------------------------------------------------
 
 function SnapshotMiniGraph({
   label,
   snapshot,
-  imageDataUrl,
   score,
   config,
-  n,
 }: {
   label: string;
   snapshot: GraphSnapshot;
-  imageDataUrl?: string;
+  imageDataUrl?: string; // kept for API compat (ZIP export), not displayed
   score: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
   n: number;
 }) {
-  const nodes = Object.values(snapshot.nodes);
-
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       <div className="flex items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800">
-        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 truncate">{label}</span>
+        <span className="truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">{label}</span>
         <span
-          className="shrink-0 ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
+          className="ml-2 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
           style={{ backgroundColor: operativityColor(score, config) }}
         >
           {score.toFixed(1)}%
         </span>
       </div>
-      {imageDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageDataUrl} alt={label} className="h-40 w-full object-cover" />
-      ) : (
-        <div className="flex h-40 flex-wrap content-start gap-1.5 overflow-y-auto p-3">
-          {nodes.length === 0 && (
-            <span className="m-auto text-xs text-zinc-400">No nodes</span>
-          )}
-          {nodes.map((nd) => {
-            const level = config.functionality_scale.find((l) => l.level === nd.functionality);
-            const color = level?.color ?? "#94a3b8";
-            const pct = ((nd.functionality / n) * 100).toFixed(0);
-            return (
-              <div
-                key={nd.id}
-                title={`${nd.label ?? nd.id}: F${nd.functionality} (${pct}%)`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ backgroundColor: color }}
-              >
-                {nd.functionality}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <SnapshotFlowView snapshot={snapshot} heightClass="h-52" />
     </div>
   );
 }

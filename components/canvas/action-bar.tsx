@@ -3,17 +3,20 @@
 /**
  * ActionBar — sits below the Topbar.
  *
- * Left zone:  [▶ Propagate] [↺ Reset] [Local/Global toggle]
+ * Left zone:  [▶ Propagate] [↺ Reset] [Undo] [Redo]
  * Divider
  * Event zone: [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
+ * Divider
+ * Temporal:   [⏱ Time ▾]
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2 } from "lucide-react";
+import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import {
   useConfigStore,
@@ -24,154 +27,57 @@ import {
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
-import { buildPropagationPayload } from "@/lib/propagation-payload";
-import { PropagationResultSchema } from "@/lib/schemas/api";
-import type { EventDefinition } from "@/lib/schemas/config";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { usePropagate } from "@/hooks/usePropagate";
+import { resetFunctionality } from "@/lib/network-utils";
 
 export function ActionBar() {
   const scope = useUiStore((s) => s.propagationScope);
-  const isPropagating = useUiStore((s) => s.isPropagating);
-  const serverReachable = useUiStore((s) => s.serverReachable);
   const setPropagationScope = useUiStore((s) => s.setPropagationScope);
-  const setIsPropagating = useUiStore((s) => s.setIsPropagating);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
   const pushToast = useUiStore((s) => s.pushToast);
+  const revertSnapshot = useUiStore((s) => s.temporalJumpRevertSnapshot);
+  const elapsedHours = useUiStore((s) => s.temporalJumpElapsedHours);
+  const clearTemporalJumpProgress = useUiStore((s) => s.clearTemporalJumpProgress);
+  const globalViewActive = useUiStore((s) => s.globalViewActive);
 
   const actionBarEvents = useConfigStore(useShallow(selectActionBarEvents));
   const overflowEvents = useConfigStore(useShallow(selectOverflowEvents));
   const n = useConfigStore(selectN);
 
   const { undo, redo, canUndo, canRedo } = useNetworkHistory();
+  const { propagate, isPropagating, serverReachable } = usePropagate();
 
   const [moreOpen, setMoreOpen] = useState(false);
 
-  async function handlePropagate() {
-    if (!serverReachable || isPropagating) return;
-
+  function handleRevertFromBar() {
+    if (!revertSnapshot || elapsedHours === 0) return;
     const canvasState = useCanvasStore.getState();
-    const config = useConfigStore.getState().config;
-    const activeCanvasId = canvasState.activeCanvasId;
-
-    let payload;
-    try {
-      payload = buildPropagationPayload({
-        project: canvasState.toProject(),
-        config,
-        scope,
-        activeCanvasId,
-      });
-    } catch (err) {
-      pushToast({ message: `Cannot propagate: ${err instanceof Error ? err.message : String(err)}`, variant: "error", durationMs: 4000 });
-      return;
-    }
-
-    setIsPropagating(true);
-    const before = canvasState.toGraphSnapshot();
-
-    try {
-      const response = await fetch(`${API_BASE}/api/propagate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const detail = await response.text().catch(() => response.statusText);
-        throw new Error(`Server returned ${response.status}: ${detail}`);
-      }
-
-      const raw = await response.json();
-      const result = PropagationResultSchema.parse(raw);
-
-      canvasState.applyPropagationResult(result);
-
-      const after = useCanvasStore.getState().toGraphSnapshot();
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type: "propagation",
-        label: `Propagation (${scope})`,
-        scope,
-        canvas_id: activeCanvasId ?? undefined,
-        before,
-        after,
-      });
-
-      const count = result.updates.length;
-      const warnings = result.warnings ?? [];
-
-      if (warnings.length > 0) {
-        pushToast({
-          message: `Propagation complete — ${count} element${count !== 1 ? "s" : ""} updated. ⚠ ${warnings[0]}`,
-          variant: "warning",
-          durationMs: 5000,
-        });
-      } else {
-        pushToast({
-          message: count > 0
-            ? `Propagation complete — ${count} element${count !== 1 ? "s" : ""} updated`
-            : "Propagation complete — no changes",
-          variant: "success",
-          durationMs: 3500,
-        });
-      }
-    } catch (err) {
-      pushToast({
-        message: `Propagation failed — ${err instanceof Error ? err.message : "unexpected error"}`,
-        variant: "error",
-        durationMs: 5000,
-      });
-    } finally {
-      setIsPropagating(false);
-    }
-  }
-
-  function handleReset() {
-    const state = useCanvasStore.getState();
-    const activeCanvasId = state.activeCanvasId;
-    if (!activeCanvasId) return;
-
-    // Scope-aware: local resets only the active canvas; global resets the whole registry.
-    const before = state.toGraphSnapshot();
-
-    if (scope === "local") {
-      const canvas = state.canvases[activeCanvasId];
-      if (!canvas) return;
-      canvas.graph.node_ids.forEach((id) => {
-        state.updateNode(id, { functionality: n, direct_damage: false, functionality_time: 0 });
-      });
-      canvas.graph.edge_ids.forEach((id) => {
-        state.updateEdge(id, { functionality: n, direct_damage: false, functionality_time: 0 });
-      });
-    } else {
-      Object.values(state.nodes).forEach((node) => {
-        state.updateNode(node.id, { functionality: n, direct_damage: false, functionality_time: 0 });
-      });
-      Object.values(state.edges).forEach((edge) => {
-        state.updateEdge(edge.id, { functionality: n, direct_damage: false, functionality_time: 0 });
-      });
-    }
-
+    const current = canvasState.toGraphSnapshot();
+    canvasState.restoreSnapshot(revertSnapshot);
     useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
       update_type: "manual_functionality_update",
-      label: scope === "local" ? "Reset canvas to Functionality N" : "Reset all to Functionality N",
+      label: `Revert temporal jumps (−${elapsedHours}h)`,
       scope,
-      canvas_id: activeCanvasId,
-      before,
-      after: state.toGraphSnapshot(),
+      canvas_id: canvasState.activeCanvasId ?? undefined,
+      before: current,
+      after: revertSnapshot,
     });
+    clearTemporalJumpProgress();
+    pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
+  }
+
+  function handleReset() {
+    resetFunctionality({ n, scope, globalViewActive });
   }
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Split Propagate button — left half triggers run, right half selects scope */}
+      {/* Split Propagate button */}
       <PropagateSplitButton
         scope={scope}
-        onPropagate={handlePropagate}
+        onPropagate={propagate}
         onScopeChange={setPropagationScope}
         disabled={!serverReachable || isPropagating}
         loading={isPropagating}
@@ -189,22 +95,12 @@ export function ActionBar() {
       </ActionButton>
 
       {/* Undo */}
-      <ActionButton
-        onClick={undo}
-        disabled={!canUndo}
-        title="Undo (Ctrl+Z)"
-        className="text-zinc-600 dark:text-zinc-400"
-      >
+      <ActionButton onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="text-zinc-600 dark:text-zinc-400">
         <Undo2 size={13} />
       </ActionButton>
 
       {/* Redo */}
-      <ActionButton
-        onClick={redo}
-        disabled={!canRedo}
-        title="Redo (Ctrl+Y)"
-        className="text-zinc-600 dark:text-zinc-400"
-      >
+      <ActionButton onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" className="text-zinc-600 dark:text-zinc-400">
         <Redo2 size={13} />
       </ActionButton>
 
@@ -213,20 +109,16 @@ export function ActionBar() {
 
       {/* Event buttons */}
       {actionBarEvents.map((ev) => (
-        <EventButton key={ev.id} event={ev} />
+        <EventButton key={ev.id} event={ev} pushToast={pushToast} />
       ))}
 
       {/* More ▼ */}
       {overflowEvents.length > 0 && (
         <div className="relative">
-          <ActionButton
-            onClick={() => setMoreOpen((v) => !v)}
-            className="text-zinc-500"
-          >
+          <ActionButton onClick={() => setMoreOpen((v) => !v)} className="text-zinc-500">
             <span>More</span>
             <ChevronDown size={12} className={cn("transition-transform", moreOpen && "rotate-180")} />
           </ActionButton>
-
           {moreOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
@@ -234,7 +126,7 @@ export function ActionBar() {
                 {overflowEvents.map((ev) => (
                   <button
                     key={ev.id}
-                    onClick={() => setMoreOpen(false)}
+                    onClick={() => { setMoreOpen(false); }}
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700"
                   >
                     <EventIcon type={ev.type} size={13} />
@@ -255,12 +147,441 @@ export function ActionBar() {
       >
         <Plus size={13} />
       </button>
+
+      {/* Divider */}
+      <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+      {/* Temporal Jump controls */}
+      <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
+
+      {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
+      {revertSnapshot && elapsedHours > 0 && (
+        <ActionButton
+          onClick={handleRevertFromBar}
+          title={`Revert all temporal jumps applied in this session (−${elapsedHours}h)`}
+          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400"
+        >
+          <RotateCcw size={12} />
+          <span>−{elapsedHours}h</span>
+        </ActionButton>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Split Propagate button: [▶ Propagate] [Local/Global ▾]
+// Temporal Jump controls
+// ---------------------------------------------------------------------------
+
+const MAX_AUTO_ADVANCE_STEPS = 50;
+
+function TemporalJumpControls({
+  propagate,
+  isPropagating,
+}: {
+  propagate: () => Promise<boolean>;
+  isPropagating: boolean;
+}) {
+  const n = useConfigStore(selectN);
+  const scope = useUiStore((s) => s.propagationScope);
+  const autoPropagate = useUiStore((s) => s.temporalAutoPropagate);
+  const setAutoPropagate = useUiStore((s) => s.setTemporalAutoPropagate);
+  const revertSnapshot = useUiStore((s) => s.temporalJumpRevertSnapshot);
+  const elapsedHours = useUiStore((s) => s.temporalJumpElapsedHours);
+  const saveTemporalRevertSnapshot = useUiStore((s) => s.saveTemporalRevertSnapshot);
+  const addTemporalElapsedHours = useUiStore((s) => s.addTemporalElapsedHours);
+  const clearTemporalJumpProgress = useUiStore((s) => s.clearTemporalJumpProgress);
+  const pushToast = useUiStore((s) => s.pushToast);
+
+  // Live ft values from the store — used to build ticks when the popover opens.
+  const liveTicks = useCanvasStore(useShallow((s) => {
+    const seen = new Set<number>();
+    for (const node of Object.values(s.nodes)) {
+      const ft = node.functionality_time ?? 0;
+      if (ft > 0) seen.add(ft);
+    }
+    for (const edge of Object.values(s.edges)) {
+      const ft = edge.functionality_time ?? 0;
+      if (ft > 0) seen.add(ft);
+    }
+    return Array.from(seen).sort((a, b) => a - b);
+  }));
+
+  const [open, setOpen] = useState(false);
+  const [manualHours, setManualHours] = useState("");
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  // Snapshot of ticks: when jumps are in progress use the pre-jump ticks (stable);
+  // otherwise use live ticks. Pre-jump ticks are derived from revertSnapshot.
+  const [snapshotTicks, setSnapshotTicks] = useState<number[]>([]);
+  const cancelRef = useRef(false);
+
+  // When popover opens: re-derive snapshot ticks from the revert snapshot if present,
+  // or from live ticks if no jumps have been applied yet. Don't reset elapsed/revert.
+  useEffect(() => {
+    if (open) {
+      setManualHours("");
+      if (revertSnapshot) {
+        // Derive ticks from the pre-jump state so the full original range is visible.
+        const seen = new Set<number>();
+        for (const node of Object.values(revertSnapshot.nodes)) {
+          const ft = node.functionality_time ?? 0;
+          if (ft > 0) seen.add(ft);
+        }
+        for (const edge of Object.values(revertSnapshot.edges)) {
+          const ft = edge.functionality_time ?? 0;
+          if (ft > 0) seen.add(ft);
+        }
+        setSnapshotTicks(Array.from(seen).sort((a, b) => a - b));
+      } else {
+        setSnapshotTicks(liveTicks);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const busy = isPropagating || isAutoAdvancing;
+  // Use snapshot ticks when jumps are in progress (stable original range).
+  // Fall back to live ticks when no jumps have been applied yet.
+  const displayTicks = (revertSnapshot !== null || isAutoAdvancing) ? snapshotTicks : liveTicks;
+  const maxHours = displayTicks[displayTicks.length - 1] ?? 0;
+
+  function buildSyntheticEvent(hours: number): EventDefinition {
+    return {
+      id: `tj-${nanoid(6)}`,
+      label: `Temporal Jump (+${hours}h)`,
+      type: "temporal_jump",
+      frequency_per_10y: 0,
+      duration_hours: hours,
+    };
+  }
+
+  function getMinFt(): number | null {
+    const state = useCanvasStore.getState();
+    const allFt = [
+      ...Object.values(state.nodes).map((node) => node.functionality_time ?? 0),
+      ...Object.values(state.edges).map((edge) => edge.functionality_time ?? 0),
+    ].filter((ft) => ft > 0);
+    if (allFt.length === 0) return null;
+    return Math.min(...allFt);
+  }
+
+  async function applyJump(hours: number) {
+    const event = buildSyntheticEvent(hours);
+    const canvasState = useCanvasStore.getState();
+    const before = canvasState.toGraphSnapshot();
+    // Save pre-jump state on the very first jump so revert can restore it.
+    if (revertSnapshot === null) {
+      saveTemporalRevertSnapshot(before);
+    }
+    canvasState.applyEvent(event, n);
+    useHistoryStore.getState().pushUpdateEntry({
+      id: nanoid(),
+      timestamp: new Date().toISOString(),
+      update_type: "event_applied",
+      label: event.label,
+      scope,
+      canvas_id: canvasState.activeCanvasId ?? undefined,
+      event_id: event.id,
+      before,
+      after: useCanvasStore.getState().toGraphSnapshot(),
+    });
+    addTemporalElapsedHours(hours);
+    if (autoPropagate) {
+      await propagate();
+    }
+  }
+
+  async function handleManualJump() {
+    const hours = parseInt(manualHours, 10);
+    if (!Number.isInteger(hours) || hours < 1) return;
+    await applyJump(hours);
+    setManualHours("");
+  }
+
+  async function handleStep() {
+    const minFt = getMinFt();
+    if (minFt === null) {
+      pushToast({ message: "No elements have Functionality Time > 0.", variant: "info", durationMs: 3000 });
+      return;
+    }
+    // Keep popover open during step so timeline is visible.
+    await applyJump(minFt);
+  }
+
+  async function handlePlay() {
+    setIsAutoAdvancing(true);
+    cancelRef.current = false;
+    let steps = 0;
+
+    while (!cancelRef.current && steps < MAX_AUTO_ADVANCE_STEPS) {
+      const minFt = getMinFt();
+      if (minFt === null) break;
+      await applyJump(minFt);
+      steps++;
+    }
+
+    setIsAutoAdvancing(false);
+
+    if (steps >= MAX_AUTO_ADVANCE_STEPS) {
+      pushToast({
+        message: `Auto-advance stopped after ${MAX_AUTO_ADVANCE_STEPS} steps — check for elements stuck with Functionality Time.`,
+        variant: "warning",
+        durationMs: 6000,
+      });
+    } else if (steps > 0) {
+      pushToast({
+        message: `Auto-advance complete — ${steps} step${steps !== 1 ? "s" : ""} applied.`,
+        variant: "success",
+        durationMs: 4000,
+      });
+    }
+  }
+
+  function handleRevert() {
+    if (!revertSnapshot || elapsedHours === 0) return;
+    const canvasState = useCanvasStore.getState();
+    const current = canvasState.toGraphSnapshot();
+    canvasState.restoreSnapshot(revertSnapshot);
+    useHistoryStore.getState().pushUpdateEntry({
+      id: nanoid(),
+      timestamp: new Date().toISOString(),
+      update_type: "manual_functionality_update",
+      label: `Revert temporal jumps (−${elapsedHours}h)`,
+      scope,
+      canvas_id: canvasState.activeCanvasId ?? undefined,
+      before: current,
+      after: revertSnapshot,
+    });
+    clearTemporalJumpProgress();
+    // Refresh snapshot ticks to reflect the restored state.
+    setSnapshotTicks(liveTicks);
+  }
+
+  const manualValid =
+    manualHours.trim() !== "" &&
+    Number.isInteger(parseInt(manualHours, 10)) &&
+    parseInt(manualHours, 10) >= 1;
+
+  return (
+    <div className="relative">
+      <ActionButton
+        onClick={() => { if (!busy) setOpen((v) => !v); }}
+        disabled={busy}
+        title="Temporal Jump controls"
+        className={cn("gap-1 text-violet-600 dark:text-violet-400", busy && "opacity-40")}
+      >
+        <Clock size={13} className={cn(isAutoAdvancing && "animate-pulse")} />
+        <span>{isAutoAdvancing ? "Advancing…" : "Time"}</span>
+        <ChevronDown size={11} className={cn("transition-transform", open && "rotate-180")} />
+      </ActionButton>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+
+            {/* Timeline slider — only shown when elements have Functionality Time */}
+            {maxHours > 0 && (
+              <>
+                <div className="px-4 pt-3 pb-1">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+                      Timeline
+                      {elapsedHours > 0 && (
+                        <span className="ml-2 normal-case font-normal text-violet-500">
+                          +{elapsedHours}h
+                        </span>
+                      )}
+                    </p>
+                    {elapsedHours > 0 && !isAutoAdvancing && (
+                      <button
+                        onClick={handleRevert}
+                        title={`Revert all temporal jumps (−${elapsedHours}h)`}
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                      >
+                        ↩ Revert
+                      </button>
+                    )}
+                  </div>
+                  <TimelineSlider
+                    ticks={displayTicks}
+                    maxHours={maxHours}
+                    elapsed={elapsedHours}
+                    readOnly={isAutoAdvancing}
+                    onSeek={(h) => setManualHours(String(h))}
+                  />
+                </div>
+                <div className="border-t border-zinc-100 dark:border-zinc-800" />
+              </>
+            )}
+
+            {/* Manual jump */}
+            <div className="px-3 pt-3 pb-2">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Manual jump</p>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={manualHours}
+                  onChange={(e) => setManualHours(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && manualValid) handleManualJump(); }}
+                  placeholder="hours"
+                  className="w-20 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+                <button
+                  onClick={handleManualJump}
+                  disabled={!manualValid}
+                  className="flex items-center gap-1 rounded-md bg-violet-600 px-2 py-1 text-xs font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Play size={10} />
+                  Jump
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-zinc-100 dark:border-zinc-800" />
+
+            {/* Auto-advance */}
+            <div className="px-3 py-2">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Auto-advance</p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={handleStep}
+                  disabled={isAutoAdvancing}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-md border border-zinc-200 px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  title="Jump to next expiry (minimum Functionality Time)"
+                >
+                  <SkipForward size={11} />
+                  Step
+                </button>
+                <button
+                  onClick={isAutoAdvancing ? () => { cancelRef.current = true; } : handlePlay}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-medium",
+                    isAutoAdvancing
+                      ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                      : "border-violet-200 text-violet-600 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-400 dark:hover:bg-violet-900/20",
+                  )}
+                  title={isAutoAdvancing ? "Stop auto-advance" : "Run to completion"}
+                >
+                  <ChevronsRight size={11} />
+                  {isAutoAdvancing ? "Stop" : "Play"}
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-zinc-100 dark:border-zinc-800" />
+
+            {/* Auto-propagate toggle */}
+            <div className="px-3 py-2.5">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={autoPropagate}
+                  onChange={(e) => setAutoPropagate(e.target.checked)}
+                  className="h-3 w-3 rounded accent-violet-600"
+                />
+                <span className="text-xs text-zinc-600 dark:text-zinc-400">Auto-propagate</span>
+              </label>
+              <p className="mt-0.5 pl-5 text-[10px] text-zinc-400">
+                Uses current scope ({scope})
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Timeline slider
+// ---------------------------------------------------------------------------
+
+function TimelineSlider({
+  ticks,
+  maxHours,
+  elapsed,
+  readOnly,
+  onSeek,
+}: {
+  ticks: number[];
+  maxHours: number;
+  elapsed: number;
+  readOnly: boolean;
+  onSeek: (hours: number) => void;
+}) {
+  // Percentage along the track for a given hour value.
+  const pct = (h: number) => Math.min(100, (h / maxHours) * 100);
+
+  // Decide which tick labels to show: if ticks are very close together, skip
+  // intermediate labels to avoid overlap. Minimum spacing: ~28px in a ~224px track.
+  const TRACK_PX = 224; // w-72 minus padding
+  const MIN_LABEL_SPACING_PCT = (28 / TRACK_PX) * 100;
+  let lastLabelPct = -Infinity;
+  const showLabel = ticks.map((t) => {
+    const p = pct(t);
+    if (p - lastLabelPct >= MIN_LABEL_SPACING_PCT) {
+      lastLabelPct = p;
+      return true;
+    }
+    return false;
+  });
+
+  return (
+    // Extra bottom padding to hold tick labels (positioned absolutely below the track).
+    <div className="relative pb-5 select-none">
+      {/* Track background */}
+      <div className="relative h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700">
+        {/* Elapsed fill */}
+        <div
+          className="absolute left-0 top-0 h-full rounded-full bg-violet-500 transition-all duration-300"
+          style={{ width: `${pct(elapsed)}%` }}
+        />
+
+        {/* Tick marks on the track */}
+        {ticks.map((t) => (
+          <div
+            key={t}
+            className="absolute top-0 h-full w-px bg-zinc-400/60 dark:bg-zinc-500/60"
+            style={{ left: `${pct(t)}%` }}
+          />
+        ))}
+
+        {/* Thumb */}
+        <div
+          className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-violet-600 bg-white shadow-sm transition-all duration-300 dark:bg-zinc-900"
+          style={{ left: `${pct(elapsed)}%` }}
+        />
+      </div>
+
+      {/* Tick labels below the track */}
+      {ticks.map((t, i) => (
+        <button
+          key={t}
+          disabled={readOnly}
+          onClick={() => onSeek(t)}
+          title={`Jump to ${t}h`}
+          className={cn(
+            "absolute top-2.5 -translate-x-1/2 text-[9px] leading-none transition-colors",
+            readOnly
+              ? "cursor-default text-zinc-400 dark:text-zinc-500"
+              : "cursor-pointer text-zinc-400 hover:text-violet-500 dark:text-zinc-500 dark:hover:text-violet-400",
+            // Always show a tick line; only show the number label when there's room.
+            !showLabel[i] && "opacity-0 pointer-events-none",
+          )}
+          style={{ left: `${pct(t)}%` }}
+        >
+          {t >= 1000 ? `${Math.round(t / 1000)}k` : t}h
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Split Propagate button
 // ---------------------------------------------------------------------------
 
 function PropagateSplitButton({
@@ -286,7 +607,6 @@ function PropagateSplitButton({
 
   return (
     <div className="flex items-center rounded-md border border-green-300 dark:border-green-800">
-      {/* Run button */}
       <button
         onClick={disabled ? undefined : onPropagate}
         disabled={disabled}
@@ -303,10 +623,8 @@ function PropagateSplitButton({
         <span>{loading ? "Running…" : "Propagate"}</span>
       </button>
 
-      {/* Divider */}
       <div className="h-5 w-px bg-green-200 dark:bg-green-800" />
 
-      {/* Scope selector */}
       <div className="relative">
         <button
           onClick={() => setScopeOpen((v) => !v)}
@@ -339,7 +657,7 @@ function PropagateSplitButton({
               <div className="border-t border-zinc-100 px-3 py-1.5 dark:border-zinc-700">
                 <p className="text-[10px] leading-tight text-zinc-400">
                   {scope === "local"
-                    ? "Active canvas only — inter-canvas edges excluded from engine payload"
+                    ? "Active canvas only — inter-canvas edges excluded"
                     : "Full multi-canvas — all canvases sent to engine"}
                 </p>
               </div>
@@ -355,9 +673,13 @@ function PropagateSplitButton({
 // Event button
 // ---------------------------------------------------------------------------
 
-function EventButton({ event }: { event: EventDefinition }) {
-  const pushToast = useUiStore((s) => s.pushToast);
-
+function EventButton({
+  event,
+  pushToast,
+}: {
+  event: EventDefinition;
+  pushToast: ReturnType<typeof useUiStore.getState>["pushToast"];
+}) {
   function applyEvent() {
     const storeState = useCanvasStore.getState();
     if (!storeState.activeCanvasId) return;
@@ -365,8 +687,6 @@ function EventButton({ event }: { event: EventDefinition }) {
     const N = useConfigStore.getState().getFunctionalityN();
     const snapshotBefore = storeState.toGraphSnapshot();
 
-    // Delegate all application logic (vulnerability drops, direct_damage_effects,
-    // attribute_mutations, temporal jump, history push) to the store.
     storeState.applyEvent(event, N);
 
     const snapshotAfter = useCanvasStore.getState().toGraphSnapshot();
@@ -410,9 +730,8 @@ function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): numb
 }
 
 function EventIcon({ type, size }: { type: "hazard" | "disservice" | "temporal_jump"; size: number }) {
-  return type === "hazard"
-    ? <Zap size={size} />
-    : <Waves size={size} />;
+  if (type === "temporal_jump") return <Clock size={size} />;
+  return type === "hazard" ? <Zap size={size} /> : <Waves size={size} />;
 }
 
 // ---------------------------------------------------------------------------

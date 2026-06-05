@@ -443,25 +443,23 @@ export const useCanvasStore = create<CanvasStore>()(
         }
       }
 
-      // ── 2. direct_damage_effects + default_repair_time ──
-      // Per-element overrides take precedence; default_repair_time covers everything else.
-      const explicitEffects = event.direct_damage_effects ?? {};
-      const damageEntries = Object.entries(explicitEffects);
-      for (const [elementId, effect] of damageEntries) {
-        const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
-        if (!el) continue;
-        capture(elementId, "direct_damage", el.direct_damage ?? false);
-        capture(elementId, "expected_repair_time", el.expected_repair_time ?? null);
-      }
-      // Elements covered by the global default but not individually overridden
-      const defaultRepairTime = event.type === "hazard" ? event.default_repair_time : undefined;
-      const defaultDamageElements: Array<{ id: string; el: Node | Edge }> =
-        defaultRepairTime !== undefined
-          ? allElements.filter(({ id }) => !(id in explicitEffects))
-          : [];
-      for (const { id, el } of defaultDamageElements) {
-        capture(id, "direct_damage", el.direct_damage ?? false);
-        capture(id, "expected_repair_time", el.expected_repair_time ?? null);
+      // ── 2. direct_damage for hazards ──
+      // A hazard sets direct_damage = true on every element whose vulnerability_level > 0
+      // (i.e., the hazard produces any worsening of functionality on that element).
+      // direct_damage_effects provides per-element expected_repair_time overrides only;
+      // default_repair_time is the fallback repair time when no override is present.
+      const directDamageElements: Array<{ id: string; repairTime: number | undefined }> = [];
+      if (event.type === "hazard") {
+        const explicitEffects = event.direct_damage_effects ?? {};
+        const defaultRepairTime = event.default_repair_time;
+        for (const { id, el } of allElements) {
+          const level = el.vulnerability_levels?.[event.id] ?? 0;
+          if (level === 0) continue;
+          capture(id, "direct_damage", el.direct_damage ?? false);
+          capture(id, "expected_repair_time", el.expected_repair_time ?? null);
+          const repairTime = explicitEffects[id]?.expected_repair_time ?? defaultRepairTime;
+          directDamageElements.push({ id, repairTime });
+        }
       }
 
       // ── 3. attribute_mutations ──
@@ -492,22 +490,13 @@ export const useCanvasStore = create<CanvasStore>()(
           if (draft.nodes[id]) draft.nodes[id].functionality = imposed;
           else if (draft.edges[id]) draft.edges[id].functionality = imposed;
         }
-        for (const [elementId, effect] of damageEntries) {
-          if (draft.nodes[elementId]) {
-            draft.nodes[elementId].direct_damage = true;
-            draft.nodes[elementId].expected_repair_time = effect.expected_repair_time;
-          } else if (draft.edges[elementId]) {
-            draft.edges[elementId].direct_damage = true;
-            draft.edges[elementId].expected_repair_time = effect.expected_repair_time;
-          }
-        }
-        for (const { id } of defaultDamageElements) {
+        for (const { id, repairTime } of directDamageElements) {
           if (draft.nodes[id]) {
             draft.nodes[id].direct_damage = true;
-            draft.nodes[id].expected_repair_time = defaultRepairTime;
+            if (repairTime !== undefined) draft.nodes[id].expected_repair_time = repairTime;
           } else if (draft.edges[id]) {
             draft.edges[id].direct_damage = true;
-            draft.edges[id].expected_repair_time = defaultRepairTime;
+            if (repairTime !== undefined) draft.edges[id].expected_repair_time = repairTime;
           }
         }
         for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {

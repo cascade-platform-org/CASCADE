@@ -26,7 +26,6 @@ import {
   BackgroundVariant,
   useReactFlow,
   getNodesBounds,
-  getViewportForBounds,
   Handle,
   Position,
   ConnectionMode,
@@ -459,7 +458,7 @@ function CascadeEdge({
   );
 }
 
-const edgeTypes: EdgeTypes = {
+export const edgeTypes: EdgeTypes = {
   cascadeEdge: CascadeEdge as EdgeTypes[string],
 };
 
@@ -587,9 +586,6 @@ export function FlowCanvas() {
   // on screen — the user is responsible for being on the view they want to record.
   // Uses html-to-image (handles CSS transforms and SVG edges correctly).
   useEffect(() => {
-    const IMG_W = 1200;
-    const IMG_H = 800;
-
     async function capture(): Promise<string | undefined> {
       try {
         const { toPng } = await import("html-to-image");
@@ -598,18 +594,59 @@ export function FlowCanvas() {
         if (!viewport || nodes.length === 0) return undefined;
 
         const bounds = getNodesBounds(nodes);
-        const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
+        const PADDING = 48;
+        const TARGET_MAX = 1600;
 
-        return await toPng(viewport, {
-          backgroundColor: "#ffffff",
-          width: IMG_W,
-          height: IMG_H,
+        // Zoom to fit the content within TARGET_MAX on its longest axis.
+        const zoom = Math.min(2, Math.max(0.15,
+          Math.min(TARGET_MAX / bounds.width, TARGET_MAX / bounds.height),
+        ));
+
+        // Desired output dimensions: tight crop around content.
+        const cropW = Math.round(bounds.width * zoom + 2 * PADDING);
+        const cropH = Math.round(bounds.height * zoom + 2 * PADDING);
+
+        // With transformOrigin "0 0", translate(tx, ty) scale(zoom) maps a node
+        // at flow position (bounds.x, bounds.y) to screen (PADDING, PADDING).
+        const tx = PADDING - bounds.x * zoom;
+        const ty = PADDING - bounds.y * zoom;
+
+        // The capture canvas must be wide/tall enough to contain ALL nodes at
+        // their original (untransformed) positions so nothing is clipped by
+        // the element's own overflow box before the transform is applied.
+        const captureW = Math.max(Math.ceil(Math.max(0, bounds.x) + bounds.width) + PADDING, cropW);
+        const captureH = Math.max(Math.ceil(Math.max(0, bounds.y) + bounds.height) + PADDING, cropH);
+
+        const dataUrl = await toPng(viewport, {
+          backgroundColor: "#f4f4f5",
+          width: captureW,
+          height: captureH,
           style: {
-            width: `${IMG_W}px`,
-            height: `${IMG_H}px`,
-            transform: `translate(${x}px, ${y}px) scale(${zoom})`,
+            width: `${captureW}px`,
+            height: `${captureH}px`,
+            transform: `translate(${tx}px, ${ty}px) scale(${zoom})`,
+            transformOrigin: "0 0",
           },
         });
+
+        // If the capture canvas was larger than the desired output, crop it.
+        if (cropW < captureW || cropH < captureH) {
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = dataUrl;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = cropW;
+          canvas.height = cropH;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return dataUrl;
+          ctx.drawImage(img, 0, 0, cropW, cropH, 0, 0, cropW, cropH);
+          return canvas.toDataURL("image/png");
+        }
+
+        return dataUrl;
       } catch {
         return undefined;
       }

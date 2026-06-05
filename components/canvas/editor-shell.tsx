@@ -19,6 +19,8 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { saveBeforeUnload } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
+import { checkServerHealth } from "@/lib/api-client";
+import { SaveScorecardDialog } from "@/components/scorecard/operativity-scorecard";
 
 export function EditorShell() {
   const configModalOpen = useUiStore((s) => s.configModalOpen);
@@ -27,12 +29,35 @@ export function EditorShell() {
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
+  const scorecardSaveDialogOpen = useUiStore((s) => s.scorecardSaveDialogOpen);
+  const closeScorecardSaveDialog = useUiStore((s) => s.closeScorecardSaveDialog);
+  const setServerReachable = useUiStore((s) => s.setServerReachable);
 
   const recoveryDirRef = useRef<FileSystemDirectoryHandle | null>(null);
 
   useEffect(() => {
     loadRecoveryDir().then((dir) => { recoveryDirRef.current = dir; });
   }, []);
+
+  // Health-check: probe on mount, every 30 s, and when the tab regains focus.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function probe() {
+      const ok = await checkServerHealth();
+      if (!cancelled) setServerReachable(ok);
+    }
+
+    probe();
+    const interval = setInterval(probe, 30_000);
+    window.addEventListener("focus", probe);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", probe);
+    };
+  }, [setServerReachable]);
 
   useEffect(() => {
     function handleBeforeUnload() {
@@ -74,6 +99,9 @@ export function EditorShell() {
       {activeRulesPanelOpen && <ActiveRulesPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
+      {scorecardSaveDialogOpen && (
+        <SaveScorecardDialog onClose={closeScorecardSaveDialog} />
+      )}
 
       <ToastContainer />
     </div>
