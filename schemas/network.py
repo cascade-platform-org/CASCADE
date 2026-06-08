@@ -33,6 +33,7 @@ class GeoCoords(BaseModel):
     lng: float
     lat: float
     alt: Optional[float] = None
+    crs: Optional[str] = Field(None, description="Override the parent Canvas CRS for this point. Inherits Canvas.crs when absent.")
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +236,19 @@ class AnyUpdateEntry(BaseModel):
     before: GraphSnapshot
     after: GraphSnapshot
     propagation_meta: Optional[PropagationMeta] = None  # set for propagation entries
+    mutation_reversal: Optional[dict[str, Any]] = Field(
+        None,
+        description=(
+            "Populated only on event_applied entries. "
+            "Keys are '<elementId>.<fieldName>' (same dot-notation as "
+            "EventDefinition.attribute_mutations). Values are pre-event field values "
+            "captured immediately before the event was applied. "
+            "Covers all three effect channels: vulnerability_levels drops "
+            "(→ functionality), direct_damage_effects, and attribute_mutations. "
+            "Used by clear-event to revert only the mutated fields, preserving "
+            "changes made to other fields after the event was applied."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -243,28 +257,37 @@ class AnyUpdateEntry(BaseModel):
 
 class ScorecardEntry(BaseModel):
     """
-    One entry in the Scorecard: a named before/after Scenario pair explicitly
-    saved by the user after a Propagation run.
+    One entry in the Scorecard: up to three Scenario snapshots explicitly saved
+    by the user. The history pattern Event → Propagation → (Temporal Jump →
+    Propagation)* maps directly onto the three fields.
 
-    `scenario_before` — GraphSnapshot fed to the engine (post-Event,
-        post-manual-edit, or restored from history). The "before" state.
-    `scenario_after`  — GraphSnapshot after the engine's updates have been
-        merged into the registry. The "after" state. Absent when the entry
-        was saved from a manual Scenario without running Propagation.
-    `propagation_result` — the raw engine delta (ElementUpdate list). Kept for
-        causal analysis (responsibility_share) and warnings. Absent for manual
-        Scenario entries.
+    `before_propagation`   — state just before the most recent Propagation
+        (post-Event, post-manual-edit). Always present.
+    `after_propagation`    — state after the Propagation. Absent when no
+        Propagation has been run (Manual What-If entry).
+    `after_temporal_jump`  — state after one or more Temporal Jump events +
+        Propagations. Absent when no Temporal Jump was run or requested.
+    `temporal_jump_hours`  — total hours elapsed across all Temporal Jumps that
+        produced `after_temporal_jump`. Absent when `after_temporal_jump` is absent.
+    `propagation_result`   — raw engine delta from the Propagation that produced
+        `after_propagation`. Absent for Manual What-If entries.
 
-    Derived metrics (Operativity Score, cost of disservice, status breakdown,
-    most impacted Elements) are computed client-side from the snapshots and are
-    never stored here.
+    Derived metrics are computed client-side from the snapshots; never stored.
     """
     id: str
     label: str
     created_at: str  # ISO 8601 UTC
-    scenario_before: GraphSnapshot
-    scenario_after: Optional[GraphSnapshot] = None
+    event_id: Optional[str] = None  # EventDefinition.id; None for Manual What-If entries
+    before_propagation: GraphSnapshot
+    after_propagation: Optional[GraphSnapshot] = None
+    after_temporal_jump: Optional[GraphSnapshot] = None
+    temporal_jump_hours: Optional[int] = Field(None, ge=1)
     propagation_result: Optional["PropagationResult"] = None  # type: ignore[name-defined]
+    # Base64-encoded PNG of the GlobalViewCanvas at each snapshot state.
+    # Captured once at save time; stored so the Scorecard renders offline.
+    before_propagation_image: Optional[str] = None
+    after_propagation_image: Optional[str] = None
+    after_temporal_jump_image: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -281,6 +304,14 @@ class ProjectMeta(BaseModel):
 class Project(BaseModel):
     version: Literal["2.0"]
     meta: ProjectMeta
+    global_graph_type: Optional[str] = Field(
+        None,
+        description=(
+            "Graph type assigned to the Global view (all Canvases rendered together). "
+            "References a name in ModelConfiguration.graph_types. "
+            "None means no type is assigned — the engine dispatches per-Canvas only."
+        ),
+    )
     nodes: dict[str, Node] = Field(
         default_factory=dict,
         description="Global element registry. Keys are globally unique node IDs.",

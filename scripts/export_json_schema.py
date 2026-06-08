@@ -4,37 +4,28 @@ Export Pydantic schemas to JSON Schema files.
 
 These JSON Schema files are the bridge between the Python backend types and
 the TypeScript frontend types. After modifying any Pydantic model in
-backend/schemas/, run this script to regenerate the JSON Schema files, then
-use them to regenerate or update the Zod schemas in app/lib/schemas/.
+CASCADE-backend/schemas/, run this script to regenerate the JSON Schema files,
+then apply the equivalent change to the Zod schemas in CASCADE-app/lib/schemas/.
 
 Usage
 -----
-    cd propagation-platform
-    python backend/scripts/export_json_schema.py
+    # From the project root (CASCADE-v2/)
+    python CASCADE-backend/scripts/export_json_schema.py
 
 Output
 ------
-    shared/schemas/network.schema.json
-    shared/schemas/config.schema.json
-    shared/schemas/results.schema.json
-    shared/schemas/auth.schema.json
+    CASCADE-app/shared/schemas/network.schema.json
+    CASCADE-app/shared/schemas/config.schema.json
+    CASCADE-app/shared/schemas/results.schema.json
+    CASCADE-app/shared/schemas/auth.schema.json
 
-Zod generation (automated, requires Node.js tooling)
-------------------------------------------------------
-After this script runs, you can pipe the JSON Schema files to a Zod generator:
-
-    npx json-schema-to-zod -i shared/schemas/network.schema.json -o app/lib/schemas/_gen_network.ts
-
-Review the generated output and integrate it into the hand-authored schema
-files (app/lib/schemas/*.ts). Full automation is possible but the generated
-output often needs minor adjustments for Zod idioms (e.g. .default(), .min()).
-
-Manual workflow (current)
---------------------------
-1. Change a Pydantic model.
-2. Run this script — compare the old and new JSON Schema diffs.
-3. Manually apply the equivalent change to the Zod schema in app/lib/schemas/.
-4. TypeScript types update automatically via z.infer<>.
+Workflow for schema changes (CLAUDE.md §6)
+------------------------------------------
+1. Change the Pydantic model in CASCADE-backend/schemas/.
+2. Run this script.
+3. Diff the output in CASCADE-app/shared/schemas/ against the previous version.
+4. Apply the equivalent change to the Zod schema in CASCADE-app/lib/schemas/.
+5. TypeScript types update automatically via z.infer<>.
 """
 
 from __future__ import annotations
@@ -43,22 +34,40 @@ import json
 import sys
 from pathlib import Path
 
-# Ensure the backend package is importable when run from the project root.
-ROOT = Path(__file__).resolve().parents[2]  # propagation-platform/
-sys.path.insert(0, str(ROOT))
+# Insert CASCADE-backend/ so that `from schemas.*` resolves correctly.
+ROOT = Path(__file__).resolve().parents[2]          # CASCADE-v2/
+BACKEND = ROOT / "CASCADE-backend"
+sys.path.insert(0, str(BACKEND))
 
-from backend.schemas.network import Canvas, Edge, InterCanvasEdge, Node, Project
-from backend.schemas.config import HazardDefinition, ProjectConfig, RuleDefinition
-from backend.schemas.results import (
-    ElementUpdate,
-    PropagationRequest,
-    PropagationResult,
-    SyncDownloadResponse,
-    SyncUploadRequest,
+from schemas.network import (                        # noqa: E402
+    Node,
+    Edge,
+    Canvas,
+    Graph,
+    GraphSnapshot,
+    AnyUpdateEntry,
+    ScorecardEntry,
+    Project,
 )
-from backend.schemas.auth import AuthUser, TokenPair
+from schemas.config import (                         # noqa: E402
+    FunctionalityScaleLevel,
+    CategoryDefinition,
+    DirectDamageEffect,
+    EventDefinition,
+    HeuristicConfig,
+    GraphTypeConfig,
+    ModelConfiguration,
+)
+from schemas.results import (                        # noqa: E402
+    PropagationRequest,
+    ElementUpdate,
+    PropagationResult,
+    SyncUploadRequest,
+    SyncDownloadResponse,
+)
+from schemas.auth import AuthUser, TokenPair         # noqa: E402
 
-OUTPUT_DIR = ROOT / "shared" / "schemas"
+OUTPUT_DIR = ROOT / "CASCADE-app" / "shared" / "schemas"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -81,11 +90,12 @@ def main() -> None:
 
     export(
         "network.schema.json",
-        Node, Edge, InterCanvasEdge, Canvas, Project,
+        Node, Edge, Canvas, Graph, GraphSnapshot, AnyUpdateEntry, ScorecardEntry, Project,
     )
     export(
         "config.schema.json",
-        HazardDefinition, RuleDefinition, ProjectConfig,
+        FunctionalityScaleLevel, CategoryDefinition, DirectDamageEffect,
+        EventDefinition, HeuristicConfig, GraphTypeConfig, ModelConfiguration,
     )
     export(
         "results.schema.json",
@@ -97,7 +107,7 @@ def main() -> None:
         AuthUser, TokenPair,
     )
 
-    print("\nDone. Review diffs in shared/schemas/ and update app/lib/schemas/ accordingly.")
+    print("\nDone. Diff CASCADE-app/shared/schemas/ and update CASCADE-app/lib/schemas/ accordingly.")
 
 
 if __name__ == "__main__":

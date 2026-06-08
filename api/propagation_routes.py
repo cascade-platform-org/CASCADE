@@ -148,6 +148,7 @@ async def get_engine_algorithms(
 @router.post(
     "/propagate",
     response_model=PropagationResult,
+    response_model_exclude_none=True,
     summary="Run propagation",
     description=(
         "Accepts a PropagationRequest (project + config + scope) and returns "

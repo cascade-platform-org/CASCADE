@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 
-EventKind = Literal["hazard", "disservice"]
+EventKind = Literal["hazard", "disservice", "temporal_jump"]
 
 
 class FunctionalityScaleLevel(BaseModel):
@@ -29,12 +29,27 @@ class EventDefinition(BaseModel):
     id: str
     label: str
     type: EventKind
-    frequency_per_10y: float = Field(..., ge=0)
+    frequency_per_10y: float = Field(default=0.0, ge=0)
     expected_recovery_time: Optional[int] = Field(
-        None, ge=0, description="Hours. Disservices only."
+        None, ge=0, description="Hours until self-resolution. Disservices only."
+    )
+    duration_hours: Optional[int] = Field(
+        None, ge=1,
+        description=(
+            "Hours to advance the clock. Temporal Jump events only. "
+            "Used as the default when saving to Scorecard."
+        ),
+    )
+    default_repair_time: Optional[int] = Field(
+        None,
+        ge=0,
+        description=(
+            "Global default repair time (hours) applied to all elements when this hazard fires. "
+            "Elements in direct_damage_effects override this value."
+        ),
     )
     direct_damage_effects: Optional[dict[str, DirectDamageEffect]] = Field(
-        None, description="Per-element effects. Hazards only. Key = ElementId."
+        None, description="Per-element repair time overrides. Hazards only. Key = ElementId."
     )
     attribute_mutations: dict[str, Any] = Field(
         default_factory=dict,
@@ -107,5 +122,12 @@ class ModelConfiguration(BaseModel):
         description=(
             "Per-graph-type heuristic pipeline overrides. "
             "Absent entries use the engine's built-in defaults for that graph type."
+        ),
+    )
+    node_defaults: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Named node templates. Key = user-chosen name. "
+            "Value = partial Node — any Node field except id and position can be preset."
         ),
     )

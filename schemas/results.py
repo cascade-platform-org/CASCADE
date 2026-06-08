@@ -33,6 +33,9 @@ class ElementUpdate(BaseModel):
 
     `id` is a globally unique Element ID — look it up directly in
     Project.nodes or Project.edges. No canvas_id needed.
+
+    Optional fields are excluded from serialisation when None so the JSON
+    response omits them entirely — Zod `.optional()` accepts absence but not null.
     """
     id: str
     functionality: int = Field(..., ge=1)
