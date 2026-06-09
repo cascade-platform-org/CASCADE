@@ -581,7 +581,20 @@ export function FlowCanvas() {
   const clipboard = useClipboardStore((s) => s.contents);
   const copyToClipboard = useClipboardStore((s) => s.copy);
 
-  const { screenToFlowPosition, getNodes } = useReactFlow();
+  const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
+
+  // Auto-frame the Canvas's content when switching Canvas. fitView's `fitView`
+  // prop only fires on first mount, and FlowCanvas is not remounted per Canvas,
+  // so we re-fit whenever the active Canvas changes. rAF lets React Flow commit
+  // the new Canvas's nodes before we measure their bounds.
+  const activeCanvasId = activeCanvas?.id;
+  useEffect(() => {
+    if (!activeCanvasId) return;
+    const raf = requestAnimationFrame(() => {
+      if (getNodes().length > 0) fitView({ duration: 300 });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeCanvasId, fitView, getNodes]);
 
   // Register a capture function in ui-store so the Scorecard dialog can call it
   // from outside the ReactFlow context. Captures whatever is currently rendered
@@ -1060,9 +1073,12 @@ export function FlowCanvas() {
 
   return (
     <div className="relative h-full w-full">
-      {/* Map background — always behind React Flow when canvas is georeferenced */}
+      {/* Map background — always behind React Flow when canvas is georeferenced.
+          Keyed by canvas id so switching Canvas remounts with a fresh MapLibre
+          instance (correct saved center/zoom/anchor and freshly-measured dims),
+          rather than reusing the previous Canvas's stale map. */}
       {activeCanvas.georeferenced && (
-        <GeoMapBackground canvasId={activeCanvas.id} />
+        <GeoMapBackground key={activeCanvas.id} canvasId={activeCanvas.id} />
       )}
 
       {/* Canvas colour tint — subtle hue overlay, works in both light and dark mode */}
@@ -1100,6 +1116,8 @@ export function FlowCanvas() {
         connectOnClick={activeTool === "add-edge"}
         onlyRenderVisibleElements
         fitView
+        minZoom={0.25}
+        maxZoom={4}
         proOptions={{ hideAttribution: true }}
       >
         {!activeCanvas.georeferenced && (

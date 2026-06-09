@@ -29,6 +29,7 @@ import type {
 import type { ElementUpdate, PropagationResult, EventDefinition } from "@/lib/schemas";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
+import { useNetworkStore } from "@/store/network-store";
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -736,6 +737,13 @@ if (typeof window !== "undefined") {
       import("@/store/ui-store").then(({ useUiStore }) => {
         useUiStore.getState().markDirty();
       });
+    }
+    // An Element removal (undo/redo/clearEvent restore, or removeNode) can leave
+    // network-store selection/hover pointing at IDs that no longer exist. Prune
+    // them so "selection ⊆ existing Elements" holds. Only Element registries
+    // matter here — canvases-only changes never remove Elements.
+    if (state.nodes !== prev.nodes || state.edges !== prev.edges) {
+      useNetworkStore.getState().reconcileToElements(state.nodes, state.edges);
     }
     prev = state;
   });

@@ -15,6 +15,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
+import type { Node, Edge } from "@/lib/schemas/network";
 
 // Immer does not support Set/Map by default — enable the plugin once at module
 // load time so all stores can use Sets in their state.
@@ -66,6 +67,16 @@ export interface NetworkActions {
   // Edge drawing mode
   beginAddEdge: (sourceNodeId: string) => void;
   cancelAddEdge: () => void;
+
+  /**
+   * Drop every reference to an Element that no longer exists in the given
+   * registries. Maintains the invariant "selection ⊆ existing Elements" after
+   * a GraphSnapshot restore (undo/redo/clearEvent) or any Element removal:
+   * prunes both selection Sets, nulls a stale hover, and cancels a dangling
+   * edge-draw. No-ops (no state-identity churn, no subscriber notification)
+   * when every reference is still valid.
+   */
+  reconcileToElements: (nodes: Record<string, Node>, edges: Record<string, Edge>) => void;
 }
 
 export type NetworkStore = NetworkState & NetworkActions;
@@ -181,6 +192,38 @@ export const useNetworkStore = create<NetworkStore>()(
       set((state) => {
         state.isAddingEdge = false;
         state.pendingEdgeSourceId = null;
+      });
+    },
+
+    reconcileToElements(nodes, edges) {
+      set((state) => {
+        // Each guard mutates only when something is actually stale, so immer
+        // returns the same state reference when selection is already valid.
+        if ([...state.selectedNodeIds].some((id) => !nodes[id])) {
+          state.selectedNodeIds = new Set(
+            [...state.selectedNodeIds].filter((id) => nodes[id]),
+          );
+        }
+        if ([...state.selectedEdgeIds].some((id) => !edges[id])) {
+          state.selectedEdgeIds = new Set(
+            [...state.selectedEdgeIds].filter((id) => edges[id]),
+          );
+        }
+        if (
+          state.hoveredElementId &&
+          !nodes[state.hoveredElementId] &&
+          !edges[state.hoveredElementId]
+        ) {
+          state.hoveredElementId = null;
+        }
+        if (
+          state.isAddingEdge &&
+          state.pendingEdgeSourceId &&
+          !nodes[state.pendingEdgeSourceId]
+        ) {
+          state.isAddingEdge = false;
+          state.pendingEdgeSourceId = null;
+        }
       });
     },
   })),

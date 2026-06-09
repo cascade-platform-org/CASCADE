@@ -12,8 +12,9 @@ import { ZoomIn, ZoomOut } from "lucide-react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
-const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 2.5;
+// Keep in sync with the ReactFlow minZoom/maxZoom in flow-canvas.tsx.
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
 
 export function ZoomSlider() {
   const { zoomIn, zoomOut, zoomTo } = useReactFlow();

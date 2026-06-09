@@ -177,6 +177,11 @@ export function useMapViewportSync({
     if (!el) return;
     const update = () => {
       dimsRef.current = { W: el.offsetWidth, H: el.offsetHeight };
+      // Sync MapLibre's WebGL canvas to the new container size. Without this the
+      // canvas keeps its old pixel width when the layout changes (e.g. the
+      // Inspector panel opens) and overflows on top of the panel until the next
+      // map render. resize() also re-renders, so the map stays in step.
+      mapRef.current?.resize();
       const a = anchorRef.current;
       if (!a) return;
       const v = rfVpRef.current;
