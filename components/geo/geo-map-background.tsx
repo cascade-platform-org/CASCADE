@@ -7,42 +7,20 @@
  *   SETUP  (geo_anchor absent): fully interactive map (drag/scroll like OSM).
  *   SYNCED (geo_anchor present): interaction disabled, map follows RF viewport.
  *
- * Sync strategy — CSS transform, NOT map.jumpTo() on every viewport change:
- *
- *   map.jumpTo() updates MapLibre's camera state synchronously, but the WebGL
- *   canvas only redraws on the NEXT requestAnimationFrame. Even with
- *   useSyncExternalStore, React flushes SyncLane at the event-handler boundary
- *   (not inside store.setState). useLayoutEffect therefore fires AFTER the event
- *   handler returns, and jumpTo's rAF fires in the NEXT frame — 1 frame behind
- *   React's CSS transform on .react-flow__viewport.
- *
- *   Fix: apply a CSS transform to the map container div in useLayoutEffect.
- *   The GPU compositor applies it in the same compositing pass as React Flow's
- *   own .react-flow__viewport transform. No rAF, no lag, zero shimmer.
- *
- *   map.jumpTo() is still called — but only when panning stops (onEnd), to
- *   reload sharp tiles for the current viewport. The CSS transform bridges the
- *   gap between quality refreshes.
- *
- *   Why v3 (CSS transform) broke: anchor.flow was the node centroid, which
- *   puts anchor.geo far from the RF viewport center, producing large tx values
- *   that slide the map container off-screen. Fix: anchor.flow is always the
- *   RF viewport center at anchor-set time, guaranteeing tx=0 at that moment.
- *
- *   visualBase: the flow position shown at the map center after the last
- *   completed tile reload. Updated ONLY inside map.once('render') — never
- *   immediately after jumpTo. Default (until first reload) = anchor.flow,
- *   which is the RF viewport center → initial tx = 0.
+ * This component owns only the MapLibre lifecycle (init, style, interaction
+ * toggle, resize) and the setup/synced UI. The viewport-sync machinery — the
+ * per-frame CSS-transform mirror, the on-stop tile reload, the GeoAnchor
+ * projection — lives behind the useMapViewportSync seam.
  *
  * Debug overlay: add ?geoDebug=1 to the URL.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useOnViewportChange, useReactFlow, useViewport } from "@xyflow/react";
+import { useReactFlow, useViewport } from "@xyflow/react";
 import { useCanvasStore } from "@/store/canvas-store";
-import { computeMapTarget } from "@/lib/geo-utils";
+import { useMapViewportSync } from "@/hooks/useMapViewportSync";
 import type { GeoAnchor } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -83,34 +61,6 @@ function disableMapInteraction(map: maplibregl.Map) {
   map.touchZoomRotate.disable();
 }
 
-type VisualBase = { flowCX: number; flowCY: number; rfZoom: number };
-
-/**
- * Apply CSS transform to `el` so that the map container — which currently
- * renders flow position (vb.flowCX, vb.flowCY) at its screen centre — is
- * repositioned to match the current RF viewport.
- *
- * transform-origin: center (50% 50%)
- *   → scale(s) keeps the element centre fixed, then translate(tx, ty) moves it
- *   → element centre ends up at the screen position of (vb.flowCX, vb.flowCY)
- */
-function applyCssTransform(
-  el: HTMLElement,
-  vb: VisualBase,
-  vpX: number,
-  vpY: number,
-  rfZoom: number,
-  W: number,
-  H: number,
-) {
-  if (W === 0 || H === 0) return;
-  const tx = vb.flowCX * rfZoom + vpX - W / 2;
-  const ty = vb.flowCY * rfZoom + vpY - H / 2;
-  const s  = rfZoom / vb.rfZoom;
-  el.style.transform       = `translate(${tx}px, ${ty}px) scale(${s})`;
-  el.style.transformOrigin = "center";
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -130,7 +80,6 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       new URLSearchParams(window.location.search).get("geoDebug") === "1",
   );
   const [debugInfo, setDebugInfo] = useState("");
-  const syncCountRef = useRef(0);
 
   const canvas           = useCanvasStore((s) => s.canvases[canvasId]);
   const updateCanvasMeta = useCanvasStore((s) => s.updateCanvasMeta);
@@ -142,131 +91,17 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
   const { getViewport } = useReactFlow();
   const { x: vpX, y: vpY, zoom: rfZoom } = useViewport();
 
-  // Stable refs for use inside async callbacks.
-  const geoAnchorRef = useRef(geoAnchor);
-  geoAnchorRef.current = geoAnchor;
-  const mapReadyRef = useRef(mapReady);
-  mapReadyRef.current = mapReady;
-  const rfVpRef = useRef({ x: vpX, y: vpY, zoom: rfZoom });
-  rfVpRef.current = { x: vpX, y: vpY, zoom: rfZoom };
-
-  // The flow position shown at the map centre after the last completed tile
-  // reload. Updated ONLY inside map.once('render'). Default = anchor.flow,
-  // which equals the RF viewport centre at anchor-set time → initial tx = 0.
-  const visualBase  = useRef<VisualBase | null>(null);
-  // Cancellation token — incremented per reload to discard stale callbacks.
-  const reloadGenRef = useRef(0);
-
-  // Cached container dimensions. Reading offsetWidth/offsetHeight forces a
-  // synchronous layout reflow; doing it every pan frame is what makes panning
-  // janky. A ResizeObserver keeps these current without touching the DOM in
-  // the hot path, so the per-frame effect only WRITES style.transform.
-  const dimsRef = useRef({ W: 0, H: 0 });
-
-  // ── CSS transform sync (before-paint, zero visual lag) ────────────────────
-  useLayoutEffect(() => {
-    const anchor = geoAnchorRef.current;
-    const el     = containerRef.current;
-    if (!el || !anchor) {
-      if (el) el.style.transform = "";
-      return;
-    }
-    // Default base: anchor.flow == RF viewport centre at anchor time → tx = 0.
-    const vb = visualBase.current ?? {
-      flowCX: anchor.flow.x,
-      flowCY: anchor.flow.y,
-      rfZoom: anchor.rf_zoom,
-    };
-    // Use cached dims — no offsetWidth read in the hot path, so this effect is
-    // a pure compositor write and the pan stays fluid.
-    const { W, H } = dimsRef.current;
-    applyCssTransform(el, vb, vpX, vpY, rfZoom, W, H);
-
-    if (debugMode) {
-      syncCountRef.current += 1;
-      const map = mapRef.current;
-      const target = map ? computeMapTarget({ x: vpX, y: vpY, zoom: rfZoom }, anchor, W, H) : null;
-      const actual = map?.getCenter();
-      setDebugInfo(
-        `css-syncs:${syncCountRef.current} | ` +
-          `vb=(${vb.flowCX.toFixed(1)},${vb.flowCY.toFixed(1)} z=${vb.rfZoom.toFixed(2)}) | ` +
-          `tx=${(vb.flowCX * rfZoom + vpX - W / 2).toFixed(1)} ` +
-          `ty=${(vb.flowCY * rfZoom + vpY - H / 2).toFixed(1)} ` +
-          `s=${(rfZoom / vb.rfZoom).toFixed(3)}` +
-          (target && actual
-            ? ` | Δlng=${(actual.lng - target.cLng).toFixed(7)}`
-            : ""),
-      );
-    }
-  }, [vpX, vpY, rfZoom, debugMode]);
-
-  // ── Quality refresh (onEnd) ────────────────────────────────────────────────
-  // Reloads sharp tiles for the current viewport. visualBase is updated only
-  // inside map.once('render'), after WebGL has actually drawn the new tiles.
-  //
-  // SEAMLESS re-base: the jump target is computed via map.unproject — MapLibre's
-  // OWN Web Mercator projection — NOT our linear formula. We find the screen
-  // point the CSS transform currently maps to the viewport centre, ask the map
-  // what geo is really there, and jump exactly to it. Because the same
-  // projection that drew the tiles also picks the target, the tiles don't shift
-  // relative to the graph when the CSS transform resets. No flat-earth error.
-  const doQualityRefresh = useCallback(
-    (vp: { x: number; y: number; zoom: number }) => {
-      const map    = mapRef.current;
-      const anchor = geoAnchorRef.current;
-      const el     = containerRef.current;
-      if (!map || !anchor || !el || !mapReadyRef.current) return;
-      const { W, H } = dimsRef.current;
-      if (W === 0 || H === 0) return;
-
-      // Current CSS transform (built from the active base + this end viewport).
-      const vbOld = visualBase.current ?? {
-        flowCX: anchor.flow.x,
-        flowCY: anchor.flow.y,
-        rfZoom: anchor.rf_zoom,
-      };
-      const sOld  = vp.zoom / vbOld.rfZoom;
-      const txOld = vbOld.flowCX * vp.zoom + vp.x - W / 2;
-      const tyOld = vbOld.flowCY * vp.zoom + vp.y - H / 2;
-
-      // Pre-transform screen point that the transform maps to the viewport
-      // centre (W/2, H/2). Inverting translate+scale about transform-origin
-      // centre: p = c - t / s.
-      const px = W / 2 - txOld / sOld;
-      const py = H / 2 - tyOld / sOld;
-
-      // Ask the map (current camera) what geo is actually there — exact Mercator.
-      const geoCenter = map.unproject([px, py]);
-      const mlZoom    = anchor.ml_zoom + Math.log2(vp.zoom / anchor.rf_zoom);
-      map.jumpTo({ center: geoCenter, zoom: mlZoom });
-
-      reloadGenRef.current += 1;
-      const thisGen = reloadGenRef.current;
-
-      // The new base: after this reload completes, the map centre shows the
-      // flow position corresponding to the RF viewport centre at `vp`.
-      const newBase: VisualBase = {
-        flowCX: (W / 2 - vp.x) / vp.zoom,
-        flowCY: (H / 2 - vp.y) / vp.zoom,
-        rfZoom: vp.zoom,
-      };
-
-      map.once("render", () => {
-        if (thisGen !== reloadGenRef.current) return;
-        visualBase.current = newBase;
-        // Apply CSS transform for whatever the RF viewport is NOW (user may
-        // have panned slightly since onEnd fired). Re-read dims — the container
-        // may have resized between jumpTo and this async render callback.
-        const el2 = containerRef.current;
-        if (!el2) return;
-        const v = rfVpRef.current;
-        applyCssTransform(el2, newBase, v.x, v.y, v.zoom, dimsRef.current.W, dimsRef.current.H);
-      });
-    },
-    [],
-  );
-
-  useOnViewportChange({ onEnd: doQualityRefresh });
+  // ── Viewport sync seam ─────────────────────────────────────────────────────
+  // All the per-frame tracking, on-stop tile reload, and GeoAnchor projection
+  // live behind this hook. invalidate() cancels a pending reload's render
+  // callback (used before a style swap fires its own render events).
+  const { invalidate } = useMapViewportSync({
+    mapRef,
+    containerRef,
+    anchor: geoAnchor,
+    mapReady,
+    onDebug: debugMode ? setDebugInfo : undefined,
+  });
 
   // ── MapLibre initialisation ────────────────────────────────────────────────
   useEffect(() => {
@@ -292,7 +127,6 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       map.remove();
       mapRef.current = null;
       setMapReady(false);
-      visualBase.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -300,30 +134,6 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
   useLayoutEffect(() => {
     if (mapReady) mapRef.current?.resize();
   }, [mapReady]);
-
-  // Keep cached dims current via ResizeObserver — never read offsetWidth in the
-  // per-frame sync. Seed immediately and re-apply the transform on resize so
-  // the map doesn't drift when the container changes size.
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      dimsRef.current = { W: el.offsetWidth, H: el.offsetHeight };
-      const anchor = geoAnchorRef.current;
-      if (!anchor) return;
-      const vb = visualBase.current ?? {
-        flowCX: anchor.flow.x,
-        flowCY: anchor.flow.y,
-        rfZoom: anchor.rf_zoom,
-      };
-      const v = rfVpRef.current;
-      applyCssTransform(el, vb, v.x, v.y, v.zoom, dimsRef.current.W, dimsRef.current.H);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
@@ -333,27 +143,11 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
-    // Invalidate any pending quality-refresh render callback: a style swap
-    // fires its own 'render' events, which must not be mistaken for the tile
-    // reload a doQualityRefresh was waiting on.
-    reloadGenRef.current += 1;
+    // Invalidate any pending tile-reload render callback: a style swap fires its
+    // own 'render' events, which must not be mistaken for that reload.
+    invalidate();
     mapRef.current.setStyle(TILE_STYLES[tileStyleId] ?? TILE_STYLES.liberty);
-  }, [tileStyleId, mapReady]);
-
-  // Clear the cached visual base whenever the anchor is cleared — including
-  // resets that bypass handleResetAnchor (e.g. the inspector's reset button) —
-  // so a stale base can't leak into the next anchor.
-  useEffect(() => {
-    if (!geoAnchor) visualBase.current = null;
-  }, [geoAnchor]);
-
-  // Initial quality refresh when anchor is set or map finishes loading.
-  useEffect(() => {
-    if (!mapReady || !mapRef.current || !geoAnchor) return;
-    visualBase.current = null;
-    doQualityRefresh(getViewport());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geoAnchor, mapReady]);
+  }, [tileStyleId, mapReady, invalidate]);
 
   // ── Set / reset anchor ─────────────────────────────────────────────────────
   // anchor.flow = RF viewport centre at anchor-set time.
@@ -375,7 +169,6 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       rf_zoom: rfVp.zoom,
       ml_zoom: mlZoom,
     };
-    visualBase.current = null;
     updateCanvasMeta(canvasId, {
       geo_anchor: anchor,
       map_center: { lng: mlCenter.lng, lat: mlCenter.lat },
@@ -385,7 +178,6 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
 
   function handleResetAnchor() {
     const map = mapRef.current;
-    visualBase.current = null;
     if (map) {
       const c = map.getCenter();
       updateCanvasMeta(canvasId, {
@@ -531,7 +323,7 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
             whiteSpace: "pre",
           }}
         >
-          <span style={{ color: "#ff0", fontWeight: "bold" }}>GeoSync v5 — CSS transform (GPU compositor){"\n"}</span>
+          <span style={{ color: "#ff0", fontWeight: "bold" }}>GeoSync — useMapViewportSync · exact Mercator{"\n"}</span>
           {debugInfo}
           {"\n"}
           <span style={{ color: "#aaa" }}>tx/ty/s = CSS transform values · Δlng = map centre error (should be ~0 after reload)</span>
