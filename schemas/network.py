@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 # node_type is a free string — valid values are defined in Client Configuration,
 # not hardcoded in the schema. This allows new Node Types without a schema change.
 
-ResponsibilityShare = dict[str, float]  # ElementId | EventId -> share in (0, 1], summing to 1
+ResponsibilityShare = dict[str, float]  # ElementId | EventId -> share in [0, 1], summing to 1
 
 
 # ---------------------------------------------------------------------------
@@ -44,15 +44,19 @@ class CategoryDependencyProfile(BaseModel):
     """
     Dependency attributes a node carries for one specific Category.
 
-    dependency_level: 1..N where N = fully dependent (strict thresholds),
-    1 = barely dependent (high tolerance). Inverse of the Functionality scale.
+    dependency_level: 1..N (N = len(functionality_scale)). Acts as a GUARD that
+    attenuates a proposed Functionality drop by a linear shift:
+        P' = min(current, P + (N − dependency_level))
+    N = full dependency (drop passes unattenuated); 1 = no dependency
+    (shift of N−1 neutralises any possible drop entirely). Intermediate values
+    reduce the drop linearly by (N − dependency_level) levels.
     capacity: maximum throughput for this category — degrades proportionally with Functionality.
     demand and priority are SourceToDemands-only; leave absent for Requisite.
     """
     dependency_level: int = Field(..., ge=1)
     capacity: Optional[float] = Field(None, ge=0, description="Maximum throughput for this category.")
     backup: Optional[bool] = None
-    backup_duration: Optional[int] = Field(None, ge=0, description="Hours. SourceToDemands only.")
+    backup_duration: Optional[int] = Field(None, ge=0, description="Hours. Applies when backup is true.")
     demand: Optional[float] = Field(None, ge=0, description="Resource amount requested. SourceToDemands only.")
     priority: Optional[int] = Field(None, ge=1, le=10, description="Flow allocation priority. SourceToDemands only.")
 
@@ -81,12 +85,15 @@ class Node(BaseModel):
     supply_capacity: Optional[dict[str, float]] = None
     category_dependency_profiles: Optional[dict[str, CategoryDependencyProfile]] = None
     # Keyed by EventId. value 1..N — higher = more vulnerable (imposed = N − vulnerability_level).
-    vulnerability_levels: Optional[dict[str, int]] = None
+    vulnerability_levels: Optional[dict[str, int]] = Field(
+        None,
+        description="Keyed by EventId. 0 ≤ value < N where N = len(functionality_scale).",
+    )
     responsibility_share: Optional[ResponsibilityShare] = Field(
         None,
         description=(
             "Persisted last-known responsibility share for this node's current Functionality. "
-            "Keyed by ElementId or EventId; values in (0, 1] summing to 1. "
+            "Keyed by ElementId or EventId; values in [0, 1] summing to 1. "
             "Set by the engine after each Propagation and stored in the project file."
         ),
     )
@@ -122,7 +129,7 @@ class Edge(BaseModel):
         None,
         description=(
             "Persisted last-known responsibility share for this edge's current Functionality. "
-            "Keyed by ElementId or EventId; values in (0, 1] summing to 1."
+            "Keyed by ElementId or EventId; values in [0, 1] summing to 1."
         ),
     )
     # Raw rule strings — parsed and validated client-side; evaluated by the engine.
@@ -160,6 +167,29 @@ class Graph(BaseModel):
 # Canvas — named UI container for one Graph
 # ---------------------------------------------------------------------------
 
+class GeoAnchor(BaseModel):
+    """
+    One correspondence between a React Flow coordinate and a geographic coordinate,
+    plus the zoom levels at which the anchor was established.
+
+    Together with the projection, this defines a bijection between React Flow
+    coordinate space and geographic (lng/lat) space. The projection is exact
+    Web Mercator — the same one MapLibre uses to draw tiles — so node placement
+    and the map background never disagree:
+
+        flow space  ↔  Mercator WORLD coordinates   is a constant affine map
+        Mercator world  ↔  lng/lat                  is the standard closed form
+
+    The flow↔world scale is a single constant derived from the anchor zooms:
+    worldPerFlowUnit = rf_zoom / (512 · 2^ml_zoom). All latitude curvature lives
+    in the exact world↔lng/lat step. (Frontend implementation: lib/geo-utils.ts.)
+    """
+    flow: Position = Field(description="React Flow coordinate of the anchor point.")
+    geo: GeoCoords = Field(description="Geographic coordinate at the anchor point.")
+    rf_zoom: float = Field(description="React Flow zoom when the anchor was established.")
+    ml_zoom: float = Field(description="MapLibre zoom when the anchor was established.")
+
+
 class Canvas(BaseModel):
     """
     Named UI container for a Graph. Carries display metadata only.
@@ -177,6 +207,27 @@ class Canvas(BaseModel):
         description="EPSG code for the CRS of node geo fields. Defaults to EPSG:4326.",
     )
     georeferenced: Optional[bool] = None
+    map_style: Optional[str] = Field(
+        None,
+        description="Tile style id last used in the geo editor: 'liberty' | 'bright' | 'positron'.",
+    )
+    map_center: Optional[GeoCoords] = Field(
+        None,
+        description="Last map viewport centre (lng, lat). Restored when the canvas is reopened.",
+    )
+    map_zoom: Optional[float] = Field(
+        None,
+        description="Last map zoom level. Restored when the canvas is reopened.",
+    )
+    geo_anchor: Optional[GeoAnchor] = Field(
+        None,
+        description=(
+            "Bijective anchor between one React Flow coordinate and one geographic coordinate. "
+            "When present, all node positions can be converted to/from geographic coordinates "
+            "via the exact Web Mercator projection defined by GeoAnchor. "
+            "Absent until the user sets the geo reference in the canvas editor."
+        ),
+    )
     graph: Graph
 
 

@@ -45,7 +45,7 @@ class ElementUpdate(BaseModel):
     responsibility_share: Optional[dict[str, float]] = Field(
         None,
         description=(
-            "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1. "
+            "Keyed by ElementId or EventId. Values are in [0, 1] and sum to 1. "
             "Identifies which upstream Elements or Events are directly responsible "
             "for this Element's degradation, and in what proportion."
         ),
