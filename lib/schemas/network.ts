@@ -158,6 +158,23 @@ export const GraphSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Geo anchor — one flow↔geo correspondence point plus zoom levels at anchor time
+// ---------------------------------------------------------------------------
+
+export const GeoAnchorSchema = z.object({
+  /** Flow-space position of the correspondence point. */
+  flow: PositionSchema,
+  /** Geographic position of the correspondence point. */
+  geo: GeoCoordSchema,
+  /** React Flow zoom level at anchor time. */
+  rf_zoom: z.number(),
+  /** MapLibre zoom level at anchor time. */
+  ml_zoom: z.number(),
+});
+
+export type GeoAnchor = z.infer<typeof GeoAnchorSchema>;
+
+// ---------------------------------------------------------------------------
 // Canvas — named UI container for one Graph
 // ---------------------------------------------------------------------------
 
@@ -173,6 +190,14 @@ export const CanvasSchema = z.object({
   crs: z.string().optional(),
   /** When true, node positions have meaningful geo coordinates in Canvas.crs. */
   georeferenced: z.boolean().optional(),
+  /** MapLibre tile style id (liberty | bright | positron). */
+  map_style: z.string().nullish(),
+  /** Saved MapLibre center so the map reopens at the last-navigated position. */
+  map_center: GeoCoordSchema.nullish(),
+  /** Saved MapLibre zoom level. */
+  map_zoom: z.number().nullish(),
+  /** Bijective anchor tying one flow-space point to one geographic coordinate. */
+  geo_anchor: GeoAnchorSchema.nullish(),
   graph: GraphSchema,
 });
 
@@ -330,6 +355,7 @@ export type Node = z.infer<typeof NodeSchema>;
 export type Edge = z.infer<typeof EdgeSchema>;
 export type Graph = z.infer<typeof GraphSchema>;
 export type Canvas = z.infer<typeof CanvasSchema>;
+// GeoAnchor is declared inline above (after GeoAnchorSchema) to keep it close to its schema.
 export type ProjectMeta = z.infer<typeof ProjectMetaSchema>;
 export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
 export type PropagationMeta = z.infer<typeof PropagationMetaSchema>;

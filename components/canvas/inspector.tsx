@@ -1074,6 +1074,32 @@ function CanvasMeta() {
         />
       </div>
 
+      {activeCanvas.georeferenced && (
+        <div className="mb-3 rounded-md border border-zinc-200 px-3 py-2 text-xs dark:border-zinc-700">
+          {activeCanvas.geo_anchor ? (
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span className="font-medium text-zinc-700 dark:text-zinc-200">Anchor set</span>
+                <div className="mt-0.5 text-zinc-400">
+                  {activeCanvas.geo_anchor.geo.lat.toFixed(5)}°,{" "}
+                  {activeCanvas.geo_anchor.geo.lng.toFixed(5)}°
+                </div>
+              </div>
+              <button
+                onClick={() => updateCanvasMeta(activeCanvas.id, { geo_anchor: null })}
+                className="shrink-0 rounded px-2 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-100 hover:text-red-600 dark:hover:bg-zinc-800"
+              >
+                Reset
+              </button>
+            </div>
+          ) : (
+            <span className="text-zinc-400">
+              No anchor — enable the map background to set one.
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-md bg-zinc-50 p-2 text-center dark:bg-zinc-800">
           <div className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">{nodeCount}</div>

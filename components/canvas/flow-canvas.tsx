@@ -58,6 +58,8 @@ import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store"
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
 import { pickHandles } from "@/lib/edge-routing";
+import { GeoMapBackground } from "@/components/geo/geo-map-background";
+import { anchorFlowToGeo } from "@/lib/geo-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -722,10 +724,13 @@ export function FlowCanvas() {
 
   // ── Node drag end → update position + push undoable history entry ──
   const onNodeDragStop = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
-    // Snapshot BEFORE updateNode so the store still holds the pre-drag position.
     const before = toGraphSnapshot();
-    updateNode(rfNode.id, { position: rfNode.position });
-    // toGraphSnapshot reads get() internally — sees the post-update state here.
+    const geoAnchor = activeCanvas?.geo_anchor ?? null;
+    const nodePatch: Partial<CascadeNode> = { position: rfNode.position };
+    if (geoAnchor) {
+      nodePatch.geo = anchorFlowToGeo(rfNode.position, geoAnchor);
+    }
+    updateNode(rfNode.id, nodePatch);
     useHistoryStore.getState().pushUpdateEntry({
       id: nanoid(),
       timestamp: new Date().toISOString(),
@@ -1055,6 +1060,11 @@ export function FlowCanvas() {
 
   return (
     <div className="relative h-full w-full">
+      {/* Map background — always behind React Flow when canvas is georeferenced */}
+      {activeCanvas.georeferenced && (
+        <GeoMapBackground canvasId={activeCanvas.id} />
+      )}
+
       {/* Canvas colour tint — subtle hue overlay, works in both light and dark mode */}
       {canvasColor && (
         <div
@@ -1092,7 +1102,9 @@ export function FlowCanvas() {
         fitView
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+        {!activeCanvas.georeferenced && (
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+        )}
         <NodeSearch />
         <ZoomSlider />
         {/* Freehand lasso — active in select tool, replaces rect-select */}

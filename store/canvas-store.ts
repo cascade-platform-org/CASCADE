@@ -67,7 +67,7 @@ export interface CanvasActions {
   // --- Canvas lifecycle ---
   addCanvas: (canvas: Canvas) => void;
   removeCanvas: (canvasId: string) => void;
-  updateCanvasMeta: (canvasId: string, patch: Partial<Pick<Canvas, "label" | "color" | "crs" | "georeferenced">>) => void;
+  updateCanvasMeta: (canvasId: string, patch: Partial<Pick<Canvas, "label" | "color" | "crs" | "georeferenced" | "map_style" | "map_center" | "map_zoom" | "geo_anchor">>) => void;
   setActiveCanvas: (canvasId: string) => void;
   reorderCanvases: (orderedIds: string[]) => void;
 
