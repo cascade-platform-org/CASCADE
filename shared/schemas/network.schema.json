@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CategoryDependencyProfile": {
-      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N where N = fully dependent (strict thresholds),\n1 = barely dependent (high tolerance). Inverse of the Functionality scale.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
+      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N (N = len(functionality_scale)). Acts as a GUARD that\nattenuates a proposed Functionality drop by a linear shift:\n    P' = min(current, P + (N \u2212 dependency_level))\nN = full dependency (drop passes unattenuated); 1 = no dependency\n(shift of N\u22121 neutralises any possible drop entirely). Intermediate values\nreduce the drop linearly by (N \u2212 dependency_level) levels.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
       "properties": {
         "dependency_level": {
           "minimum": 1,
@@ -46,7 +46,7 @@
             }
           ],
           "default": null,
-          "description": "Hours. SourceToDemands only.",
+          "description": "Hours. Applies when backup is true.",
           "title": "Backup Duration"
         },
         "demand": {
@@ -326,6 +326,7 @@
             }
           ],
           "default": null,
+          "description": "Keyed by EventId. 0 \u2264 value < N where N = len(functionality_scale).",
           "title": "Vulnerability Levels"
         },
         "responsibility_share": {
@@ -341,7 +342,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
+          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
           "title": "Responsibility Share"
         },
         "rules": {
@@ -480,7 +481,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1.",
+          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1.",
           "title": "Responsibility Share"
         },
         "rules": {
@@ -519,6 +520,37 @@
         "functionality"
       ],
       "title": "Edge",
+      "type": "object"
+    },
+    "GeoAnchor": {
+      "description": "One correspondence between a React Flow coordinate and a geographic coordinate,\nplus the zoom levels at which the anchor was established.\n\nTogether with the projection, this defines a bijection between React Flow\ncoordinate space and geographic (lng/lat) space. The projection is exact\nWeb Mercator \u2014 the same one MapLibre uses to draw tiles \u2014 so node placement\nand the map background never disagree:\n\n    flow space  \u2194  Mercator WORLD coordinates   is a constant affine map\n    Mercator world  \u2194  lng/lat                  is the standard closed form\n\nThe flow\u2194world scale is a single constant derived from the anchor zooms:\nworldPerFlowUnit = rf_zoom / (512 \u00b7 2^ml_zoom). All latitude curvature lives\nin the exact world\u2194lng/lat step. (Frontend implementation: lib/geo-utils.ts.)",
+      "properties": {
+        "flow": {
+          "$ref": "#/$defs/Position",
+          "description": "React Flow coordinate of the anchor point."
+        },
+        "geo": {
+          "$ref": "#/$defs/GeoCoords",
+          "description": "Geographic coordinate at the anchor point."
+        },
+        "rf_zoom": {
+          "description": "React Flow zoom when the anchor was established.",
+          "title": "Rf Zoom",
+          "type": "number"
+        },
+        "ml_zoom": {
+          "description": "MapLibre zoom when the anchor was established.",
+          "title": "Ml Zoom",
+          "type": "number"
+        }
+      },
+      "required": [
+        "flow",
+        "geo",
+        "rf_zoom",
+        "ml_zoom"
+      ],
+      "title": "GeoAnchor",
       "type": "object"
     },
     "Graph": {
@@ -606,6 +638,56 @@
           ],
           "default": null,
           "title": "Georeferenced"
+        },
+        "map_style": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Tile style id last used in the geo editor: 'liberty' | 'bright' | 'positron'.",
+          "title": "Map Style"
+        },
+        "map_center": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoCoords"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Last map viewport centre (lng, lat). Restored when the canvas is reopened."
+        },
+        "map_zoom": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Last map zoom level. Restored when the canvas is reopened.",
+          "title": "Map Zoom"
+        },
+        "geo_anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bijective anchor between one React Flow coordinate and one geographic coordinate. When present, all node positions can be converted to/from geographic coordinates via the exact Web Mercator projection defined by GeoAnchor. Absent until the user sets the geo reference in the canvas editor."
         },
         "graph": {
           "$ref": "#/$defs/Graph"
@@ -792,7 +874,7 @@
       "type": "object"
     },
     "ElementUpdate": {
-      "description": "Engine's update for a single Element (node or edge) after a Propagation.\n\n`id` is a globally unique Element ID \u2014 look it up directly in\nProject.nodes or Project.edges. No canvas_id needed.",
+      "description": "Engine's update for a single Element (node or edge) after a Propagation.\n\n`id` is a globally unique Element ID \u2014 look it up directly in\nProject.nodes or Project.edges. No canvas_id needed.\n\nOptional fields are excluded from serialisation when None so the JSON\nresponse omits them entirely \u2014 Zod `.optional()` accepts absence but not null.",
       "properties": {
         "id": {
           "title": "Id",
@@ -854,7 +936,7 @@
             }
           ],
           "default": null,
-          "description": "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
+          "description": "Keyed by ElementId or EventId. Values are in [0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
           "title": "Responsibility Share"
         },
         "properties": {

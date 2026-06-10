@@ -416,6 +416,7 @@ export const useCanvasStore = create<CanvasStore>()(
 
       // ── 0. Temporal Jump — advance functionality_time, expire if ≤ 0 ──
       const temporalExpired = new Map<string, { functionality: number; functionality_time: number }>();
+      const expiredIds = new Set<string>();  // elements whose backup expired (functionality → 1)
       if (event.type === "temporal_jump") {
         const hours = event.duration_hours ?? 0;
         for (const { id, el } of allElements) {
@@ -425,6 +426,8 @@ export const useCanvasStore = create<CanvasStore>()(
           const newFt = ft - hours;
           if (newFt <= 0) {
             capture(id, "functionality", el.functionality);
+            capture(id, "responsibility_share", el.responsibility_share ?? null);
+            expiredIds.add(id);
             temporalExpired.set(id, { functionality: 1, functionality_time: 0 });
           } else {
             temporalExpired.set(id, { functionality: el.functionality ?? n, functionality_time: newFt });
@@ -440,6 +443,7 @@ export const useCanvasStore = create<CanvasStore>()(
         const imposed = Math.max(1, n - level);
         if (imposed < (el.functionality ?? n)) {
           capture(id, "functionality", el.functionality);
+          capture(id, "responsibility_share", el.responsibility_share ?? null);
           vuln.set(id, imposed);
         }
       }
@@ -472,24 +476,38 @@ export const useCanvasStore = create<CanvasStore>()(
         const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
         if (!el) continue;
         capture(elementId, field, (el as Record<string, unknown>)[field] ?? null);
+        if (field === "functionality") {
+          capture(elementId, "responsibility_share", el.responsibility_share ?? null);
+        }
       }
 
       // ── Apply everything ──
       const before = state.toGraphSnapshot();
 
       set((draft) => {
+        // The Event is the direct cause for elements it drops — set the
+        // responsibility share to the EventId so the UI shows "Event: …" rather
+        // than a stale propagation cause from a previous run.
+        const eventCause = { [event.id]: 1.0 };
         for (const [id, { functionality, functionality_time }] of temporalExpired) {
           if (draft.nodes[id]) {
             draft.nodes[id].functionality_time = functionality_time;
             draft.nodes[id].functionality = functionality;
+            if (expiredIds.has(id)) draft.nodes[id].responsibility_share = eventCause;
           } else if (draft.edges[id]) {
             draft.edges[id].functionality_time = functionality_time;
             draft.edges[id].functionality = functionality;
+            if (expiredIds.has(id)) draft.edges[id].responsibility_share = eventCause;
           }
         }
         for (const [id, imposed] of vuln) {
-          if (draft.nodes[id]) draft.nodes[id].functionality = imposed;
-          else if (draft.edges[id]) draft.edges[id].functionality = imposed;
+          if (draft.nodes[id]) {
+            draft.nodes[id].functionality = imposed;
+            draft.nodes[id].responsibility_share = eventCause;
+          } else if (draft.edges[id]) {
+            draft.edges[id].functionality = imposed;
+            draft.edges[id].responsibility_share = eventCause;
+          }
         }
         for (const { id, repairTime } of directDamageElements) {
           if (draft.nodes[id]) {
@@ -507,8 +525,10 @@ export const useCanvasStore = create<CanvasStore>()(
           const field = key.slice(dotIdx + 1);
           if (draft.nodes[elementId]) {
             (draft.nodes[elementId] as Record<string, unknown>)[field] = newVal;
+            if (field === "functionality") draft.nodes[elementId].responsibility_share = eventCause;
           } else if (draft.edges[elementId]) {
             (draft.edges[elementId] as Record<string, unknown>)[field] = newVal;
+            if (field === "functionality") draft.edges[elementId].responsibility_share = eventCause;
           }
         }
       });

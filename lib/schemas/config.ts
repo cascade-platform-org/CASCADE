@@ -98,10 +98,17 @@ export const HeuristicConfigSchema = z.object({
  * `name` must match a Canvas.graph_type value used in the project.
  * `heuristics` is the full ordered pipeline — the engine runs them in this order.
  * If a canvas's graph_type has no entry here the engine uses its built-in defaults.
+ *
+ * `local_graph_types` is used by the global graph type only (referenced by
+ * Project.global_graph_type): it lists the constituent local graph type names
+ * whose pipelines compose for a global Propagation. The engine merges those
+ * locals' heuristics; because heuristic params are keyed by category, params
+ * from different locals coexist without conflict. Absent for a local graph type.
  */
 export const GraphTypeConfigSchema = z.object({
   name: z.string(),
-  heuristics: z.array(HeuristicConfigSchema),
+  heuristics: z.array(HeuristicConfigSchema).default([]),
+  local_graph_types: z.array(z.string()).optional(),
 });
 
 // ---------------------------------------------------------------------------

@@ -167,6 +167,56 @@
           "default": null,
           "title": "Georeferenced"
         },
+        "map_style": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Tile style id last used in the geo editor: 'liberty' | 'bright' | 'positron'.",
+          "title": "Map Style"
+        },
+        "map_center": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoCoords"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Last map viewport centre (lng, lat). Restored when the canvas is reopened."
+        },
+        "map_zoom": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Last map zoom level. Restored when the canvas is reopened.",
+          "title": "Map Zoom"
+        },
+        "geo_anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeoAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bijective anchor between one React Flow coordinate and one geographic coordinate. When present, all node positions can be converted to/from geographic coordinates via the exact Web Mercator projection defined by GeoAnchor. Absent until the user sets the geo reference in the canvas editor."
+        },
         "graph": {
           "$ref": "#/$defs/Graph"
         }
@@ -209,7 +259,7 @@
       "type": "object"
     },
     "CategoryDependencyProfile": {
-      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N where N = fully dependent (strict thresholds),\n1 = barely dependent (high tolerance). Inverse of the Functionality scale.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
+      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N (N = len(functionality_scale)). Acts as a GUARD that\nattenuates a proposed Functionality drop by a linear shift:\n    P' = min(current, P + (N \u2212 dependency_level))\nN = full dependency (drop passes unattenuated); 1 = no dependency\n(shift of N\u22121 neutralises any possible drop entirely). Intermediate values\nreduce the drop linearly by (N \u2212 dependency_level) levels.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
       "properties": {
         "dependency_level": {
           "minimum": 1,
@@ -253,7 +303,7 @@
             }
           ],
           "default": null,
-          "description": "Hours. SourceToDemands only.",
+          "description": "Hours. Applies when backup is true.",
           "title": "Backup Duration"
         },
         "demand": {
@@ -432,7 +482,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1.",
+          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1.",
           "title": "Responsibility Share"
         },
         "rules": {
@@ -474,7 +524,7 @@
       "type": "object"
     },
     "ElementUpdate": {
-      "description": "Engine's update for a single Element (node or edge) after a Propagation.\n\n`id` is a globally unique Element ID \u2014 look it up directly in\nProject.nodes or Project.edges. No canvas_id needed.",
+      "description": "Engine's update for a single Element (node or edge) after a Propagation.\n\n`id` is a globally unique Element ID \u2014 look it up directly in\nProject.nodes or Project.edges. No canvas_id needed.\n\nOptional fields are excluded from serialisation when None so the JSON\nresponse omits them entirely \u2014 Zod `.optional()` accepts absence but not null.",
       "properties": {
         "id": {
           "title": "Id",
@@ -536,7 +586,7 @@
             }
           ],
           "default": null,
-          "description": "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
+          "description": "Keyed by ElementId or EventId. Values are in [0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
           "title": "Responsibility Share"
         },
         "properties": {
@@ -613,6 +663,20 @@
           "description": "Hours to advance the clock. Temporal Jump events only. Used as the default when saving to Scorecard.",
           "title": "Duration Hours"
         },
+        "default_repair_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Global default repair time (hours) applied to all elements when this hazard fires. Elements in direct_damage_effects override this value.",
+          "title": "Default Repair Time"
+        },
         "direct_damage_effects": {
           "anyOf": [
             {
@@ -626,7 +690,7 @@
             }
           ],
           "default": null,
-          "description": "Per-element effects. Hazards only. Key = ElementId.",
+          "description": "Per-element repair time overrides. Hazards only. Key = ElementId.",
           "title": "Direct Damage Effects"
         },
         "attribute_mutations": {
@@ -666,6 +730,37 @@
         "color"
       ],
       "title": "FunctionalityScaleLevel",
+      "type": "object"
+    },
+    "GeoAnchor": {
+      "description": "One correspondence between a React Flow coordinate and a geographic coordinate,\nplus the zoom levels at which the anchor was established.\n\nTogether with the projection, this defines a bijection between React Flow\ncoordinate space and geographic (lng/lat) space. The projection is exact\nWeb Mercator \u2014 the same one MapLibre uses to draw tiles \u2014 so node placement\nand the map background never disagree:\n\n    flow space  \u2194  Mercator WORLD coordinates   is a constant affine map\n    Mercator world  \u2194  lng/lat                  is the standard closed form\n\nThe flow\u2194world scale is a single constant derived from the anchor zooms:\nworldPerFlowUnit = rf_zoom / (512 \u00b7 2^ml_zoom). All latitude curvature lives\nin the exact world\u2194lng/lat step. (Frontend implementation: lib/geo-utils.ts.)",
+      "properties": {
+        "flow": {
+          "$ref": "#/$defs/Position",
+          "description": "React Flow coordinate of the anchor point."
+        },
+        "geo": {
+          "$ref": "#/$defs/GeoCoords",
+          "description": "Geographic coordinate at the anchor point."
+        },
+        "rf_zoom": {
+          "description": "React Flow zoom when the anchor was established.",
+          "title": "Rf Zoom",
+          "type": "number"
+        },
+        "ml_zoom": {
+          "description": "MapLibre zoom when the anchor was established.",
+          "title": "Ml Zoom",
+          "type": "number"
+        }
+      },
+      "required": [
+        "flow",
+        "geo",
+        "rf_zoom",
+        "ml_zoom"
+      ],
+      "title": "GeoAnchor",
       "type": "object"
     },
     "GeoCoords": {
@@ -770,7 +865,7 @@
       "type": "object"
     },
     "GraphTypeConfig": {
-      "description": "Per-graph-type override of the engine's default heuristic pipeline.\n\nThe engine uses this to select and order the heuristics it applies when\npropagating across a canvas whose graph_type matches `name`.\nIf a canvas's graph_type has no entry here the engine falls back to its\nbuilt-in default pipeline for that type.\n\nThe ordered `heuristics` list is the full pipeline override \u2014 the engine\nruns them in the declared order.  Disable individual steps via `enabled`\nrather than removing them so the intent is legible in saved config files.",
+      "description": "Per-graph-type override of the engine's default heuristic pipeline.\n\nThe engine uses this to select and order the heuristics it applies when\npropagating across a canvas whose graph_type matches `name`.\nIf a canvas's graph_type has no entry here the engine falls back to its\nbuilt-in default pipeline for that type.\n\nThe ordered `heuristics` list is the full pipeline override \u2014 the engine\nruns them in the declared order.  Disable individual steps via `enabled`\nrather than removing them so the intent is legible in saved config files.\n\n`local_graph_types` is used by the **global** graph type only (the one\nreferenced by Project.global_graph_type): it lists the constituent local\ngraph type names whose pipelines compose for a global Propagation. The\nengine's effective global pipeline is the merge of those locals' heuristics;\nbecause heuristic `params` are keyed by category, params from different\nlocals coexist without conflict. For a local graph type this is absent and\n`heuristics` is the literal pipeline.",
       "properties": {
         "name": {
           "description": "Must match a Canvas.graph_type value used in the project.",
@@ -784,11 +879,26 @@
           },
           "title": "Heuristics",
           "type": "array"
+        },
+        "local_graph_types": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Global graph type only: names of the constituent local graph types whose heuristic pipelines compose for a global Propagation. Absent for a local graph type.",
+          "title": "Local Graph Types"
         }
       },
       "required": [
-        "name",
-        "heuristics"
+        "name"
       ],
       "title": "GraphTypeConfig",
       "type": "object"
@@ -864,6 +974,12 @@
           },
           "title": "Graph Types",
           "type": "array"
+        },
+        "node_defaults": {
+          "additionalProperties": true,
+          "description": "Named node templates. Key = user-chosen name. Value = partial Node \u2014 any Node field except id and position can be preset.",
+          "title": "Node Defaults",
+          "type": "object"
         }
       },
       "required": [
@@ -1054,6 +1170,7 @@
             }
           ],
           "default": null,
+          "description": "Keyed by EventId. 0 \u2264 value < N where N = len(functionality_scale).",
           "title": "Vulnerability Levels"
         },
         "responsibility_share": {
@@ -1069,7 +1186,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
+          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
           "title": "Responsibility Share"
         },
         "rules": {

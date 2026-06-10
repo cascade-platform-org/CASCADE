@@ -40,19 +40,19 @@ export function resetFunctionality({
 
   if (isGlobal) {
     Object.values(state.nodes).forEach((node) => {
-      state.updateNode(node.id, { functionality: n, direct_damage: false, functionality_time: 0 });
+      state.updateNode(node.id, { functionality: n, direct_damage: false, functionality_time: 0, responsibility_share: undefined });
     });
     Object.values(state.edges).forEach((edge) => {
-      state.updateEdge(edge.id, { functionality: n, direct_damage: false, functionality_time: 0 });
+      state.updateEdge(edge.id, { functionality: n, direct_damage: false, functionality_time: 0, responsibility_share: undefined });
     });
   } else {
     const canvas = state.canvases[activeCanvasId!];
     if (!canvas) return;
     canvas.graph.node_ids.forEach((id) => {
-      state.updateNode(id, { functionality: n, direct_damage: false, functionality_time: 0 });
+      state.updateNode(id, { functionality: n, direct_damage: false, functionality_time: 0, responsibility_share: undefined });
     });
     canvas.graph.edge_ids.forEach((id) => {
-      state.updateEdge(id, { functionality: n, direct_damage: false, functionality_time: 0 });
+      state.updateEdge(id, { functionality: n, direct_damage: false, functionality_time: 0, responsibility_share: undefined });
     });
   }
 

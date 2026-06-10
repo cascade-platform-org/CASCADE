@@ -123,6 +123,20 @@
           "description": "Hours to advance the clock. Temporal Jump events only. Used as the default when saving to Scorecard.",
           "title": "Duration Hours"
         },
+        "default_repair_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Global default repair time (hours) applied to all elements when this hazard fires. Elements in direct_damage_effects override this value.",
+          "title": "Default Repair Time"
+        },
         "direct_damage_effects": {
           "anyOf": [
             {
@@ -136,7 +150,7 @@
             }
           ],
           "default": null,
-          "description": "Per-element effects. Hazards only. Key = ElementId.",
+          "description": "Per-element repair time overrides. Hazards only. Key = ElementId.",
           "title": "Direct Damage Effects"
         },
         "attribute_mutations": {
@@ -188,7 +202,7 @@
       "type": "object"
     },
     "GraphTypeConfig": {
-      "description": "Per-graph-type override of the engine's default heuristic pipeline.\n\nThe engine uses this to select and order the heuristics it applies when\npropagating across a canvas whose graph_type matches `name`.\nIf a canvas's graph_type has no entry here the engine falls back to its\nbuilt-in default pipeline for that type.\n\nThe ordered `heuristics` list is the full pipeline override \u2014 the engine\nruns them in the declared order.  Disable individual steps via `enabled`\nrather than removing them so the intent is legible in saved config files.",
+      "description": "Per-graph-type override of the engine's default heuristic pipeline.\n\nThe engine uses this to select and order the heuristics it applies when\npropagating across a canvas whose graph_type matches `name`.\nIf a canvas's graph_type has no entry here the engine falls back to its\nbuilt-in default pipeline for that type.\n\nThe ordered `heuristics` list is the full pipeline override \u2014 the engine\nruns them in the declared order.  Disable individual steps via `enabled`\nrather than removing them so the intent is legible in saved config files.\n\n`local_graph_types` is used by the **global** graph type only (the one\nreferenced by Project.global_graph_type): it lists the constituent local\ngraph type names whose pipelines compose for a global Propagation. The\nengine's effective global pipeline is the merge of those locals' heuristics;\nbecause heuristic `params` are keyed by category, params from different\nlocals coexist without conflict. For a local graph type this is absent and\n`heuristics` is the literal pipeline.",
       "properties": {
         "name": {
           "description": "Must match a Canvas.graph_type value used in the project.",
@@ -202,11 +216,26 @@
           },
           "title": "Heuristics",
           "type": "array"
+        },
+        "local_graph_types": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Global graph type only: names of the constituent local graph types whose heuristic pipelines compose for a global Propagation. Absent for a local graph type.",
+          "title": "Local Graph Types"
         }
       },
       "required": [
-        "name",
-        "heuristics"
+        "name"
       ],
       "title": "GraphTypeConfig",
       "type": "object"
@@ -274,6 +303,12 @@
           },
           "title": "Graph Types",
           "type": "array"
+        },
+        "node_defaults": {
+          "additionalProperties": true,
+          "description": "Named node templates. Key = user-chosen name. Value = partial Node \u2014 any Node field except id and position can be preset.",
+          "title": "Node Defaults",
+          "type": "object"
         }
       },
       "required": [
