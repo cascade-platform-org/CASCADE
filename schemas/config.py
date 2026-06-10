@@ -95,11 +95,27 @@ class GraphTypeConfig(BaseModel):
     The ordered `heuristics` list is the full pipeline override — the engine
     runs them in the declared order.  Disable individual steps via `enabled`
     rather than removing them so the intent is legible in saved config files.
+
+    `local_graph_types` is used by the **global** graph type only (the one
+    referenced by Project.global_graph_type): it lists the constituent local
+    graph type names whose pipelines compose for a global Propagation. The
+    engine's effective global pipeline is the merge of those locals' heuristics;
+    because heuristic `params` are keyed by category, params from different
+    locals coexist without conflict. For a local graph type this is absent and
+    `heuristics` is the literal pipeline.
     """
     name: str = Field(..., description="Must match a Canvas.graph_type value used in the project.")
     heuristics: list[HeuristicConfig] = Field(
-        ...,
+        default_factory=list,
         description="Ordered heuristic pipeline for this graph type.",
+    )
+    local_graph_types: Optional[list[str]] = Field(
+        None,
+        description=(
+            "Global graph type only: names of the constituent local graph types "
+            "whose heuristic pipelines compose for a global Propagation. Absent "
+            "for a local graph type."
+        ),
     )
 
 
