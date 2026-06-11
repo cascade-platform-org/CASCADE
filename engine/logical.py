@@ -18,9 +18,10 @@ what makes this the engine's logical heuristic — live here.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional
 
 from core.aggregation import attributed
+from core.utils.normalization import normalize_category_name
 from schemas.network import Edge, Node
 
 
@@ -78,6 +79,7 @@ def logical_category_candidates(
     edge_func: dict[str, int],
     nodes: dict[str, Node],
     skip: frozenset[str] = frozenset(),
+    intra_op: Optional[Callable[[str], Optional[str]]] = None,
 ) -> dict[str, tuple[int, dict[str, float]]]:
     """Per-category logical candidates: ``{category -> (level, shares)}``.
 
@@ -115,8 +117,11 @@ def logical_category_candidates(
         if not deliverables:
             continue
 
-        # Stage 2: intracategorical redundancy (best surviving supplier).
-        cg = attributed("best_of", deliverables)
+        # Stage 2: intracategorical aggregation. Default is best_of (redundancy);
+        # an intracategorical rule may re-parameterise the operator for this
+        # category at this target.
+        operator = (intra_op(category) if intra_op else None) or "best_of"
+        cg = attributed(operator, deliverables)
         candidates[category] = (cg.level, _rekey_shares(cg.shares, binding))
 
     return candidates
@@ -124,21 +129,55 @@ def logical_category_candidates(
 
 def compose_categories(
     candidates: dict[str, tuple[int, dict[str, float]]],
-) -> Optional[tuple[int, dict[str, float]]]:
+    inter_override: Optional[tuple[str, list[str]]] = None,
+    n: Optional[int] = None,
+) -> Optional[tuple[int, dict[str, float], frozenset[str]]]:
     """Stage 3: intercategorical conjunction across per-category candidates.
 
-    `worst_of` over the per-category levels (all categories needed), with
-    responsibility taken from the binding (worst) categories — ties union per
-    ADR-0003. Accepts candidates from any mechanism (logical or flow), so it is
-    the single composition point for a node's final proposal. Returns `None` when
-    there are no candidates (the node keeps its level).
+    Default: `worst_of` over the per-category levels (all categories needed).
+    An intercategorical rule may pass `inter_override = (operator, categories)`
+    to re-parameterise this: the operator is applied over exactly the listed
+    categories, each at its candidate level or **N** when it produced no
+    candidate (not degraded). The listed categories are **normalised** names
+    (case-insensitive vocabulary, ADR-0002); they are matched against the actual
+    candidate keys via the normaliser, so a rule may spell a category differently
+    from the node's `node_categories`. Either way responsibility is taken from
+    the binding (worst) categories — ties union per ADR-0003.
+
+    Returns `(level, responsibility, binding_categories)`, or `None` when there
+    are no candidates. `binding_categories` are the worst categories that set the
+    level — the backup guard consults their profiles.
     """
     if not candidates:
         return None
-    cat_level = {cat: level for cat, (level, _) in candidates.items()}
-    cat_shares = {cat: shares for cat, (_, shares) in candidates.items()}
-    inter = attributed("worst_of", cat_level)
-    return inter.level, _compose(inter.shares, cat_shares)
+
+    if inter_override is not None and n is not None:
+        operator, categories = inter_override
+        # Map each normalised override category to the real candidate key, so the
+        # actual node-spelled key (not the normalised form) carries the blame.
+        by_norm = {normalize_category_name(key): key for key in candidates}
+        cat_level: dict[str, int] = {}
+        cat_shares: dict[str, dict[str, float]] = {}
+        for category in categories:
+            actual = by_norm.get(category)
+            if actual is not None:
+                level, shares = candidates[actual]
+                cat_level[actual] = level
+                cat_shares[actual] = shares
+            else:
+                cat_level[category] = n  # not degraded → counts as full
+        if not cat_level:
+            return None
+    else:
+        operator = "worst_of"
+        cat_level = {cat: level for cat, (level, _) in candidates.items()}
+        cat_shares = {cat: shares for cat, (_, shares) in candidates.items()}
+
+    inter = attributed(operator, cat_level)
+    # Blame only binding categories that actually carry a share dict (the
+    # degraded ones); missing-as-N categories contribute no responsibility.
+    binding_with_shares = {c: w for c, w in inter.shares.items() if c in cat_shares}
+    return inter.level, _compose(binding_with_shares, cat_shares), frozenset(inter.shares)
 
 
 def _rekey_shares(shares: dict[str, float], binding: dict[str, str]) -> dict[str, float]:

@@ -41,6 +41,17 @@ from core.utils.normalization import (
 )
 
 
+# A rule string prefixed with this marker is **disabled** (inactive): the engine
+# skips it entirely. This is the single backend definition of the convention;
+# the frontend mirrors it in CASCADE-app/lib/rule-status.ts. Keep them in lockstep.
+DISABLED_RULE_PREFIX = "// "
+
+
+def is_rule_disabled(rule_text: str) -> bool:
+    """True when a rule is disabled (commented out) and should be skipped."""
+    return rule_text.startswith(DISABLED_RULE_PREFIX)
+
+
 class RuleType(Enum):
     """The three supported rule kinds, plus UNKNOWN for undetermined input."""
 
@@ -264,9 +275,27 @@ class RuleParser:
     where case-insensitivity is a feature. Every AST node still carries the
     verbatim `raw_name` / `raw_value` it was authored with for frontend round-trip
     (here `raw_name` and `name` coincide for IDs, since no transform is applied).
+
+    **Display-label fallback.** When `element_labels` (display label -> ID) is
+    supplied, a name that is not an exact ID is resolved case-insensitively
+    against the labels — so a rule may name an element by what the editor shows
+    ("Mixed Hub") rather than its machine ID. Exact-ID matching always wins, so
+    this never weakens ADR-0002. Multi-word names (labels or categories with
+    spaces) are kept whole through the whitespace tokenizer by a pre-pass that
+    swaps their internal spaces for a sentinel, restored the moment the reference
+    is resolved; `name` holds the canonical ID, `raw_name` the verbatim spelling.
     """
 
     _ALLOWED_OPERATORS = frozenset({"<", ">", "=", "≠", "<=", ">="})
+
+    # Sentinel that temporarily replaces the internal spaces of a recognised
+    # multi-word name, so the whitespace-splitting tokenizer keeps it as one
+    # token. It is a private-use Unicode code point no human would type, and is
+    # neither whitespace (so the tokenizer won't split on it — note the control
+    # chars \x1c-\x1f *are* whitespace to Python, so they can't be used) nor one
+    # of the punctuation tokens; it rides along inside a single token and is
+    # stripped back out to a space the moment the reference is resolved.
+    _SPACE_SENTINEL = "\uE000"
 
     def __init__(
         self,
@@ -275,18 +304,93 @@ class RuleParser:
         edge_ids: Iterable[str] = (),
         categories: Iterable[str] = (),
         labels: Mapping[str, int] | None = None,
+        element_labels: Mapping[str, str] | None = None,
+        value_labels: Iterable[str] | None = None,
     ):
         # Element IDs are matched exactly (canonical keys); categories are matched
         # via their normalised form -> original-name map (human vocabulary).
         self.nodes: set[str] = set(node_ids)
         self.edges: set[str] = set(edge_ids)
+        category_list = list(categories)
         self.categories: dict[str, str] = {
-            normalize_category_name(c): c for c in categories
+            normalize_category_name(c): c for c in category_list
         }
         self.labels: dict[str, int] = dict(labels or {})
 
+        # Human display label -> canonical element ID. Used as a *fallback* after
+        # exact-ID matching, so a rule may name an element by what the user sees
+        # in the editor ("Datacenter", "Mixed Hub") rather than its machine ID.
+        # Matched case-insensitively via the label normaliser.
+        self._label_to_id: dict[str, str] = {
+            normalize_label(label): eid
+            for label, eid in (element_labels or {}).items()
+            if label
+        }
+
+        # Pre-tokenizer protection: any recognised name/value that contains
+        # whitespace — a display label, a category, or a Functionality-scale label
+        # used as a value ("Operational Warning") — is matched in the raw text and
+        # its internal spaces are swapped for the sentinel, so the tokenizer keeps
+        # it whole. Longest-first so "Backup Datacenter" wins over a hypothetical
+        # "Datacenter". Casing of the user's text is preserved (replacement only
+        # rewrites the whitespace runs).
+        spaced = sorted(
+            {
+                p
+                for p in [
+                    *(element_labels or {}).keys(),
+                    *category_list,
+                    *(value_labels or ()),
+                ]
+                if p and re.search(r"\s", p)
+            },
+            key=len,
+            reverse=True,
+        )
+        pattern_parts = [
+            r"(?<!\w)" + r"\s+".join(re.escape(w) for w in re.split(r"\s+", p.strip())) + r"(?!\w)"
+            for p in spaced
+        ]
+        self._protect_re = (
+            re.compile("|".join(pattern_parts), re.IGNORECASE) if pattern_parts else None
+        )
+
         self.tokens: list[Token] = []
         self.position: int = 0
+
+    # -- spaced-name handling -----------------------------------------------
+
+    def _protect_spaced_names(self, text: str) -> str:
+        """Swap the internal spaces of recognised multi-word names for the
+        sentinel, so the whitespace tokenizer keeps each such name as one token.
+        A no-op when no spaced names were configured."""
+        if self._protect_re is None:
+            return text
+        return self._protect_re.sub(
+            lambda m: re.sub(r"\s+", self._SPACE_SENTINEL, m.group(0)), text
+        )
+
+    def _denormalize(self, token_value: str) -> str:
+        """Restore a protected token's spaces — the inverse of protection — so the
+        user's verbatim spelling is recovered for matching and round-trip."""
+        return token_value.replace(self._SPACE_SENTINEL, " ")
+
+    def _resolve_identifier(self, token_value: str) -> tuple[str, str, str]:
+        """Resolve an identifier token to `(canonical_name, display_name, node_type)`.
+
+        Exact ID first (ADR-0002), then a case-insensitive display-label fallback.
+        `canonical_name` is the registry key the engine resolves against (the ID);
+        `display_name` is the user's verbatim spelling, kept for round-trip.
+        """
+        display = self._denormalize(token_value)
+        if display in self.nodes:
+            return display, display, "node"
+        if display in self.edges:
+            return display, display, "edge"
+        eid = self._label_to_id.get(normalize_label(display))
+        if eid is not None:
+            return eid, display, "edge" if eid in self.edges else "node"
+        return display, display, "node"
 
     # -- public API ----------------------------------------------------------
 
@@ -300,7 +404,7 @@ class RuleParser:
         if not rule_text or not rule_text.strip():
             raise ValueError("Empty or whitespace-only rule text")
         try:
-            self.tokens = tokenize_rule(rule_text)
+            self.tokens = tokenize_rule(self._protect_spaced_names(rule_text))
             self.position = 0
             rule_type = self._detect_rule_type()
             self.position = 0
@@ -462,16 +566,17 @@ class RuleParser:
                     value_raw = value_raw[len(candidate):].strip()
                     break
 
+        value_raw = self._denormalize(value_raw)  # restore any protected spaces
         value = self._resolve_value(value_raw, attribute)
-        node_type = self._infer_node_type(raw_identifier)
+        name, raw_name, node_type = self._resolve_identifier(raw_identifier)
         if is_result_part:
             operator = "="
 
         return {
             "type": "attribute_condition",
             "node_type": node_type,
-            "name": raw_identifier,    # exact ID — matched verbatim against registry
-            "raw_name": raw_identifier,  # verbatim, for frontend round-trip
+            "name": name,              # canonical ID — what the engine resolves against
+            "raw_name": raw_name,        # verbatim spelling, for frontend round-trip
             "attribute": attribute,
             "operator": operator,
             "value": value,            # resolved (int for functionality)
@@ -500,14 +605,6 @@ class RuleParser:
         except ValueError:
             return value_raw
 
-    def _infer_node_type(self, identifier: str) -> str:
-        # Exact match against canonical registry IDs.
-        if identifier in self.nodes:
-            return "node"
-        if identifier in self.edges:
-            return "edge"
-        return "node"  # default; semantic validation can flag a true miss later
-
     # -- propagation (intra/inter) rules -------------------------------------
 
     def _parse_propagation_rule(self, rule_type: RuleType) -> dict[str, Any]:
@@ -521,7 +618,7 @@ class RuleParser:
         target_token = self._get_current_token()
         if target_token.value in (")", ","):
             raise RuleSyntaxError("Invalid target node specified for propagation rule")
-        raw_target = target_token.value
+        target_name, raw_target, _ = self._resolve_identifier(target_token.value)
         self.position += 1
         if self._has_more_tokens():
             raise RuleSyntaxError(
@@ -530,8 +627,8 @@ class RuleParser:
         return {
             "type": rule_type.value,
             "function": function_ast,
-            "target_node": raw_target,       # exact ID, matched verbatim
-            "raw_target_node": raw_target,
+            "target_node": target_name,      # canonical ID (label resolved if used)
+            "raw_target_node": raw_target,   # verbatim spelling, for round-trip
         }
 
     def _parse_function_expression(self) -> dict[str, Any]:
@@ -574,14 +671,20 @@ class RuleParser:
         `name` holds the exact ID for elements and the original category name for
         categories, so the engine can resolve it directly.
         """
-        if raw_name in self.nodes:
-            return {"type": "reference_node", "name": raw_name, "raw_name": raw_name}
-        category = self._resolve_category(raw_name)
+        display = self._denormalize(raw_name)
+        if display in self.nodes:
+            return {"type": "reference_node", "name": display, "raw_name": display}
+        category = self._resolve_category(display)
         if category is not None:
-            return {"type": "reference_category", "name": category, "raw_name": raw_name}
-        if raw_name in self.edges:
-            return {"type": "reference_edge", "name": raw_name, "raw_name": raw_name}
-        return {"type": "reference_unknown", "name": raw_name, "raw_name": raw_name}
+            return {"type": "reference_category", "name": category, "raw_name": display}
+        if display in self.edges:
+            return {"type": "reference_edge", "name": display, "raw_name": display}
+        # Display-label fallback: resolve a human label to its canonical element ID.
+        eid = self._label_to_id.get(normalize_label(display))
+        if eid is not None:
+            kind = "reference_edge" if eid in self.edges else "reference_node"
+            return {"type": kind, "name": eid, "raw_name": display}
+        return {"type": "reference_unknown", "name": display, "raw_name": display}
 
     # -- token helpers -------------------------------------------------------
 

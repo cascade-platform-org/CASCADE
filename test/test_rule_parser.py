@@ -282,3 +282,72 @@ def test_missing_then_is_syntax_error():
 def test_non_if_specific_shape_is_syntax_error():
     with pytest.raises(RuleSyntaxError, match="must start with 'if'"):
         _parser().parse("hospital is critical then tank is critical")
+
+
+# --- display-label fallback and spaced names --------------------------------
+
+
+def _labelled_parser():
+    """Parser that knows display labels (some with spaces) for its elements."""
+    labels = build_label_map([_Level(1, "critical"), _Level(4, "operational")])
+    return RuleParser(
+        node_ids=["hub", "datacenter"],
+        edge_ids=[],
+        categories=["water", "digital", "spare power"],
+        labels=labels,
+        element_labels={"Mixed Hub": "hub", "Datacenter": "datacenter"},
+    )
+
+
+def test_spaced_label_target_resolves_to_id():
+    ast = _labelled_parser().parse("average_of(water, digital) propagates to Mixed Hub")
+    assert ast["target_node"] == "hub"            # canonical id the engine uses
+    assert ast["raw_target_node"] == "Mixed Hub"  # verbatim spelling for round-trip
+
+
+def test_label_fallback_in_condition_and_assignment():
+    ast = _labelled_parser().parse(
+        "if Datacenter.functionality is <3 then Mixed Hub is critical"
+    )
+    cond = ast["condition"]
+    assert cond["name"] == "datacenter" and cond["raw_name"] == "Datacenter"
+    assign = ast["then"]["assignments"][0]
+    assert assign["name"] == "hub"  # target resolved from its label
+
+
+def test_label_fallback_in_function_argument():
+    arg = _labelled_parser().parse("worst_of(Datacenter) propagates to hub")["function"]["arguments"][0]
+    assert arg["type"] == "reference_node"
+    assert arg["name"] == "datacenter" and arg["raw_name"] == "Datacenter"
+
+
+def test_spaced_category_name_is_protected():
+    ast = _labelled_parser().parse("worst_of(spare power) propagates to hub")
+    arg = ast["function"]["arguments"][0]
+    assert arg["type"] == "reference_category"
+    assert arg["name"] == "spare power"  # canonical category name, kept whole
+    assert ast["type"] == "intercategorical"
+
+
+def test_exact_id_still_wins_over_label():
+    # A bare id keeps matching exactly even though labels are configured.
+    ast = _labelled_parser().parse("worst_of(datacenter) propagates to hub")
+    assert ast["function"]["arguments"][0]["name"] == "datacenter"
+
+
+def test_spaced_functionality_label_value_resolves():
+    # A multi-word scale label used as a value survives the tokenizer and
+    # resolves to its integer level, with the space restored for round-trip.
+    labels = build_label_map(
+        [_Level(1, "critical"), _Level(3, "operational warning")]
+    )
+    parser = RuleParser(
+        node_ids=["hub", "a"],
+        labels=labels,
+        element_labels={"Mixed Hub": "hub"},
+        value_labels=["critical", "operational warning"],
+    )
+    ast = parser.parse("if a is operational warning then Mixed Hub is critical")
+    cond = ast["condition"]
+    assert cond["value"] == 3                       # resolved level
+    assert cond["raw_value"] == "operational warning"  # space restored
