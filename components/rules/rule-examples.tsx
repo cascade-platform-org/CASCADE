@@ -11,9 +11,10 @@
  * The `onUseExample` callback lets the parent pre-fill the expression
  * input with the example text when the user clicks "Use this".
  *
- * NOTE: The examples below use placeholder syntax. The actual DSL will
- * be defined in docs/rule-syntax.md once the rule engine interface is
- * finalised. Update this file and that doc together.
+ * The examples below use the real rule DSL. The full reference lives in
+ * the RulesManual component (components/rules/rules-manual.tsx), which
+ * mirrors the backend parser (CASCADE-backend/core/rule_parser.py) and
+ * ADR-0003. Update this file, the manual, and the parser together.
  */
 
 type RuleKind = "specific" | "intracategorical" | "intercategorical";
@@ -25,23 +26,25 @@ interface Example {
 
 const EXAMPLES: Record<RuleKind, Example> = {
   specific: {
-    expression: "IF node:pump_station_01 <= 2 THEN node:reservoir_south -= 1",
+    expression: "if pump_station_01.functionality is <2 then reservoir_south is critical",
     explanation:
-      "Names individual elements by ID. When pump_station_01 drops to " +
-      "level 2 or below, reservoir_south loses one functionality level.",
+      "Names individual elements (by ID or display label). When " +
+      "pump_station_01 drops below level 2, reservoir_south is forced to " +
+      "critical. Comparisons: < > = ≠ <= >=; default attribute is functionality.",
   },
   intracategorical: {
-    expression: "IF ANY power_grid < 3 THEN ALL water_treatment -= 1",
+    expression: "worst_of(pump_a, pump_b) propagates to water_treatment",
     explanation:
-      "Applies across all nodes in one category. If any power-grid node " +
-      "falls below level 3, every water-treatment node loses one level.",
+      "Combines suppliers within one category. The named elements select " +
+      "the category; the operator then governs all of the target's suppliers " +
+      "there — here water_treatment follows its worst pump instead of its best.",
   },
   intercategorical: {
-    expression: "IF CATEGORY power_grid AVG < 0.5 THEN CATEGORY emergency_services -= 2",
+    expression: "average_of(power, water) propagates to emergency_services",
     explanation:
-      "Relates two different categories. If the average functionality " +
-      "ratio of the power-grid category falls below 50 %, every " +
-      "emergency-services node loses two levels.",
+      "Combines different categories (the arguments are category names). " +
+      "emergency_services runs on the average of its power and water levels " +
+      "instead of collapsing to the worst. A category with no damage counts as N.",
   },
 };
 

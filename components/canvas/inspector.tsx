@@ -13,6 +13,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { ChevronDown, ChevronRight, X, Plus, Trash2, AlertTriangle, Copy, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isRuleDisabled, ruleBody, toggleRuleDisabled, setRuleBody } from "@/lib/rule-status";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -974,10 +975,11 @@ function EdgeInspector({ edge }: { edge: Edge }) {
 /**
  * RulesEditor — inline editor with per-rule enable/disable toggle.
  *
- * Convention: a rule string that starts with "// " is disabled.
- * The toggle strips or prepends this prefix without touching the rule text.
- * Disabled rules are displayed in muted style and the textarea is editable
- * but grayed out, giving a clear visual signal without hiding the content.
+ * The disabled convention (a "// " prefix) lives in lib/rule-status.ts and is
+ * shared with the Active Rules panel and the engine. The toggle strips or
+ * prepends this prefix without touching the rule text. Disabled rules are
+ * displayed in muted style and the textarea is editable but grayed out, giving
+ * a clear visual signal without hiding the content.
  */
 function RulesEditor({
   rules,
@@ -986,29 +988,22 @@ function RulesEditor({
   rules: string[];
   onChange: (rules: string[]) => void;
 }) {
-  const DISABLED_PREFIX = "// ";
-
-  function isDisabled(rule: string) { return rule.startsWith(DISABLED_PREFIX); }
-  function ruleText(rule: string) { return isDisabled(rule) ? rule.slice(DISABLED_PREFIX.length) : rule; }
-
   function toggleRule(i: number) {
     const next = [...rules];
-    next[i] = isDisabled(next[i])
-      ? ruleText(next[i])
-      : DISABLED_PREFIX + next[i];
+    next[i] = toggleRuleDisabled(next[i]);
     onChange(next);
   }
 
   function updateText(i: number, text: string) {
     const next = [...rules];
-    next[i] = isDisabled(next[i]) ? DISABLED_PREFIX + text : text;
+    next[i] = setRuleBody(next[i], text);
     onChange(next);
   }
 
   return (
     <div className="space-y-1.5">
       {rules.map((rule, i) => {
-        const disabled = isDisabled(rule);
+        const disabled = isRuleDisabled(rule);
         return (
           <div key={i} className="flex items-start gap-1.5">
             {/* Enable / disable toggle */}
@@ -1030,7 +1025,7 @@ function RulesEditor({
             </button>
 
             <textarea
-              value={ruleText(rule)}
+              value={ruleBody(rule)}
               rows={2}
               onChange={(e) => updateText(i, e.target.value)}
               className={cn(

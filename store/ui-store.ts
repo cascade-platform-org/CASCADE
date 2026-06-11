@@ -58,6 +58,9 @@ export interface UiState {
   // --- Active Rules panel ---
   activeRulesPanelOpen: boolean;
 
+  // --- Rules Manual panel ---
+  rulesManualPanelOpen: boolean;
+
   // --- Scorecard panel ---
   scorecardPanelOpen: boolean;
   /** When true, the Save-to-Scorecard dialog is open independently of the Scorecard panel. */
@@ -156,6 +159,10 @@ export interface UiActions {
   toggleActiveRulesPanel: () => void;
   closeActiveRulesPanel: () => void;
 
+  // --- Rules Manual panel ---
+  toggleRulesManualPanel: () => void;
+  closeRulesManualPanel: () => void;
+
   // --- Scorecard panel ---
   toggleScorecardPanel: () => void;
   closeScorecardPanel: () => void;
@@ -211,6 +218,7 @@ const initialState: UiState = {
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
   activeRulesPanelOpen: false,
+  rulesManualPanelOpen: false,
   scorecardPanelOpen: false,
   scorecardSaveDialogOpen: false,
   temporalAutoPropagate: true,
@@ -322,6 +330,18 @@ export const useUiStore = create<UiStore>()(
 
     closeActiveRulesPanel() {
       set((state) => { state.activeRulesPanelOpen = false; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Rules Manual panel
+    // -------------------------------------------------------------------------
+
+    toggleRulesManualPanel() {
+      set((state) => { state.rulesManualPanelOpen = !state.rulesManualPanelOpen; });
+    },
+
+    closeRulesManualPanel() {
+      set((state) => { state.rulesManualPanelOpen = false; });
     },
 
     // -------------------------------------------------------------------------

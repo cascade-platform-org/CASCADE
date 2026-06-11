@@ -11,6 +11,7 @@ import { Toolbox } from "./toolbox";
 import { ConfigModal } from "@/components/controls/config-modal";
 import { FileIoPanel } from "@/components/controls/file-io-panel";
 import { ActiveRulesPanel } from "@/components/rules/active-rules-panel";
+import { RulesManualPanel } from "@/components/rules/rules-manual-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { ToastContainer } from "./toast-container";
@@ -26,6 +27,7 @@ export function EditorShell() {
   const configModalOpen = useUiStore((s) => s.configModalOpen);
   const fileIoPanelOpen = useUiStore((s) => s.fileIoPanelOpen);
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
+  const rulesManualPanelOpen = useUiStore((s) => s.rulesManualPanelOpen);
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
@@ -97,6 +99,7 @@ export function EditorShell() {
       {configModalOpen && <ConfigModal />}
       {fileIoPanelOpen && <FileIoPanel />}
       {activeRulesPanelOpen && <ActiveRulesPanel />}
+      {rulesManualPanelOpen && <RulesManualPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
       {scorecardSaveDialogOpen && (
