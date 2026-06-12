@@ -13,7 +13,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { nanoid } from "nanoid";
-import { EngineAlgorithmsSchema } from "@/lib/schemas/api";
+import { getEngineAlgorithms } from "@/lib/api-client";
 import type {
   CategoryDefinition,
   EventDefinition,
@@ -124,7 +124,7 @@ export interface ConfigActions {
    * No-ops if already loading or successfully cached.
    * On network error sets status to "error" — UI falls back to raw JSON textarea.
    */
-  fetchEngineAlgorithms: (apiBaseUrl?: string) => Promise<void>;
+  fetchEngineAlgorithms: () => Promise<void>;
 
   // --- Selectors (read committed config) ---
   getFunctionalityN: () => number;
@@ -431,18 +431,18 @@ export const useConfigStore = create<ConfigStore>()(
     // Engine algorithms
     // -------------------------------------------------------------------------
 
-    async fetchEngineAlgorithms(apiBaseUrl = "") {
+    async fetchEngineAlgorithms() {
       const { engineAlgorithmsStatus, engineAlgorithms } = get();
       if (engineAlgorithmsStatus === "loading" || engineAlgorithms !== null) return;
       set((state) => { state.engineAlgorithmsStatus = "loading"; });
       try {
-        const res = await fetch(`${apiBaseUrl}/api/engine/algorithms`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.json();
-        const parsed = EngineAlgorithmsSchema.safeParse(raw);
-        if (!parsed.success) throw new Error("Schema mismatch");
+        // Goes through api-client so the base URL (and, later, the auth
+        // header) is defined in one place. The previous inline fetch used a
+        // relative URL by default, which hit the Next.js server instead of
+        // the backend.
+        const algorithms = await getEngineAlgorithms();
         set((state) => {
-          state.engineAlgorithms = parsed.data;
+          state.engineAlgorithms = algorithms;
           state.engineAlgorithmsStatus = "idle";
         });
       } catch {

@@ -9,6 +9,7 @@
  */
 export * from "./primitives";
 export * from "./network";
+export * from "./propagation";
 export * from "./config";
 export * from "./api";
 export * from "./audit";

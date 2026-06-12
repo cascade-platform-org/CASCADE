@@ -26,7 +26,8 @@ import type {
   Node,
   Project,
 } from "@/lib/schemas";
-import type { ElementUpdate, PropagationResult, EventDefinition } from "@/lib/schemas";
+import type { PropagationResult, EventDefinition } from "@/lib/schemas";
+import { assignElementUpdate } from "@/lib/element-update";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -157,18 +158,6 @@ function resolveCanvasId(state: CanvasState, canvasId?: string): string {
   if (!id) throw new Error("No active Canvas — provide an explicit canvasId.");
   if (!state.canvases[id]) throw new Error(`Canvas '${id}' not found.`);
   return id;
-}
-
-function applyUpdate(element: Node | Edge, update: ElementUpdate): Node | Edge {
-  return {
-    ...element,
-    functionality: update.functionality,
-    ...(update.functionality_time !== undefined && { functionality_time: update.functionality_time }),
-    ...(update.direct_damage !== undefined && { direct_damage: update.direct_damage }),
-    ...(update.expected_repair_time !== undefined && { expected_repair_time: update.expected_repair_time }),
-    ...(update.responsibility_share !== undefined && { responsibility_share: update.responsibility_share }),
-    ...(update.properties !== undefined && { properties: { ...(element.properties ?? {}), ...update.properties } }),
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -349,9 +338,9 @@ export const useCanvasStore = create<CanvasStore>()(
       set((state) => {
         for (const update of result.updates) {
           if (state.nodes[update.id]) {
-            state.nodes[update.id] = applyUpdate(state.nodes[update.id], update) as Node;
+            assignElementUpdate(state.nodes[update.id], update);
           } else if (state.edges[update.id]) {
-            state.edges[update.id] = applyUpdate(state.edges[update.id], update) as Edge;
+            assignElementUpdate(state.edges[update.id], update);
           }
         }
       });

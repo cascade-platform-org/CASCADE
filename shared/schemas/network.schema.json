@@ -317,6 +317,7 @@
           "anyOf": [
             {
               "additionalProperties": {
+                "minimum": 0,
                 "type": "integer"
               },
               "type": "object"
@@ -326,13 +327,15 @@
             }
           ],
           "default": null,
-          "description": "Keyed by EventId. 0 \u2264 value < N where N = len(functionality_scale).",
+          "description": "Keyed by EventId. Value 0..N\u22121 (N = max configured functionality level): higher = more vulnerable, 0 = immune (same as absent). The event imposes functionality = max(1, N \u2212 vulnerability_level).",
           "title": "Vulnerability Levels"
         },
         "responsibility_share": {
           "anyOf": [
             {
               "additionalProperties": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
                 "type": "number"
               },
               "type": "object"
@@ -342,7 +345,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1. Set by the engine after each Propagation and stored in the project file.",
+          "description": "Persisted last-known responsibility share for this node's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1 \u2014 zero shares are never emitted (a blameless element is simply absent). Set by the engine after each Propagation and stored in the project file.",
           "title": "Responsibility Share"
         },
         "rules": {
@@ -457,6 +460,7 @@
           "anyOf": [
             {
               "additionalProperties": {
+                "minimum": 0,
                 "type": "integer"
               },
               "type": "object"
@@ -466,12 +470,15 @@
             }
           ],
           "default": null,
+          "description": "Keyed by EventId. Value 0..N\u22121: higher = more vulnerable, 0 = immune (same as absent). The event imposes functionality = max(1, N \u2212 vulnerability_level).",
           "title": "Vulnerability Levels"
         },
         "responsibility_share": {
           "anyOf": [
             {
               "additionalProperties": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
                 "type": "number"
               },
               "type": "object"
@@ -481,7 +488,7 @@
             }
           ],
           "default": null,
-          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in [0, 1] summing to 1.",
+          "description": "Persisted last-known responsibility share for this edge's current Functionality. Keyed by ElementId or EventId; values in (0, 1] summing to 1 \u2014 zero shares are never emitted (a blameless element is simply absent).",
           "title": "Responsibility Share"
         },
         "rules": {
@@ -498,6 +505,32 @@
           ],
           "default": null,
           "title": "Rules"
+        },
+        "sourceHandle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "React Flow handle id on the source node \u2014 which connection dot the edge was drawn from. UI-only; ignored by the engine.",
+          "title": "Sourcehandle"
+        },
+        "targetHandle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "React Flow handle id on the target node \u2014 which connection dot the edge attaches to. UI-only; ignored by the engine.",
+          "title": "Targethandle"
         },
         "properties": {
           "anyOf": [
@@ -927,6 +960,8 @@
           "anyOf": [
             {
               "additionalProperties": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
                 "type": "number"
               },
               "type": "object"
@@ -936,7 +971,7 @@
             }
           ],
           "default": null,
-          "description": "Keyed by ElementId or EventId. Values are in [0, 1] and sum to 1. Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
+          "description": "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1 \u2014 zero shares are never emitted (a blameless element is simply absent). Identifies which upstream Elements or Events are directly responsible for this Element's degradation, and in what proportion.",
           "title": "Responsibility Share"
         },
         "properties": {

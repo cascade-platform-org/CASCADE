@@ -13,6 +13,7 @@
  * "Inter-canvas edge" is a UI render-time concept only — no special type exists.
  */
 import { z } from "zod";
+import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -83,8 +84,12 @@ export const NodeSchema = z.object({
    */
   supply_capacity: z.record(z.string(), z.number()).optional(),
   category_dependency_profiles: z.record(z.string(), CategoryDependencyProfileSchema).optional(),
-  /** Per-Event vulnerability: keyed by EventId, value 1..N. Higher = more vulnerable (drops further). */
-  vulnerability_levels: z.record(z.string(), z.number().int().min(1)).optional(),
+  /**
+   * Per-Event vulnerability: keyed by EventId, value 0..N−1. Higher = more
+   * vulnerable; 0 = immune (same as absent — the inspector slider writes 0
+   * rather than deleting the key). Imposed functionality = max(1, N − level).
+   */
+  vulnerability_levels: z.record(z.string(), z.number().int().min(0)).optional(),
   /**
    * Persisted last-known responsibility share for this node's current Functionality.
    * Keyed by ElementId or EventId; values in (0, 1] summing to 1.
@@ -119,7 +124,8 @@ export const EdgeSchema = z.object({
   direct_damage: z.boolean().optional(),
   expected_repair_time: z.number().int().min(0).optional(),
   capacity: z.number().optional(),
-  vulnerability_levels: z.record(z.string(), z.number().int().min(1)).optional(),
+  /** Same semantics as on nodes: 0..N−1, 0 = immune (same as absent). */
+  vulnerability_levels: z.record(z.string(), z.number().int().min(0)).optional(),
   /**
    * Persisted last-known responsibility share for this edge's current Functionality.
    * Keyed by ElementId or EventId; values in (0, 1] summing to 1.
@@ -217,12 +223,7 @@ export const GraphSnapshotSchema = z.object({
   canvases: z.array(CanvasSchema).default([]),
 });
 
-export const PropagationMetaSchema = z.object({
-  scope: z.enum(["local", "global"]),
-  iterations: z.number().int().min(0),
-  warnings: z.array(z.string()).default([]),
-  computed_at: z.string(),
-});
+// PropagationMetaSchema lives in ./propagation (shared with PropagationResultSchema).
 
 // ---------------------------------------------------------------------------
 // Any Update history
@@ -292,11 +293,7 @@ export const ScorecardEntrySchema = z.object({
   before_propagation_image: z.string().optional(),
   after_propagation_image: z.string().optional(),
   after_temporal_jump_image: z.string().optional(),
-  propagation_result: z.lazy(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PropagationResultSchema } = require("./api");
-    return PropagationResultSchema.optional();
-  }).optional(),
+  propagation_result: PropagationResultSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -358,7 +355,7 @@ export type Canvas = z.infer<typeof CanvasSchema>;
 // GeoAnchor is declared inline above (after GeoAnchorSchema) to keep it close to its schema.
 export type ProjectMeta = z.infer<typeof ProjectMetaSchema>;
 export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
-export type PropagationMeta = z.infer<typeof PropagationMetaSchema>;
+// PropagationMeta type is exported from ./propagation (via the schemas barrel).
 export type AnyUpdateType = z.infer<typeof AnyUpdateTypeSchema>;
 export type AnyUpdateEntry = z.infer<typeof AnyUpdateEntrySchema>;
 export type ScorecardEntry = z.infer<typeof ScorecardEntrySchema>;

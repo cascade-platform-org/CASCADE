@@ -6,9 +6,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
-import { PropagationResultSchema } from "@/lib/schemas/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { postPropagate } from "@/lib/api-client";
 
 /**
  * Returns a stable `propagate` function that sends the current canvas state to
@@ -52,19 +50,7 @@ export function usePropagate() {
     const before = canvasState.toGraphSnapshot();
 
     try {
-      const response = await fetch(`${API_BASE}/api/propagate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const detail = await response.text().catch(() => response.statusText);
-        throw new Error(`Server returned ${response.status}: ${detail}`);
-      }
-
-      const raw = await response.json();
-      const result = PropagationResultSchema.parse(raw);
+      const result = await postPropagate(payload);
 
       canvasState.applyPropagationResult(result);
 

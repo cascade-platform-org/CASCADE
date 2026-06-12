@@ -1,17 +1,11 @@
 /**
- * snapshot-diff.ts — Utilities for comparing and patching GraphSnapshots.
+ * snapshot-diff.ts — Comparing GraphSnapshots for the history panel.
  *
- * Two primary use-cases:
+ * `diffGraphSnapshot(before, after)` returns a structured list of changed
+ * elements so the UI can highlight what changed between two snapshots.
  *
- * 1. History panel — show the user *what changed* between two snapshots
- *    without having to diff the entire project structure manually.
- *    `diffGraphSnapshot(before, after)` returns a structured list of changed
- *    elements so the UI can highlight them.
- *
- * 2. Applying propagation results — `applyPropagationUpdates` merges
- *    ElementUpdate[] (from PropagationResult) onto a snapshot, producing a
- *    new snapshot that can be stored as the "after" state in history.
- *    This is the canonical way to build history entries from engine output.
+ * (Applying engine ElementUpdate[] onto a snapshot lives in
+ * lib/element-update.ts — `mergeUpdatesIntoSnapshot`.)
  *
  * Data shape (ADR-0001):
  *   GraphSnapshot.nodes  = Record<id, Node>   ← global element registry
@@ -24,7 +18,6 @@
  */
 
 import type { Canvas, Edge, GraphSnapshot, Node } from "@/lib/schemas/network";
-import type { ElementUpdate } from "@/lib/schemas/api";
 
 // ---------------------------------------------------------------------------
 // Diff types
@@ -161,67 +154,8 @@ export function diffGraphSnapshot(
 }
 
 // ---------------------------------------------------------------------------
-// applyPropagationUpdates
-// ---------------------------------------------------------------------------
-
-/**
- * Merge engine ElementUpdate[] onto a GraphSnapshot, producing a new snapshot.
- *
- * This is the canonical way to build the "after" state in an AnyUpdateEntry
- * from a PropagationResult without going through the Zustand store.
- *
- * Each update's `id` is looked up directly in the global node/edge registry
- * (ADR-0001). No canvas_id or element_type discriminator is needed.
- *
- * Only the fields explicitly returned by the engine are touched; all other
- * node/edge fields are copied from the base snapshot unchanged.
- *
- * Monotone invariant: propagation can only worsen functionality, never improve
- * it. This function does NOT enforce that invariant — the engine is responsible.
- */
-export function applyPropagationUpdates(
-  base: GraphSnapshot,
-  updates: ElementUpdate[],
-): GraphSnapshot {
-  // Shallow-clone the registry records so the original is not mutated.
-  const nodes: Record<string, Node> = { ...base.nodes };
-  const edges: Record<string, Edge> = { ...base.edges };
-
-  for (const update of updates) {
-    if (nodes[update.id]) {
-      nodes[update.id] = applyUpdateToElement(nodes[update.id], update) as Node;
-    } else if (edges[update.id]) {
-      edges[update.id] = applyUpdateToElement(edges[update.id], update) as Edge;
-    }
-    // Unknown id: engine returned an update for an element not in this snapshot — skip.
-  }
-
-  return {
-    nodes,
-    edges,
-    // Canvas membership (node_ids / edge_ids) is not changed by propagation.
-    canvases: base.canvases,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
-
-function applyUpdateToElement(
-  element: Node | Edge,
-  update: ElementUpdate,
-): Node | Edge {
-  return {
-    ...element,
-    functionality: update.functionality,
-    ...(update.functionality_time !== undefined && { functionality_time: update.functionality_time }),
-    ...(update.direct_damage !== undefined && { direct_damage: update.direct_damage }),
-    ...(update.expected_repair_time !== undefined && { expected_repair_time: update.expected_repair_time }),
-    ...(update.responsibility_share !== undefined && { responsibility_share: update.responsibility_share }),
-    ...(update.properties !== undefined && { properties: { ...(element.properties ?? {}), ...update.properties } }),
-  };
-}
 
 function indexCanvases(canvases: Canvas[]): Record<string, Canvas> {
   const map: Record<string, Canvas> = {};
