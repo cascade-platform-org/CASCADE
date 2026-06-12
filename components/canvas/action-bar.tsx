@@ -30,6 +30,37 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { resetFunctionality } from "@/lib/network-utils";
 
+// Shared core for both revert call-sites (bar button + panel button).
+// Restores the pre-jump snapshot, records a history entry, and clears elapsed
+// state. Callers are responsible for their own trailing side effects (toast,
+// snapshot-tick refresh).
+function executeRevert({
+  revertSnapshot,
+  elapsedHours,
+  scope,
+  clearTemporalJumpProgress,
+}: {
+  revertSnapshot: GraphSnapshot;
+  elapsedHours: number;
+  scope: "local" | "global";
+  clearTemporalJumpProgress: () => void;
+}) {
+  const canvasState = useCanvasStore.getState();
+  const current = canvasState.toGraphSnapshot();
+  canvasState.restoreSnapshot(revertSnapshot);
+  useHistoryStore.getState().pushUpdateEntry({
+    id: nanoid(),
+    timestamp: new Date().toISOString(),
+    update_type: "manual_functionality_update",
+    label: `Revert temporal jumps (−${elapsedHours}h)`,
+    scope,
+    canvas_id: canvasState.activeCanvasId ?? undefined,
+    before: current,
+    after: revertSnapshot,
+  });
+  clearTemporalJumpProgress();
+}
+
 export function ActionBar() {
   const scope = useUiStore((s) => s.propagationScope);
   const setPropagationScope = useUiStore((s) => s.setPropagationScope);
@@ -51,20 +82,7 @@ export function ActionBar() {
 
   function handleRevertFromBar() {
     if (!revertSnapshot || elapsedHours === 0) return;
-    const canvasState = useCanvasStore.getState();
-    const current = canvasState.toGraphSnapshot();
-    canvasState.restoreSnapshot(revertSnapshot);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "manual_functionality_update",
-      label: `Revert temporal jumps (−${elapsedHours}h)`,
-      scope,
-      canvas_id: canvasState.activeCanvasId ?? undefined,
-      before: current,
-      after: revertSnapshot,
-    });
-    clearTemporalJumpProgress();
+    executeRevert({ revertSnapshot, elapsedHours, scope, clearTemporalJumpProgress });
     pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
   }
 
@@ -339,22 +357,10 @@ function TemporalJumpControls({
 
   function handleRevert() {
     if (!revertSnapshot || elapsedHours === 0) return;
-    const canvasState = useCanvasStore.getState();
-    const current = canvasState.toGraphSnapshot();
-    canvasState.restoreSnapshot(revertSnapshot);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "manual_functionality_update",
-      label: `Revert temporal jumps (−${elapsedHours}h)`,
-      scope,
-      canvas_id: canvasState.activeCanvasId ?? undefined,
-      before: current,
-      after: revertSnapshot,
-    });
-    clearTemporalJumpProgress();
-    // Refresh snapshot ticks to reflect the restored state.
+    executeRevert({ revertSnapshot, elapsedHours, scope, clearTemporalJumpProgress });
+    // Refresh the panel's tick display to reflect the restored (pre-jump) state.
     setSnapshotTicks(liveTicks);
+    pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
   }
 
   const manualValid =
