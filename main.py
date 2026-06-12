@@ -23,7 +23,7 @@ from api import (
     propagation_router,
 )
 from auth.oauth2 import fetch_oidc_config
-from config import get_settings
+from config import assert_production_safe, get_settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +59,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+
+    # Fail-closed guard: refuse to serve in production without auth.
+    # Covers `uvicorn main:app --workers N` too — every worker imports main.
+    assert_production_safe(settings)
 
     app = FastAPI(
         title="CASCADE Propagation Platform",

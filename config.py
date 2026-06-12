@@ -8,9 +8,9 @@ without a database or OIDC provider in local-only mode.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     # ---- Server ----
     host: str = "0.0.0.0"
     port: int = 8000
-    env: str = "development"
+    # Literal (not free string) so a typo like ENV=prod fails LOUDLY at startup
+    # instead of silently not matching the == "production" checks below — a
+    # mismatch there would disable the production auth guard (fail-open).
+    env: Literal["development", "production"] = "development"
     cors_origins: str = "http://localhost:3000"
 
     # ---- Database ----
@@ -40,8 +43,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_audience: Optional[str] = None
 
-    # ---- Rate limiting ----
-    rate_limit_enabled: bool = False
+    # NOTE: no rate-limiting setting exists yet — deliberately. A flag that is
+    # read by nothing would let an operator "enable" a control with no effect.
+    # Reintroduce the setting in the same commit as the enforcing middleware.
 
     # ---- Derived ----
     @property
@@ -61,6 +65,31 @@ class Settings(BaseSettings):
     @classmethod
     def _blank_to_none(cls, v: object) -> object:
         return v or None
+
+    @field_validator("env", mode="before")
+    @classmethod
+    def _normalize_env(cls, v: object) -> object:
+        """Tolerate case/whitespace ('Production', 'PRODUCTION ') but nothing
+        else — 'prod' etc. still fails loudly via the Literal type."""
+        return v.strip().lower() if isinstance(v, str) else v
+
+
+def assert_production_safe(settings: Settings) -> None:
+    """Refuse to SERVE in production without auth configured.
+
+    When OIDC is not configured every request is treated as a synthetic admin
+    user (local-only mode). That is intentional on a developer machine but
+    catastrophic on a public server. This check lives at the serving
+    entrypoint (main.create_app), not on Settings itself, so maintenance
+    scripts that only need e.g. DATABASE_URL (scripts/create_admin.py) still
+    run on a production host that hasn't wired up its IdP yet.
+    """
+    if settings.env == "production" and not settings.auth_enabled:
+        raise RuntimeError(
+            "ENV=production requires auth: set OIDC_DISCOVERY_URL and "
+            "OIDC_CLIENT_ID (auth-disabled local mode grants admin to "
+            "every request and must never serve in production)."
+        )
 
 
 @lru_cache(maxsize=1)

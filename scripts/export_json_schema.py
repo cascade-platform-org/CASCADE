@@ -62,8 +62,6 @@ from schemas.results import (                        # noqa: E402
     PropagationRequest,
     ElementUpdate,
     PropagationResult,
-    SyncUploadRequest,
-    SyncDownloadResponse,
 )
 from schemas.auth import AuthUser, TokenPair         # noqa: E402
 
@@ -100,7 +98,6 @@ def main() -> None:
     export(
         "results.schema.json",
         PropagationRequest, ElementUpdate, PropagationResult,
-        SyncUploadRequest, SyncDownloadResponse,
     )
     export(
         "auth.schema.json",

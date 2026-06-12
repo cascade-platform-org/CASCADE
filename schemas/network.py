@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,7 +12,16 @@ from pydantic import BaseModel, Field
 # node_type is a free string — valid values are defined in Client Configuration,
 # not hardcoded in the schema. This allows new Node Types without a schema change.
 
-ResponsibilityShare = dict[str, float]  # ElementId | EventId -> share in [0, 1], summing to 1
+# ElementId | EventId -> share in (0, 1], summing to 1. Zero shares are never
+# emitted (a blameless element is simply absent) — enforced here, mirrored by
+# Zod's gt(0).lte(1) on the frontend.
+ResponsibilityShare = dict[str, Annotated[float, Field(gt=0, le=1)]]
+
+# EventId -> vulnerability in 0..N−1 (N = max configured functionality level).
+# 0 = immune (equivalent to the key being absent — the inspector UI writes 0
+# rather than deleting the key). The event imposes
+# functionality = max(1, N − vulnerability_level).
+VulnerabilityLevels = dict[str, Annotated[int, Field(ge=0)]]
 
 
 # ---------------------------------------------------------------------------
@@ -84,16 +93,20 @@ class Node(BaseModel):
     # for the same category — the engine warns and treats it as supply-only.
     supply_capacity: Optional[dict[str, float]] = None
     category_dependency_profiles: Optional[dict[str, CategoryDependencyProfile]] = None
-    # Keyed by EventId. value 1..N — higher = more vulnerable (imposed = N − vulnerability_level).
-    vulnerability_levels: Optional[dict[str, int]] = Field(
+    vulnerability_levels: Optional[VulnerabilityLevels] = Field(
         None,
-        description="Keyed by EventId. 0 ≤ value < N where N = len(functionality_scale).",
+        description=(
+            "Keyed by EventId. Value 0..N−1 (N = max configured functionality level): "
+            "higher = more vulnerable, 0 = immune (same as absent). "
+            "The event imposes functionality = max(1, N − vulnerability_level)."
+        ),
     )
     responsibility_share: Optional[ResponsibilityShare] = Field(
         None,
         description=(
             "Persisted last-known responsibility share for this node's current Functionality. "
-            "Keyed by ElementId or EventId; values in [0, 1] summing to 1. "
+            "Keyed by ElementId or EventId; values in (0, 1] summing to 1 — zero shares are "
+            "never emitted (a blameless element is simply absent). "
             "Set by the engine after each Propagation and stored in the project file."
         ),
     )
@@ -124,16 +137,37 @@ class Edge(BaseModel):
     direct_damage: Optional[bool] = None
     expected_repair_time: Optional[int] = Field(None, ge=0, description="Hours")
     capacity: Optional[float] = None
-    vulnerability_levels: Optional[dict[str, int]] = None
+    vulnerability_levels: Optional[VulnerabilityLevels] = Field(
+        None,
+        description=(
+            "Keyed by EventId. Value 0..N−1: higher = more vulnerable, 0 = immune "
+            "(same as absent). The event imposes functionality = max(1, N − vulnerability_level)."
+        ),
+    )
     responsibility_share: Optional[ResponsibilityShare] = Field(
         None,
         description=(
             "Persisted last-known responsibility share for this edge's current Functionality. "
-            "Keyed by ElementId or EventId; values in [0, 1] summing to 1."
+            "Keyed by ElementId or EventId; values in (0, 1] summing to 1 — zero shares are "
+            "never emitted (a blameless element is simply absent)."
         ),
     )
     # Raw rule strings — parsed and validated client-side; evaluated by the engine.
     rules: Optional[list[str]] = None
+    sourceHandle: Optional[str] = Field(
+        None,
+        description=(
+            "React Flow handle id on the source node — which connection dot the edge "
+            "was drawn from. UI-only; ignored by the engine."
+        ),
+    )
+    targetHandle: Optional[str] = Field(
+        None,
+        description=(
+            "React Flow handle id on the target node — which connection dot the edge "
+            "attaches to. UI-only; ignored by the engine."
+        ),
+    )
     properties: Optional[dict[str, Any]] = None
 
 

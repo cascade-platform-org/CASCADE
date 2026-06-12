@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from .network import Project
+from .network import Project, ResponsibilityShare
 from .config import ModelConfiguration
 
 
@@ -42,10 +42,11 @@ class ElementUpdate(BaseModel):
     functionality_time: Optional[int] = Field(None, ge=0)
     direct_damage: Optional[bool] = None
     expected_repair_time: Optional[int] = Field(None, ge=0)
-    responsibility_share: Optional[dict[str, float]] = Field(
+    responsibility_share: Optional[ResponsibilityShare] = Field(
         None,
         description=(
-            "Keyed by ElementId or EventId. Values are in [0, 1] and sum to 1. "
+            "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1 — "
+            "zero shares are never emitted (a blameless element is simply absent). "
             "Identifies which upstream Elements or Events are directly responsible "
             "for this Element's degradation, and in what proportion."
         ),
@@ -61,95 +62,6 @@ class PropagationResult(BaseModel):
     warnings: list[str] = Field(
         default_factory=list,
         description="Non-fatal engine warnings, e.g. convergence not reached.",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Server-side project sync
-# ---------------------------------------------------------------------------
-
-class RemoteProjectRecord(BaseModel):
-    id: str
-    name: str
-    description: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-
-
-class SyncUploadRequest(BaseModel):
-    project: Project
-    config: ModelConfiguration
-
-
-class SyncDownloadResponse(BaseModel):
-    record: RemoteProjectRecord
-    project: Project
-    config: ModelConfiguration
-
-
-# ---------------------------------------------------------------------------
-# Batch propagation (async) — POST /api/propagate/batch
-# ---------------------------------------------------------------------------
-
-class BatchPropagationItem(BaseModel):
-    """
-    One propagation job within a batch request.
-    `item_id` is caller-assigned and echoed back in the job results so the
-    caller can match results to requests without relying on list order.
-    """
-    item_id: str
-    project: Project
-    config: ModelConfiguration
-    scope: Literal["local", "global"]
-    active_canvas_id: Optional[str] = Field(
-        None, description="Canvas to restrict propagation when scope = local."
-    )
-
-
-class BatchPropagationRequest(BaseModel):
-    items: list[BatchPropagationItem] = Field(..., min_length=1)
-
-
-class BatchPropagationCreatedResponse(BaseModel):
-    """
-    Returned immediately by POST /api/propagate/batch.
-    The client should connect to `stream_url` to receive live SSE events.
-    Polling GET /api/propagate/batch/{job_id} is also supported for clients
-    that cannot use SSE.
-    """
-    job_id: str
-    status: Literal["queued"] = "queued"
-    total: int
-    stream_url: str  # e.g. /api/propagate/batch/{job_id}/stream
-
-
-class BatchPropagationJobStatus(BaseModel):
-    """
-    Snapshot of a batch job's state.
-
-    Returned by GET /api/propagate/batch/{job_id} (polling) and streamed as
-    SSE events on GET /api/propagate/batch/{job_id}/stream.  Each SSE event
-    is a JSON-serialised instance of this model sent as:
-
-        data: <json>\n\n
-
-    The stream closes after the final event where status is "done" or "failed".
-    `results` and `errors` are populated incrementally as individual items
-    complete, so early events may carry partial data.
-    """
-    job_id: str
-    status: Literal["queued", "running", "done", "failed"]
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    total: int
-    completed: int
-    results: dict[str, PropagationResult] = Field(
-        default_factory=dict,
-        description="Keyed by item_id. Present only for completed items.",
-    )
-    errors: dict[str, str] = Field(
-        default_factory=dict,
-        description="Keyed by item_id. Error message for failed items.",
     )
 
 
