@@ -1,0 +1,6 @@
+# The two sub-projects are their own git repositories
+CASCADE-app/
+CASCADE-backend/
+
+# IDE debug junk
+.vscode/.chrome-debug-profile/

@@ -1,0 +1,175 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    // =========================================================================
+    // FRONTEND
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // Client-side React (Chrome DevTools)
+    //
+    // Attaches Chrome to the already-running dev server on port 3000.
+    // Use this for breakpoints in browser-executed code (components, hooks).
+    // Prerequisite: dev server running via the compound or tasks.json.
+    // -------------------------------------------------------------------------
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "CASCADE: Frontend — Client (Chrome)",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/CASCADE-app",
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/CASCADE-app/*"
+      },
+      "userDataDir": "${workspaceFolder}/.vscode/.chrome-debug-profile",
+      "preLaunchTask": "CASCADE: Start Frontend"
+    },
+
+    // -------------------------------------------------------------------------
+    // Server-side Next.js (Node debugger — attaches to running server)
+    //
+    // The dev server must be started via the "CASCADE: Start Frontend (debug)"
+    // task in tasks.json, which passes NODE_OPTIONS=--inspect=9229.
+    // Once the server is up, run this config to attach and get breakpoints in
+    // Server Components, route handlers, and middleware.
+    // -------------------------------------------------------------------------
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "CASCADE: Frontend — Server (attach Node)",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "cwd": "${workspaceFolder}/CASCADE-app",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/CASCADE-app/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/CASCADE-app/node_modules/**"
+      ],
+      "preLaunchTask": "CASCADE: Start Frontend (debug)"
+    },
+
+    // =========================================================================
+    // BACKEND
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // FastAPI (debugpy, no --reload)
+    //
+    // uvicorn --reload forks a child; debugpy cannot follow that fork.
+    // This config runs without --reload so breakpoints work reliably.
+    // For live-reload without debugging, use "CASCADE: Start Backend" task.
+    //
+    // Venv setup (first time only):
+    //   cd CASCADE-backend
+    //   python3 -m venv .venv
+    //   .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+    // -------------------------------------------------------------------------
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "CASCADE: Backend — FastAPI (debug)",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000"
+      ],
+      "cwd": "${workspaceFolder}/CASCADE-backend",
+      "python": "${workspaceFolder}/CASCADE-backend/.venv/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/CASCADE-backend"
+      },
+      "jinja": true,
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/CASCADE-backend/.env"
+    },
+
+    // -------------------------------------------------------------------------
+    // pytest — full test suite (breakpoints work inside tests and source)
+    // -------------------------------------------------------------------------
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "CASCADE: Backend — Tests (pytest)",
+      "module": "pytest",
+      "args": ["test/", "-v", "--tb=short"],
+      "cwd": "${workspaceFolder}/CASCADE-backend",
+      "python": "${workspaceFolder}/CASCADE-backend/.venv/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/CASCADE-backend"
+      },
+      "justMyCode": false,
+      "envFile": "${workspaceFolder}/CASCADE-backend/.env"
+    },
+
+    // -------------------------------------------------------------------------
+    // Current Python file — quick ad-hoc script debugging
+    // -------------------------------------------------------------------------
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "CASCADE: Backend — Current file",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}/CASCADE-backend",
+      "python": "${workspaceFolder}/CASCADE-backend/.venv/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/CASCADE-backend"
+      },
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/CASCADE-backend/.env"
+    }
+
+  ],
+
+  // ===========================================================================
+  // Compounds
+  // ===========================================================================
+  "compounds": [
+
+    // -------------------------------------------------------------------------
+    // Full Stack — backend debugger + Chrome client debugger
+    //
+    // Starts the frontend dev server automatically (preLaunchTask on the
+    // Chrome config), then starts the backend under debugpy.
+    // -------------------------------------------------------------------------
+    {
+      "name": "CASCADE: Full Stack",
+      "configurations": [
+        "CASCADE: Frontend — Client (Chrome)",
+        "CASCADE: Backend — FastAPI (debug)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "CASCADE",
+        "order": 1
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Full Stack (server-side JS + Python) — for API-layer debugging
+    //
+    // Starts the frontend dev server in debug mode automatically (preLaunchTask
+    // on the Node attach config), then attaches both the Node inspector and debugpy.
+    // -------------------------------------------------------------------------
+    {
+      "name": "CASCADE: Full Stack (server-side)",
+      "configurations": [
+        "CASCADE: Frontend — Server (attach Node)",
+        "CASCADE: Backend — FastAPI (debug)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "CASCADE",
+        "order": 2
+      }
+    }
+
+  ]
+}

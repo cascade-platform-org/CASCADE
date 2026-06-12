@@ -1,0 +1,567 @@
+# CASCADE — Product Requirements
+
+> **Status:** Living document. Voice session 2026-05-11 takes precedence over legacy README where they conflict. Features from the existing tool not explicitly mentioned here remain in scope unless contradicted.
+>
+> **Phase 1 — Types & Schemas: complete (2026-05-11)**
+> Zod schemas: `CASCADE-app/lib/schemas/` (network, config, api, primitives, audit).
+> Pydantic schemas: `CASCADE-backend/schemas/` (network, config, results, engine, auth).
+
+---
+
+## 1. Guiding Principles
+
+- **Local-first by default.** All project data (graphs, rules, configuration, canvas state) lives as JSON on the user's machine. Editing, visualization, CRUD operations, hazard application, and topological analysis happen entirely in the browser with zero server round-trips.
+- **Optional server-side sync.** Users can opt in to storing and syncing project data on the server. When disabled, behaviour is identical to local-only mode.
+- **Private engine.** The propagation algorithm is proprietary IP hosted on a dedicated server. The client sends a payload and receives results. No project data is persisted server-side unless sync is explicitly enabled.
+- **100 % open-source stack.** Every dependency — frontend, backend framework, GIS renderer, auth provider — must be free and open-source.
+
+---
+
+## 2. System Architecture
+
+```
+CLIENT (Browser)                           SERVER (Private)
+─────────────────────────────────          ──────────────────────────────
+  Next.js app shell                          FastAPI
+  Zustand stores (local working copy)        Auth / RBAC (OAuth2/OIDC)
+  MapLibre GL JS (geo rendering)             PostgreSQL (users, roles, opt. project data)
+  File I/O + versioned auto-save             Propagation engine (private Python)
+  All CRUD, hazards, local analysis          Returns PropagationResult JSON
+```
+
+### 2.1 Data Storage Modes
+
+| Mode | Project data location |
+|---|---|
+| **Local-only** (default) | Browser / user's file system (upload/download JSON) |
+| **Server sync** (opt-in) | PostgreSQL per-user + local cache |
+
+The propagation engine operates identically in both modes.
+
+---
+
+## 3. Multi-Canvas Model
+
+### 3.1 Canvases (Layers)
+
+- Users can add, rename, and remove canvases; each canvas is an independent graph layer.
+- Inter-canvas **edges** connect nodes across layers (cross-layer dependencies).
+- Each canvas is independently toggled between **georeferenced** (MapLibre GL JS with lat/lon) and **non-georeferenced** (abstract layout) mode.
+- Each canvas carries a **`graph_type`** — a name referencing a `ModelConfiguration.graph_types` entry. The Model Configuration is the single source of truth for what a graph type is (its name and heuristic pipeline); the Canvas holds only the name assignment. Assignments can be made from two places: the Inspector's Canvas Meta panel (per-canvas, inline) and the Graph Types tab of the Config modal (all canvases at once).
+- The **Global view** (all Canvases together) also has an explicit `graph_type` stored as `Project.global_graph_type`, settable from the Graph Types tab of the Config modal.
+
+### 3.2 Propagation Scope
+
+When running Propagation the user selects:
+
+| Scope | Client payload | Behaviour |
+|---|---|---|
+| **Local** | Active Canvas nodes + intra-canvas edges only. Inter-canvas edges physically absent. | Engine sees one isolated subgraph. |
+| **Global** | Full Project — all nodes, all edges, all Canvases. | Engine sees the complete multi-canvas network. |
+
+Event application (client-side) is always applied to the full registry regardless of scope; scope only governs what is sent to the engine.
+
+### 3.3 Global Display Mode (deferred — Slice 2)
+
+A display mode renders all Canvases together in a single React Flow instance. Because element IDs are globally unique (ADR-0001) and each element lives once in the registry, a node that appears in multiple Canvases is shown exactly once — no deduplication step needed. Inter-canvas edges are rendered as dashed lines connecting nodes across their respective Canvases. This is a pure render-time operation with no data model change.
+
+---
+
+## 4. Configuration File
+
+A user-editable JSON/YAML config is the single source of truth for system-wide parameters.
+
+### 4.1 Functionality Scale
+
+- Ordered list of N levels, each with a label and a hex colour.
+- Levels are numbered 1 (worst) to N (best).
+- **Default (N = 3):** level 1 = `critical` (red), level 2 = `operational_warning` (orange), level 3 = `operational` (green).
+- Applies uniformly to both nodes and edges.
+- **Functionality Time** (`functionality_time > 0`) is an orthogonal timed-degradation state (see §9); it does not occupy a slot in the 1..N scale.
+
+### 4.2 Category Definitions
+
+Each category entry carries:
+
+| Field | Description |
+|---|---|
+| `name` | Label (e.g. `electricity`, `water`, `ICT`) |
+| `category_type` | `SourceToDemands` \| `Requisite` \| … (extensible) |
+| `color` | Default display colour |
+
+`category_type` is a **config-level** property. Nodes reference a category by name; the engine looks up its type from the config.
+
+### 4.3 Other Parameters
+
+- Default attribute templates per node type.
+- Scorecard metric weights.
+- Time unit: **hours** (applies to all duration attributes throughout the system).
+
+---
+
+## 5. Node and Edge Model
+
+### 5.1 Node Types
+
+| Type | Description |
+|---|---|
+| **Source** | Supplies one or more category resources |
+| **Infrastructure** | Transports or transforms flows |
+| **Service** | Consumes resources; end-point of dependency chains |
+| **Personnel** | Organisational / human actors — future agentic behaviour (§12) |
+
+A single node may participate in multiple categories simultaneously (e.g. a pumping station is both an Infrastructure node for water and a Service node for electricity). If the functional degradation of the node should affect its different category roles **differently**, it must be modelled as separate nodes.
+
+### 5.2 Core Attributes (nodes and edges share these)
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `functionality` | integer 1–N | Current functional status (single value per node/edge) |
+| `functionality_time` | integer (hours) | Remaining hours of Functionality Time. 0 = no pending timed degradation. |
+| `direct_damage` | boolean | Set by a hazard; signals physical breakage |
+| `expected_repair_time` | integer (hours) | Estimated repair time when `direct_damage = true` |
+
+Additional **node-only** attributes:
+
+| Attribute | Type | Notes |
+|---|---|---|
+| `node_type` | enum | One of the four types above |
+| `node_categories` | list\<string\> | References to categories defined in config |
+| `importance` | numeric | Weight for scorecard |
+| `cost_of_disservice_per_day` | numeric | Economic impact metric |
+
+### 5.3 Capacity Attributes
+
+| Attribute | Applies to | Description |
+|---|---|---|
+| `supply_capacity` | Source nodes | `{ [category]: number }` — maximum resource supply per category the node provides. |
+| `category_dependency_profiles[cat].capacity` | All nodes (per category) | Maximum throughput for that specific category dependency. Degrades proportionally with Functionality. |
+| `capacity` | Edges | Single number — caps the flow of the one category carried by the edge. An edge carries exactly one category-flow, determined by its source node's supply category. To model different capacity limits for different categories on the same connection, use separate edges (one per category).|
+
+### 5.4 Per-Category Dependency Block
+
+Nodes only — edges carry no Category Dependency Profile. For each category a node participates in, it carries:
+
+| Attribute | Type | Scope | Description |
+|---|---|---|---|
+| `dependency_level` | integer 1–N | All categories | How dependent this element is on the category. Governs how the delivered/demand ratio maps to functionality degradation (see formula below). |
+| `backup` | boolean | All categories | Whether a backup mechanism exists for this dependency |
+| `backup_duration` | integer (hours) | If `backup = true` | How long the backup sustains the element before expiry |
+| `demand` | numeric | `SourceToDemands` only | Resource amount requested from this category |
+| `priority` | integer 1–10 | `SourceToDemands` only | Flow allocation priority — higher means served first in case of scarcity |
+
+#### Dependency level and the ratio-to-status formula
+
+The delivered/demand ratio r ∈ [0, 1] is first divided into N equal segments, yielding a base functionality index b ∈ {1, …, N} (1 = worst, N = best):
+
+```
+b = ceil(r × N)   [clamped to 1..N]
+```
+
+The `dependency_level` d ∈ {1, …, N} then shifts the result:
+
+```
+proposed_level = b + (N − d)   [clamped to 1..N]
+```
+
+Effect:
+- **d = N** (fully dependent, no tolerance): shift = 0; raw ratio result is used.
+- **d = 1** (barely dependent, maximum tolerance): shift = N − 1; result pushed toward best level.
+
+The proposed level is applied only if it **worsens** the current `functionality` (propagation is monotone downward).
+
+### 5.5 Vulnerability Levels (per hazard/disservice type)
+
+Each node and edge carries a `vulnerability_level` ∈ {0, …, N−1} for each defined hazard or disservice ID. These are independent of category dependency levels. A missing entry is treated as 0 (immune).
+
+When a hazard or disservice is applied, the imposed functionality level for each affected element is:
+
+```
+imposed_level = N − vulnerability_level   [clamped to 1..N]
+```
+
+| vulnerability_level | imposed_level | Effect |
+|---|---|---|
+| 0 (absent or explicit) | N | Immune — no degradation |
+| 1 | N − 1 | Mild degradation |
+| k | N − k | Moderate degradation |
+| N − 1 | 1 | Maximum degradation (worst) |
+
+As with categories, this is applied only if it worsens current `functionality`.
+
+> An absent `vulnerability_levels[event.id]` entry is equivalent to `vulnerability_level = 0` (immune).
+
+### 5.6 Edge Functionality
+
+`edge.functionality` is the edge's **intrinsic** level — set by the user or by a previous Propagation result. During Propagation the engine applies `worst_of(edge.functionality, source_node.functionality)` and writes the result back via `ElementUpdate`. The frontend always displays `edge.functionality` as stored — it never recomputes worst-of client-side. The worst-of rule is exclusively the engine's responsibility. Edge capacity is scaled proportionally to the post-worst-of functionality.
+
+### 5.7 Free-form Attributes
+
+Additional key-value attributes may be attached to any node or edge. Hazards and disservices may modify these as part of their effect definition.
+
+---
+
+## 6. Hazards and Disservices
+
+Applied via named UI buttons. Distinguished by whether they cause physical breakage.
+
+### 6.1 Distinction
+
+| Type | Direct damage | Recovery |
+|---|---|---|
+| **Hazard** | Yes — sets `direct_damage = true` on every Element whose `vulnerability_levels[event.id] > 0` | Tracked by the timeline module (§9) |
+| **Disservice** | No | Resolves when upstream cause resolves |
+
+### 6.2 Effect on Functionality
+
+There is no explicit affected set on the event definition. Any Element carrying `vulnerability_levels[event.id]` is affected. For each such element, the imposed functionality level is computed per §5.5 and applied client-side before the Propagation engine runs.
+
+### 6.3 Effect on Other Attributes
+
+A hazard/disservice definition can specify mutations to **arbitrary other attributes** of affected nodes and edges beyond functionality.
+
+### 6.4 Event Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier |
+| `label` | string | Human-readable name |
+| `type` | enum | `hazard` \| `disservice` |
+| `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
+| `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements receive `direct_damage` — that is determined solely by `vulnerability_levels[event.id] > 0`. |
+| `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
+| `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
+
+There is no explicit `affected` set on the event definition. The affected set is **implicit**: any Element with `vulnerability_levels[event.id] > 0` is affected. The imposed Functionality level is `N − vulnerability_level` (clamped to 1), applied only if it worsens the current level.
+
+For **hazards**, every affected Element also receives `direct_damage = true`. The `expected_repair_time` is taken from `direct_damage_effects[element.id].expected_repair_time` if present, otherwise from `default_repair_time` if set on the event, otherwise left unchanged. A missing or zero vulnerability entry means the Element is unaffected and does not receive `direct_damage`.
+
+Multiple **scenario variants** of the same event type can be defined with different parameters (e.g. earthquakes at different epicentres or magnitudes).
+
+> Georeferenced hazard footprints are a future enhancement.
+
+---
+
+## 7. Propagation Engine
+
+Runs server-side as private IP.
+
+### 7.1 Client Payload
+
+- Category list with types (from config)
+- All logical rules (specific, intracategorical, intercategorical)
+- Per-node/edge: `supply_capacity`, `capacity`, `demand`, `dependency_level`, `backup`, `backup_duration`, `priority`
+- Current `functionality` states after hazard/disservice pre-application
+
+No display or layout data is sent.
+
+### 7.2 Category Algorithms
+
+#### `SourceToDemands` — Flow-based
+
+- Max-flow with costs guided by node `priority` (1–10).
+- Sources combined jointly; `capacity` on infrastructure and edges constrains throughput.
+- Service node functionality set from delivered/demand ratio adjusted by `dependency_level` per §5.4.
+
+#### `Requisite` — Logic-based
+
+- **Intra-category:** redundancy within same category → best-of.
+- **Inter-category:** multiple incoming categories → worst-of.
+- Rules layer on top.
+
+#### Extensibility
+
+The engine interface accommodates new category types without structural changes.
+
+### 7.3 Rule System (carried over from v1)
+
+- **Specific rules** — explicit conditions targeting a specific node.
+- **Intracategorical rules** — conditions within one category.
+- **Intercategorical rules** — conditions across categories.
+- Authored with human-readable labels; internally mapped to node IDs.
+
+### 7.4 Iterative Convergence
+
+Alternates capacity step and rule step until no node's `functionality` worsens further. The engine may time out before full convergence and return a `PropagationResult` with `warnings` containing `"convergence not reached"`. In that case:
+
+- The frontend merges the partial `ElementUpdate` list into the registry exactly as a normal result.
+- A persistent warning is shown (toast or status bar badge): "Propagation may be incomplete — convergence not reached."
+- The user can inspect, undo, and save the result to Scorecard. Nothing is blocked.
+
+### 7.5 Causality Tracking
+
+The engine records for each degraded Element which upstream Elements or Events are directly responsible, and in what proportion. This is returned as `responsibility_share: { [ElementId | EventId]: float }` on each `ElementUpdate` — values in [0, 1] summing to 1. Populated only from the heuristic or Rule that produced the final (worst) Functionality for the Element. Attribution per mechanism (see ADR-0003): the **logical** heuristic splits evenly across failed upstreams; the **flow** heuristic uses a provisional v1 uniform-blame rule over degraded same-category elements in the transitive incoming closure (empty if none degraded); Events key the single EventId; Specific Rules split evenly across referenced Elements. This powers:
+
+- UI visualisation of causal chains (colour edges/nodes by responsibility share).
+- Distinction between directly damaged (`direct_damage = true`) and indirectly affected Elements.
+- Input to intervention prioritisation (§10).
+
+---
+
+## 8. CRUD and Canvas Editing
+
+### 8.1 Graph Operations
+
+- Add / edit / remove nodes (with all attributes, per-category blocks, vulnerability levels).
+- Add / edit / remove edges (direction, capacity, vulnerability levels).
+- Undo/redo stack.
+
+### 8.2 Selection
+
+| Method | Description |
+|---|---|
+| **Point selection** | Click a single node or edge |
+| **Rectangle selection** | Drag bounding box; all enclosed elements selected |
+| **Multi-select** | Shift-click or equivalent |
+
+Works in both georeferenced and non-georeferenced modes.
+
+### 8.3 Georeferenced Mode *(implemented)*
+
+- A georeferenced Canvas renders a **MapLibre GL JS** base map (open-source OpenFreeMap tiles: liberty / bright / positron) as a **non-interactive background behind React Flow**. Nodes remain React Flow nodes drawn on top; the map tracks the viewport.
+- The user enters *setup* mode (interactive map) to navigate to the area and set a **GeoAnchor** — one flow↔geo correspondence point. From the anchor, the **GeoAnchor projection** (exact Web Mercator, `lib/geo-utils.ts`) converts any node `position` to/from `geo` (lng/lat). Each node stores both `position` and `geo`; see CONTEXT.md → *Node Position vs Geo Coordinates* and *GeoAnchor*.
+- Dragging a node in a georeferenced Canvas writes its `geo` via the projection. The map background stays locked to the graph through `useMapViewportSync`.
+- **Deviation from the original spec:** edges are *not* rendered as separate geographic paths, and QGIS/GeoJSON export tooling is not part of this implementation — edges render as normal React Flow edges between the on-map nodes. GeoJSON export of nodes remains a future enhancement (see `local-first-guide.md`).
+
+---
+
+## 9. Temporal Jump
+
+The history model is uniform: **Event → Propagation → Event → Propagation → …**  
+A **Temporal Jump** is the Event kind that advances simulated time.
+
+### 9.1 Functionality Time
+
+An attribute on an Element (integer, hours). Value > 0 means the Element will degrade when the clock reaches zero. Value 0 means no pending timed degradation.
+
+- `functionality_time` holds remaining hours.
+- `backup` and `backup_duration` (per-category block) extend the effective time before the Element's Functionality Time expires.
+- On expiry (`functionality_time` drops to ≤ 0): `functionality_time` is clamped to 0 and `functionality` is set to 1 (critical).
+
+### 9.2 Temporal Jump Event
+
+A Temporal Jump is an Event with `type = "temporal_jump"`. It is always system-generated (not user-authored). It carries a single parameter:
+
+| Field | Type | Description |
+|---|---|---|
+| `duration_hours` | integer ≥ 1 | How many hours to advance the clock |
+
+**Application (client-side, same as any Event):**
+
+For each Element with `functionality_time > 0`:
+1. `functionality_time -= duration_hours`
+2. If `functionality_time ≤ 0`: set `functionality_time = 0` and `functionality = 1`
+
+A Propagation immediately follows to cascade the effects of any expired Elements.
+
+**Stored in history** as an `event_applied` entry (`event_id` = the Temporal Jump's synthetic id, `type = "temporal_jump"`). Undoable with CTRL+Z. Clearable with CTRL+R (uses `mutation_reversal` like any Event).
+
+### 9.3 Auto-Advance Mode
+
+A UI mode that fires Temporal Jumps automatically:
+
+1. Find `min_ft` = minimum `functionality_time` across all Elements with Functionality Time > 0.
+2. Fire a Temporal Jump of `min_ft` hours.
+3. Run a Propagation.
+4. Repeat from step 1 until no Elements with Functionality Time > 0 remain.
+
+Both **step-by-step** (one jump at a time) and **play** (run to completion) modes are available.
+
+### 9.4 Manual Jump
+
+The user may also trigger a Temporal Jump with a custom duration — useful for skipping to a specific time horizon without waiting for natural expiry points. If the custom duration causes some Elements to overshoot (their `functionality_time` was shorter), those Elements expire as normal.
+
+### 9.5 `expected_repair_time` and Recovery
+
+When a Hazard sets `direct_damage = true`, `expected_repair_time` records estimated repair duration. Detailed recovery mechanics are deferred; the data model reserves these fields.
+
+---
+
+## 10. Intervention Prioritisation
+
+Given a `PropagationResult`, compute a **ranked intervention list** client-side (not proprietary). Inputs:
+
+- `responsibility_share` per degraded Element — identifies root causes and their proportional contribution.
+- `direct_damage` and `expected_repair_time` — identifies physically broken Elements and repair cost.
+- `importance` and `cost_of_disservice_per_day` per Element — weights downstream impact.
+
+Output: Elements ranked by expected recovery value = `sum over downstream affected elements of (importance × cost_of_disservice_per_day × responsibility_share_weight)`, prioritising those whose repair unblocks the most downstream functionality. Elements with `direct_damage = true` are flagged as requiring physical repair before functional recovery is possible.
+
+---
+
+## 11. Topological Analysis Module
+
+- **Centrality metrics**: degree, betweenness, closeness.
+- Visualisation overlays (node size / colour).
+
+---
+
+## 12. Scorecard
+
+An atlas of named Scenario snapshots. **Explicitly saved by the user** — nothing is auto-generated. The user clicks "Save to Scorecard" at any point, gives the entry a label, and it is persisted in `Project.scorecard`.
+
+### 12.1 Entry Structure
+
+Each Scorecard entry stores up to three snapshots, all optional except `before_propagation`:
+
+| Field | Type | Description |
+|---|---|---|
+| `before_propagation` | GraphSnapshot | State just before the most recent Propagation (post-Event, pre-engine). Pulled automatically from `update_history` — the `before` of the most recent `propagation` entry. If no Propagation has been run, this is the current state (Manual What-If). |
+| `after_propagation` | GraphSnapshot? | State after the Propagation. Absent if no Propagation has been run in the current session. |
+| `after_temporal_jump` | GraphSnapshot? | State after one or more Temporal Jumps + Propagations. Populated in two ways: (a) **already computed** — the Save dialog detects a `temporal_jump` entry in history that follows the most recent `propagation` entry and loads it automatically; (b) **computed at save time** — the user enters a duration in the Save dialog and the system fires a Temporal Jump internally, runs Propagation, captures the result, then discards the side-effects (the graph state is not permanently changed). |
+| `temporal_jump_hours` | integer? | The total hours elapsed across all Temporal Jumps that produced `after_temporal_jump`. |
+| `propagation_result` | PropagationResult? | The raw engine delta from the Propagation that produced `after_propagation`. Used for `responsibility_share` and causal analysis. |
+
+### 12.2 Entry Label
+
+Auto-populated from context, editable before saving:
+
+| Context | Default label |
+|---|---|
+| Most recent Event is a named Hazard/Disservice | Event label (e.g. "Earthquake M6.5") |
+| Most recent Event is a Temporal Jump | "Temporal Jump — Nh" |
+| No Event in history (manual edits only) | "Manual What-If Scenario" |
+
+### 12.3 Deduplication
+
+A Scorecard entry is a **duplicate** if its `before_propagation` snapshot is identical to an existing entry's `before_propagation`. Comparison is done by content hash (stable JSON serialisation → SHA-256). If a duplicate is detected at save time, the save is blocked and the user sees a toast: *"This scenario is already in the Scorecard."* No entry is overwritten.
+
+### 12.4 Save Dialog
+
+When the user clicks "Save to Scorecard" the dialog opens and shows:
+
+1. **Label** — editable text, pre-filled per §12.2.
+2. **Snapshot previews** — one card per snapshot already available in history:
+   - `before_propagation` — always shown (pulled from `update_history`: `before` of the most recent `propagation` entry, or current state if no Propagation has been run).
+   - `after_propagation` — shown if a Propagation has been run; absent card otherwise.
+   - `after_temporal_jump` — shown if a Temporal Jump event followed the most recent Propagation in history; absent card otherwise.
+3. **Temporal Jump option** — shown only when `after_propagation` is present but `after_temporal_jump` is absent. Contains:
+   - Hours input (default: `duration_hours` from the triggering Event if available, otherwise 48 h).
+   - **"Compute"** button — fires an ephemeral Temporal Jump + Propagation: applies the jump client-side on a copy of `after_propagation`, calls `POST /api/propagate`, and displays the result as the third card. **The main graph state is not modified.** If the server is unreachable, the card shows an error and saving proceeds without `after_temporal_jump`.
+4. **Save** button — captures the GlobalViewCanvas as a base64 PNG for each available snapshot (temporarily restores each snapshot to the store, renders, captures, then restores the original state), then commits all snapshots + images to `Project.scorecard`. Dialog closes.
+
+### 12.5 Derived Metrics
+
+Computed client-side from the stored snapshots, never persisted:
+
+| Metric | Computed from |
+|---|---|
+| Operativity Score | Weighted average `functionality` across nodes — see §12.5 |
+| Cost of disservice | Sum of `cost_of_disservice_per_day` for nodes below `functionality = N` |
+| Status breakdown | Count per functionality level |
+| Most impacted Elements | Ranked by `importance × (N − functionality)` |
+| Causal summary | `responsibility_share` from `propagation_result` |
+
+The Scorecard UI shows all three snapshots side by side, with derived metrics for each.
+
+### 12.6 Export
+
+The Scorecard is downloadable as a **zip archive** containing:
+
+```
+scorecard-<project-name>-<date>/
+  scorecard.md               ← Markdown report
+  images/
+    <entry-id>-before.png
+    <entry-id>-after.png
+    <entry-id>-temporal.png  ← present only when after_temporal_jump exists
+```
+
+The Markdown file uses standard `![label](images/<file>.png)` image references. It renders correctly in VS Code, Obsidian, GitHub, and any Markdown viewer. One section per Scorecard entry, ordered by `created_at`.
+
+### 12.6 Missing Computation Detection
+
+The Scorecard panel surfaces three categories of gaps:
+
+| Type | Description | Detection |
+|---|---|---|
+| **Type 1 — Unsaved runs** | An `event_applied` + `propagation` pair exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` against `scorecard[].event_id`. |
+| **Type 2 — Incomplete entries** | A saved entry is missing `after_propagation` or `after_temporal_jump`. | Check optional fields on each `ScorecardEntry`. |
+| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching `event_id`. | Cross-reference `config.events` against `scorecard[].event_id`. |
+
+**UI treatment:**
+- Type 1: "Unrecorded runs" section at the top of the Scorecard panel — each unsaved pair shown with a "Save" button.
+- Type 2: each incomplete saved entry shows a badge per missing snapshot with an inline "Compute" button (ephemeral engine call, stores result into the entry).
+- Type 3: "Never covered" section listing config events with no Scorecard entry — each shown with a "Run" button (see §12.7).
+
+### 12.7 "Run" Button for Uncovered Events (Type 3)
+
+When the user clicks "Run" on an uncovered event, the system applies the event **ephemerally** to the **current graph state** (as a working copy, main graph unchanged), calls `POST /api/propagate`, then opens the Save dialog pre-filled with the result. The user can add a Temporal Jump in the dialog and confirm the save. If the server is unreachable, the button is disabled with a tooltip.
+
+---
+
+## 13. Persistence, File I/O, and Version History
+
+### 12.6 Operativity Score Formula
+
+```
+O = Σ(importance_i × functionality_i) / (Σ(importance_i) × N) × 100   [%]
+```
+
+Falls back to unweighted mean `Σ(functionality_i) / (nodeCount × N) × 100` when all `importance` values are 0.
+
+**Level thresholds** — the N equal intervals that divide 0–100%:
+
+```
+Level k threshold (upper bound) = k / N × 100 %
+```
+
+For N = 3: level 1 = 0–33 %, level 2 = 33–66 %, level 3 = 66–100 %.  
+The threshold boundaries and their associated label/colour come from `FunctionalityScaleLevel` in the Model Configuration.  
+A given percentage P maps to level `k = ceil(P × N / 100)`, clamped to [1, N].
+
+---
+
+### 13.1 Explicit Save
+
+- Serialises all Zustand stores to a single `.json` file (browser download or server sync upload).
+- Each explicit save creates a named version entry.
+- Up to **10 previous explicit saves** are retained; older ones are discarded.
+
+### 13.2 Auto-save
+
+- Runs continuously in the background.
+- Auto-saves are discarded when an explicit save is made (they are safety nets, not history).
+- Stored in `localStorage` (or IndexedDB for larger graphs).
+
+### 13.3 Load
+
+- Upload a `.json` file; validate schema; hydrate stores.
+- Multi-canvas projects serialised under a `canvases` array.
+
+### 13.4 Server Sync (opt-in)
+
+When enabled, explicit saves are also pushed to PostgreSQL per-user. Version list is accessible across devices.
+
+---
+
+## 14. Authentication and Access Control
+
+- **OAuth2/OIDC** (provider-agnostic: Keycloak or any compliant IdP).
+- **RBAC** server-side; stored in PostgreSQL.
+- Roles: `viewer`, `analyst`, `manager`, `admin`.
+- Permissions: `can_propagate`, `can_view_analysis`, `can_sync`, `can_manage_users`, `can_define_roles`.
+- Single-user local mode requires no auth.
+
+---
+
+## 15. Personnel Nodes and Agentic Behaviour (Future)
+
+- Personnel nodes carry agentic rules in a simple user-writable DSL.
+- Rules describe actor responses to disservices (e.g. "if electricity = 1, mobilise backup generator within 2 h").
+- Rule engine for personnel is separate from the propagation engine.
+
+**Out of scope for the current release** — data model must reserve the `Personnel` type.
+
+---
+
+## 16. Open Questions / Deferred Decisions
+
+| Topic | Status |
+|---|---|
+| Personnel node DSL syntax | Deferred |
+| Georeferenced hazard footprints | Future enhancement |
+| Additional category types beyond `SourceToDemands` and `Requisite` | Extensibility confirmed; types TBD |
+| Exact scorecard layout and visual design | To be defined during UI design |
+| Server sync conflict resolution strategy | To be defined |
+| Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |

@@ -1,0 +1,4 @@
+{
+    "chat.experimental.useSkillAdherencePrompt": true,
+    "jsts-chat-features.skills.enabled": true
+}

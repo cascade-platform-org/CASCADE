@@ -1,0 +1,175 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+
+    // -------------------------------------------------------------------------
+    // Frontend — hot reload, no debugger (normal day-to-day dev)
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Start Frontend",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/CASCADE-app"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "next",
+        "pattern": { "regexp": "^(.*)$", "file": 1, "location": 2, "message": 3 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting\\.\\.\\.",
+          "endsPattern": "Ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "cascade-servers"
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Frontend — debug mode: exposes Node inspector on port 9229
+    // Run this task first, THEN attach "CASCADE: Frontend — Server (attach Node)"
+    // from the Run & Debug panel to get breakpoints in Server Components.
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Start Frontend (debug)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/CASCADE-app",
+        "env": {
+          "NODE_OPTIONS": "--inspect=9229"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "next-debug",
+        "pattern": { "regexp": "^(.*)$", "file": 1, "location": 2, "message": 3 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting\\.\\.\\.",
+          "endsPattern": "Ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "cascade-servers"
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Backend — start FastAPI with --reload (live reload, no breakpoints)
+    // Use the "CASCADE: Backend (FastAPI — debug)" launch config for debugging.
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Start Backend",
+      "type": "shell",
+      "command": ".venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload",
+      "options": {
+        "cwd": "${workspaceFolder}/CASCADE-backend",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/CASCADE-backend"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "uvicorn",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "INFO.*Uvicorn running|Started reloader",
+          "endsPattern": "Application startup complete"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "cascade-servers"
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Full stack — hot reload on both, no debugger (Ctrl+Shift+B default)
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Start Full Stack",
+      "dependsOn": [
+        "CASCADE: Start Frontend",
+        "CASCADE: Start Backend"
+      ],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Full stack (debug mode) — frontend exposes Node inspector on 9229,
+    // backend runs with --reload. Then attach debug configs from launch.json.
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Start Full Stack (debug)",
+      "dependsOn": [
+        "CASCADE: Start Frontend (debug)",
+        "CASCADE: Start Backend"
+      ],
+      "dependsOrder": "parallel",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // Type-check frontend (tsc --noEmit)
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Type Check Frontend",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "options": {
+        "cwd": "${workspaceFolder}/CASCADE-app"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": "$tsc"
+    },
+
+    // -------------------------------------------------------------------------
+    // Backend tests (pytest)
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Run Backend Tests",
+      "type": "shell",
+      "command": ".venv/bin/python -m pytest test/ -v --tb=short",
+      "options": {
+        "cwd": "${workspaceFolder}/CASCADE-backend",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/CASCADE-backend"
+        }
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+
+  ]
+}
