@@ -13,7 +13,7 @@ import {
 } from "@/lib/intervention-prioritisation";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
-type SortMode = "value" | "efficiency" | "importance" | "cost_of_disservice_per_day";
+type SortMode = "efficiency" | "importance" | "cost";
 
 export function InterventionPanel() {
   const close = useUiStore((s) => s.closeInterventionPanel);
@@ -21,7 +21,7 @@ export function InterventionPanel() {
   const edges = useCanvasStore((s) => s.edges);
   const config = useConfigStore((s) => s.config);
   const N = Math.max(...config.functionality_scale.map((l) => l.level));
-  const [sort, setSort] = useState<SortMode>("value");
+  const [sort, setSort] = useState<SortMode>("importance");
   const [atRiskOpen, setAtRiskOpen] = useState(false);
 
   const snapshot = useMemo(
@@ -35,9 +35,8 @@ export function InterventionPanel() {
   );
 
   const candidates =
-    sort === "value"                    ? summary.byValue
-    : sort === "efficiency"             ? summary.byEfficiency
-    : sort === "importance"             ? summary.byImportance
+    sort === "efficiency" ? summary.byEfficiency
+    : sort === "importance" ? summary.byImportance
     : summary.byCostOfDisservice;
 
   function elementLabel(id: string): string {
@@ -211,9 +210,14 @@ function CandidateTable({
           <th className="w-8 px-4 py-2.5 font-semibold text-zinc-400">#</th>
           <th className="px-4 py-2.5 font-semibold text-zinc-500">Element</th>
           <th className="px-3 py-2.5 text-center font-semibold text-zinc-500">f</th>
-          <SortTh mode="importance">Importance</SortTh>
-          <SortTh mode="cost_of_disservice_per_day">Cost of Disservice</SortTh>
-          <SortTh mode="value">Recovery Value</SortTh>
+          <SortTh mode="importance">
+            <span className="block text-[9px] font-normal leading-tight opacity-60">Expected Recovery By</span>
+            Importance
+          </SortTh>
+          <SortTh mode="cost">
+            <span className="block text-[9px] font-normal leading-tight opacity-60">Expected Recovery By</span>
+            Value
+          </SortTh>
           <th className="px-3 py-2.5 text-right font-semibold text-zinc-500">Repair Time</th>
           <SortTh mode="efficiency">Value / h</SortTh>
         </tr>
@@ -249,23 +253,14 @@ function CandidateTable({
               </span>
             </td>
 
-            {/* Importance — default 1 */}
+            {/* Expected recovery by importance weight */}
             <td className={cn("px-3 py-2.5 text-right", sort === "importance" ? "font-semibold text-amber-700 dark:text-amber-400" : "text-zinc-500")}>
-              {c.importance !== undefined
-                ? c.importance.toFixed(2)
-                : <span className="text-zinc-400" title="Default: 1">1</span>}
+              {c.recoveryByImportance.toFixed(2)}
             </td>
 
-            {/* Cost of disservice — default 0 */}
-            <td className={cn("px-3 py-2.5 text-right", sort === "cost_of_disservice_per_day" ? "font-semibold text-amber-700 dark:text-amber-400" : "text-zinc-500")}>
-              {c.cost_of_disservice_per_day !== undefined
-                ? c.cost_of_disservice_per_day.toFixed(2)
-                : <span className="text-zinc-400" title="Default: 0">0</span>}
-            </td>
-
-            {/* Recovery value */}
-            <td className={cn("px-3 py-2.5 text-right", sort === "value" ? "font-semibold text-amber-700 dark:text-amber-400" : "text-zinc-600 dark:text-zinc-300")}>
-              {c.recoveryValue.toFixed(2)}
+            {/* Expected recovery by economic value weight */}
+            <td className={cn("px-3 py-2.5 text-right", sort === "cost" ? "font-semibold text-amber-700 dark:text-amber-400" : "text-zinc-500")}>
+              {c.recoveryByValue.toFixed(2)}
             </td>
 
             {/* Repair time */}

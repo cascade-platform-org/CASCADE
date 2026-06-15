@@ -3,10 +3,17 @@
  *
  * Open/auditable client-side computation. Never touches the engine boundary.
  *
- * Formula: L(D) = W(D) × (N − f_D) / (N − 1)
- *   W = cost_of_disservice_per_day ?? importance ?? 1  (nodes only)
- *   W = 0 for edges (a broken pipe costs nothing in isolation; the hospital it
- *   starves carries the cost — edges participate as blame intermediaries only)
+ * Each candidate carries three recovery values, each computed by running the same
+ * transitive blame-chain distribution with a different weight function W(el, N):
+ *
+ *   recoveryValue        W = cost_of_disservice_per_day ?? importance ?? 1  (combined)
+ *   recoveryByImportance W = importance ?? 0
+ *   recoveryByValue      W = cost_of_disservice_per_day ?? 0
+ *
+ * Loss formula for each degraded element:  L = W × (N − f) / (N − 1)
+ * Edges always contribute W = 0 (a broken pipe costs nothing in isolation;
+ * the hospital it starves carries the cost — edges participate as blame
+ * intermediaries only).
  *
  * Losses are distributed backward along transitive responsibility_share chains
  * until reaching:
@@ -30,10 +37,23 @@ export interface RepairCandidate {
   kind: "node" | "edge";
   /** Current functionality level (1..N). */
   functionality: number;
-  /** Element's own weighted loss: W × (N − f) / (N − 1). Always 0 for edges. */
+  /** Element's own weighted loss using the combined formula. Always 0 for edges. */
   directLoss: number;
-  /** Sum of all loss portions that terminate at this element via blame chains. */
+  /**
+   * Transitive recovery value — combined weight (cost_of_disservice_per_day ?? importance ?? 1).
+   * The primary ranking metric.
+   */
   recoveryValue: number;
+  /**
+   * Transitive recovery value weighted by importance only (importance ?? 0).
+   * Zero for edges and nodes without an importance value.
+   */
+  recoveryByImportance: number;
+  /**
+   * Transitive recovery value weighted by cost_of_disservice_per_day only (cost ?? 0).
+   * Zero for edges and nodes without a cost value.
+   */
+  recoveryByValue: number;
   /** From element.expected_repair_time. undefined = no estimate provided. */
   expectedRepairTime: number | undefined;
   /**
@@ -42,10 +62,6 @@ export interface RepairCandidate {
    * undefined — repairTime is absent (no estimate; sorts last in efficiency mode).
    */
   valuePerHour: number | undefined;
-  /** From node.importance. undefined for edges and nodes where the field is absent. */
-  importance: number | undefined;
-  /** From node.cost_of_disservice_per_day. undefined for edges and nodes where the field is absent. */
-  cost_of_disservice_per_day: number | undefined;
 }
 
 export interface AtRiskElement {
@@ -58,7 +74,7 @@ export interface AtRiskElement {
 }
 
 export interface InterventionSummary {
-  /** Functionality scale length N (from ModelConfiguration). */
+  /** Max functionality scale level N (from ModelConfiguration). */
   N: number;
   /** direct_damage=true elements ranked by recoveryValue descending. */
   byValue: RepairCandidate[];
@@ -67,19 +83,13 @@ export interface InterventionSummary {
    * Candidates with no repair estimate appear after all ranked candidates.
    */
   byEfficiency: RepairCandidate[];
-  /**
-   * Ranked by importance descending.
-   * Candidates without importance (edges, or nodes missing the field) sort last.
-   */
+  /** Ranked by recoveryByImportance descending. */
   byImportance: RepairCandidate[];
-  /**
-   * Ranked by cost_of_disservice_per_day descending.
-   * Candidates without the field sort last.
-   */
+  /** Ranked by recoveryByValue (economic cost) descending. */
   byCostOfDisservice: RepairCandidate[];
   /** Elements with functionality_time > 0, ascending (most urgent first). */
   atRisk: AtRiskElement[];
-  /** Σ L(D) across all degraded elements. */
+  /** Σ L(D) across all degraded elements (combined weight). */
   totalLoss: number;
   /** Loss mass terminated on EventId keys or non-repairable natural roots. */
   nonRepairableLoss: number;
@@ -100,12 +110,23 @@ function isEdge(el: Node | Edge): el is Edge {
   return "source" in el;
 }
 
-/** Weighted loss for a degraded element. Edges always return 0. */
-function weightedLoss(el: Node | Edge, N: number): number {
+type WeightFn = (el: Node | Edge, N: number) => number;
+
+const combinedWeight: WeightFn = (el, N) => {
   if (N <= 1 || isEdge(el)) return 0;
   const W = el.cost_of_disservice_per_day ?? el.importance ?? 1;
   return W * (N - el.functionality) / (N - 1);
-}
+};
+
+const importanceWeight: WeightFn = (el, N) => {
+  if (N <= 1 || isEdge(el)) return 0;
+  return (el.importance ?? 0) * (N - el.functionality) / (N - 1);
+};
+
+const economicWeight: WeightFn = (el, N) => {
+  if (N <= 1 || isEdge(el)) return 0;
+  return (el.cost_of_disservice_per_day ?? 0) * (N - el.functionality) / (N - 1);
+};
 
 /**
  * Recursively distribute `mass` of blame backward from `elementId`.
@@ -129,21 +150,17 @@ function distribute(
 
   const el = allElements[elementId];
   if (!el) {
-    // Dangling reference (element deleted after propagation)
     acc.unattributed += mass;
     return;
   }
 
   if (el.direct_damage === true) {
-    // Repair terminal: repairing this element would unblock the loss mass
     recoveryValues.set(elementId, (recoveryValues.get(elementId) ?? 0) + mass);
     return;
   }
 
-  // Pass-through element: not directly repairable, trace further back
   const share = el.responsibility_share;
   if (!share || Object.keys(share).length === 0) {
-    // Natural root with no attribution — loss is non-repairable by a crew
     acc.nonRepairable += mass;
     return;
   }
@@ -155,49 +172,35 @@ function distribute(
     if (causeId in allElements) {
       distribute(causeId, mass * fraction, allElements, recoveryValues, acc, nextChain, depth + 1);
     } else {
-      // causeId is an EventId — externally caused, not repairable by a crew
       acc.nonRepairable += mass * fraction;
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 /**
- * Compute intervention prioritisation from a post-propagation graph snapshot.
- *
- * @param snapshot  Graph state where degraded elements carry responsibility_share
- *                  from the most recent propagation run.
- * @param N         Functionality scale length — ModelConfiguration.functionality_scale.length.
+ * Run the full blame-chain distribution for a given weight function.
+ * Returns per-element recovery values plus mass conservation totals.
  */
-export function computeInterventionPrioritisation(
-  snapshot: GraphSnapshot,
+function runDistribution(
+  allElements: Record<string, Node | Edge>,
   N: number,
-): InterventionSummary {
-  const { nodes, edges } = snapshot;
-  const allElements: Record<string, Node | Edge> = { ...nodes, ...edges };
-
+  weight: WeightFn,
+): { recoveryValues: Map<string, number>; totalLoss: number; nonRepairable: number; unattributed: number } {
   const recoveryValues = new Map<string, number>();
   let totalLoss = 0;
   const acc = { nonRepairable: 0, unattributed: 0 };
 
   for (const el of Object.values(allElements)) {
-    if (el.functionality >= N) continue;  // fully operational, no loss
+    if (el.functionality >= N) continue;
 
-    const L = weightedLoss(el, N);
+    const L = weight(el, N);
     totalLoss += L;
 
     if (el.direct_damage === true) {
-      // Own loss stays at this element: it is the repair terminal for its own degradation.
-      // We do NOT trace el's own responsibility_share further — el's damage is the root cause
-      // that a crew would fix directly.
       recoveryValues.set(el.id, (recoveryValues.get(el.id) ?? 0) + L);
       continue;
     }
 
-    // Non-direct_damage degraded element: distribute its loss backward.
     const share = el.responsibility_share;
     if (!share || Object.keys(share).length === 0) {
       acc.nonRepairable += L;
@@ -209,21 +212,50 @@ export function computeInterventionPrioritisation(
       if (causeId in allElements) {
         distribute(causeId, L * fraction, allElements, recoveryValues, acc, initChain, 0);
       } else {
-        // EventId key at the top level — loss caused by an external event
         acc.nonRepairable += L * fraction;
       }
     }
   }
 
-  // Build candidate list: all direct_damage=true elements (including those at full
-  // functionality — still physically broken, repair crew should know about them).
+  return { recoveryValues, totalLoss, nonRepairable: acc.nonRepairable, unattributed: acc.unattributed };
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute intervention prioritisation from a post-propagation graph snapshot.
+ *
+ * @param snapshot  Graph state where degraded elements carry responsibility_share
+ *                  from the most recent propagation run.
+ * @param N         Max functionality scale level — max(level for l in functionality_scale).
+ */
+export function computeInterventionPrioritisation(
+  snapshot: GraphSnapshot,
+  N: number,
+): InterventionSummary {
+  const { nodes, edges } = snapshot;
+  const allElements: Record<string, Node | Edge> = { ...nodes, ...edges };
+
+  // Three independent distributions — same blame-chain graph, different weight functions.
+  const {
+    recoveryValues,
+    totalLoss,
+    nonRepairable,
+    unattributed,
+  } = runDistribution(allElements, N, combinedWeight);
+  const { recoveryValues: importanceValues } = runDistribution(allElements, N, importanceWeight);
+  const { recoveryValues: economicValues }   = runDistribution(allElements, N, economicWeight);
+
+  // Build candidate list: all direct_damage=true elements.
   const candidates: RepairCandidate[] = [];
   for (const el of Object.values(allElements)) {
     if (el.direct_damage !== true) continue;
 
-    const rv = recoveryValues.get(el.id) ?? 0;
-    const repairTime = el.expected_repair_time;
-    const directLoss = weightedLoss(el, N);
+    const rv          = recoveryValues.get(el.id) ?? 0;
+    const repairTime  = el.expected_repair_time;
+    const directLoss  = combinedWeight(el, N);
 
     const valuePerHour: number | undefined =
       repairTime === undefined
@@ -237,11 +269,11 @@ export function computeInterventionPrioritisation(
       kind: isEdge(el) ? "edge" : "node",
       functionality: el.functionality,
       directLoss,
-      recoveryValue: rv,
-      expectedRepairTime: repairTime,
+      recoveryValue:        rv,
+      recoveryByImportance: importanceValues.get(el.id) ?? 0,
+      recoveryByValue:      economicValues.get(el.id) ?? 0,
+      expectedRepairTime:   repairTime,
       valuePerHour,
-      importance: isEdge(el) ? undefined : el.importance,
-      cost_of_disservice_per_day: isEdge(el) ? undefined : el.cost_of_disservice_per_day,
     });
   }
 
@@ -249,15 +281,14 @@ export function computeInterventionPrioritisation(
 
   const byEfficiency = [...candidates].sort((a, b) => {
     if (a.valuePerHour === undefined && b.valuePerHour === undefined) return 0;
-    if (a.valuePerHour === undefined) return 1;   // no-estimate sorts last
+    if (a.valuePerHour === undefined) return 1;
     if (b.valuePerHour === undefined) return -1;
     if (a.valuePerHour === Infinity && b.valuePerHour === Infinity) return 0;
-    return b.valuePerHour - a.valuePerHour;       // Infinity sorts first
+    return b.valuePerHour - a.valuePerHour;
   });
 
-  function descByField(field: "importance" | "cost_of_disservice_per_day") {
-    return [...candidates].sort((a, b) => (b[field] ?? 0) - (a[field] ?? 0));
-  }
+  const byImportance      = [...candidates].sort((a, b) => b.recoveryByImportance - a.recoveryByImportance);
+  const byCostOfDisservice = [...candidates].sort((a, b) => b.recoveryByValue      - a.recoveryByValue);
 
   const atRisk: AtRiskElement[] = Object.values(allElements)
     .filter((el) => (el.functionality_time ?? 0) > 0)
@@ -274,11 +305,11 @@ export function computeInterventionPrioritisation(
     N,
     byValue,
     byEfficiency,
-    byImportance: descByField("importance"),
-    byCostOfDisservice: descByField("cost_of_disservice_per_day"),
+    byImportance,
+    byCostOfDisservice,
     atRisk,
     totalLoss,
-    nonRepairableLoss: acc.nonRepairable,
-    unattributedLoss: acc.unattributed,
+    nonRepairableLoss: nonRepairable,
+    unattributedLoss:  unattributed,
   };
 }
