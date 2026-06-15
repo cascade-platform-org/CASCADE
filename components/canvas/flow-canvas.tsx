@@ -45,7 +45,7 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Waypoints } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
@@ -563,6 +563,7 @@ export function FlowCanvas() {
   const updateNode = useCanvasStore((s) => s.updateNode);
   const upsertNode = useCanvasStore((s) => s.upsertNode);
   const upsertEdge = useCanvasStore((s) => s.upsertEdge);
+  const updateEdge = useCanvasStore((s) => s.updateEdge);
   const removeNode = useCanvasStore((s) => s.removeNode);
   const removeEdge = useCanvasStore((s) => s.removeEdge);
   const addNodeToCanvas = useCanvasStore((s) => s.addNodeToCanvas);
@@ -581,7 +582,7 @@ export function FlowCanvas() {
   const clipboard = useClipboardStore((s) => s.contents);
   const copyToClipboard = useClipboardStore((s) => s.copy);
 
-  const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getNode, fitView } = useReactFlow();
 
   // Auto-frame the Canvas's content when switching Canvas. fitView's `fitView`
   // prop only fires on first mount, and FlowCanvas is not remounted per Canvas,
@@ -676,6 +677,7 @@ export function FlowCanvas() {
   // everything was deselected). This ref prevents that spurious empty-deselect
   // from wiping the selection the lasso just committed.
   const lassoActiveRef = useRef(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const activeTool = useUiStore((s) => s.activeTool);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
@@ -780,6 +782,7 @@ export function FlowCanvas() {
   }, [selectEdge, toggleEdge, setInspectorOpen]);
 
   const onPaneClick = useCallback(() => {
+    setContextMenu(null);
     if (lassoActiveRef.current) {
       lassoActiveRef.current = false;
       return;
@@ -1054,7 +1057,47 @@ export function FlowCanvas() {
     setInspectorOpen(true);
   }, [activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition, upsertNode, addNodeToCanvas, toGraphSnapshot, selectNode, setInspectorOpen]);
 
-  // ── Right-click on node → context menu (stub) ──
+  // ── Right-click on pane → context menu ──
+  const onPaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // ── Edge Layout: reassign sourceHandle/targetHandle based on node positions ──
+  const applyEdgeLayout = useCallback(() => {
+    if (!activeCanvas) return;
+    setContextMenu(null);
+
+    const before = toGraphSnapshot();
+    const edgeIds = activeCanvas.graph.edge_ids;
+    let count = 0;
+
+    for (const eid of edgeIds) {
+      const edge = allEdges[eid];
+      if (!edge) continue;
+      const srcRF = getNode(edge.source);
+      const tgtRF = getNode(edge.target);
+      if (!srcRF || !tgtRF) continue;
+      const { sourceHandle, targetHandle } = pickHandles(srcRF, tgtRF);
+      updateEdge(eid, { sourceHandle, targetHandle });
+      count++;
+    }
+
+    if (count > 0) {
+      useHistoryStore.getState().pushUpdateEntry({
+        id: nanoid(),
+        timestamp: new Date().toISOString(),
+        update_type: "graph_update",
+        label: "Edge layout",
+        canvas_id: activeCanvas.id,
+        before,
+        after: toGraphSnapshot(),
+      });
+      pushToast({ message: `Laid out ${count} edge${count !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
+    }
+  }, [activeCanvas, allEdges, toGraphSnapshot, updateEdge, getNode, pushToast]);
+
+  // ── Right-click on node → select it ──
   const onNodeContextMenu = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
     selectNode(rfNode.id);
   }, [selectNode]);
@@ -1107,6 +1150,7 @@ export function FlowCanvas() {
         onConnect={onConnect}
         onSelectionChange={onSelectionChange}
         onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
         onDoubleClick={onPaneDoubleClick}
         panOnDrag={panMode ? true : [1, 2]}
         panOnScroll={false}
@@ -1145,6 +1189,33 @@ export function FlowCanvas() {
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms */}
       <CanvasLegend />
+
+      {/* Pane context menu */}
+      {contextMenu && (
+        <>
+          {/* Transparent backdrop — catches outside clicks to close the menu */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+          />
+          <div
+            className="fixed z-50 min-w-[180px] overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Canvas
+            </p>
+            <button
+              onClick={applyEdgeLayout}
+              className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <Waypoints size={14} className="shrink-0 text-zinc-500" />
+              Edge Layout
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
