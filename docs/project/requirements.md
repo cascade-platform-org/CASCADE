@@ -290,7 +290,7 @@ Alternates capacity step and rule step until no node's `functionality` worsens f
 
 ### 7.5 Causality Tracking
 
-The engine records for each degraded Element which upstream Elements or Events are directly responsible, and in what proportion. This is returned as `responsibility_share: { [ElementId | EventId]: float }` on each `ElementUpdate` — values in [0, 1] summing to 1. Populated only from the heuristic or Rule that produced the final (worst) Functionality for the Element. Attribution per mechanism (see ADR-0003): the **logical** heuristic splits evenly across failed upstreams; the **flow** heuristic uses a provisional v1 uniform-blame rule over degraded same-category elements in the transitive incoming closure (empty if none degraded); Events key the single EventId; Specific Rules split evenly across referenced Elements. This powers:
+The engine records for each degraded Element which upstream Elements or Events are directly responsible, and in what proportion. This is returned as `responsibility_share: { [ElementId | EventId]: float }` on each `ElementUpdate` — values in (0, 1] summing to 1; zero shares are never emitted (a blameless Element is simply absent from the dictionary). Populated only from the heuristic or Rule that produced the final (worst) Functionality for the Element. Attribution per mechanism (see ADR-0003): the **logical** heuristic splits evenly across failed upstreams; the **flow** heuristic uses a provisional v1 uniform-blame rule over degraded same-category elements in the transitive incoming closure (empty if none degraded); Events key the single EventId; Specific Rules split evenly across referenced Elements. This powers:
 
 - UI visualisation of causal chains (colour edges/nodes by responsibility share).
 - Distinction between directly damaged (`direct_damage = true`) and indirectly affected Elements.
@@ -379,13 +379,22 @@ When a Hazard sets `direct_damage = true`, `expected_repair_time` records estima
 
 ## 10. Intervention Prioritisation
 
-Given a `PropagationResult`, compute a **ranked intervention list** client-side (not proprietary). Inputs:
+Given a post-Propagation Scenario (Elements carrying `responsibility_share`), compute a **ranked repair list** client-side (open logic — `CASCADE-app/lib/intervention-prioritisation.ts`, not proprietary).
 
-- `responsibility_share` per degraded Element — identifies root causes and their proportional contribution.
-- `direct_damage` and `expected_repair_time` — identifies physically broken Elements and repair cost.
-- `importance` and `cost_of_disservice_per_day` per Element — weights downstream impact.
+**Candidates.** The ranked list contains exactly the Elements (nodes *and* edges) with `direct_damage = true` — the targets a physical repair crew can act on. Degraded Elements without physical damage are reported in a separate informational bucket: they recover via Event expiry or upstream repair, not by direct intervention.
 
-Output: Elements ranked by expected recovery value = `sum over downstream affected elements of (importance × cost_of_disservice_per_day × responsibility_share_weight)`, prioritising those whose repair unblocks the most downstream functionality. Elements with `direct_damage = true` are flagged as requiring physical repair before functional recovery is possible.
+**Recovery Value.** Each degraded Element `D` carries a loss
+`L(D) = W(D) × (N − functionality_D) / (N − 1)`
+where the weight `W` uses precedence `cost_of_disservice_per_day ?? importance ?? 1`. Edges carry intrinsic loss 0 (a broken pipe costs nothing by itself; the hospital it starves carries the cost) but participate fully as blame intermediaries and as repair targets.
+Losses are distributed backwards along **transitive blame chains**: the fraction of `D`'s `responsibility_share` keyed to upstream ElementIds forwards `D`'s loss upstream multiplicatively; the fraction keyed to EventIds — or an absent share map — terminates at `D` itself. An Element's **Recovery Value** is the total loss that terminates on it: everything its repair would unblock, including its own weighted degradation.
+
+*Rationale for the changes from the earlier sketch:* the previous formula multiplied `importance × cost_of_disservice_per_day` (double-counts when both set, zero/undefined when either absent — replaced by precedence), ignored degradation depth (an Element at 1/N and one at (N−1)/N counted the same), and used one-hop `responsibility_share` directly (which ranks symptoms — the pump — instead of causes — the substation; transitive distribution fixes this).
+
+**Effort.** `expected_repair_time` is the repair effort. Two ranking modes: by Recovery Value, and by **value per repair hour** (`recovery_value / expected_repair_time`). Elements with no repair estimate sort last in the per-hour mode and are flagged.
+
+**At-risk list.** Elements with `functionality_time > 0` (holding on backup) are listed with remaining hours as time-critical context. Attributing a deferred drop to its upstream root is not derivable client-side — the engine does not emit blame for deferred proposals (see §16).
+
+**Auditability.** Blame cycles are cut by a depth cap; mass that cannot reach a terminal Element is reported as `unattributed`, so `Σ recovery values + Σ non-repairable losses + unattributed = Σ losses` holds exactly when every `responsibility_share` map sums to 1.0, and is approximate otherwise (floating-point rounding in the engine can shift the total by a small epsilon).
 
 ---
 
@@ -446,51 +455,13 @@ Computed client-side from the stored snapshots, never persisted:
 
 | Metric | Computed from |
 |---|---|
-| Operativity Score | Weighted average `functionality` across nodes — see §12.5 |
+| Operativity Score | Weighted average `functionality` across nodes — see §12.6 |
 | Cost of disservice | Sum of `cost_of_disservice_per_day` for nodes below `functionality = N` |
 | Status breakdown | Count per functionality level |
 | Most impacted Elements | Ranked by `importance × (N − functionality)` |
 | Causal summary | `responsibility_share` from `propagation_result` |
 
 The Scorecard UI shows all three snapshots side by side, with derived metrics for each.
-
-### 12.6 Export
-
-The Scorecard is downloadable as a **zip archive** containing:
-
-```
-scorecard-<project-name>-<date>/
-  scorecard.md               ← Markdown report
-  images/
-    <entry-id>-before.png
-    <entry-id>-after.png
-    <entry-id>-temporal.png  ← present only when after_temporal_jump exists
-```
-
-The Markdown file uses standard `![label](images/<file>.png)` image references. It renders correctly in VS Code, Obsidian, GitHub, and any Markdown viewer. One section per Scorecard entry, ordered by `created_at`.
-
-### 12.6 Missing Computation Detection
-
-The Scorecard panel surfaces three categories of gaps:
-
-| Type | Description | Detection |
-|---|---|---|
-| **Type 1 — Unsaved runs** | An `event_applied` + `propagation` pair exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` against `scorecard[].event_id`. |
-| **Type 2 — Incomplete entries** | A saved entry is missing `after_propagation` or `after_temporal_jump`. | Check optional fields on each `ScorecardEntry`. |
-| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching `event_id`. | Cross-reference `config.events` against `scorecard[].event_id`. |
-
-**UI treatment:**
-- Type 1: "Unrecorded runs" section at the top of the Scorecard panel — each unsaved pair shown with a "Save" button.
-- Type 2: each incomplete saved entry shows a badge per missing snapshot with an inline "Compute" button (ephemeral engine call, stores result into the entry).
-- Type 3: "Never covered" section listing config events with no Scorecard entry — each shown with a "Run" button (see §12.7).
-
-### 12.7 "Run" Button for Uncovered Events (Type 3)
-
-When the user clicks "Run" on an uncovered event, the system applies the event **ephemerally** to the **current graph state** (as a working copy, main graph unchanged), calls `POST /api/propagate`, then opens the Save dialog pre-filled with the result. The user can add a Temporal Jump in the dialog and confirm the save. If the server is unreachable, the button is disabled with a tooltip.
-
----
-
-## 13. Persistence, File I/O, and Version History
 
 ### 12.6 Operativity Score Formula
 
@@ -511,6 +482,44 @@ The threshold boundaries and their associated label/colour come from `Functional
 A given percentage P maps to level `k = ceil(P × N / 100)`, clamped to [1, N].
 
 ---
+
+### 12.7 Export
+
+The Scorecard is downloadable as a **zip archive** containing:
+
+```
+scorecard-<project-name>-<date>/
+  scorecard.md               ← Markdown report
+  images/
+    <entry-id>-before.png
+    <entry-id>-after.png
+    <entry-id>-temporal.png  ← present only when after_temporal_jump exists
+```
+
+The Markdown file uses standard `![label](images/<file>.png)` image references. It renders correctly in VS Code, Obsidian, GitHub, and any Markdown viewer. One section per Scorecard entry, ordered by `created_at`.
+
+### 12.8 Missing Computation Detection
+
+The Scorecard panel surfaces three categories of gaps:
+
+| Type | Description | Detection |
+|---|---|---|
+| **Type 1 — Unsaved runs** | An `event_applied` + `propagation` pair exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` against `scorecard[].event_id`. |
+| **Type 2 — Incomplete entries** | A saved entry is missing `after_propagation` or `after_temporal_jump`. | Check optional fields on each `ScorecardEntry`. |
+| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching `event_id`. | Cross-reference `config.events` against `scorecard[].event_id`. |
+
+**UI treatment:**
+- Type 1: "Unrecorded runs" section at the top of the Scorecard panel — each unsaved pair shown with a "Save" button.
+- Type 2: each incomplete saved entry shows a badge per missing snapshot with an inline "Compute" button (ephemeral engine call, stores result into the entry).
+- Type 3: "Never covered" section listing config events with no Scorecard entry — each shown with a "Run" button (see §12.9).
+
+### 12.9 "Run" Button for Uncovered Events (Type 3)
+
+When the user clicks "Run" on an uncovered event, the system applies the event **ephemerally** to the **current graph state** (as a working copy, main graph unchanged), calls `POST /api/propagate`, then opens the Save dialog pre-filled with the result. The user can add a Temporal Jump in the dialog and confirm the save. If the server is unreachable, the button is disabled with a tooltip.
+
+---
+
+## 13. Persistence, File I/O, and Version History
 
 ### 13.1 Explicit Save
 
@@ -565,3 +574,4 @@ When enabled, explicit saves are also pushed to PostgreSQL per-user. Version lis
 | Exact scorecard layout and visual design | To be defined during UI design |
 | Server sync conflict resolution strategy | To be defined |
 | Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |
+| Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
