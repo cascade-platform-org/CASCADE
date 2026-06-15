@@ -1,0 +1,1730 @@
+{
+  "project": {
+    "version": "2.0",
+    "meta": {
+      "name": "Full Palmanova",
+      "description": "Migrated from Full_Palmanova.json",
+      "created_at": "2026-06-15T14:47:34Z",
+      "updated_at": "2026-06-15T14:47:34Z"
+    },
+    "nodes": {
+      "node_1762946740143": {
+        "id": "node_1762946740143",
+        "functionality": 3,
+        "label": "water Operator",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "manager"
+        ],
+        "position": {
+          "x": 363.0,
+          "y": -202.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 2
+          },
+          "manager": {
+            "dependency_level": 1
+          }
+        }
+      },
+      "node_1762946753934": {
+        "id": "node_1762946753934",
+        "functionality": 3,
+        "label": "electric Operator",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "manager"
+        ],
+        "position": {
+          "x": 373.0,
+          "y": -279.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "manager": {
+            "dependency_level": 1
+          }
+        }
+      },
+      "node_1769766555762": {
+        "id": "node_1769766555762",
+        "functionality": 3,
+        "label": "transport Operator",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "manager"
+        ],
+        "position": {
+          "x": 467.0,
+          "y": -342.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "manager": {
+            "dependency_level": 1
+          }
+        }
+      },
+      "node_1764754067370": {
+        "id": "node_1764754067370",
+        "functionality": 3,
+        "label": "Palmanova electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 327.0,
+          "y": 147.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2,
+          "weak_earthquake": 2
+        }
+      },
+      "node_1764756406852": {
+        "id": "node_1764756406852",
+        "functionality": 3,
+        "label": "Sottoselva electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 412.0,
+          "y": -20.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764756534931": {
+        "id": "node_1764756534931",
+        "functionality": 3,
+        "label": "Joint est electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 663.0,
+          "y": -27.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764756677081": {
+        "id": "node_1764756677081",
+        "functionality": 3,
+        "label": "San Marco electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 72.0,
+          "y": -18.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764756777009": {
+        "id": "node_1764756777009",
+        "functionality": 3,
+        "label": "Industrial electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": -296.0,
+          "y": 23.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764758672800": {
+        "id": "node_1764758672800",
+        "functionality": 3,
+        "label": "Nord electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": -95.0,
+          "y": -102.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2,
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764760715521": {
+        "id": "node_1764760715521",
+        "functionality": 3,
+        "label": "Sottoselva",
+        "node_type": "Service",
+        "node_categories": [
+          "city"
+        ],
+        "position": {
+          "x": 360.0,
+          "y": -82.0
+        },
+        "importance": 2.0,
+        "cost_of_disservice_per_day": 100000.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 2
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 1
+        }
+      },
+      "node_1764760763435": {
+        "id": "node_1764760763435",
+        "functionality": 3,
+        "label": "Hospital",
+        "node_type": "Service",
+        "node_categories": [
+          "essentials"
+        ],
+        "position": {
+          "x": 592.0,
+          "y": 160.0
+        },
+        "importance": 3.0,
+        "cost_of_disservice_per_day": 500000.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 2
+          },
+          "water": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 48
+          },
+          "power": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 240
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 1
+        }
+      },
+      "node_1764760818917": {
+        "id": "node_1764760818917",
+        "functionality": 3,
+        "label": "civil protection Operator",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "manager"
+        ],
+        "position": {
+          "x": 494.0,
+          "y": -241.0
+        },
+        "importance": 1.0,
+        "cost_of_disservice_per_day": 2.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          },
+          "water": {
+            "dependency_level": 3,
+            "backup_duration": 48
+          },
+          "power": {
+            "dependency_level": 3,
+            "backup_duration": 240
+          },
+          "manager": {
+            "dependency_level": 1,
+            "backup_duration": 240
+          }
+        }
+      },
+      "node_1764760856861": {
+        "id": "node_1764760856861",
+        "functionality": 3,
+        "label": "San Marco",
+        "node_type": "Service",
+        "node_categories": [
+          "city"
+        ],
+        "position": {
+          "x": 157.0,
+          "y": -76.0
+        },
+        "importance": 2.0,
+        "cost_of_disservice_per_day": 100000.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 2
+          },
+          "power": {
+            "dependency_level": 2
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 1
+        }
+      },
+      "node_1764760888903": {
+        "id": "node_1764760888903",
+        "functionality": 3,
+        "label": "Palmanova",
+        "node_type": "Service",
+        "node_categories": [
+          "city"
+        ],
+        "position": {
+          "x": 248.0,
+          "y": 181.0
+        },
+        "importance": 3.0,
+        "cost_of_disservice_per_day": 1000000.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 2
+          },
+          "power": {
+            "dependency_level": 2
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 1
+        }
+      },
+      "node_1764760948153": {
+        "id": "node_1764760948153",
+        "functionality": 3,
+        "label": "Jalmicco",
+        "node_type": "Service",
+        "node_categories": [
+          "city"
+        ],
+        "position": {
+          "x": 758.0,
+          "y": 132.0
+        },
+        "importance": 2.0,
+        "cost_of_disservice_per_day": 100000.0,
+        "rules": [
+          "worst_of(best_of(water, transport), best_of(electric, transport)) propagates to jalmicco"
+        ],
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 2
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 1
+        }
+      },
+      "node_1764761676929": {
+        "id": "node_1764761676929",
+        "functionality": 3,
+        "label": "Industrial",
+        "node_type": "Service",
+        "node_categories": [
+          "relevants"
+        ],
+        "position": {
+          "x": -381.0,
+          "y": 28.0
+        },
+        "importance": 2.0,
+        "cost_of_disservice_per_day": 2.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 12
+          }
+        }
+      },
+      "node_1764762932932": {
+        "id": "node_1764762932932",
+        "functionality": 3,
+        "label": "Jalmicco electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 814.0,
+          "y": 76.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764763540852": {
+        "id": "node_1764763540852",
+        "functionality": 3,
+        "label": "Sud electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": -79.0,
+          "y": 248.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764763781720": {
+        "id": "node_1764763781720",
+        "functionality": 3,
+        "label": "Est electric",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": 764.0,
+          "y": -115.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 3
+          }
+        }
+      },
+      "node_1764763952810": {
+        "id": "node_1764763952810",
+        "functionality": 3,
+        "label": "Electric Source",
+        "node_type": "Source",
+        "node_categories": [
+          "power"
+        ],
+        "position": {
+          "x": -257.0,
+          "y": -215.0
+        },
+        "importance": 1.0,
+        "supply_capacity": {
+          "power": 100.0
+        },
+        "category_dependency_profiles": {
+          "manager": {
+            "dependency_level": 2
+          }
+        }
+      },
+      "node_1764754067370_1": {
+        "id": "node_1764754067370_1",
+        "functionality": 3,
+        "label": "Palmanova transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 174.0,
+          "y": 129.0
+        },
+        "importance": 1.0,
+        "rules": [
+          "majority_of(udine_access, cividale_access, aquileia_access) propagates to palmanova_transport"
+        ],
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764755425117": {
+        "id": "node_1764755425117",
+        "functionality": 3,
+        "label": "Cividale Access",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 275.0,
+          "y": 56.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2,
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764755438669": {
+        "id": "node_1764755438669",
+        "functionality": 3,
+        "label": "Udine Access",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 84.0,
+          "y": 51.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2,
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764755443188": {
+        "id": "node_1764755443188",
+        "functionality": 3,
+        "label": "Aquileia access",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 171.0,
+          "y": 246.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2,
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764756406852_1": {
+        "id": "node_1764756406852_1",
+        "functionality": 3,
+        "label": "Sottoselva transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 305.0,
+          "y": -29.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764756451988": {
+        "id": "node_1764756451988",
+        "functionality": 3,
+        "label": "Jalmicco transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 760.0,
+          "y": 52.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764756534931_1": {
+        "id": "node_1764756534931_1",
+        "functionality": 3,
+        "label": "joint est transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 591.0,
+          "y": -16.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        }
+      },
+      "node_1764756677081_1": {
+        "id": "node_1764756677081_1",
+        "functionality": 3,
+        "label": "San Marco transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": 40.0,
+          "y": -62.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "flood": 2,
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764756777009_1": {
+        "id": "node_1764756777009_1",
+        "functionality": 3,
+        "label": "Industrial transport",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": -323.0,
+          "y": 95.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "flood": 1
+        }
+      },
+      "node_1764758863910": {
+        "id": "node_1764758863910",
+        "functionality": 3,
+        "label": "Underpass San Marco",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "transport"
+        ],
+        "position": {
+          "x": -46.0,
+          "y": 50.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "transport": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "node_1764754067370_2": {
+        "id": "node_1764754067370_2",
+        "functionality": 3,
+        "label": "Palmanova water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 252.0,
+          "y": 107.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 24,
+            "demand": 10.0
+          }
+        },
+        "vulnerability_levels": {
+          "weak_earthquake": 1
+        }
+      },
+      "node_1764756534931_2": {
+        "id": "node_1764756534931_2",
+        "functionality": 3,
+        "label": "Joint est water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 468.0,
+          "y": -78.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        },
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "node_1764756677081_2": {
+        "id": "node_1764756677081_2",
+        "functionality": 3,
+        "label": "San Marco water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 55.0,
+          "y": -117.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764756777009_2": {
+        "id": "node_1764756777009_2",
+        "functionality": 3,
+        "label": "Industrial water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": -328.0,
+          "y": -38.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1764758643809_1": {
+        "id": "node_1764758643809_1",
+        "functionality": 3,
+        "label": "Local water Source",
+        "node_type": "Source",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 311.0,
+          "y": 286.0
+        },
+        "importance": 1.0,
+        "supply_capacity": {
+          "water": 10.0
+        },
+        "vulnerability_levels": {
+          "strong_earthquake": 2
+        }
+      },
+      "node_1764758863910_1": {
+        "id": "node_1764758863910_1",
+        "functionality": 3,
+        "label": "San Marco water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": -52.0,
+          "y": -23.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3
+          }
+        },
+        "vulnerability_levels": {
+          "flood": 1
+        }
+      },
+      "node_1764762932932_1": {
+        "id": "node_1764762932932_1",
+        "functionality": 3,
+        "label": "Jalmicco water",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 708.0,
+          "y": 79.0
+        },
+        "importance": 1.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10.0
+          }
+        }
+      },
+      "node_1765797139110": {
+        "id": "node_1765797139110",
+        "functionality": 3,
+        "label": "Fauglis water Source",
+        "node_type": "Source",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": -214.0,
+          "y": 190.0
+        },
+        "importance": 1.0,
+        "rules": [
+          "if water_operator.is_communicating_with_electric_operator is True and electric_operator is operational and water_operator is operational then fauglis is operational"
+        ],
+        "supply_capacity": {
+          "water": 45.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3
+          },
+          "power": {
+            "dependency_level": 2,
+            "backup_duration": 120,
+            "demand": 10.0
+          },
+          "manager": {
+            "dependency_level": 2
+          }
+        }
+      },
+      "node_1772615442881": {
+        "id": "node_1772615442881",
+        "functionality": 3,
+        "label": "Civil Protection",
+        "node_type": "Service",
+        "node_categories": [
+          "essentials"
+        ],
+        "position": {
+          "x": 581.0,
+          "y": -166.0
+        },
+        "importance": 2.0,
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 48
+          },
+          "power": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 240
+          }
+        }
+      }
+    },
+    "edges": {
+      "edge_node_1762946740143_node_1764760818917_1": {
+        "id": "edge_node_1762946740143_node_1764760818917_1",
+        "source": "node_1762946740143",
+        "target": "node_1764760818917",
+        "functionality": 3
+      },
+      "edge_node_1762946740143_node_1765797139110_2": {
+        "id": "edge_node_1762946740143_node_1765797139110_2",
+        "source": "node_1762946740143",
+        "target": "node_1765797139110",
+        "functionality": 3
+      },
+      "edge_node_1762946753934_node_1764760818917_2": {
+        "id": "edge_node_1762946753934_node_1764760818917_2",
+        "source": "node_1762946753934",
+        "target": "node_1764760818917",
+        "functionality": 3
+      },
+      "edge_node_1762946753934_node_1764763952810_3": {
+        "id": "edge_node_1762946753934_node_1764763952810_3",
+        "source": "node_1762946753934",
+        "target": "node_1764763952810",
+        "functionality": 3
+      },
+      "edge_node_1769766555762_node_1764760818917_1": {
+        "id": "edge_node_1769766555762_node_1764760818917_1",
+        "source": "node_1769766555762",
+        "target": "node_1764760818917",
+        "functionality": 3
+      },
+      "edge_node_1764754067370__node_1764760888903_4": {
+        "id": "edge_node_1764754067370__node_1764760888903_4",
+        "source": "node_1764754067370",
+        "target": "node_1764760888903",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_node_1764763540852_1": {
+        "id": "edge_node_1764754067370_node_1764763540852_1",
+        "source": "node_1764754067370",
+        "target": "node_1764763540852",
+        "functionality": 3
+      },
+      "edge_node_1764756406852__node_1764760715521_5": {
+        "id": "edge_node_1764756406852__node_1764760715521_5",
+        "source": "node_1764756406852",
+        "target": "node_1764760715521",
+        "functionality": 3
+      },
+      "edge_node_1764756406852__node_1764754067370_2": {
+        "id": "edge_node_1764756406852__node_1764754067370_2",
+        "source": "node_1764756406852",
+        "target": "node_1764754067370",
+        "functionality": 3
+      },
+      "edge_node_1764756534931__node_1764760763435_5": {
+        "id": "edge_node_1764756534931__node_1764760763435_5",
+        "source": "node_1764756534931",
+        "target": "node_1764760763435",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_node_1772615442881_1": {
+        "id": "edge_node_1764756534931_node_1772615442881_1",
+        "source": "node_1764756534931",
+        "target": "node_1772615442881",
+        "functionality": 3
+      },
+      "edge_node_1764756677081__node_1764760856861_4": {
+        "id": "edge_node_1764756677081__node_1764760856861_4",
+        "source": "node_1764756677081",
+        "target": "node_1764760856861",
+        "functionality": 3
+      },
+      "edge_node_1764756777009__node_1764761676929_2": {
+        "id": "edge_node_1764756777009__node_1764761676929_2",
+        "source": "node_1764756777009",
+        "target": "node_1764761676929",
+        "functionality": 3
+      },
+      "edge_node_1764758672800__node_1764756677081_1": {
+        "id": "edge_node_1764758672800__node_1764756677081_1",
+        "source": "node_1764758672800",
+        "target": "node_1764756677081",
+        "functionality": 3
+      },
+      "edge_node_1764758672800__node_1764756777009_2": {
+        "id": "edge_node_1764758672800__node_1764756777009_2",
+        "source": "node_1764758672800",
+        "target": "node_1764756777009",
+        "functionality": 3
+      },
+      "edge_node_1764758672800__node_1764754067370_3": {
+        "id": "edge_node_1764758672800__node_1764754067370_3",
+        "source": "node_1764758672800",
+        "target": "node_1764754067370",
+        "functionality": 3
+      },
+      "edge_node_1764760818917_node_1762946753934_0": {
+        "id": "edge_node_1764760818917_node_1762946753934_0",
+        "source": "node_1764760818917",
+        "target": "node_1762946753934",
+        "functionality": 3
+      },
+      "edge_node_1764760818917_node_1762946740143_1": {
+        "id": "edge_node_1764760818917_node_1762946740143_1",
+        "source": "node_1764760818917",
+        "target": "node_1762946740143",
+        "functionality": 3
+      },
+      "edge_node_1764760818917_node_1769766555762_2": {
+        "id": "edge_node_1764760818917_node_1769766555762_2",
+        "source": "node_1764760818917",
+        "target": "node_1769766555762",
+        "functionality": 3
+      },
+      "edge_node_1764760818917_node_1772615442881_3": {
+        "id": "edge_node_1764760818917_node_1772615442881_3",
+        "source": "node_1764760818917",
+        "target": "node_1772615442881",
+        "functionality": 3
+      },
+      "edge_node_1764762932932__node_1764760948153_0": {
+        "id": "edge_node_1764762932932__node_1764760948153_0",
+        "source": "node_1764762932932",
+        "target": "node_1764760948153",
+        "functionality": 3
+      },
+      "edge_node_1764763540852__node_1764754067370_1": {
+        "id": "edge_node_1764763540852__node_1764754067370_1",
+        "source": "node_1764763540852",
+        "target": "node_1764754067370",
+        "functionality": 3
+      },
+      "edge_node_1764763540852__node_1764756777009_2": {
+        "id": "edge_node_1764763540852__node_1764756777009_2",
+        "source": "node_1764763540852",
+        "target": "node_1764756777009",
+        "functionality": 3
+      },
+      "edge_node_1764763540852__node_1765797139110_2": {
+        "id": "edge_node_1764763540852__node_1765797139110_2",
+        "source": "node_1764763540852",
+        "target": "node_1765797139110",
+        "functionality": 3
+      },
+      "edge_node_1764763781720__node_1764762932932_0": {
+        "id": "edge_node_1764763781720__node_1764762932932_0",
+        "source": "node_1764763781720",
+        "target": "node_1764762932932",
+        "functionality": 3
+      },
+      "edge_node_1764763781720__node_1764756534931_1": {
+        "id": "edge_node_1764763781720__node_1764756534931_1",
+        "source": "node_1764763781720",
+        "target": "node_1764756534931",
+        "functionality": 3
+      },
+      "edge_node_1764763781720__node_1764756406852_2": {
+        "id": "edge_node_1764763781720__node_1764756406852_2",
+        "source": "node_1764763781720",
+        "target": "node_1764756406852",
+        "functionality": 3
+      },
+      "edge_node_1764763952810__node_1764758672800_0": {
+        "id": "edge_node_1764763952810__node_1764758672800_0",
+        "source": "node_1764763952810",
+        "target": "node_1764758672800",
+        "functionality": 3
+      },
+      "edge_node_1764763952810__node_1764763781720_1": {
+        "id": "edge_node_1764763952810__node_1764763781720_1",
+        "source": "node_1764763952810",
+        "target": "node_1764763781720",
+        "functionality": 3
+      },
+      "edge_node_1764763952810__node_1764763540852_2": {
+        "id": "edge_node_1764763952810__node_1764763540852_2",
+        "source": "node_1764763952810",
+        "target": "node_1764763540852",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_1__node_1764755425117_0": {
+        "id": "edge_node_1764754067370_1__node_1764755425117_0",
+        "source": "node_1764754067370_1",
+        "target": "node_1764755425117",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_1__node_1764755438669_1": {
+        "id": "edge_node_1764754067370_1__node_1764755438669_1",
+        "source": "node_1764754067370_1",
+        "target": "node_1764755438669",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_1__node_1764755443188_2": {
+        "id": "edge_node_1764754067370_1__node_1764755443188_2",
+        "source": "node_1764754067370_1",
+        "target": "node_1764755443188",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_1__node_1764760888903_1": {
+        "id": "edge_node_1764754067370_1__node_1764760888903_1",
+        "source": "node_1764754067370_1",
+        "target": "node_1764760888903",
+        "functionality": 3
+      },
+      "edge_node_1764755425117__node_1764754067370_1_0": {
+        "id": "edge_node_1764755425117__node_1764754067370_1_0",
+        "source": "node_1764755425117",
+        "target": "node_1764754067370_1",
+        "functionality": 3
+      },
+      "edge_node_1764755425117__node_1764755438669_1": {
+        "id": "edge_node_1764755425117__node_1764755438669_1",
+        "source": "node_1764755425117",
+        "target": "node_1764755438669",
+        "functionality": 3
+      },
+      "edge_node_1764755425117__node_1764755443188_2": {
+        "id": "edge_node_1764755425117__node_1764755443188_2",
+        "source": "node_1764755425117",
+        "target": "node_1764755443188",
+        "functionality": 3
+      },
+      "edge_node_1764755425117__node_1764756406852_1_3": {
+        "id": "edge_node_1764755425117__node_1764756406852_1_3",
+        "source": "node_1764755425117",
+        "target": "node_1764756406852_1",
+        "functionality": 3
+      },
+      "edge_node_1764755438669__node_1764754067370_1_0": {
+        "id": "edge_node_1764755438669__node_1764754067370_1_0",
+        "source": "node_1764755438669",
+        "target": "node_1764754067370_1",
+        "functionality": 3
+      },
+      "edge_node_1764755438669__node_1764755425117_1": {
+        "id": "edge_node_1764755438669__node_1764755425117_1",
+        "source": "node_1764755438669",
+        "target": "node_1764755425117",
+        "functionality": 3
+      },
+      "edge_node_1764755438669__node_1764755443188_2": {
+        "id": "edge_node_1764755438669__node_1764755443188_2",
+        "source": "node_1764755438669",
+        "target": "node_1764755443188",
+        "functionality": 3
+      },
+      "edge_node_1764755438669__node_1764756677081_1_4": {
+        "id": "edge_node_1764755438669__node_1764756677081_1_4",
+        "source": "node_1764755438669",
+        "target": "node_1764756677081_1",
+        "functionality": 3
+      },
+      "edge_node_1764755443188__node_1764754067370_1_0": {
+        "id": "edge_node_1764755443188__node_1764754067370_1_0",
+        "source": "node_1764755443188",
+        "target": "node_1764754067370_1",
+        "functionality": 3
+      },
+      "edge_node_1764755443188__node_1764755425117_1": {
+        "id": "edge_node_1764755443188__node_1764755425117_1",
+        "source": "node_1764755443188",
+        "target": "node_1764755425117",
+        "functionality": 3
+      },
+      "edge_node_1764755443188__node_1764755438669_2": {
+        "id": "edge_node_1764755443188__node_1764755438669_2",
+        "source": "node_1764755443188",
+        "target": "node_1764755438669",
+        "functionality": 3
+      },
+      "edge_node_1764755443188__node_1764756777009_1_3": {
+        "id": "edge_node_1764755443188__node_1764756777009_1_3",
+        "source": "node_1764755443188",
+        "target": "node_1764756777009_1",
+        "functionality": 3
+      },
+      "edge_node_1764755443188__node_1764756406852_1_4": {
+        "id": "edge_node_1764755443188__node_1764756406852_1_4",
+        "source": "node_1764755443188",
+        "target": "node_1764756406852_1",
+        "functionality": 3
+      },
+      "edge_node_1764756406852_1__node_1764755425117_0": {
+        "id": "edge_node_1764756406852_1__node_1764755425117_0",
+        "source": "node_1764756406852_1",
+        "target": "node_1764755425117",
+        "functionality": 3
+      },
+      "edge_node_1764756406852_1__node_1764756534931_1_1": {
+        "id": "edge_node_1764756406852_1__node_1764756534931_1_1",
+        "source": "node_1764756406852_1",
+        "target": "node_1764756534931_1",
+        "functionality": 3
+      },
+      "edge_node_1764756406852_1__node_1764756677081_1_2": {
+        "id": "edge_node_1764756406852_1__node_1764756677081_1_2",
+        "source": "node_1764756406852_1",
+        "target": "node_1764756677081_1",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "edge_node_1764756406852_1__node_1764755443188_3": {
+        "id": "edge_node_1764756406852_1__node_1764755443188_3",
+        "source": "node_1764756406852_1",
+        "target": "node_1764755443188",
+        "functionality": 3
+      },
+      "edge_node_1764756406852_1__node_1764760715521_1": {
+        "id": "edge_node_1764756406852_1__node_1764760715521_1",
+        "source": "node_1764756406852_1",
+        "target": "node_1764760715521",
+        "functionality": 3
+      },
+      "edge_node_1764756451988__node_1764756534931_1_1": {
+        "id": "edge_node_1764756451988__node_1764756534931_1_1",
+        "source": "node_1764756451988",
+        "target": "node_1764756534931_1",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "strong_earthquake": 2
+        }
+      },
+      "edge_node_1764756451988__node_1764760948153_1": {
+        "id": "edge_node_1764756451988__node_1764760948153_1",
+        "source": "node_1764756451988",
+        "target": "node_1764760948153",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_1__node_1764756451988_0": {
+        "id": "edge_node_1764756534931_1__node_1764756451988_0",
+        "source": "node_1764756534931_1",
+        "target": "node_1764756451988",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "strong_earthquake": 2
+        }
+      },
+      "edge_node_1764756534931_1__node_1764756406852_1_1": {
+        "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
+        "source": "node_1764756534931_1",
+        "target": "node_1764756406852_1",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_1__node_1764760763435_1": {
+        "id": "edge_node_1764756534931_1__node_1764760763435_1",
+        "source": "node_1764756534931_1",
+        "target": "node_1764760763435",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_1_node_1772615442881_3": {
+        "id": "edge_node_1764756534931_1_node_1772615442881_3",
+        "source": "node_1764756534931_1",
+        "target": "node_1772615442881",
+        "functionality": 3
+      },
+      "edge_node_1764756677081_1__node_1764755438669_0": {
+        "id": "edge_node_1764756677081_1__node_1764755438669_0",
+        "source": "node_1764756677081_1",
+        "target": "node_1764755438669",
+        "functionality": 3
+      },
+      "edge_node_1764756677081_1__node_1764756406852_1_2": {
+        "id": "edge_node_1764756677081_1__node_1764756406852_1_2",
+        "source": "node_1764756677081_1",
+        "target": "node_1764756406852_1",
+        "functionality": 3
+      },
+      "edge_node_1764756677081_1__node_1764758863910_3": {
+        "id": "edge_node_1764756677081_1__node_1764758863910_3",
+        "source": "node_1764756677081_1",
+        "target": "node_1764758863910",
+        "functionality": 3
+      },
+      "edge_node_1764756677081_1__node_1764760856861_1": {
+        "id": "edge_node_1764756677081_1__node_1764760856861_1",
+        "source": "node_1764756677081_1",
+        "target": "node_1764760856861",
+        "functionality": 3
+      },
+      "edge_node_1764756777009_1__node_1764755443188_1": {
+        "id": "edge_node_1764756777009_1__node_1764755443188_1",
+        "source": "node_1764756777009_1",
+        "target": "node_1764755443188",
+        "functionality": 3
+      },
+      "edge_node_1764756777009_1__node_1764758863910_2": {
+        "id": "edge_node_1764756777009_1__node_1764758863910_2",
+        "source": "node_1764756777009_1",
+        "target": "node_1764758863910",
+        "functionality": 3
+      },
+      "edge_node_1764756777009_1__node_1764761676929_1": {
+        "id": "edge_node_1764756777009_1__node_1764761676929_1",
+        "source": "node_1764756777009_1",
+        "target": "node_1764761676929",
+        "functionality": 3
+      },
+      "edge_node_1764758863910__node_1764756777009_1_0": {
+        "id": "edge_node_1764758863910__node_1764756777009_1_0",
+        "source": "node_1764758863910",
+        "target": "node_1764756777009_1",
+        "functionality": 3
+      },
+      "edge_node_1764758863910__node_1764756677081_1_1": {
+        "id": "edge_node_1764758863910__node_1764756677081_1_1",
+        "source": "node_1764758863910",
+        "target": "node_1764756677081_1",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_2__node_1764760888903_1": {
+        "id": "edge_node_1764754067370_2__node_1764760888903_1",
+        "source": "node_1764754067370_2",
+        "target": "node_1764760888903",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_2__node_1764758863910_1_2": {
+        "id": "edge_node_1764754067370_2__node_1764758863910_1_2",
+        "source": "node_1764754067370_2",
+        "target": "node_1764758863910_1",
+        "functionality": 3
+      },
+      "edge_node_1764754067370_2__node_1764756534931_2_3": {
+        "id": "edge_node_1764754067370_2__node_1764756534931_2_3",
+        "source": "node_1764754067370_2",
+        "target": "node_1764756534931_2",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_2__node_1764760763435_1": {
+        "id": "edge_node_1764756534931_2__node_1764760763435_1",
+        "source": "node_1764756534931_2",
+        "target": "node_1764760763435",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_2__node_1764762932932_1_3": {
+        "id": "edge_node_1764756534931_2__node_1764762932932_1_3",
+        "source": "node_1764756534931_2",
+        "target": "node_1764762932932_1",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_2__node_1764760715521_3": {
+        "id": "edge_node_1764756534931_2__node_1764760715521_3",
+        "source": "node_1764756534931_2",
+        "target": "node_1764760715521",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_2__node_1764754067370_2_4": {
+        "id": "edge_node_1764756534931_2__node_1764754067370_2_4",
+        "source": "node_1764756534931_2",
+        "target": "node_1764754067370_2",
+        "functionality": 3
+      },
+      "edge_node_1764756534931_2__node_1764758863910_1_5": {
+        "id": "edge_node_1764756534931_2__node_1764758863910_1_5",
+        "source": "node_1764756534931_2",
+        "target": "node_1764758863910_1",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "edge_node_1764756534931_2_node_1772615442881_5": {
+        "id": "edge_node_1764756534931_2_node_1772615442881_5",
+        "source": "node_1764756534931_2",
+        "target": "node_1772615442881",
+        "functionality": 3
+      },
+      "edge_node_1764756677081_2__node_1764760856861_1": {
+        "id": "edge_node_1764756677081_2__node_1764760856861_1",
+        "source": "node_1764756677081_2",
+        "target": "node_1764760856861",
+        "functionality": 3
+      },
+      "edge_node_1764756777009_2_node_1764761676929_0": {
+        "id": "edge_node_1764756777009_2_node_1764761676929_0",
+        "source": "node_1764756777009_2",
+        "target": "node_1764761676929",
+        "functionality": 3
+      },
+      "edge_node_1764758643809_1__node_1764754067370_2_2": {
+        "id": "edge_node_1764758643809_1__node_1764754067370_2_2",
+        "source": "node_1764758643809_1",
+        "target": "node_1764754067370_2",
+        "functionality": 3
+      },
+      "edge_node_1764758863910_1__node_1764756677081_2_1": {
+        "id": "edge_node_1764758863910_1__node_1764756677081_2_1",
+        "source": "node_1764758863910_1",
+        "target": "node_1764756677081_2",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "edge_node_1764758863910_1__node_1764756777009_2_3": {
+        "id": "edge_node_1764758863910_1__node_1764756777009_2_3",
+        "source": "node_1764758863910_1",
+        "target": "node_1764756777009_2",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "edge_node_1764758863910_1__node_1764756534931_2_4": {
+        "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
+        "source": "node_1764758863910_1",
+        "target": "node_1764756534931_2",
+        "functionality": 3,
+        "vulnerability_levels": {
+          "flood": 2
+        }
+      },
+      "edge_node_1764758863910_1__node_1764754067370_2_3": {
+        "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
+        "source": "node_1764758863910_1",
+        "target": "node_1764754067370_2",
+        "functionality": 3
+      },
+      "edge_node_1764762932932_1__node_1764760948153_1": {
+        "id": "edge_node_1764762932932_1__node_1764760948153_1",
+        "source": "node_1764762932932_1",
+        "target": "node_1764760948153",
+        "functionality": 3
+      },
+      "edge_node_1765797139110__node_1764758863910_1_4": {
+        "id": "edge_node_1765797139110__node_1764758863910_1_4",
+        "source": "node_1765797139110",
+        "target": "node_1764758863910_1",
+        "functionality": 3
+      }
+    },
+    "canvases": [
+      {
+        "id": "canvas-electrical",
+        "label": "Electrical",
+        "color": "#eab308",
+        "graph": {
+          "graph_type": "power",
+          "node_ids": [
+            "node_1762946740143",
+            "node_1762946753934",
+            "node_1764754067370",
+            "node_1764756406852",
+            "node_1764756534931",
+            "node_1764756677081",
+            "node_1764756777009",
+            "node_1764758672800",
+            "node_1764760715521",
+            "node_1764760763435",
+            "node_1764760818917",
+            "node_1764760856861",
+            "node_1764760888903",
+            "node_1764760948153",
+            "node_1764761676929",
+            "node_1764762932932",
+            "node_1764763540852",
+            "node_1764763781720",
+            "node_1764763952810",
+            "node_1769766555762",
+            "node_1772615442881"
+          ],
+          "edge_ids": [
+            "edge_node_1762946740143_node_1764760818917_1",
+            "edge_node_1762946753934_node_1764760818917_2",
+            "edge_node_1762946753934_node_1764763952810_3",
+            "edge_node_1764754067370__node_1764760888903_4",
+            "edge_node_1764754067370_node_1764763540852_1",
+            "edge_node_1764756406852__node_1764754067370_2",
+            "edge_node_1764756406852__node_1764760715521_5",
+            "edge_node_1764756534931__node_1764760763435_5",
+            "edge_node_1764756534931_node_1772615442881_1",
+            "edge_node_1764756677081__node_1764760856861_4",
+            "edge_node_1764756777009__node_1764761676929_2",
+            "edge_node_1764758672800__node_1764754067370_3",
+            "edge_node_1764758672800__node_1764756677081_1",
+            "edge_node_1764758672800__node_1764756777009_2",
+            "edge_node_1764760818917_node_1762946740143_1",
+            "edge_node_1764760818917_node_1762946753934_0",
+            "edge_node_1764760818917_node_1769766555762_2",
+            "edge_node_1764760818917_node_1772615442881_3",
+            "edge_node_1764762932932__node_1764760948153_0",
+            "edge_node_1764763540852__node_1764754067370_1",
+            "edge_node_1764763540852__node_1764756777009_2",
+            "edge_node_1764763781720__node_1764756406852_2",
+            "edge_node_1764763781720__node_1764756534931_1",
+            "edge_node_1764763781720__node_1764762932932_0",
+            "edge_node_1764763952810__node_1764758672800_0",
+            "edge_node_1764763952810__node_1764763540852_2",
+            "edge_node_1764763952810__node_1764763781720_1",
+            "edge_node_1769766555762_node_1764760818917_1"
+          ]
+        }
+      },
+      {
+        "id": "canvas-water",
+        "label": "Water",
+        "color": "#3b82f6",
+        "graph": {
+          "graph_type": "water",
+          "node_ids": [
+            "node_1762946740143",
+            "node_1762946753934",
+            "node_1764754067370_2",
+            "node_1764756534931_2",
+            "node_1764756677081_2",
+            "node_1764756777009_2",
+            "node_1764758643809_1",
+            "node_1764758863910_1",
+            "node_1764760715521",
+            "node_1764760763435",
+            "node_1764760818917",
+            "node_1764760856861",
+            "node_1764760888903",
+            "node_1764760948153",
+            "node_1764761676929",
+            "node_1764762932932_1",
+            "node_1765797139110",
+            "node_1769766555762",
+            "node_1772615442881"
+          ],
+          "edge_ids": [
+            "edge_node_1762946740143_node_1764760818917_1",
+            "edge_node_1762946740143_node_1765797139110_2",
+            "edge_node_1762946753934_node_1764760818917_2",
+            "edge_node_1764754067370_2__node_1764756534931_2_3",
+            "edge_node_1764754067370_2__node_1764758863910_1_2",
+            "edge_node_1764754067370_2__node_1764760888903_1",
+            "edge_node_1764756534931_2__node_1764754067370_2_4",
+            "edge_node_1764756534931_2__node_1764758863910_1_5",
+            "edge_node_1764756534931_2__node_1764760715521_3",
+            "edge_node_1764756534931_2__node_1764760763435_1",
+            "edge_node_1764756534931_2__node_1764762932932_1_3",
+            "edge_node_1764756534931_2_node_1772615442881_5",
+            "edge_node_1764756677081_2__node_1764760856861_1",
+            "edge_node_1764756777009_2_node_1764761676929_0",
+            "edge_node_1764758643809_1__node_1764754067370_2_2",
+            "edge_node_1764758863910_1__node_1764754067370_2_3",
+            "edge_node_1764758863910_1__node_1764756534931_2_4",
+            "edge_node_1764758863910_1__node_1764756677081_2_1",
+            "edge_node_1764758863910_1__node_1764756777009_2_3",
+            "edge_node_1764760818917_node_1762946740143_1",
+            "edge_node_1764760818917_node_1762946753934_0",
+            "edge_node_1764760818917_node_1769766555762_2",
+            "edge_node_1764760818917_node_1772615442881_3",
+            "edge_node_1764762932932_1__node_1764760948153_1",
+            "edge_node_1765797139110__node_1764758863910_1_4",
+            "edge_node_1769766555762_node_1764760818917_1"
+          ]
+        }
+      },
+      {
+        "id": "canvas-transport",
+        "label": "Transport",
+        "color": "#22c55e",
+        "graph": {
+          "graph_type": "transport",
+          "node_ids": [
+            "node_1762946740143",
+            "node_1762946753934",
+            "node_1764754067370_1",
+            "node_1764755425117",
+            "node_1764755438669",
+            "node_1764755443188",
+            "node_1764756406852_1",
+            "node_1764756451988",
+            "node_1764756534931_1",
+            "node_1764756677081_1",
+            "node_1764756777009_1",
+            "node_1764758863910",
+            "node_1764760715521",
+            "node_1764760763435",
+            "node_1764760818917",
+            "node_1764760856861",
+            "node_1764760888903",
+            "node_1764760948153",
+            "node_1764761676929",
+            "node_1769766555762",
+            "node_1772615442881"
+          ],
+          "edge_ids": [
+            "edge_node_1762946740143_node_1764760818917_1",
+            "edge_node_1762946753934_node_1764760818917_2",
+            "edge_node_1764754067370_1__node_1764755425117_0",
+            "edge_node_1764754067370_1__node_1764755438669_1",
+            "edge_node_1764754067370_1__node_1764755443188_2",
+            "edge_node_1764754067370_1__node_1764760888903_1",
+            "edge_node_1764755425117__node_1764754067370_1_0",
+            "edge_node_1764755425117__node_1764755438669_1",
+            "edge_node_1764755425117__node_1764755443188_2",
+            "edge_node_1764755425117__node_1764756406852_1_3",
+            "edge_node_1764755438669__node_1764754067370_1_0",
+            "edge_node_1764755438669__node_1764755425117_1",
+            "edge_node_1764755438669__node_1764755443188_2",
+            "edge_node_1764755438669__node_1764756677081_1_4",
+            "edge_node_1764755443188__node_1764754067370_1_0",
+            "edge_node_1764755443188__node_1764755425117_1",
+            "edge_node_1764755443188__node_1764755438669_2",
+            "edge_node_1764755443188__node_1764756406852_1_4",
+            "edge_node_1764755443188__node_1764756777009_1_3",
+            "edge_node_1764756406852_1__node_1764755425117_0",
+            "edge_node_1764756406852_1__node_1764755443188_3",
+            "edge_node_1764756406852_1__node_1764756534931_1_1",
+            "edge_node_1764756406852_1__node_1764756677081_1_2",
+            "edge_node_1764756406852_1__node_1764760715521_1",
+            "edge_node_1764756451988__node_1764756534931_1_1",
+            "edge_node_1764756451988__node_1764760948153_1",
+            "edge_node_1764756534931_1__node_1764756406852_1_1",
+            "edge_node_1764756534931_1__node_1764756451988_0",
+            "edge_node_1764756534931_1__node_1764760763435_1",
+            "edge_node_1764756534931_1_node_1772615442881_3",
+            "edge_node_1764756677081_1__node_1764755438669_0",
+            "edge_node_1764756677081_1__node_1764756406852_1_2",
+            "edge_node_1764756677081_1__node_1764758863910_3",
+            "edge_node_1764756677081_1__node_1764760856861_1",
+            "edge_node_1764756777009_1__node_1764755443188_1",
+            "edge_node_1764756777009_1__node_1764758863910_2",
+            "edge_node_1764756777009_1__node_1764761676929_1",
+            "edge_node_1764758863910__node_1764756677081_1_1",
+            "edge_node_1764758863910__node_1764756777009_1_0",
+            "edge_node_1764760818917_node_1762946740143_1",
+            "edge_node_1764760818917_node_1762946753934_0",
+            "edge_node_1764760818917_node_1769766555762_2",
+            "edge_node_1764760818917_node_1772615442881_3",
+            "edge_node_1769766555762_node_1764760818917_1"
+          ]
+        }
+      }
+    ],
+    "update_history": [],
+    "scorecard": []
+  },
+  "config": {
+    "version": "1.0",
+    "meta": {
+      "name": "Full Palmanova",
+      "description": "Configuration migrated from network_analysis_tool format."
+    },
+    "functionality_scale": [
+      {
+        "level": 1,
+        "label": "critical",
+        "color": "#ef4444"
+      },
+      {
+        "level": 2,
+        "label": "operational_warning",
+        "color": "#f97316"
+      },
+      {
+        "level": 3,
+        "label": "operational",
+        "color": "#22c55e"
+      }
+    ],
+    "categories": [
+      {
+        "name": "power",
+        "category_type": "SourceToDemands",
+        "color": "#eab308"
+      },
+      {
+        "name": "water",
+        "category_type": "SourceToDemands",
+        "color": "#3b82f6"
+      },
+      {
+        "name": "transport",
+        "category_type": "Requisite",
+        "color": "#22c55e"
+      },
+      {
+        "name": "manager",
+        "category_type": "Requisite",
+        "color": "#8b5cf6"
+      },
+      {
+        "name": "city",
+        "category_type": "Requisite",
+        "color": "#ec4899"
+      },
+      {
+        "name": "essentials",
+        "category_type": "Requisite",
+        "color": "#f97316"
+      },
+      {
+        "name": "relevants",
+        "category_type": "Requisite",
+        "color": "#14b8a6"
+      }
+    ],
+    "events": [
+      {
+        "id": "flood",
+        "label": "Flood",
+        "type": "hazard",
+        "frequency_per_10y": 0
+      },
+      {
+        "id": "strong_earthquake",
+        "label": "Strong Earthquake",
+        "type": "hazard",
+        "frequency_per_10y": 0
+      },
+      {
+        "id": "weak_earthquake",
+        "label": "Weak Earthquake",
+        "type": "hazard",
+        "frequency_per_10y": 0
+      }
+    ],
+    "graph_types": [
+      {
+        "name": "power",
+        "heuristics": []
+      },
+      {
+        "name": "water",
+        "heuristics": []
+      },
+      {
+        "name": "transport",
+        "heuristics": []
+      }
+    ],
+    "node_defaults": {}
+  }
+}
