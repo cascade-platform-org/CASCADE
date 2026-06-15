@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 
 # ---------------------------------------------------------------------------
@@ -12,16 +12,35 @@ from pydantic import BaseModel, Field
 # node_type is a free string — valid values are defined in Client Configuration,
 # not hardcoded in the schema. This allows new Node Types without a schema change.
 
+
+def _strip_zero_shares(v: object) -> object:
+    """Strip zero-value entries before the per-entry gt(0) check fires.
+
+    Zero shares are semantically absent (a blameless element is not listed).
+    The engine never emits 0.0, but external tools or project files created
+    before this invariant was enforced may contain them. Filtering here
+    provides backward compat without a validation error.
+    """
+    if isinstance(v, dict):
+        return {k: frac for k, frac in v.items() if frac}
+    return v
+
+
 # ElementId | EventId -> share in (0, 1], summing to 1. Zero shares are never
 # emitted (a blameless element is simply absent) — enforced here, mirrored by
 # Zod's gt(0).lte(1) on the frontend.
-ResponsibilityShare = dict[str, Annotated[float, Field(gt=0, le=1)]]
+ResponsibilityShare = Annotated[
+    dict[str, Annotated[float, Field(gt=0, le=1)]],
+    BeforeValidator(_strip_zero_shares),
+]
 
 # EventId -> vulnerability in 0..N−1 (N = max configured functionality level).
 # 0 = immune (equivalent to the key being absent — the inspector UI writes 0
 # rather than deleting the key). The event imposes
 # functionality = max(1, N − vulnerability_level).
-VulnerabilityLevels = dict[str, Annotated[int, Field(ge=0)]]
+# Upper bound le=100: N is runtime data so the exact N−1 cap is enforced by
+# the engine; 100 is a static sanity bound (no realistic scale exceeds it).
+VulnerabilityLevels = dict[str, Annotated[int, Field(ge=0, le=100)]]
 
 
 # ---------------------------------------------------------------------------
