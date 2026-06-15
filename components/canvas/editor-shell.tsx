@@ -14,6 +14,7 @@ import { ActiveRulesPanel } from "@/components/rules/active-rules-panel";
 import { RulesManualPanel } from "@/components/rules/rules-manual-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
+import { InterventionPanel } from "@/components/canvas/intervention-panel";
 import { ToastContainer } from "./toast-container";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -29,6 +30,7 @@ export function EditorShell() {
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
   const rulesManualPanelOpen = useUiStore((s) => s.rulesManualPanelOpen);
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
+  const interventionPanelOpen = useUiStore((s) => s.interventionPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
   const scorecardSaveDialogOpen = useUiStore((s) => s.scorecardSaveDialogOpen);
@@ -101,6 +103,7 @@ export function EditorShell() {
       {activeRulesPanelOpen && <ActiveRulesPanel />}
       {rulesManualPanelOpen && <RulesManualPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
+      {interventionPanelOpen && <InterventionPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
       {scorecardSaveDialogOpen && (
         <SaveScorecardDialog onClose={closeScorecardSaveDialog} />

@@ -66,6 +66,9 @@ export interface UiState {
   /** When true, the Save-to-Scorecard dialog is open independently of the Scorecard panel. */
   scorecardSaveDialogOpen: boolean;
 
+  // --- Intervention prioritisation panel ---
+  interventionPanelOpen: boolean;
+
   // --- Inspector ---
   /** When false the inspector panel is fully collapsed. */
   inspectorOpen: boolean;
@@ -169,6 +172,10 @@ export interface UiActions {
   openScorecardSaveDialog: () => void;
   closeScorecardSaveDialog: () => void;
 
+  // --- Intervention panel ---
+  toggleInterventionPanel: () => void;
+  closeInterventionPanel: () => void;
+
   // --- Inspector ---
   setInspectorOpen: (open: boolean) => void;
 
@@ -221,6 +228,7 @@ const initialState: UiState = {
   rulesManualPanelOpen: false,
   scorecardPanelOpen: false,
   scorecardSaveDialogOpen: false,
+  interventionPanelOpen: false,
   temporalAutoPropagate: true,
   temporalJumpRevertSnapshot: null,
   temporalJumpElapsedHours: 0,
@@ -362,6 +370,18 @@ export const useUiStore = create<UiStore>()(
 
     closeScorecardSaveDialog() {
       set((state) => { state.scorecardSaveDialogOpen = false; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Intervention panel
+    // -------------------------------------------------------------------------
+
+    toggleInterventionPanel() {
+      set((state) => { state.interventionPanelOpen = !state.interventionPanelOpen; });
+    },
+
+    closeInterventionPanel() {
+      set((state) => { state.interventionPanelOpen = false; });
     },
 
     // -------------------------------------------------------------------------

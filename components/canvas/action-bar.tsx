@@ -358,8 +358,6 @@ function TemporalJumpControls({
   function handleRevert() {
     if (!revertSnapshot || elapsedHours === 0) return;
     executeRevert({ revertSnapshot, elapsedHours, scope, clearTemporalJumpProgress });
-    // Refresh the panel's tick display to reflect the restored (pre-jump) state.
-    setSnapshotTicks(liveTicks);
     pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
   }
 

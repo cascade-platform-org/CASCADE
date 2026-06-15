@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Settings, Save, User, Plus, ChevronDown, Layers, X, BookMarked } from "lucide-react";
+import { Settings, Save, User, Plus, ChevronDown, Layers, X, BookMarked, Wrench } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
@@ -63,6 +63,13 @@ export function Topbar() {
           onClick={() => useUiStore.getState().toggleScorecardPanel()}
         >
           <BookMarked size={15} />
+        </TopbarIconButton>
+
+        <TopbarIconButton
+          label="Repair"
+          onClick={() => useUiStore.getState().toggleInterventionPanel()}
+        >
+          <Wrench size={15} />
         </TopbarIconButton>
 
         <TopbarIconButton

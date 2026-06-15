@@ -89,7 +89,7 @@ export const NodeSchema = z.object({
    * vulnerable; 0 = immune (same as absent — the inspector slider writes 0
    * rather than deleting the key). Imposed functionality = max(1, N − level).
    */
-  vulnerability_levels: z.record(z.string(), z.number().int().min(0)).optional(),
+  vulnerability_levels: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
   /**
    * Persisted last-known responsibility share for this node's current Functionality.
    * Keyed by ElementId or EventId; values in (0, 1] summing to 1.
@@ -125,7 +125,7 @@ export const EdgeSchema = z.object({
   expected_repair_time: z.number().int().min(0).optional(),
   capacity: z.number().optional(),
   /** Same semantics as on nodes: 0..N−1, 0 = immune (same as absent). */
-  vulnerability_levels: z.record(z.string(), z.number().int().min(0)).optional(),
+  vulnerability_levels: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
   /**
    * Persisted last-known responsibility share for this edge's current Functionality.
    * Keyed by ElementId or EventId; values in (0, 1] summing to 1.
