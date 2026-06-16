@@ -15,13 +15,145 @@
  * Debug overlay: add ?geoDebug=1 to the URL.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useReactFlow, useViewport } from "@xyflow/react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useMapViewportSync } from "@/hooks/useMapViewportSync";
 import type { GeoAnchor } from "@/lib/schemas/network";
+
+// ---------------------------------------------------------------------------
+// Ghost graph overlay — shows node/edge positions in setup mode
+// ---------------------------------------------------------------------------
+
+interface GhostGraphOverlayProps {
+  canvasId: string;
+  /** React Flow viewport — used to convert flow positions to screen positions. */
+  vpX: number;
+  vpY: number;
+  rfZoom: number;
+}
+
+function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProps) {
+  const canvas = useCanvasStore((s) => s.canvases[canvasId]);
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
+
+  const nodeIds: string[] = canvas?.graph.node_ids ?? [];
+  const edgeIds: string[] = canvas?.graph.edge_ids ?? [];
+
+  const nodes = useMemo(
+    () => nodeIds.map((id) => allNodes[id]).filter(Boolean),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodeIds.join(","), allNodes],
+  );
+
+  const edges = useMemo(
+    () => edgeIds.map((id) => allEdges[id]).filter(Boolean),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [edgeIds.join(","), allEdges],
+  );
+
+  // Map from node id → screen {x, y}
+  const screenPos = useMemo(() => {
+    const map: Record<string, { x: number; y: number }> = {};
+    for (const n of nodes) {
+      if (!n.position) continue;
+      map[n.id] = {
+        x: n.position.x * rfZoom + vpX,
+        y: n.position.y * rfZoom + vpY,
+      };
+    }
+    return map;
+  }, [nodes, vpX, vpY, rfZoom]);
+
+  if (nodes.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 15,
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+    >
+      {/* Edge lines */}
+      <svg
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
+      >
+        {edges.map((e) => {
+          const s = screenPos[e.source];
+          const t = screenPos[e.target];
+          if (!s || !t) return null;
+          return (
+            <line
+              key={e.id}
+              x1={s.x} y1={s.y}
+              x2={t.x} y2={t.y}
+              stroke="rgba(59,130,246,0.45)"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+          );
+        })}
+      </svg>
+
+      {/* Node dots + labels */}
+      {nodes.map((n) => {
+        const s = screenPos[n.id];
+        if (!s) return null;
+        return (
+          <div
+            key={n.id}
+            style={{
+              position: "absolute",
+              left: s.x,
+              top: s.y,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: "rgba(59,130,246,0.75)",
+                border: "1.5px solid rgba(255,255,255,0.85)",
+                boxShadow: "0 0 4px rgba(0,0,0,0.3)",
+              }}
+            />
+            {n.label && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: 13,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: 10,
+                  fontWeight: 500,
+                  color: "rgba(30,30,30,0.9)",
+                  background: "rgba(255,255,255,0.8)",
+                  padding: "1px 4px",
+                  borderRadius: 3,
+                  whiteSpace: "nowrap",
+                  maxWidth: 120,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  backdropFilter: "blur(2px)",
+                }}
+              >
+                {n.label}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Tile style catalogue
@@ -80,8 +212,10 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       new URLSearchParams(window.location.search).get("geoDebug") === "1",
   );
   const [debugInfo, setDebugInfo] = useState("");
+  const [applyToAll, setApplyToAll] = useState(false);
 
   const canvas           = useCanvasStore((s) => s.canvases[canvasId]);
+  const canvasOrder      = useCanvasStore((s) => s.canvasOrder);
   const updateCanvasMeta = useCanvasStore((s) => s.updateCanvasMeta);
 
   const geoAnchor  = canvas?.geo_anchor ?? null;
@@ -169,11 +303,15 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       rf_zoom: rfVp.zoom,
       ml_zoom: mlZoom,
     };
-    updateCanvasMeta(canvasId, {
-      geo_anchor: anchor,
-      map_center: { lng: mlCenter.lng, lat: mlCenter.lat },
-      map_zoom:   mlZoom,
-    });
+
+    const targets = applyToAll ? canvasOrder : [canvasId];
+    for (const id of targets) {
+      updateCanvasMeta(id, {
+        geo_anchor: anchor,
+        map_center: { lng: mlCenter.lng, lat: mlCenter.lat },
+        map_zoom:   mlZoom,
+      });
+    }
   }
 
   function handleResetAnchor() {
@@ -216,6 +354,33 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
     return (
       <>
         {mapContainer}
+
+        {/* Ghost graph: nodes and edges at their React Flow screen positions */}
+        <GhostGraphOverlay
+          canvasId={canvasId}
+          vpX={vpX}
+          vpY={vpY}
+          rfZoom={rfZoom}
+        />
+
+        {/* Center crosshair — this flow point will be tied to the map center */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 16,
+            pointerEvents: "none",
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <line x1="16" y1="2" x2="16" y2="30" stroke="rgba(59,130,246,0.8)" strokeWidth="1.5" />
+            <line x1="2" y1="16" x2="30" y2="16" stroke="rgba(59,130,246,0.8)" strokeWidth="1.5" />
+            <circle cx="16" cy="16" r="3.5" fill="rgba(59,130,246,0.9)" stroke="white" strokeWidth="1.5" />
+          </svg>
+        </div>
+
         <div
           style={{
             position: "absolute",
@@ -227,33 +392,46 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
           }}
         >
           <div
-            className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95"
-            style={{ minWidth: 340 }}
+            className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95"
+            style={{ minWidth: 380 }}
           >
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                Navigate to your network area
-              </p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Drag to pan · Scroll to zoom · Then set the anchor
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                  Navigate to your network area
+                </p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Graph preview shown · Pan &amp; zoom to position it · Set anchor to confirm
+                </p>
+              </div>
+              <select
+                value={tileStyleId}
+                onChange={(e) => updateCanvasMeta(canvasId, { map_style: e.target.value })}
+                className="shrink-0 rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
+              >
+                {STYLE_OPTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleSetAnchor}
+                disabled={!mapReady}
+                className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Set anchor
+              </button>
             </div>
-            <select
-              value={tileStyleId}
-              onChange={(e) => updateCanvasMeta(canvasId, { map_style: e.target.value })}
-              className="shrink-0 rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-            >
-              {STYLE_OPTIONS.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-            <button
-              onClick={handleSetAnchor}
-              disabled={!mapReady}
-              className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              Set anchor
-            </button>
+            {canvasOrder.length > 1 && (
+              <label className="flex cursor-pointer items-center gap-2 self-end text-[11px] text-zinc-500 dark:text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={applyToAll}
+                  onChange={(e) => setApplyToAll(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded accent-blue-600"
+                />
+                Apply this anchor to all canvases ({canvasOrder.length})
+              </label>
+            )}
           </div>
         </div>
       </>

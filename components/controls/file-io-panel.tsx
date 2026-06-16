@@ -67,7 +67,8 @@ export function FileIoPanel() {
         return;
       }
       markSaved();
-    } catch {
+    } catch (err) {
+      console.error("[CASCADE] Save failed:", err);
       pushToast({ message: "Save failed.", variant: "error", durationMs: 4000 });
     }
   }

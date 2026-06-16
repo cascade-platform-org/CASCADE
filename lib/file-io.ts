@@ -48,7 +48,15 @@ function pushToHistory(entry: HistoryEntry): void {
   const history = loadHistory();
   history.unshift(entry);
   if (history.length > MAX_HISTORY) history.splice(MAX_HISTORY);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (err) {
+    // QuotaExceededError: the bundle is too large for localStorage (typically
+    // caused by a large update_history with many undo snapshots). The download
+    // already succeeded — silently drop the history entry rather than surfacing
+    // a misleading "Save failed" toast.
+    console.warn("[CASCADE] Could not write version history to localStorage:", err);
+  }
 }
 
 export function getProjectHistory(): HistoryEntry[] {
