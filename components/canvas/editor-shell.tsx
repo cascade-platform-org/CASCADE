@@ -5,7 +5,8 @@ import { Topbar } from "./topbar";
 import { ActionBar } from "./action-bar";
 import { StatusBar } from "./status-bar";
 import { FlowCanvasWithProvider } from "./flow-canvas";
-import { GlobalViewCanvasWithProvider } from "./global-view-canvas";
+import { GroupedViewCanvasWithProvider } from "./global-view-canvas";
+import { MergedViewCanvasWithProvider } from "./merged-view-canvas";
 import { Inspector } from "./inspector";
 import { Toolbox } from "./toolbox";
 import { ConfigModal } from "@/components/controls/config-modal";
@@ -33,6 +34,7 @@ export function EditorShell() {
   const interventionPanelOpen = useUiStore((s) => s.interventionPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
+  const globalViewLayout = useUiStore((s) => s.globalViewLayout);
   const scorecardSaveDialogOpen = useUiStore((s) => s.scorecardSaveDialogOpen);
   const closeScorecardSaveDialog = useUiStore((s) => s.closeScorecardSaveDialog);
   const setServerReachable = useUiStore((s) => s.setServerReachable);
@@ -80,19 +82,21 @@ export function EditorShell() {
 
       {/* Main workspace */}
       <div className="flex min-h-0 flex-1">
-        {/* Toolbox hidden in global view (read-only) */}
-        {!globalViewActive && <Toolbox />}
+        {/* Toolbox: visible in single-canvas mode and merged global view (both editable) */}
+        {(!globalViewActive || globalViewLayout === "merged") && <Toolbox />}
 
         {/* Canvas area */}
         <div className="relative flex-1 bg-zinc-100 dark:bg-zinc-900">
-          {globalViewActive
-            ? <GlobalViewCanvasWithProvider />
-            : <FlowCanvasWithProvider />
+          {!globalViewActive
+            ? <FlowCanvasWithProvider />
+            : globalViewLayout === "merged"
+            ? <MergedViewCanvasWithProvider />
+            : <GroupedViewCanvasWithProvider />
           }
         </div>
 
-        {/* Inspector hidden in global view */}
-        {!globalViewActive && <Inspector />}
+        {/* Inspector: visible in single-canvas mode and merged global view (both editable) */}
+        {(!globalViewActive || globalViewLayout === "merged") && <Inspector />}
       </div>
 
       <StatusBar />

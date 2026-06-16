@@ -39,6 +39,8 @@ export interface UiState {
   // --- Global view ---
   /** When true the "All" tab is active — shows every canvas merged into one view. */
   globalViewActive: boolean;
+  /** Layout for the global view. "merged" = flat editable canvas (default); "grouped" = read-only coloured boxes. */
+  globalViewLayout: "merged" | "grouped";
 
   // --- Active tool ---
   activeTool: ActiveTool;
@@ -141,6 +143,7 @@ export interface UiActions {
 
   // --- Global view ---
   setGlobalViewActive: (active: boolean) => void;
+  setGlobalViewLayout: (layout: "merged" | "grouped") => void;
 
   // --- Active tool ---
   setActiveTool: (tool: ActiveTool) => void;
@@ -204,7 +207,7 @@ export interface UiActions {
   markSaved: () => void;
 
   // --- Canvas screenshot ---
-  registerCaptureCanvas: (fn: () => Promise<string | undefined>) => void;
+  registerCaptureCanvas: (fn: (() => Promise<string | undefined>) | null) => void;
 }
 
 export type UiStore = UiState & UiActions;
@@ -218,6 +221,7 @@ const initialState: UiState = {
   isPropagating: false,
   serverReachable: false,
   globalViewActive: false,
+  globalViewLayout: "merged",
   activeTool: "select",
   configModalOpen: false,
   configModalTab: "functionality-scale",
@@ -268,12 +272,19 @@ export const useUiStore = create<UiStore>()(
     },
 
     // -------------------------------------------------------------------------
-    // Active tool
+    // Global view
     // -------------------------------------------------------------------------
 
     setGlobalViewActive(active) {
       set((state) => { state.globalViewActive = active; });
     },
+    setGlobalViewLayout(layout) {
+      set((state) => { state.globalViewLayout = layout; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Active tool
+    // -------------------------------------------------------------------------
 
     setActiveTool(tool) {
       set((state) => { state.activeTool = tool; });

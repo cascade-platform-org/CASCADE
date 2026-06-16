@@ -310,3 +310,6 @@ export function GlobalViewCanvasWithProvider() {
     </ReactFlowProvider>
   );
 }
+
+// Re-export the grouped variant under a stable name used by editor-shell.
+export { GlobalViewCanvasWithProvider as GroupedViewCanvasWithProvider };

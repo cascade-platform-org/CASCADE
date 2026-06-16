@@ -1120,6 +1120,119 @@ function PropertiesEditor({
 }
 
 // ---------------------------------------------------------------------------
+// All-canvases meta panel (shown in inspector when global view is active, nothing selected)
+// ---------------------------------------------------------------------------
+
+function AllCanvasesMeta() {
+  const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
+  const allNodes = useCanvasStore((s) => s.nodes);
+  const allEdges = useCanvasStore((s) => s.edges);
+  const updateCanvasMeta = useCanvasStore((s) => s.updateCanvasMeta);
+  const globalViewLayout = useUiStore((s) => s.globalViewLayout);
+  const setGlobalViewLayout = useUiStore((s) => s.setGlobalViewLayout);
+
+  const totalNodes = new Set(canvases.flatMap((c) => c.graph.node_ids)).size;
+  const totalEdges = new Set(canvases.flatMap((c) => c.graph.edge_ids)).size;
+
+  return (
+    <div className="p-3">
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-md bg-zinc-50 p-2 text-center dark:bg-zinc-800">
+          <div className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">{totalNodes}</div>
+          <div className="text-xs text-zinc-400">total nodes</div>
+        </div>
+        <div className="rounded-md bg-zinc-50 p-2 text-center dark:bg-zinc-800">
+          <div className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">{totalEdges}</div>
+          <div className="text-xs text-zinc-400">total edges</div>
+        </div>
+      </div>
+
+      <Field label="View mode">
+        <div className="flex gap-1">
+          {(["merged", "grouped"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setGlobalViewLayout(mode)}
+              className={cn(
+                "flex-1 rounded border px-2 py-1 text-xs capitalize transition-colors",
+                globalViewLayout === mode
+                  ? "border-blue-500 bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  : "border-zinc-200 text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800",
+              )}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <div className="mt-2 space-y-2">
+        <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+          Canvases
+        </div>
+        {canvases.map((c) => {
+          const nodeCount = new Set(c.graph.node_ids.filter((id) => allNodes[id])).size;
+          const edgeCount = new Set(c.graph.edge_ids.filter((id) => allEdges[id])).size;
+          return (
+            <div key={c.id} className="rounded-md border border-zinc-100 px-2 py-2 dark:border-zinc-800">
+              <div className="mb-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: c.color ?? "#94a3b8" }}
+                  />
+                  <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    {c.label ?? c.id}
+                  </span>
+                </div>
+                <span className="shrink-0 text-[11px] text-zinc-400 ml-2">
+                  {nodeCount}n · {edgeCount}e
+                </span>
+              </div>
+
+              {/* Geo toggle — same code as CanvasMeta, only available in merged mode */}
+              {globalViewLayout === "merged" && (
+                <>
+                  <Toggle
+                    value={c.georeferenced ?? false}
+                    onChange={(v) => updateCanvasMeta(c.id, { georeferenced: v })}
+                    label="Georeferenced canvas"
+                  />
+                  {c.georeferenced && (
+                    <div className="mt-1 rounded border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700">
+                      {c.geo_anchor ? (
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-medium text-zinc-700 dark:text-zinc-200">Anchor set</span>
+                            <div className="mt-0.5 text-zinc-400">
+                              {c.geo_anchor.geo.lat.toFixed(5)}°,{" "}
+                              {c.geo_anchor.geo.lng.toFixed(5)}°
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => updateCanvasMeta(c.id, { geo_anchor: null })}
+                            className="shrink-0 rounded px-2 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-100 hover:text-red-600 dark:hover:bg-zinc-800"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-zinc-400">
+                          No anchor — enable the map background to set one.
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Canvas meta panel (nothing selected)
 // ---------------------------------------------------------------------------
 
@@ -1813,6 +1926,7 @@ function VulnerabilityBatchRow({
 
 export function Inspector() {
   const inspectorOpen = useUiStore((s) => s.inspectorOpen);
+  const globalViewActive = useUiStore((s) => s.globalViewActive);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
@@ -1888,6 +2002,8 @@ export function Inspector() {
               nodeIds={nodeIdArr}
               edgeIds={edgeIdArr}
             />
+          ) : globalViewActive ? (
+            <AllCanvasesMeta />
           ) : (
             <CanvasMeta />
           )}

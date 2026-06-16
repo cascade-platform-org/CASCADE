@@ -38,14 +38,13 @@ import {
   type OnSelectionChangeFunc,
   getBezierPath,
   BaseEdge,
-  EdgeLabelRenderer,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
-import { ChevronDown, Waypoints } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
@@ -58,6 +57,7 @@ import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store"
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
 import { pickHandles } from "@/lib/edge-routing";
+import { CanvasContextMenu } from "./canvas-context-menu";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 
@@ -78,12 +78,12 @@ function nodeSize(importance: number | undefined): number {
 // Helpers — convert CASCADE nodes/edges → React Flow format
 // ---------------------------------------------------------------------------
 
-function toRFNode(node: CascadeNode, selected: boolean): RFNode {
+export function toRFNode(node: CascadeNode, selected: boolean): RFNode {
   return {
     id: node.id,
     type: (node.node_type?.toLowerCase() ?? "service") as string,
     position: node.position ?? { x: 0, y: 0 },
-    data: { ...node },
+    data: node,
     selected,
   };
 }
@@ -420,43 +420,22 @@ function CascadeEdge({
   const n = useConfigStore(selectN);
   const levelColor = useConfigStore(selectLevelColor(data?.functionality ?? n));
 
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath] = getBezierPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
   });
 
   return (
-    <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={{
-          stroke: selected ? "#3b82f6" : levelColor,
-          strokeWidth: selected ? 2.5 : 1.5,
-          strokeDasharray: data?.isInterCanvas ? "5,4" : undefined,
-        }}
-        markerEnd={markerEnd}
-      />
-      {data?.isInterCanvas && data.targetCanvasLabel && (
-        <EdgeLabelRenderer>
-          <div
-            style={{
-              position: "absolute",
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              fontSize: 9,
-              background: "rgba(255,255,255,0.85)",
-              padding: "1px 4px",
-              borderRadius: 3,
-              color: "#6b7280",
-              pointerEvents: "none",
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            → {data.targetCanvasLabel}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
+    <BaseEdge
+      id={id}
+      path={edgePath}
+      style={{
+        stroke: selected ? "#3b82f6" : levelColor,
+        strokeWidth: selected ? 2.5 : 1.5,
+        strokeDasharray: data?.isInterCanvas ? "5,4" : undefined,
+      }}
+      markerEnd={markerEnd}
+    />
   );
 }
 
@@ -563,7 +542,6 @@ export function FlowCanvas() {
   const updateNode = useCanvasStore((s) => s.updateNode);
   const upsertNode = useCanvasStore((s) => s.upsertNode);
   const upsertEdge = useCanvasStore((s) => s.upsertEdge);
-  const updateEdge = useCanvasStore((s) => s.updateEdge);
   const removeNode = useCanvasStore((s) => s.removeNode);
   const removeEdge = useCanvasStore((s) => s.removeEdge);
   const addNodeToCanvas = useCanvasStore((s) => s.addNodeToCanvas);
@@ -582,7 +560,7 @@ export function FlowCanvas() {
   const clipboard = useClipboardStore((s) => s.contents);
   const copyToClipboard = useClipboardStore((s) => s.copy);
 
-  const { screenToFlowPosition, getNodes, getNode, fitView } = useReactFlow();
+  const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
 
   // Auto-frame the Canvas's content when switching Canvas. fitView's `fitView`
   // prop only fires on first mount, and FlowCanvas is not remounted per Canvas,
@@ -606,7 +584,9 @@ export function FlowCanvas() {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
-        const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
+        const viewport =
+          containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
+          document.querySelector<HTMLElement>(".react-flow__viewport");
         if (!viewport || nodes.length === 0) return undefined;
 
         const bounds = getNodesBounds(nodes);
@@ -669,6 +649,7 @@ export function FlowCanvas() {
     }
 
     useUiStore.getState().registerCaptureCanvas(capture);
+    return () => useUiStore.getState().registerCaptureCanvas(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // register once — capture() reads live DOM state on every call
 
@@ -676,6 +657,7 @@ export function FlowCanvas() {
   // with an empty array (it sees the drag-end as a pane interaction and thinks
   // everything was deselected). This ref prevents that spurious empty-deselect
   // from wiping the selection the lasso just committed.
+  const containerRef = useRef<HTMLDivElement>(null);
   const lassoActiveRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -1063,40 +1045,6 @@ export function FlowCanvas() {
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, []);
 
-  // ── Edge Layout: reassign sourceHandle/targetHandle based on node positions ──
-  const applyEdgeLayout = useCallback(() => {
-    if (!activeCanvas) return;
-    setContextMenu(null);
-
-    const before = toGraphSnapshot();
-    const edgeIds = activeCanvas.graph.edge_ids;
-    let count = 0;
-
-    for (const eid of edgeIds) {
-      const edge = allEdges[eid];
-      if (!edge) continue;
-      const srcRF = getNode(edge.source);
-      const tgtRF = getNode(edge.target);
-      if (!srcRF || !tgtRF) continue;
-      const { sourceHandle, targetHandle } = pickHandles(srcRF, tgtRF);
-      updateEdge(eid, { sourceHandle, targetHandle });
-      count++;
-    }
-
-    if (count > 0) {
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: "Edge layout",
-        canvas_id: activeCanvas.id,
-        before,
-        after: toGraphSnapshot(),
-      });
-      pushToast({ message: `Laid out ${count} edge${count !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
-    }
-  }, [activeCanvas, allEdges, toGraphSnapshot, updateEdge, getNode, pushToast]);
-
   // ── Right-click on node → select it ──
   const onNodeContextMenu = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
     selectNode(rfNode.id);
@@ -1115,7 +1063,7 @@ export function FlowCanvas() {
   const canvasColor = activeCanvas.color;
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       {/* Map background — always behind React Flow when canvas is georeferenced.
           Keyed by canvas id so switching Canvas remounts with a fresh MapLibre
           instance (correct saved center/zoom/anchor and freshly-measured dims),
@@ -1152,7 +1100,7 @@ export function FlowCanvas() {
         onNodeContextMenu={onNodeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
         onDoubleClick={onPaneDoubleClick}
-        panOnDrag={panMode ? true : [1, 2]}
+        panOnDrag={panMode ? true : [1]}
         panOnScroll={false}
         selectionOnDrag={false}
         zoomOnDoubleClick={false}
@@ -1174,14 +1122,11 @@ export function FlowCanvas() {
           active={activeTool === "select"}
           partial
           onSelect={(nodeIds) => {
-            if (nodeIds.length > 0) {
-              // Raise the guard before updating the store so that RF's spurious
-              // empty onSelectionChange (fired on drag-end) is ignored.
-              lassoActiveRef.current = true;
-            }
+            // Always raise the guard — even on zero hits — so that RF's spurious
+            // empty onSelectionChange and the subsequent onPaneClick don't wipe
+            // an existing selection when the user draws a lasso over empty space.
+            lassoActiveRef.current = true;
             selectAll(nodeIds, []);
-            // The rfNodes memo re-stamps `selected` from the store automatically,
-            // so no setRfNodes call is needed here.
             if (nodeIds.length > 0) setInspectorOpen(true);
           }}
         />
@@ -1192,29 +1137,15 @@ export function FlowCanvas() {
 
       {/* Pane context menu */}
       {contextMenu && (
-        <>
-          {/* Transparent backdrop — catches outside clicks to close the menu */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setContextMenu(null)}
-            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
-          />
-          <div
-            className="fixed z-50 min-w-[180px] overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-          >
-            <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-              Canvas
-            </p>
-            <button
-              onClick={applyEdgeLayout}
-              className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <Waypoints size={14} className="shrink-0 text-zinc-500" />
-              Edge Layout
-            </button>
-          </div>
-        </>
+        <CanvasContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          nodeIds={activeCanvas?.graph.node_ids ?? []}
+          edgeIds={activeCanvas?.graph.edge_ids ?? []}
+          filename={activeCanvas?.label ?? "canvas"}
+          onClose={() => setContextMenu(null)}
+          containerRef={containerRef}
+        />
       )}
     </div>
   );

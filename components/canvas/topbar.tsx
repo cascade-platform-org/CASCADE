@@ -151,28 +151,70 @@ function ProjectNameEditor() {
 function GlobalViewTab() {
   const globalViewActive = useUiStore((s) => s.globalViewActive);
   const setGlobalViewActive = useUiStore((s) => s.setGlobalViewActive);
+  const globalViewLayout = useUiStore((s) => s.globalViewLayout);
+  const setGlobalViewLayout = useUiStore((s) => s.setGlobalViewLayout);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   function activate() {
     setGlobalViewActive(true);
-    // Reset tool so handles are hidden in the read-only global view
     useUiStore.getState().setActiveTool("select");
-    useUiStore.getState().setInspectorOpen(false);
+    useNetworkStore.getState().clearSelection();
+    useUiStore.getState().setInspectorOpen(true);
+  }
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }
+
+  function closeMenu() {
+    setContextMenu(null);
   }
 
   return (
-    <button
-      onClick={activate}
-      title="Global view — all canvases together"
-      className={cn(
-        "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm select-none transition-colors",
-        globalViewActive
-          ? "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-          : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/50",
+    <div className="relative">
+      <button
+        onClick={activate}
+        onContextMenu={handleContextMenu}
+        title="Global view — all canvases together (right-click for options)"
+        className={cn(
+          "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm select-none transition-colors",
+          globalViewActive
+            ? "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+            : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/50",
+        )}
+      >
+        <Layers size={13} />
+        <span>All</span>
+      </button>
+
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeMenu} />
+          <div
+            className="fixed z-50 min-w-[200px] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              View mode
+            </p>
+            <MenuItem
+              onClick={() => { setGlobalViewLayout("merged"); closeMenu(); }}
+              className={globalViewLayout === "merged" ? "font-semibold text-blue-600 dark:text-blue-400" : ""}
+            >
+              Merged (default)
+            </MenuItem>
+            <MenuItem
+              onClick={() => { setGlobalViewLayout("grouped"); closeMenu(); }}
+              className={globalViewLayout === "grouped" ? "font-semibold text-blue-600 dark:text-blue-400" : ""}
+            >
+              Grouped (read-only)
+            </MenuItem>
+
+          </div>
+        </>
       )}
-    >
-      <Layers size={13} />
-      <span>All</span>
-    </button>
+    </div>
   );
 }
 
@@ -187,6 +229,7 @@ function CanvasTabs() {
   const reorderCanvases = useCanvasStore((s) => s.reorderCanvases);
   const canvasOrder = useCanvasStore((s) => s.canvasOrder);
   const setGlobalViewActive = useUiStore((s) => s.setGlobalViewActive);
+  const globalViewActive = useUiStore((s) => s.globalViewActive);
 
   const dragSrc = useRef<string | null>(null);
 
@@ -212,7 +255,7 @@ function CanvasTabs() {
         <CanvasTab
           key={canvas.id}
           canvas={canvas}
-          active={canvas.id === activeCanvasId}
+          active={!globalViewActive && canvas.id === activeCanvasId}
           onActivate={() => {
             setGlobalViewActive(false);
             setActiveCanvas(canvas.id);
