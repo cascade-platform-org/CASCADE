@@ -1,11 +1,12 @@
 """
 engine/propagation.py — Propagation engine (PRIVATE IP).
 
-Slice 1: the iterative round loop with the **logical heuristic** and monotone
-commit (ADR-0003). Flow allocation, guards (`dependency_level`, `backup`), and
-rule evaluation are not yet wired — they arrive in later slices. Until flow
-exists, every dependency category is handled logically (the dispatch point is
-`_proposal_for`, where Slice 3 will route `SourceToDemands` to flow).
+Proposal phase runs two sub-steps per round (ADR-0005):
+  1. Universal Requisite pass — logical aggregation over every incoming edge for
+     every node, regardless of category type (best_of within source-category group,
+     worst_of across groups). Absent profile → dependency_level = N (full dependency).
+  2. SourceToDemands flow pass — priority min-cost max-flow for demanding nodes.
+     Both passes merge per category via worst_of before the guard phase.
 
 Pipeline per round (ADR-0003 → propose → guard → commit):
   - effective edge Functionality is refreshed: worst_of(intrinsic, source) (ADR-0004)
@@ -45,14 +46,13 @@ def run(request: PropagationRequest) -> PropagationResult:
     edges_by_id = {e.id: e for e in edges}
     rules = RuleContext(nodes, edges, request.config)
 
-    # Categories handled by the flow heuristic (SourceToDemands); the rest go
-    # logical. Flow categories are skipped in the logical pass so they aren't
-    # double-counted, then merged back in per node before composing.
+    # ADR-0005: Universal Requisite runs for every node over every incoming edge
+    # regardless of category type. SourceToDemands flow is an additive layer on top.
+    # The two passes are merged per category via worst_of before the guard phase.
     category_types = {c.name: c.category_type for c in request.config.categories}
     flow_categories = [
         name for name, ctype in category_types.items() if ctype == "SourceToDemands"
     ]
-    flow_skip = frozenset(flow_categories)
 
     # N = the best (highest) Functionality level. Derive it from the maximum
     # configured level, NOT from len(functionality_scale): the scale need not be a
@@ -97,14 +97,28 @@ def run(request: PropagationRequest) -> PropagationResult:
             node = nodes[nid]
             current = node_func[nid]
 
-            # Propose: logical (non-flow categories) ∪ flow candidates.
-            # Intracategorical rules may re-parameterise the aggregation operator.
+            # Propose — two sub-steps, merged per category via worst_of (ADR-0005).
+            # 1. Universal Requisite pass: logical aggregation over all incoming edges,
+            #    all categories. No skip — SourceToDemands categories included.
             candidates = logical_category_candidates(
                 node, incoming_index.get(nid, []), node_func, edge_func, nodes,
-                skip=flow_skip,
                 intra_op=lambda category, _nid=nid: rules.intra_operator(_nid, category),
             )
-            candidates.update(flow_candidates.get(nid, {}))
+            # 2. SourceToDemands flow pass: additive layer. Merge each flow candidate
+            #    into the running dict via worst_of so neither pass silently overwrites.
+            for category, (flow_level, flow_shares) in flow_candidates.get(nid, {}).items():
+                if category not in candidates:
+                    candidates[category] = (flow_level, flow_shares)
+                else:
+                    log_level, log_shares = candidates[category]
+                    if flow_level < log_level:
+                        candidates[category] = (flow_level, flow_shares)
+                    elif flow_level == log_level:
+                        merged = dict(log_shares)
+                        for k, v in flow_shares.items():
+                            merged[k] = merged.get(k, 0.0) + v
+                        total = sum(merged.values()) or 1.0
+                        candidates[category] = (flow_level, {k: v / total for k, v in merged.items()})
 
             # Guard 1 — dependency_level attenuation, per category.
             for category, (level, shares) in candidates.items():
