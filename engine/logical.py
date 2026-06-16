@@ -90,12 +90,26 @@ def logical_category_candidates(
     logical only for the categories flow does not cover and merge the two before
     composing.
     """
-    # Union of what the target declares and what its parents supply, minus skips.
+    # Build the set of categories the target depends on.
+    # Start from what the target itself declares.
     categories: set[str] = declared_categories(target)
+    target_cats = frozenset(categories)
     for edge in incoming:
         parent = nodes.get(edge.source)
-        if parent is not None:
-            categories.update(parent_categories(parent))
+        if parent is None:
+            continue
+        parent_cats = parent_categories(parent)
+        # Add a parent's categories only when there is NO overlap with the
+        # target's declared categories. A parent that shares a category with the
+        # target already contributes through that shared category; blindly adding
+        # its OTHER categories would create spurious cross-category dependencies
+        # (e.g., a digital+power node attaching a phantom power dependency to a
+        # digital-only child that has its own redundant digital suppliers).
+        # When there IS no overlap — or the parent is an untagged generic feeder
+        # (parent_cats empty) — the edge represents a genuine cross-category or
+        # generic dependency and the parent's categories flow through normally.
+        if not parent_cats or not target_cats.intersection(parent_cats):
+            categories.update(parent_cats)
     categories -= skip
 
     candidates: dict[str, tuple[int, dict[str, float]]] = {}

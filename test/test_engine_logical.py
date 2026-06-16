@@ -13,6 +13,7 @@ from schemas.config import (
 )
 from schemas.network import (
     Canvas,
+    CategoryDependencyProfile,
     Edge,
     Graph,
     Node,
@@ -194,3 +195,76 @@ def test_tie_unions_responsibility():
     hosp = _updates_by_id(result)["hosp"]
     assert hosp.functionality == 2
     assert hosp.responsibility_share == {"w": 0.5, "p": 0.5}
+
+
+def test_multi_category_parent_no_phantom_dependency():
+    """A parent that carries both 'power' and 'digital' should not inject a
+    spurious power dependency into a child that only declared 'digital' and has a
+    redundant healthy digital supplier.
+
+    Topology:
+        dc_a  (power+digital, level=2) ──┐
+                                          ├──> ops (digital, level=4)
+        dc_b  (digital,       level=4) ──┘
+
+    dc_a's power failure has already lowered its own level to 2. ops sees dc_a
+    delivering digital at 2 and dc_b delivering digital at 4. The intracategorical
+    best_of for digital = 4, so ops should NOT degrade.
+
+    Before the category-intersection guard, the engine would also attribute a
+    'power' category dependency to ops (inherited from dc_a's power tag), producing
+    worst_of(power=2, digital=4)=2 and a spurious degradation.
+    """
+    nodes = [
+        _node("dc_a", 2, categories=["power", "digital"]),
+        _node("dc_b", 4, categories=["digital"]),
+        _node("ops",  4, categories=["digital"]),
+    ]
+    edges = [_edge("e_da_ops", "dc_a", "ops"), _edge("e_db_ops", "dc_b", "ops")]
+    result = run(_request(nodes, edges, {"power": "SourceToDemands", "digital": "Requisite"}))
+
+    assert "ops" not in _updates_by_id(result), (
+        "ops should be protected by its redundant healthy digital supplier dc_b; "
+        "dc_a's power category must not create a phantom power dependency in ops"
+    )
+
+
+def test_universal_requisite_degrades_consumer_via_bad_link(
+):
+    """ADR-0005: the Universal Requisite pass covers SourceToDemands categories.
+
+    Even when a SourceToDemands flow would fully serve a consumer (supply >> demand),
+    a degraded link on the supply path makes the Requisite logical proposal worse
+    than the flow result. The worst_of merge in propagation.py binds the logical
+    result, degrading the consumer.
+
+    Topology:
+        water_src (water, level=4, supply=100) --[link func=2]--> consumer (demand=10)
+
+    Flow alone: supply 100 >> demand 10 → consumer fully served → no degradation.
+    Logical (Universal Requisite, no skip): min(source=4, link=2)=2 → water=2.
+    Merge: worst_of(flow=4, logical=2) = 2 → consumer degrades to 2.
+    """
+    nodes = [
+        Node(
+            id="water_src", functionality=4,
+            node_categories=["water"],
+            supply_capacity={"water": 100},
+        ),
+        Node(
+            id="consumer", functionality=4,
+            node_categories=["water"],
+            category_dependency_profiles={
+                "water": CategoryDependencyProfile(demand=10, dependency_level=4),
+            },
+        ),
+    ]
+    edges = [_edge("e", "water_src", "consumer", functionality=2)]
+    result = run(_request(nodes, edges, {"water": "SourceToDemands"}))
+
+    by_id = _updates_by_id(result)
+    assert "consumer" in by_id, (
+        "consumer must degrade: Universal Requisite sees link=2 and proposes water=2; "
+        "the flow alone would pass (supply >> demand) but the logical worst_of wins"
+    )
+    assert by_id["consumer"].functionality == 2
