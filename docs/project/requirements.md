@@ -140,7 +140,9 @@ Additional **node-only** attributes:
 
 ### 5.4 Per-Category Dependency Block
 
-Nodes only — edges carry no Category Dependency Profile. For each category a node participates in, it carries:
+Nodes only — edges carry no Category Dependency Profile. A profile entry is **guard customisation only** — its absence never prevents propagation. When the Universal Requisite pass (§7.2) discovers a source category `C` for which the target node has no profile entry, the guard defaults to `dependency_level = N` (full dependency). The frontend auto-adds a default entry (`dependency_level = N`, no backup, no demand) whenever an edge is created from a node whose declared categories are not yet covered in the target's profiles, so the entry is visible and editable in the Inspector without the modeller needing to remember this rule. On edge deletion the profile entry is retained and flagged as orphaned in the Inspector; the modeller decides whether to remove it.
+
+For each category a node participates in (or receives via an incoming edge), it carries:
 
 | Attribute | Type | Scope | Description |
 |---|---|---|---|
@@ -257,21 +259,38 @@ No display or layout data is sent.
 
 ### 7.2 Category Algorithms
 
-#### `SourceToDemands` — Flow-based
+The proposal phase runs two sub-steps in sequence for each node each round. Their candidates are merged via `worst_of` before the guard phase (see ADR-0005).
+
+#### Universal Requisite pass (every node, every round)
+
+Every node receives a Requisite logical aggregation proposal over **all** its incoming edges, regardless of the source node's category type:
+
+1. For each incoming edge `(u → v)`, compute the deliverable `L(u→v) = worst_of(u.functionality, edge.functionality)`.
+2. Group deliverables by source category (all categories declared on `u`).
+3. Within each group apply `best_of` (redundancy — one healthy supplier suffices).
+4. Across groups apply `worst_of` (conjunctive — all required categories must hold).
+5. The resulting candidate `P_req` is merged into the running proposal `P` via `worst_of`.
+
+When the target node has no `category_dependency_profiles` entry for a source category, the guard uses `dependency_level = N` (full dependency — the drop passes unattenuated). Profiles are guard customisation only; their absence never prevents propagation.
+
+#### `SourceToDemands` — additive flow pass
+
+For nodes with `demand > 0` in at least one `SourceToDemands`-typed category, the flow heuristic also runs:
 
 - Max-flow with costs guided by node `priority` (1–10).
 - Sources combined jointly; `capacity` on infrastructure and edges constrains throughput.
-- Service node functionality set from delivered/demand ratio adjusted by `dependency_level` per §5.4.
+- Service node functionality set from delivered/demand ratio via a configurable threshold table (`dependency_level` guard applies afterwards).
+- The flow candidate `P_flow` is merged into `P` via `worst_of` alongside the Requisite candidate.
 
-#### `Requisite` — Logic-based
+Nodes without demand are unaffected by this pass.
 
-- **Intra-category:** redundancy within same category → best-of.
-- **Inter-category:** multiple incoming categories → worst-of.
-- Rules layer on top.
+#### Guard applies once
+
+After both sub-steps, the guard phase runs once on the merged `P`: `dependency_level` attenuation → `backup` deferral → specific-rule override (see ADR-0003 §Guard mechanics).
 
 #### Extensibility
 
-The engine interface accommodates new category types without structural changes.
+Future category types (multicommodity flow, transport, etc.) add as further additive passes alongside `SourceToDemands`. The Universal Requisite pass and the guard phase are unchanged.
 
 ### 7.3 Rule System (carried over from v1)
 
