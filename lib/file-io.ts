@@ -166,17 +166,12 @@ export function saveBeforeUnload(
   if (recoveryDir) {
     entry.folder_name = recoveryDir.name;
     entry.recovery_filename = filename;
-    try {
-      // File System Access API writes are async but beforeunload is sync.
-      // We fire-and-forget: modern browsers give a short grace period for async work.
-      recoveryDir.getFileHandle(filename, { create: true }).then((fh) =>
-        fh.createWritable().then((w) =>
-          w.write(JSON.stringify(entry, null, 2)).then(() => w.close())
-        )
-      );
-    } catch {
-      // silently ignore
-    }
+    // File System Access API writes are async but beforeunload is sync.
+    // We fire-and-forget: modern browsers give a short grace period for async work.
+    recoveryDir.getFileHandle(filename, { create: true })
+      .then((fh) => fh.createWritable())
+      .then((w) => w.write(JSON.stringify(entry, null, 2)).then(() => w.close()))
+      .catch((err) => console.warn("[CASCADE] Recovery file write failed:", err));
   }
 
   // Always write to localStorage as a fallback

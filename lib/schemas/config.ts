@@ -126,7 +126,7 @@ export const ModelConfigurationSchema = z.object({
     description: z.string().optional(),
   }),
   /** Ordered 1..N. Index 0 = worst (critical), last = best (operational). */
-  functionality_scale: z.array(FunctionalityScaleLevelSchema),
+  functionality_scale: z.array(FunctionalityScaleLevelSchema).min(2),
   categories: z.array(CategoryDefinitionSchema),
   /** Hazard and Disservice definitions. Both types are Events. */
   events: z.array(EventDefinitionSchema).default([]),

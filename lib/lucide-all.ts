@@ -10,16 +10,13 @@
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-// Lucide icons are React.forwardRef objects (typeof === "object"), not functions.
-// Filter: PascalCase name + has a displayName string (set by createLucideIcon).
+// Lucide icons are React.forwardRef objects (typeof === "object") with a
+// displayName string set by createLucideIcon. Filter on both to skip
+// non-icon exports (version strings, utility objects, etc.).
 export const allIcons: Record<string, LucideIcon> = Object.fromEntries(
   Object.entries(LucideIcons as Record<string, unknown>).filter(([key, val]) => {
     if (!/^[A-Z]/.test(key)) return false;
-    if (typeof val === "function") return true; // plain function components
-    if (typeof val === "object" && val !== null) {
-      const obj = val as Record<string, unknown>;
-      return typeof obj["displayName"] === "string"; // forwardRef components set displayName
-    }
-    return false;
+    if (typeof val !== "object" || val === null) return false;
+    return typeof (val as Record<string, unknown>)["displayName"] === "string";
   }),
 ) as Record<string, LucideIcon>;
