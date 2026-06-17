@@ -229,11 +229,14 @@ export async function saveConfig(config: ModelConfiguration): Promise<void> {
 
 const AUTOSAVE_KEY = "cascade:project:autosave";
 
-export function autosave(bundle: ProjectBundle): void {
+/** Returns true on success, false when localStorage is full or unavailable. */
+export function autosave(bundle: ProjectBundle): boolean {
   try {
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(bundle));
-  } catch {
-    // Quota exceeded — silently skip autosave. Explicit saves still work.
+    return true;
+  } catch (err) {
+    console.warn("[CASCADE] Autosave failed (localStorage quota exceeded or unavailable):", err);
+    return false;
   }
 }
 

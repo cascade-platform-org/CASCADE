@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
 import { autosave, pushAutoSnapshot } from "@/lib/file-io";
 
 const DEBOUNCE_MS = 2_000;
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1_000; // 5 minutes
+const FAILURE_TOAST_THRESHOLD = 3;
 
 /**
  * Continuously saves the current project to localStorage as a safety net.
@@ -22,6 +24,7 @@ const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1_000; // 5 minutes
  */
 export function useAutosave(): void {
   const lastSnapshotRef = useRef<number>(0);
+  const consecutiveFailuresRef = useRef<number>(0);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -33,7 +36,19 @@ export function useAutosave(): void {
         const config = useConfigStore.getState().config;
         const slim = { project: { ...project, update_history: [] }, config };
 
-        autosave(slim);
+        const ok = autosave(slim);
+        if (ok) {
+          consecutiveFailuresRef.current = 0;
+        } else {
+          consecutiveFailuresRef.current += 1;
+          if (consecutiveFailuresRef.current === FAILURE_TOAST_THRESHOLD) {
+            useUiStore.getState().pushToast({
+              message: "Autosave is failing — your browser storage may be full. Download a backup to avoid losing work.",
+              variant: "warning",
+              durationMs: 10_000,
+            });
+          }
+        }
 
         const now = Date.now();
         if (now - lastSnapshotRef.current >= SNAPSHOT_INTERVAL_MS) {

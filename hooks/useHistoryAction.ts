@@ -37,7 +37,7 @@ export function useHistoryAction() {
         timestamp: new Date().toISOString(),
         update_type,
         label,
-        canvas_id: store.activeCanvasId ?? "",
+        canvas_id: store.activeCanvasId ?? undefined,
         before,
         after,
       });
