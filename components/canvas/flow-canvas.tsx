@@ -41,11 +41,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, memo, useState, useRef, useReducer } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
 import { ChevronDown } from "lucide-react";
-import { categoryToIcon } from "@/lib/category-icons";
+import { categoryToIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
@@ -272,6 +272,10 @@ type NodeData = CascadeNode;
 
 // React Flow passes `selected` as a top-level prop, not inside `data`.
 function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: ShapeType; selected?: boolean }) {
+  // Re-render once when the full icon cache becomes ready so stored icons show immediately.
+  const [, forceRender] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => subscribeIconsReady(forceRender), []);
+
   const size = nodeSize(data.importance);
   const levelColor = useConfigStore(selectLevelColor(data.functionality));
   const configCategories = useConfigStore((s) => s.config.categories);

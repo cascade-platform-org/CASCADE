@@ -24,6 +24,7 @@ import { saveBeforeUnload } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
 import { useAutosave } from "@/hooks/useAutosave";
 import { checkServerHealth } from "@/lib/api-client";
+import { loadAllIconsOnce } from "@/lib/category-icons";
 import { SaveScorecardDialog } from "@/components/scorecard/operativity-scorecard";
 
 export function EditorShell() {
@@ -41,6 +42,10 @@ export function EditorShell() {
   const setServerReachable = useUiStore((s) => s.setServerReachable);
 
   useAutosave();
+
+  // Load the full Lucide icon set in the background so stored icons render
+  // immediately without the user needing to open the config modal first.
+  useEffect(() => { loadAllIconsOnce(); }, []);
 
   const recoveryDirRef = useRef<FileSystemDirectoryHandle | null>(null);
 

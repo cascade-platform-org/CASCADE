@@ -80,15 +80,39 @@ function byKeyword(name: string): LucideIcon {
  */
 let _allIconsCache: Record<string, LucideIcon> | null = null;
 
+/** Components subscribe here to be notified when the cache becomes ready. */
+const _readyCallbacks: Array<() => void> = [];
+
 export function primeIconRegistry(icons: Record<string, LucideIcon>): void {
   _allIconsCache = icons;
+  _readyCallbacks.splice(0).forEach((fn) => fn());
 }
 
-/** Trigger a one-time background load of all icons. Safe to call multiple times. */
+/**
+ * Trigger a one-time background load of all icons. Safe to call multiple times.
+ * Notifies all subscribers when the cache is populated.
+ */
 export async function loadAllIconsOnce(): Promise<void> {
   if (_allIconsCache) return;
   const { allIcons } = await import("@/lib/lucide-all");
-  _allIconsCache = allIcons as Record<string, LucideIcon>;
+  primeIconRegistry(allIcons as Record<string, LucideIcon>);
+}
+
+/**
+ * Subscribe to the icon cache becoming ready.
+ * If the cache is already populated, `fn` is called synchronously.
+ * Returns an unsubscribe function suitable for use in a useEffect cleanup.
+ */
+export function subscribeIconsReady(fn: () => void): () => void {
+  if (_allIconsCache) {
+    fn();
+    return () => {};
+  }
+  _readyCallbacks.push(fn);
+  return () => {
+    const idx = _readyCallbacks.indexOf(fn);
+    if (idx >= 0) _readyCallbacks.splice(idx, 1);
+  };
 }
 
 /**

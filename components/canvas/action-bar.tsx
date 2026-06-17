@@ -13,7 +13,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight } from "lucide-react";
-import { resolveIcon, loadAllIconsOnce } from "@/lib/category-icons";
+import { resolveIcon, loadAllIconsOnce, subscribeIconsReady } from "@/lib/category-icons";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -685,11 +685,9 @@ function EventButton({
   event: EventDefinition;
   pushToast: ReturnType<typeof useUiStore.getState>["pushToast"];
 }) {
-  // Ensure the icon cache is loaded if this event has a custom icon
-  useEffect(() => {
-    if (event.icon) loadAllIconsOnce();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event.icon]);
+  // Force a re-render once the full icon cache is ready so the stored icon shows immediately.
+  const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
+  useEffect(() => subscribeIconsReady(forceRender), []);
 
   function applyEvent() {
     const storeState = useCanvasStore.getState();
