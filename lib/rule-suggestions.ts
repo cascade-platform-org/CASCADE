@@ -18,25 +18,17 @@
  */
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants — sourced from the shared grammar spec
 // ---------------------------------------------------------------------------
+// CASCADE-app/shared/rule-grammar.json is the single source of truth for the
+// Rule DSL grammar.  The backend reads it via core/rule_grammar.py.  Any
+// grammar change (new function, operator, attribute) must be made there only.
 
-export const RULE_FUNC_NAMES = [
-  "worst_of",
-  "best_of",
-  "average_of",
-  "median_of",
-  "majority_of",
-] as const;
+import grammar from "@/shared/rule-grammar.json";
 
-export const RULE_OPERATORS = ["<", "<=", ">", ">=", "=", "≠"] as const;
-
-export const NODE_ATTRIBUTES = [
-  "functionality",
-  "direct_damage",
-  "functionality_time",
-  "expected_repair_time",
-] as const;
+export const RULE_FUNC_NAMES: readonly string[] = grammar.function_names;
+export const RULE_OPERATORS: readonly string[] = grammar.operators;
+export const NODE_ATTRIBUTES: readonly string[] = grammar.node_attributes;
 
 // ---------------------------------------------------------------------------
 // Context type
