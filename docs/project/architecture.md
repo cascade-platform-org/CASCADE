@@ -245,21 +245,46 @@ CASCADE-v2/
 │   ├── components/             # React components by domain
 │   │   ├── analysis/           # Centrality, timeline, model-based tools
 │   │   ├── auth/               # User button, anonymous banner
-│   │   ├── canvas/             # Topbar, Action Bar, Flow Canvas, Inspector, Status Bar
+│   │   ├── canvas/             # Topbar, Action Bar, Flow Canvas, Status Bar
+│   │   │   └── inspector/      # Inspector panel — split by selection mode
+│   │   │       ├── index.tsx           # Thin dispatch root (routes to sub-panels)
+│   │   │       ├── node-inspector.tsx  # Single-node panel
+│   │   │       ├── edge-inspector.tsx  # Single-edge panel
+│   │   │       ├── canvas-meta.tsx     # Canvas/All-Canvases meta (nothing selected)
+│   │   │       ├── multi-select-panel.tsx # Batch editing panel
+│   │   │       ├── canvas-membership.tsx  # Shared canvas copy/move section
+│   │   │       ├── cause-banner.tsx    # Compromised-element cause banner
+│   │   │       ├── editors.tsx         # RulesEditor, PropertiesEditor
+│   │   │       └── primitives.tsx      # Section, Field, TextInput, NumberInput, Toggle…
 │   │   ├── controls/           # Category panel, config override, file I/O
+│   │   │   └── config-modal/   # ModelConfiguration modal — split by tab
+│   │   │       ├── index.tsx              # Thin shell (draft lifecycle, tab bar, footer)
+│   │   │       ├── primitives.tsx         # TextInput, NumberInput, ColBtn, CollapsibleSection
+│   │   │       ├── icon-picker.tsx        # IconPickerButton + module-level icon cache
+│   │   │       ├── event-editors.tsx      # DirectDamageEditor, VulnerabilityLevelsEditor, AttributeMutationsEditor
+│   │   │       ├── tab-functionality-scale.tsx
+│   │   │       ├── tab-categories.tsx     # TabCategories + CategoryRow
+│   │   │       ├── tab-events.tsx
+│   │   │       ├── tab-graph-types.tsx
+│   │   │       └── tab-node-defaults.tsx
 │   │   ├── geo/                # MapLibre background behind React Flow (geo-map-background)
 │   │   ├── onboarding/         # New Project Wizard
 │   │   ├── rules/              # Rule editor, autocomplete, active rules panel
 │   │   └── scorecard/          # Scorecard panels
 │   ├── hooks/                  # Custom React hooks
+│   │   ├── useHistoryAction.ts # Snapshot-wrap-push hook for undoable mutations
 │   ├── lib/
 │   │   ├── schemas/            # Zod schemas (network, config, api, primitives, audit)
 │   │   └── …                   # Utilities, API client, rule parser, file I/O
+│   ├── shared/
+│   │   ├── schemas/            # Generated JSON Schema bridge files (do not edit manually)
+│   │   └── rule-grammar.json   # Rule DSL grammar spec — shared seam (functions, operators, attributes, disabled prefix)
 │   └── store/                  # Zustand stores (canvas, network, config, clipboard, auth, ui)
 ├── CASCADE-backend/            # FastAPI backend
 │   ├── api/                    # Route handlers
 │   ├── auth/                   # OAuth2/OIDC + RBAC
 │   ├── core/                   # Open graph/rule logic
+│   │   └── rule_grammar.py     # Python adapter: loads rule-grammar.json, exports typed constants
 │   ├── engine/                 # PRIVATE propagation algorithm
 │   ├── schemas/                # Pydantic models (network, config, results, engine, auth)
 │   ├── services/               # Business logic orchestration
