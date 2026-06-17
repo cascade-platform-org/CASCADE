@@ -129,7 +129,7 @@ class ConfigMeta(BaseModel):
 class ModelConfiguration(BaseModel):
     version: str
     meta: ConfigMeta
-    functionality_scale: list[FunctionalityScaleLevel]
+    functionality_scale: list[FunctionalityScaleLevel] = Field(..., min_length=2)
     categories: list[CategoryDefinition]
     events: list[EventDefinition] = Field(
         default_factory=list,
