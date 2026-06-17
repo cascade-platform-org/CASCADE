@@ -35,16 +35,14 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 
+from core.rule_grammar import DISABLED_RULE_PREFIX, OPERATORS as _GRAMMAR_OPERATORS
 from core.utils.normalization import (
     normalize_category_name,
     normalize_label,
 )
 
-
-# A rule string prefixed with this marker is **disabled** (inactive): the engine
-# skips it entirely. This is the single backend definition of the convention;
-# the frontend mirrors it in CASCADE-app/lib/rule-status.ts. Keep them in lockstep.
-DISABLED_RULE_PREFIX = "// "
+# DISABLED_RULE_PREFIX is sourced from CASCADE-app/shared/rule-grammar.json
+# via core.rule_grammar — the single source of truth shared with the frontend.
 
 
 def is_rule_disabled(rule_text: str) -> bool:
@@ -286,7 +284,7 @@ class RuleParser:
     is resolved; `name` holds the canonical ID, `raw_name` the verbatim spelling.
     """
 
-    _ALLOWED_OPERATORS = frozenset({"<", ">", "=", "≠", "<=", ">="})
+    _ALLOWED_OPERATORS: frozenset[str] = frozenset(_GRAMMAR_OPERATORS)
 
     # Sentinel that temporarily replaces the internal spaces of a recognised
     # multi-word name, so the whitespace-splitting tokenizer keeps it as one

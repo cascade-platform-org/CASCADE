@@ -17,7 +17,8 @@ class FunctionalityScaleLevel(BaseModel):
 class CategoryDefinition(BaseModel):
     name: str
     category_type: str  # "SourceToDemands" | "Requisite" | open string
-    color: Optional[str] = None
+    color: Optional[str] = None  # kept for backward compat; icon takes precedence in the UI
+    icon: Optional[str] = None  # Lucide icon name, e.g. "Droplet", "Zap"
 
 
 class DirectDamageEffect(BaseModel):
@@ -29,6 +30,7 @@ class EventDefinition(BaseModel):
     id: str
     label: str
     type: EventKind
+    icon: Optional[str] = None  # Lucide icon name shown on the Action Bar button
     frequency_per_10y: float = Field(default=0.0, ge=0)
     expected_recovery_time: Optional[int] = Field(
         None, ge=0, description="Hours until self-resolution. Disservices only."
