@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { NewProjectWizard } from "@/components/onboarding/new-project-wizard";
 import { EditorShell } from "@/components/canvas/editor-shell";
 import { ErrorBoundary } from "@/components/canvas/error-boundary";
-import { getBeforeUnloadSave, clearBeforeUnloadSave, type BeforeUnloadSave } from "@/lib/file-io";
+import { getBeforeUnloadSave, clearBeforeUnloadSave, loadAutosave, clearAutosave, type BeforeUnloadSave } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
@@ -17,9 +17,17 @@ export default function Home() {
   const [pathCopied, setPathCopied] = useState(false);
 
   useEffect(() => {
-    const save = getBeforeUnloadSave();
-    if (save) {
-      setPendingSave(save);
+    const buSave = getBeforeUnloadSave();
+    if (buSave) {
+      setPendingSave(buSave);
+      setAppState("restore-prompt");
+      return;
+    }
+    // Fallback: check the continuous autosave (covers browser crashes where
+    // beforeunload never fired).
+    const asSave = loadAutosave();
+    if (asSave) {
+      setPendingSave({ saved_at: new Date().toISOString(), bundle: asSave });
       setAppState("restore-prompt");
     }
   }, []);
@@ -53,11 +61,13 @@ export default function Home() {
     useCanvasStore.getState().fromProject(pendingSave.bundle.project);
     useConfigStore.getState().loadConfig(pendingSave.bundle.config);
     clearBeforeUnloadSave();
+    clearAutosave();
     setAppState("editor");
   }
 
   function handleDiscard() {
     clearBeforeUnloadSave();
+    clearAutosave();
     setAppState("wizard");
   }
 

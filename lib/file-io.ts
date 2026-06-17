@@ -45,22 +45,46 @@ function loadHistory(): HistoryEntry[] {
 }
 
 function pushToHistory(entry: HistoryEntry): void {
+  // Strip update_history before storing: the undo stack holds full graph
+  // snapshots for every edit and is the primary cause of QuotaExceededError.
+  // The download already captured the full data; the history entry only needs
+  // to restore the graph state, not the undo stack.
+  const slim: HistoryEntry = {
+    ...entry,
+    bundle: {
+      ...entry.bundle,
+      project: { ...entry.bundle.project, update_history: [] },
+    },
+  };
   const history = loadHistory();
-  history.unshift(entry);
+  history.unshift(slim);
   if (history.length > MAX_HISTORY) history.splice(MAX_HISTORY);
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   } catch (err) {
-    // QuotaExceededError: the bundle is too large for localStorage (typically
-    // caused by a large update_history with many undo snapshots). The download
-    // already succeeded — silently drop the history entry rather than surfacing
-    // a misleading "Save failed" toast.
     console.warn("[CASCADE] Could not write version history to localStorage:", err);
   }
 }
 
 export function getProjectHistory(): HistoryEntry[] {
   return loadHistory();
+}
+
+/** Called by the autosave hook on a longer interval to build history automatically. */
+export function pushAutoSnapshot(bundle: ProjectBundle): void {
+  pushToHistory({
+    saved_at: new Date().toISOString(),
+    name: bundle.project.meta.name,
+    bundle,
+  });
+}
+
+export function clearProjectHistory(): void {
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +215,7 @@ export async function saveBundle(bundle: ProjectBundle): Promise<void> {
     name: bundle.project.meta.name,
     bundle,
   });
+  clearAutosave();
 }
 
 export async function saveProject(project: Project): Promise<void> {

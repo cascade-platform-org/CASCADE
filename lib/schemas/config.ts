@@ -30,6 +30,8 @@ export const CategoryDefinitionSchema = z.object({
   /** "SourceToDemands" | "Requisite" | any future type added in config. */
   category_type: z.string(),
   color: z.string().optional(),
+  /** Lucide icon name, e.g. "Droplet", "Zap". Overrides keyword-based auto-detection. */
+  icon: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -45,6 +47,8 @@ export const EventDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
   type: z.enum(["hazard", "disservice", "temporal_jump"]),
+  /** Lucide icon name shown on the Action Bar button. Falls back to type icon if absent. */
+  icon: z.string().optional(),
   /** Expected number of occurrences in a 10-year period. Not meaningful for temporal_jump. */
   frequency_per_10y: z.number().min(0).default(0),
   /** Hours until the disservice self-resolves. Disservices only. */

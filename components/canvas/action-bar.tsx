@@ -10,9 +10,10 @@
  * Temporal:   [⏱ Time ▾]
  */
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight } from "lucide-react";
+import { resolveIcon, loadAllIconsOnce } from "@/lib/category-icons";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -147,7 +148,7 @@ export function ActionBar() {
                     onClick={() => { setMoreOpen(false); }}
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700"
                   >
-                    <EventIcon type={ev.type} size={13} />
+                    <EventIcon type={ev.type} icon={ev.icon} size={13} />
                     {ev.label}
                   </button>
                 ))}
@@ -684,6 +685,12 @@ function EventButton({
   event: EventDefinition;
   pushToast: ReturnType<typeof useUiStore.getState>["pushToast"];
 }) {
+  // Ensure the icon cache is loaded if this event has a custom icon
+  useEffect(() => {
+    if (event.icon) loadAllIconsOnce();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.icon]);
+
   function applyEvent() {
     const storeState = useCanvasStore.getState();
     if (!storeState.activeCanvasId) return;
@@ -716,7 +723,7 @@ function EventButton({
           : "text-orange-500 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20",
       )}
     >
-      <EventIcon type={event.type} size={13} />
+      <EventIcon type={event.type} icon={event.icon} size={13} />
       <span className="max-w-[80px] truncate">{event.label}</span>
     </ActionButton>
   );
@@ -733,7 +740,11 @@ function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): numb
   return count;
 }
 
-function EventIcon({ type, size }: { type: "hazard" | "disservice" | "temporal_jump"; size: number }) {
+function EventIcon({ type, icon, size }: { type: "hazard" | "disservice" | "temporal_jump"; icon?: string; size: number }) {
+  if (icon) {
+    const Resolved = resolveIcon(icon) as React.FC<{ size?: number; strokeWidth?: number }> | null;
+    if (Resolved) return <Resolved size={size} strokeWidth={2} />;
+  }
   if (type === "temporal_jump") return <Clock size={size} />;
   return type === "hazard" ? <Zap size={size} /> : <Waves size={size} />;
 }

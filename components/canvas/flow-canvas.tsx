@@ -45,6 +45,7 @@ import { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
 import { ChevronDown } from "lucide-react";
+import { categoryToIcon } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
@@ -110,25 +111,26 @@ interface ShapeProps {
   size: number;
   fill: string;
   stroke?: string;
+  strokeWidth?: number;
   strokeDasharray?: string;
   strokeDashoffset?: number;
 }
 
-function Diamond({ size, fill, stroke = "#e4e4e7", strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Diamond({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const h = size * 0.5;
   return (
     <polygon
       points={`${h},0 ${size},${h} ${h},${size} 0,${h}`}
       fill={fill}
       stroke={stroke}
-      strokeWidth={2.5}
+      strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
       strokeDashoffset={strokeDashoffset}
     />
   );
 }
 
-function Octagon({ size, fill, stroke = "#e4e4e7", strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Octagon({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const o = size * 0.2;
   const e = size - o;
   const points = [
@@ -140,28 +142,28 @@ function Octagon({ size, fill, stroke = "#e4e4e7", strokeDasharray, strokeDashof
       points={points}
       fill={fill}
       stroke={stroke}
-      strokeWidth={2.5}
+      strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
       strokeDashoffset={strokeDashoffset}
     />
   );
 }
 
-function Circle({ size, fill, stroke = "#e4e4e7", strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Circle({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const r = size * 0.5;
   return (
     <circle
       cx={r} cy={r} r={r - 1}
       fill={fill}
       stroke={stroke}
-      strokeWidth={2.5}
+      strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
       strokeDashoffset={strokeDashoffset}
     />
   );
 }
 
-function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeDasharray, strokeDashoffset }: ShapeProps) {
+function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   return (
     <rect
       x={1} y={1}
@@ -169,7 +171,7 @@ function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeDasharray, stroke
       rx={size * 0.2} ry={size * 0.2}
       fill={fill}
       stroke={stroke}
-      strokeWidth={2.5}
+      strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
       strokeDashoffset={strokeDashoffset}
     />
@@ -177,55 +179,89 @@ function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeDasharray, stroke
 }
 
 // ---------------------------------------------------------------------------
-// Category border helper
-//
-// Colours the shape's own border in segments, one per category.
-// Uses stroke-dasharray to divide the perimeter equally.
+// Category → Lucide icon mapping
+// Matched by keyword so no schema change is needed. Add more keywords as new
+// category names appear in user configs.
 // ---------------------------------------------------------------------------
 
 type ShapeType = typeof Diamond | typeof Octagon | typeof Circle | typeof RoundedSquare;
 
-function CategoryBorder({
+// ---------------------------------------------------------------------------
+// Category icons — rendered as absolutely-positioned Lucide icons inside the shape
+// ---------------------------------------------------------------------------
+
+interface CategoryItem { name: string; icon?: string }
+
+function CategoryIcons({
   categories,
   size,
-  Shape,
-  getCategoryColor,
 }: {
-  categories: string[];
+  categories: CategoryItem[];
   size: number;
-  Shape: ShapeType;
-  getCategoryColor: (name: string) => string;
 }) {
-  const perimeter = Shape === Circle
-    ? Math.PI * size
-    : Shape === Diamond
-    ? 2 * Math.SQRT2 * size
-    : 4 * size;
+  if (categories.length === 0) return null;
 
-  if (categories.length === 0) {
-    return <Shape size={size} fill="transparent" stroke="#e4e4e7" />;
-  }
-  if (categories.length === 1) {
-    return <Shape size={size} fill="transparent" stroke={getCategoryColor(categories[0])} />;
-  }
-
-  const segLen = perimeter / categories.length;
-  const gap = segLen * 0.1;
+  const visible = categories.slice(0, 3);
+  const gap = 3;
+  const maxTotalW = size * 0.78;
+  const iconSize = Math.max(8, Math.min(
+    Math.floor(size * 0.45),
+    Math.floor((maxTotalW - (visible.length - 1) * gap) / visible.length),
+  ));
+  const totalW = visible.length * iconSize + (visible.length - 1) * gap;
+  const startX = 8 + (size - totalW) / 2;
+  const startY = (size - iconSize) / 2;
 
   return (
     <>
-      {categories.map((cat, i) => (
-        <Shape
-          key={cat}
-          size={size}
-          fill="transparent"
-          stroke={getCategoryColor(cat)}
-          strokeDasharray={`${segLen - gap} ${perimeter - (segLen - gap)}`}
-          strokeDashoffset={-(i * segLen)}
-        />
-      ))}
+      {visible.map(({ name, icon }, i) => {
+        const Icon = categoryToIcon(name, icon);
+        return (
+          <div
+            key={name}
+            style={{
+              position: "absolute",
+              left: startX + i * (iconSize + gap),
+              top: startY,
+              width: iconSize,
+              height: iconSize,
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon size={iconSize} color="black" strokeWidth={2.2} />
+          </div>
+        );
+      })}
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Crack geometry — coordinates in SVG root space (shape starts at x = offsetX)
+// ---------------------------------------------------------------------------
+
+function buildCrackPaths(size: number, offsetX: number) {
+  const cx = offsetX + size * 0.5;
+  const s = size;
+  const main = [
+    `M ${cx - s * 0.04},0`,
+    `L ${cx + s * 0.10},${s * 0.18}`,
+    `L ${cx - s * 0.06},${s * 0.26}`,
+    `L ${cx + s * 0.12},${s * 0.48}`,
+    `L ${cx - s * 0.08},${s * 0.56}`,
+    `L ${cx + s * 0.08},${s * 0.75}`,
+    `L ${cx - s * 0.04},${s * 0.82}`,
+    `L ${cx + s * 0.06},${s}`,
+  ].join(" ");
+  const branch = [
+    `M ${cx + s * 0.12},${s * 0.48}`,
+    `L ${cx + s * 0.26},${s * 0.62}`,
+    `L ${cx + s * 0.18},${s * 0.72}`,
+  ].join(" ");
+  return { main, branch };
 }
 
 // ---------------------------------------------------------------------------
@@ -238,16 +274,21 @@ type NodeData = CascadeNode;
 function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: ShapeType; selected?: boolean }) {
   const size = nodeSize(data.importance);
   const levelColor = useConfigStore(selectLevelColor(data.functionality));
-  const categories = useConfigStore((s) => s.config.categories);
+  const configCategories = useConfigStore((s) => s.config.categories);
   const activeTool = useUiStore((s) => s.activeTool);
-  const getCategoryColor = useCallback(
-    (name: string) => categories.find((c) => c.name === name)?.color ?? "#94a3b8",
-    [categories],
-  );
-  const nodeCategories = data.node_categories ?? [];
+  // Build CategoryItem list so CategoryIcons can resolve stored icon names
+  const nodeCategories: CategoryItem[] = (data.node_categories ?? []).map((name) => ({
+    name,
+    icon: configCategories.find((c) => c.name === name)?.icon,
+  }));
 
   const hasTimeWarning = (data.functionality_time ?? 0) > 0;
   const hasDamage = data.direct_damage === true;
+
+  // Crack geometry — computed once; coordinates are in SVG root space (shape offset = 8px)
+  const crack = hasDamage ? buildCrackPaths(size, 8) : null;
+  // SVG IDs must not contain characters invalid in id/url() — replace anything non-alphanumeric
+  const maskId = `frac-${data.id.replace(/[^a-zA-Z0-9]/g, "-")}`;
   const label = data.label ?? data.id;
   const showHandles = activeTool === "add-edge";
 
@@ -319,35 +360,36 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           />
         )}
 
-        {/* Filled shape (functionality colour) */}
-        <g transform="translate(8,0)">
-          <Shape size={size} fill={levelColor} stroke="none" />
-        </g>
-
-        {/* Category border segments drawn on top of the fill */}
-        <g transform="translate(8,0)" strokeWidth={3.5}>
-          <CategoryBorder
-            categories={nodeCategories}
-            size={size}
-            Shape={Shape}
-            getCategoryColor={getCategoryColor}
-          />
-        </g>
-
-        {/* Direct damage overlay — centered, shown instead of text */}
-        {hasDamage && (
-          <text
-            x={8 + size * 0.5}
-            y={size * 0.5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize={size * 0.45}
-            fill="#ef4444"
-          >
-            ⚡
-          </text>
+        {/* SVG mask that cuts the crack gap out of the node when damaged */}
+        {crack && (
+          <defs>
+            <mask id={maskId} maskUnits="userSpaceOnUse">
+              {/* White = keep, black = cut through */}
+              <rect x={8} y={0} width={size} height={size} fill="white" />
+              <path d={crack.main}   stroke="black" strokeWidth={2}   strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d={crack.branch} stroke="black" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </mask>
+          </defs>
         )}
+
+        {/* Filled shape (functionality colour) — masked to show crack gap */}
+        <g mask={crack ? `url(#${maskId})` : undefined}>
+          <g transform="translate(8,0)">
+            <Shape size={size} fill={levelColor} stroke="none" />
+          </g>
+        </g>
+
+        {/* Neutral border — also masked so the outline breaks at the crack */}
+        <g mask={crack ? `url(#${maskId})` : undefined}>
+          <g transform="translate(8,0)">
+            <Shape size={size} fill="transparent" stroke="white" strokeWidth={2} />
+          </g>
+        </g>
+
       </svg>
+
+      {/* Category icons centered inside the shape */}
+      <CategoryIcons categories={nodeCategories} size={size} />
 
       {/* Label below */}
       <div

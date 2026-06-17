@@ -22,6 +22,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { saveBeforeUnload } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
+import { useAutosave } from "@/hooks/useAutosave";
 import { checkServerHealth } from "@/lib/api-client";
 import { SaveScorecardDialog } from "@/components/scorecard/operativity-scorecard";
 
@@ -38,6 +39,8 @@ export function EditorShell() {
   const scorecardSaveDialogOpen = useUiStore((s) => s.scorecardSaveDialogOpen);
   const closeScorecardSaveDialog = useUiStore((s) => s.closeScorecardSaveDialog);
   const setServerReachable = useUiStore((s) => s.setServerReachable);
+
+  useAutosave();
 
   const recoveryDirRef = useRef<FileSystemDirectoryHandle | null>(null);
 

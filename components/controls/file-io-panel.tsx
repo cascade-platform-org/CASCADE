@@ -14,6 +14,7 @@ import {
   saveProject,
   saveConfig,
   getProjectHistory,
+  clearProjectHistory,
   loadProjectFile,
   loadConfigFile,
   loadBundleFile,
@@ -42,6 +43,9 @@ export function FileIoPanel() {
   useEffect(() => {
     loadRecoveryDir().then((dir) => setRecoveryDirName(dir?.name ?? null));
     setHistory(getProjectHistory());
+    // Re-read history every 30 s so automatic snapshots appear without reopening the panel.
+    const interval = setInterval(() => setHistory(getProjectHistory()), 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   function currentBundle(): ProjectBundle {
@@ -257,9 +261,23 @@ export function FileIoPanel() {
 
           {/* Version history */}
           <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              <History size={12} /> Version history
-            </h3>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                <History size={12} /> Version history
+              </h3>
+              {history.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (!window.confirm("Clear all version history? This cannot be undone.")) return;
+                    clearProjectHistory();
+                    setHistory([]);
+                  }}
+                  className="text-xs text-zinc-400 hover:text-red-500"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             {history.length === 0 ? (
               <p className="text-xs text-zinc-400 italic">No saved versions yet. Download a bundle to create one.</p>
             ) : (
