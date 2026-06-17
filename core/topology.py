@@ -17,6 +17,7 @@ its parents, then their parents, and so on.
 """
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -79,11 +80,11 @@ def incoming_closure(
 
     # Nodes whose incoming edges we still need to expand. Seed with the target
     # so we pick up its direct suppliers first, then fan outwards.
-    frontier: list[str] = [target_id]
+    frontier: deque[str] = deque([target_id])
     visited: set[str] = {target_id}
 
     while frontier:
-        current = frontier.pop()
+        current = frontier.popleft()
         for edge in index.get(current, ()):  # edges arriving at `current`
             traversed_edges.add(edge.id)
             parent = edge.source

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, Field
+
+if TYPE_CHECKING:
+    from .results import PropagationResult
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +389,7 @@ class ScorecardEntry(BaseModel):
     after_propagation: Optional[GraphSnapshot] = None
     after_temporal_jump: Optional[GraphSnapshot] = None
     temporal_jump_hours: Optional[int] = Field(None, ge=1)
-    propagation_result: Optional["PropagationResult"] = None  # type: ignore[name-defined]
+    propagation_result: Optional[PropagationResult] = None
     # Base64-encoded PNG of the GlobalViewCanvas at each snapshot state.
     # Captured once at save time; stored so the Scorecard renders offline.
     before_propagation_image: Optional[str] = None
