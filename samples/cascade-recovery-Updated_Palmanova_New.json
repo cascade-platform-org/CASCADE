@@ -1,13 +1,13 @@
 {
-  "saved_at": "2026-06-17T10:56:56.277Z",
+  "saved_at": "2026-06-17T13:12:20.168Z",
   "bundle": {
     "project": {
       "version": "2.0",
       "meta": {
         "name": "Updated Palmanova New",
         "description": "Migrated from Full_Palmanova.json",
-        "created_at": "2026-06-17T10:56:56.276Z",
-        "updated_at": "2026-06-17T10:56:56.276Z"
+        "created_at": "2026-06-17T13:12:20.167Z",
+        "updated_at": "2026-06-17T13:12:20.167Z"
       },
       "nodes": {
         "node_1762946740143": {
@@ -196,7 +196,10 @@
               "dependency_level": 3,
               "demand": 10
             }
-          }
+          },
+          "rules": [
+            "if Palmanova electric is critical then San Marco electric is operational"
+          ]
         },
         "node_1764756777009": {
           "id": "node_1764756777009",
