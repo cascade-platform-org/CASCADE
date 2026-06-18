@@ -56,6 +56,7 @@ import { useNetworkStore } from "@/store/network-store";
 import { useClipboardStore } from "@/store/clipboard-store";
 import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
+import { useAnalysisStore } from "@/store/analysis-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
 import { pickHandles } from "@/lib/edge-routing";
 import { CanvasContextMenu } from "./canvas-context-menu";
@@ -277,7 +278,9 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
   useEffect(() => subscribeIconsReady(forceRender), []);
 
   const size = nodeSize(data.importance);
-  const levelColor = useConfigStore(selectLevelColor(data.functionality));
+  const functionalityColor = useConfigStore(selectLevelColor(data.functionality));
+  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive ? (s.heatmapColors[data.id] ?? null) : null);
+  const levelColor = heatmapOverride ?? functionalityColor;
   const configCategories = useConfigStore((s) => s.config.categories);
   const activeTool = useUiStore((s) => s.activeTool);
   // Build CategoryItem list so CategoryIcons can resolve stored icon names
@@ -464,7 +467,9 @@ function CascadeEdge({
   markerEnd?: string;  // provided by React Flow from the edge definition's markerEnd field
 }) {
   const n = useConfigStore(selectN);
-  const levelColor = useConfigStore(selectLevelColor(data?.functionality ?? n));
+  const functionalityColorEdge = useConfigStore(selectLevelColor(data?.functionality ?? n));
+  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive && id ? (s.heatmapColors[id] ?? null) : null);
+  const levelColor = heatmapOverride ?? functionalityColorEdge;
 
   const [edgePath] = getBezierPath({
     sourceX, sourceY, sourcePosition,

@@ -5,9 +5,13 @@
  * structures and can be called from any context.
  */
 
-import type { GraphSnapshot, ScorecardEntry, AnyUpdateEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnyUpdateEntry } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import JSZip from "jszip";
+
+function isPropagationEntry(e: ScorecardEntry): e is PropagationScorecardEntry {
+  return e.type === "propagation";
+}
 
 // ---------------------------------------------------------------------------
 // Operativity Score
@@ -105,8 +109,9 @@ export async function findUnsavedRuns(
   history: AnyUpdateEntry[],
   scorecard: ScorecardEntry[],
 ): Promise<UnsavedRun[]> {
+  const propEntries = scorecard.filter(isPropagationEntry);
   const savedHashes = new Set(
-    await Promise.all(scorecard.map((e) => hashSnapshot(e.before_propagation))),
+    await Promise.all(propEntries.map((e) => hashSnapshot(e.before_propagation))),
   );
 
   const runs: UnsavedRun[] = [];
@@ -154,7 +159,7 @@ export function findUncoveredEvents(
   config: ModelConfiguration,
   scorecard: ScorecardEntry[],
 ): UncoveredEvent[] {
-  const coveredIds = new Set(scorecard.map((e) => e.event_id).filter(Boolean));
+  const coveredIds = new Set(scorecard.filter(isPropagationEntry).map((e) => e.event_id).filter(Boolean));
   return (config.events ?? [])
     .filter((ev) => ev.type !== "temporal_jump" && !coveredIds.has(ev.id))
     .map((ev) => ({ eventId: ev.id, eventLabel: ev.label, eventType: ev.type }));
@@ -177,10 +182,12 @@ export function generateMarkdown(
   lines.push("---", "");
 
   // Summary table
+  const propEntries = entries.filter(isPropagationEntry);
+
   lines.push("## Summary", "");
   lines.push("| Event | Before O% | After O% | After Temporal O% |");
   lines.push("|---|---|---|---|");
-  for (const e of entries) {
+  for (const e of propEntries) {
     const before = computeOperativityScore(e.before_propagation, n).toFixed(1);
     const after = e.after_propagation
       ? computeOperativityScore(e.after_propagation, n).toFixed(1)
@@ -193,7 +200,7 @@ export function generateMarkdown(
   lines.push("");
 
   // Per-entry sections
-  for (const e of entries) {
+  for (const e of propEntries) {
     lines.push("---", "", `## ${e.label}`, "");
     lines.push(`**Saved:** ${new Date(e.created_at).toLocaleString()}`, "");
 

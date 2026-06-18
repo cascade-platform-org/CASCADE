@@ -12,13 +12,14 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight } from "lucide-react";
+import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
 import { resolveIcon, loadAllIconsOnce, subscribeIconsReady } from "@/lib/category-icons";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
+import { useAnalysisStore } from "@/store/analysis-store";
 import {
   useConfigStore,
   selectActionBarEvents,
@@ -63,6 +64,7 @@ function executeRevert({
 }
 
 export function ActionBar() {
+  const openAnalysisPage = useAnalysisStore((s) => s.openAnalysisPage);
   const scope = useUiStore((s) => s.propagationScope);
   const setPropagationScope = useUiStore((s) => s.setPropagationScope);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
@@ -102,6 +104,16 @@ export function ActionBar() {
         loading={isPropagating}
         serverReachable={serverReachable}
       />
+
+      {/* Analyse */}
+      <ActionButton
+        onClick={openAnalysisPage}
+        title="Open Topological Analysis"
+        className="text-indigo-600 dark:text-indigo-400"
+      >
+        <BarChart2 size={13} />
+        <span>Analyse</span>
+      </ActionButton>
 
       {/* Reset */}
       <ActionButton

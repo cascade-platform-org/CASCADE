@@ -30,7 +30,7 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
-import type { GraphSnapshot, ScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
 // Ephemeral temporal jump math (client-side, no propagation call)
@@ -174,7 +174,7 @@ export function SaveScorecardDialog({
     let cancelled = false;
     hashSnapshot(before).then((hash) => {
       if (cancelled) return;
-      Promise.all(scorecard.map((e) => hashSnapshot(e.before_propagation))).then((hashes) => {
+      Promise.all(scorecard.filter((e): e is PropagationScorecardEntry => e.type === "propagation").map((e) => hashSnapshot(e.before_propagation))).then((hashes) => {
         if (!cancelled) setDuplicate(hashes.includes(hash));
       });
     });
@@ -197,7 +197,8 @@ export function SaveScorecardDialog({
       // snapshot slot so the expanded entry always shows a consistent picture.
       const image = captureCanvas ? await captureCanvas() : undefined;
 
-      const entry: ScorecardEntry = {
+      const entry: PropagationScorecardEntry = {
+        type: "propagation",
         id: `sc-${nanoid(10)}`,
         label: label.trim(),
         created_at: new Date().toISOString(),

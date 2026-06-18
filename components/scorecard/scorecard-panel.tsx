@@ -30,7 +30,7 @@ import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
 import { SaveScorecardDialog } from "./operativity-scorecard";
 import { SnapshotFlowView } from "./snapshot-flow-view";
-import type { GraphSnapshot, ScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnalysisScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
@@ -73,7 +73,7 @@ export function ScorecardPanel() {
   );
 
   const incompleteEntries = useMemo(
-    () => scorecard.filter((e) => !e.after_propagation),
+    () => scorecard.filter((e): e is PropagationScorecardEntry => e.type === "propagation" && !e.after_propagation),
     [scorecard],
   );
 
@@ -165,7 +165,7 @@ export function ScorecardPanel() {
                 defaultLabel: run.eventLabel,
                 eventId: run.eventId,
               })}
-              onComputeEntry={async (entry) => {
+              onComputeEntry={async (entry: PropagationScorecardEntry) => {
                 if (!serverReachable) return;
                 try {
                   const after = await runEphemeralPropagation(entry.before_propagation);
@@ -200,15 +200,23 @@ export function ScorecardPanel() {
             <EmptyState onSave={() => openSaveDialog()} />
           ) : (
             <div className="space-y-4">
-              {scorecard.map((entry) => (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  n={n}
-                  config={config}
-                  onDelete={() => removeScorecardEntry(entry.id)}
-                />
-              ))}
+              {scorecard.map((entry) =>
+                entry.type === "propagation" ? (
+                  <EntryCard
+                    key={entry.id}
+                    entry={entry}
+                    n={n}
+                    config={config}
+                    onDelete={() => removeScorecardEntry(entry.id)}
+                  />
+                ) : (
+                  <AnalysisEntryCard
+                    key={entry.id}
+                    entry={entry}
+                    onDelete={() => removeScorecardEntry(entry.id)}
+                  />
+                )
+              )}
             </div>
           )}
         </div>
@@ -255,13 +263,13 @@ function EmptyState({ onSave }: { onSave: () => void }) {
 
 interface GapsSectionProps {
   unsavedRuns: UnsavedRun[];
-  incompleteEntries: ScorecardEntry[];
+  incompleteEntries: PropagationScorecardEntry[];
   uncoveredEvents: UncoveredEvent[];
   loading: boolean;
   serverReachable: boolean;
   config: ReturnType<typeof useConfigStore.getState>["config"];
   onSaveRun: (run: UnsavedRun) => void;
-  onComputeEntry: (entry: ScorecardEntry) => Promise<void>;
+  onComputeEntry: (entry: PropagationScorecardEntry) => Promise<void>;
   onRunEvent: (ev: UncoveredEvent) => void;
 }
 
@@ -290,7 +298,7 @@ function GapsSection({
     setDismissedRunIds(new Set(unsavedRuns.map((r) => r.eventEntryId)));
   }
 
-  async function handleCompute(entry: ScorecardEntry) {
+  async function handleCompute(entry: PropagationScorecardEntry) {
     setComputingIds((s) => new Set(s).add(entry.id));
     await onComputeEntry(entry);
     setComputingIds((s) => { const n = new Set(s); n.delete(entry.id); return n; });
@@ -421,11 +429,90 @@ function GapsSection({
 }
 
 // ---------------------------------------------------------------------------
+// Analysis entry card
+// ---------------------------------------------------------------------------
+
+interface AnalysisEntryCardProps {
+  entry: AnalysisScorecardEntry;
+  onDelete: () => void;
+}
+
+function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const topEntries = Object.entries(entry.scores)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{entry.label}</p>
+            <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+              analysis
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400">
+            {new Date(entry.created_at).toLocaleString()}
+            <span className="ml-2 text-zinc-500">{entry.metric} · {entry.scope}</span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {topEntries.length > 0 && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              title={expanded ? "Collapse" : "Show top elements"}
+              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
+            </button>
+          )}
+          {confirmDelete ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+              <button onClick={onDelete} className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Yes</button>
+              <button onClick={() => setConfirmDelete(false)} className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700">No</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)} title="Delete entry" className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-700">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Top Elements by Score</p>
+          <div className="space-y-1">
+            {topEntries.map(([id, score], i) => {
+              const node = entry.snapshot.nodes[id];
+              return (
+                <div key={id} className="flex items-center justify-between text-xs">
+                  <span className="truncate text-zinc-600 dark:text-zinc-400">
+                    {i + 1}. {node?.label ?? id}
+                  </span>
+                  <span className="ml-2 font-mono text-indigo-600 dark:text-indigo-400">{score.toFixed(4)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Entry card
 // ---------------------------------------------------------------------------
 
 interface EntryCardProps {
-  entry: ScorecardEntry;
+  entry: PropagationScorecardEntry;
   n: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
   onDelete: () => void;

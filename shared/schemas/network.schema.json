@@ -317,6 +317,7 @@
           "anyOf": [
             {
               "additionalProperties": {
+                "maximum": 100,
                 "minimum": 0,
                 "type": "integer"
               },
@@ -460,6 +461,7 @@
           "anyOf": [
             {
               "additionalProperties": {
+                "maximum": 100,
                 "minimum": 0,
                 "type": "integer"
               },
@@ -1040,9 +1042,15 @@
       "title": "PropagationResult",
       "type": "object"
     },
-    "ScorecardEntry": {
-      "description": "One entry in the Scorecard: up to three Scenario snapshots explicitly saved\nby the user. The history pattern Event \u2192 Propagation \u2192 (Temporal Jump \u2192\nPropagation)* maps directly onto the three fields.\n\n`before_propagation`   \u2014 state just before the most recent Propagation\n    (post-Event, post-manual-edit). Always present.\n`after_propagation`    \u2014 state after the Propagation. Absent when no\n    Propagation has been run (Manual What-If entry).\n`after_temporal_jump`  \u2014 state after one or more Temporal Jump events +\n    Propagations. Absent when no Temporal Jump was run or requested.\n`temporal_jump_hours`  \u2014 total hours elapsed across all Temporal Jumps that\n    produced `after_temporal_jump`. Absent when `after_temporal_jump` is absent.\n`propagation_result`   \u2014 raw engine delta from the Propagation that produced\n    `after_propagation`. Absent for Manual What-If entries.\n\nDerived metrics are computed client-side from the snapshots; never stored.",
+    "PropagationScorecardEntry": {
+      "description": "Scorecard entry produced by a Propagation run (ADR-0006).\n\n`before_propagation`   \u2014 state just before the most recent Propagation\n    (post-Event, post-manual-edit). Always present.\n`after_propagation`    \u2014 state after the Propagation. Absent when no\n    Propagation has been run (Manual What-If entry).\n`after_temporal_jump`  \u2014 state after one or more Temporal Jump events +\n    Propagations. Absent when no Temporal Jump was run or requested.\n`temporal_jump_hours`  \u2014 total hours elapsed across all Temporal Jumps that\n    produced `after_temporal_jump`. Absent when `after_temporal_jump` is absent.\n`propagation_result`   \u2014 raw engine delta from the Propagation that produced\n    `after_propagation`. Absent for Manual What-If entries.\n\nDerived metrics are computed client-side from the snapshots; never stored.",
       "properties": {
+        "type": {
+          "const": "propagation",
+          "default": "propagation",
+          "title": "Type",
+          "type": "string"
+        },
         "id": {
           "title": "Id",
           "type": "string"
@@ -1159,7 +1167,87 @@
         "created_at",
         "before_propagation"
       ],
-      "title": "ScorecardEntry",
+      "title": "PropagationScorecardEntry",
+      "type": "object"
+    },
+    "AnalysisScorecardEntry": {
+      "description": "Scorecard entry produced by a Topological Analysis run (ADR-0006).\n\nStores per-Element scores for a named Analysis Metric plus a GraphSnapshot\nat computation time. The PNG (if present) shows the canvas with Analysis\nHeatmap applied.",
+      "properties": {
+        "type": {
+          "const": "analysis",
+          "title": "Type",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "local",
+            "global"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "canvas_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canvas Id"
+        },
+        "scores": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Per-Element score at computation time. Keys are element IDs.",
+          "title": "Scores",
+          "type": "object"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/GraphSnapshot"
+        },
+        "image_png": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Png"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "label",
+        "created_at",
+        "metric",
+        "scope",
+        "snapshot"
+      ],
+      "title": "AnalysisScorecardEntry",
       "type": "object"
     },
     "ProjectMeta": {
@@ -1269,7 +1357,21 @@
         "scorecard": {
           "description": "User-curated atlas of named Scenarios and their Propagation results. Persisted in the project file. Derived metrics are computed client-side from each entry's snapshot and never stored here.",
           "items": {
-            "$ref": "#/$defs/ScorecardEntry"
+            "discriminator": {
+              "mapping": {
+                "analysis": "#/$defs/AnalysisScorecardEntry",
+                "propagation": "#/$defs/PropagationScorecardEntry"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/PropagationScorecardEntry"
+              },
+              {
+                "$ref": "#/$defs/AnalysisScorecardEntry"
+              }
+            ]
           },
           "title": "Scorecard",
           "type": "array"

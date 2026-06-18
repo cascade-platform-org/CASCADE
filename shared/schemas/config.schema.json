@@ -46,6 +46,18 @@
           ],
           "default": null,
           "title": "Color"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
         }
       },
       "required": [
@@ -88,6 +100,18 @@
           ],
           "title": "Type",
           "type": "string"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
         },
         "frequency_per_10y": {
           "default": 0.0,
@@ -278,6 +302,7 @@
           "items": {
             "$ref": "#/$defs/FunctionalityScaleLevel"
           },
+          "minItems": 2,
           "title": "Functionality Scale",
           "type": "array"
         },

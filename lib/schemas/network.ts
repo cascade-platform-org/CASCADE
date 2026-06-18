@@ -259,31 +259,20 @@ export const AnyUpdateEntrySchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Scorecard
+// Scorecard — discriminated union (ADR-0006)
 // ---------------------------------------------------------------------------
 
 /**
- * One Scorecard entry. The history pattern Event → Propagation → Temporal Jump →
- * Propagation maps onto three optional snapshot fields.
- *
- * `before_propagation`  — state just before the most recent Propagation
- *   (post-Event, post-manual-edit). Always present.
- * `after_propagation`   — state after the Propagation. Absent for Manual
- *   What-If entries (no Propagation run).
- * `after_temporal_jump` — state after Temporal Jump(s) + Propagation(s).
- *   Absent when no Temporal Jump was run or requested.
- * `temporal_jump_hours` — total hours elapsed across Temporal Jumps that
- *   produced `after_temporal_jump`.
- * `propagation_result`  — raw engine delta from the Propagation that produced
- *   `after_propagation`. Absent for Manual What-If entries.
- *
- * Derived metrics are computed client-side; never stored.
+ * Propagation entry: before/after Scenario snapshots from a Propagation run.
+ * Backward compat: old project files without `type` field default to "propagation"
+ * via the preprocessor on ProjectSchema.scorecard below.
  */
-export const ScorecardEntrySchema = z.object({
+export const PropagationScorecardEntrySchema = z.object({
+  type: z.literal("propagation").default("propagation"),
   id: z.string(),
   label: z.string(),
   created_at: z.string(),
-  /** EventDefinition.id that triggered this entry. Null for Manual What-If entries. */
+  /** EventDefinition.id that triggered this entry. Absent for Manual What-If entries. */
   event_id: z.string().optional(),
   before_propagation: GraphSnapshotSchema,
   after_propagation: GraphSnapshotSchema.optional(),
@@ -295,6 +284,33 @@ export const ScorecardEntrySchema = z.object({
   after_temporal_jump_image: z.string().optional(),
   propagation_result: PropagationResultSchema.optional(),
 });
+
+/**
+ * Analysis entry: per-Element scores from a Topological Analysis metric run.
+ */
+export const AnalysisScorecardEntrySchema = z.object({
+  type: z.literal("analysis"),
+  id: z.string(),
+  label: z.string(),
+  created_at: z.string(),
+  /** Analysis Metric name, e.g. "betweenness", "vitality", "shapley". */
+  metric: z.string(),
+  scope: z.enum(["local", "global"]),
+  /** Set when scope = "local". */
+  canvas_id: z.string().optional(),
+  /** Per-Element score at computation time. Keys are element IDs. */
+  scores: z.record(z.string(), z.number()).default({}),
+  /** Graph state at time of computation. */
+  snapshot: GraphSnapshotSchema,
+  /** Base64-encoded PNG of the canvas with Analysis Heatmap applied. */
+  image_png: z.string().optional(),
+});
+
+/** Discriminated union on `type`. */
+export const ScorecardEntrySchema = z.discriminatedUnion("type", [
+  PropagationScorecardEntrySchema,
+  AnalysisScorecardEntrySchema,
+]);
 
 // ---------------------------------------------------------------------------
 // Project
@@ -334,7 +350,23 @@ export const ProjectSchema = z.object({
    * User-curated atlas of named Scenarios and their Propagation results.
    * Persisted in the project file. Derived metrics are computed client-side.
    */
-  scorecard: z.array(ScorecardEntrySchema).default([]),
+  /**
+   * Backward compat: old project files have Propagation entries without a `type`
+   * field. The preprocessor injects `type: "propagation"` before the discriminated
+   * union parser runs, so they load correctly without schema migration.
+   */
+  scorecard: z.preprocess(
+    (val) => {
+      if (!Array.isArray(val)) return val;
+      return val.map((entry: unknown) => {
+        if (typeof entry === "object" && entry !== null && !("type" in entry)) {
+          return { ...(entry as object), type: "propagation" };
+        }
+        return entry;
+      });
+    },
+    z.array(ScorecardEntrySchema).default([]),
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -358,5 +390,7 @@ export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
 // PropagationMeta type is exported from ./propagation (via the schemas barrel).
 export type AnyUpdateType = z.infer<typeof AnyUpdateTypeSchema>;
 export type AnyUpdateEntry = z.infer<typeof AnyUpdateEntrySchema>;
+export type PropagationScorecardEntry = z.infer<typeof PropagationScorecardEntrySchema>;
+export type AnalysisScorecardEntry = z.infer<typeof AnalysisScorecardEntrySchema>;
 export type ScorecardEntry = z.infer<typeof ScorecardEntrySchema>;
 export type Project = z.infer<typeof ProjectSchema>;

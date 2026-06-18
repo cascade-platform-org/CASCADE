@@ -16,6 +16,7 @@ import { RulesManualPanel } from "@/components/rules/rules-manual-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { InterventionPanel } from "@/components/canvas/intervention-panel";
+import { AnalysisPage } from "@/components/analysis/analysis-page";
 import { ToastContainer } from "./toast-container";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -120,6 +121,7 @@ export function EditorShell() {
       {scorecardSaveDialogOpen && (
         <SaveScorecardDialog onClose={closeScorecardSaveDialog} />
       )}
+      <AnalysisPage />
 
       <ToastContainer />
     </div>
