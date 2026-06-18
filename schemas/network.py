@@ -362,11 +362,9 @@ class AnyUpdateEntry(BaseModel):
 # Scorecard
 # ---------------------------------------------------------------------------
 
-class ScorecardEntry(BaseModel):
+class PropagationScorecardEntry(BaseModel):
     """
-    One entry in the Scorecard: up to three Scenario snapshots explicitly saved
-    by the user. The history pattern Event → Propagation → (Temporal Jump →
-    Propagation)* maps directly onto the three fields.
+    Scorecard entry produced by a Propagation run (ADR-0006).
 
     `before_propagation`   — state just before the most recent Propagation
         (post-Event, post-manual-edit). Always present.
@@ -381,6 +379,7 @@ class ScorecardEntry(BaseModel):
 
     Derived metrics are computed client-side from the snapshots; never stored.
     """
+    type: Literal["propagation"] = "propagation"
     id: str
     label: str
     created_at: str  # ISO 8601 UTC
@@ -395,6 +394,39 @@ class ScorecardEntry(BaseModel):
     before_propagation_image: Optional[str] = None
     after_propagation_image: Optional[str] = None
     after_temporal_jump_image: Optional[str] = None
+
+
+class AnalysisScorecardEntry(BaseModel):
+    """
+    Scorecard entry produced by a Topological Analysis run (ADR-0006).
+
+    Stores per-Element scores for a named Analysis Metric plus a GraphSnapshot
+    at computation time. The PNG (if present) shows the canvas with Analysis
+    Heatmap applied.
+    """
+    type: Literal["analysis"]
+    id: str
+    label: str
+    created_at: str  # ISO 8601 UTC
+    metric: str  # e.g. "betweenness", "vitality", "shapley"
+    scope: Literal["local", "global"]
+    canvas_id: Optional[str] = None  # set when scope == "local"
+    scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Per-Element score at computation time. Keys are element IDs.",
+    )
+    snapshot: GraphSnapshot
+    image_png: Optional[str] = None  # Base64-encoded PNG with Analysis Heatmap
+
+
+# Discriminated union — `type` field selects the variant.
+# Backward compat: old project files without a `type` field are handled by
+# the Zod preprocessor on the frontend; Pydantic defaults `type` to
+# "propagation" via PropagationScorecardEntry's field default.
+ScorecardEntry = Annotated[
+    PropagationScorecardEntry | AnalysisScorecardEntry,
+    Field(discriminator="type"),
+]
 
 
 # ---------------------------------------------------------------------------

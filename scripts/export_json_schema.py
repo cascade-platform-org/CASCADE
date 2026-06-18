@@ -46,7 +46,8 @@ from schemas.network import (                        # noqa: E402
     Graph,
     GraphSnapshot,
     AnyUpdateEntry,
-    ScorecardEntry,
+    PropagationScorecardEntry,
+    AnalysisScorecardEntry,
     Project,
 )
 from schemas.config import (                         # noqa: E402
@@ -88,7 +89,8 @@ def main() -> None:
 
     export(
         "network.schema.json",
-        Node, Edge, Canvas, Graph, GraphSnapshot, AnyUpdateEntry, ScorecardEntry, Project,
+        Node, Edge, Canvas, Graph, GraphSnapshot, AnyUpdateEntry,
+        PropagationScorecardEntry, AnalysisScorecardEntry, Project,
     )
     export(
         "config.schema.json",

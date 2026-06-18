@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from .network import Project, ResponsibilityShare, ScorecardEntry
+from .network import Project, ResponsibilityShare, ScorecardEntry, PropagationScorecardEntry
 from .config import ModelConfiguration
 
 
@@ -65,6 +65,6 @@ class PropagationResult(BaseModel):
     )
 
 
-# ScorecardEntry.propagation_result references PropagationResult via a forward
-# reference. Rebuild now that PropagationResult is defined in this module.
-ScorecardEntry.model_rebuild()
+# PropagationScorecardEntry.propagation_result references PropagationResult via
+# a forward reference. Rebuild now that PropagationResult is defined here.
+PropagationScorecardEntry.model_rebuild()
