@@ -120,11 +120,29 @@ function MergedViewCanvas() {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
+        if (nodes.length === 0) return undefined;
+
+        // Georeferenced: capture the full container so map tiles appear.
+        const isGeoref = (await import("@/store/canvas-store"))
+          .useCanvasStore.getState().canvases;
+        const hasGeoref = Object.values(isGeoref).some((c) => c.georeferenced);
+        if (hasGeoref && containerRef.current) {
+          const el = containerRef.current;
+          return await toPng(el, { width: el.offsetWidth, height: el.offsetHeight });
+        }
+
         const viewport =
           containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
           document.querySelector<HTMLElement>(".react-flow__viewport");
-        if (!viewport || nodes.length === 0) return undefined;
-        const bounds = getNodesBounds(nodes);
+        if (!viewport) return undefined;
+        const rawBounds = getNodesBounds(nodes);
+        const OVERFLOW = 40;
+        const bounds = {
+          x: rawBounds.x - OVERFLOW,
+          y: rawBounds.y - OVERFLOW,
+          width: rawBounds.width + 2 * OVERFLOW,
+          height: rawBounds.height + 2 * OVERFLOW,
+        };
         const PADDING = 48;
         const TARGET_MAX = 1600;
         const zoom = Math.min(2, Math.max(0.15,

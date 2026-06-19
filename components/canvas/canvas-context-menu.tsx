@@ -130,14 +130,44 @@ export function CanvasContextMenu({
     try {
       const { toSvg } = await import("html-to-image");
       const nodes = getNodes();
-      const viewport =
-        containerRef?.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
-        document.querySelector<HTMLElement>(".react-flow__viewport");
-      if (!viewport || nodes.length === 0) {
+      if (nodes.length === 0) {
         pushToast({ message: "Nothing to export", variant: "info", durationMs: 2000 });
         return;
       }
-      const bounds = getNodesBounds(nodes);
+
+      // Georeferenced canvas: capture the full container so map tiles appear.
+      const storeState = useCanvasStore.getState();
+      const activeId = storeState.activeCanvasId;
+      const isGeoref = activeId ? (storeState.canvases[activeId]?.georeferenced ?? false) : false;
+
+      if (isGeoref && containerRef?.current) {
+        const el = containerRef.current as HTMLElement;
+        const dataUrl = await toSvg(el, {
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+        });
+        const link = document.createElement("a");
+        link.download = `${filename}.svg`;
+        link.href = dataUrl;
+        link.click();
+        return;
+      }
+
+      const viewport =
+        containerRef?.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
+        document.querySelector<HTMLElement>(".react-flow__viewport");
+      if (!viewport) {
+        pushToast({ message: "Nothing to export", variant: "info", durationMs: 2000 });
+        return;
+      }
+      const rawBounds = getNodesBounds(nodes);
+      const OVERFLOW = 40;
+      const bounds = {
+        x: rawBounds.x - OVERFLOW,
+        y: rawBounds.y - OVERFLOW,
+        width: rawBounds.width + 2 * OVERFLOW,
+        height: rawBounds.height + 2 * OVERFLOW,
+      };
       const PADDING = 48;
       const TARGET_MAX = 1600;
       const zoom = Math.min(2, Math.max(0.15, Math.min(TARGET_MAX / bounds.width, TARGET_MAX / bounds.height)));
@@ -167,7 +197,7 @@ export function CanvasContextMenu({
     } catch {
       pushToast({ message: "SVG export failed — try PNG instead", variant: "error", durationMs: 3000 });
     }
-  }, [getNodes, filename, pushToast, onClose]);
+  }, [getNodes, filename, pushToast, onClose, containerRef]);
 
   // ---------------------------------------------------------------------------
 

@@ -402,20 +402,20 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
       <div
         style={{
           position: "absolute",
-          bottom: 0,
-          left: 0,
-          width: size + 16,
+          top: size + 2,
+          left: "50%",
+          transform: "translateX(-50%)",
           textAlign: "center",
           fontSize: 10,
           color: "#52525b",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
-          maxWidth: 120,
+          maxWidth: 200,
           lineHeight: "14px",
         }}
       >
-        {label.length > 20 ? label.slice(0, 19) + "…" : label}
+        {label.length > 30 ? label.slice(0, 29) + "…" : label}
       </div>
     </div>
   );
@@ -635,12 +635,37 @@ export function FlowCanvas() {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
+        if (nodes.length === 0) return undefined;
+
+        // Georeferenced canvas: capture the full container (map + nodes) at its
+        // natural screen size so the map tiles appear in the exported image.
+        const storeState = (await import("@/store/canvas-store")).useCanvasStore.getState();
+        const activeId = storeState.activeCanvasId;
+        const isGeoref = activeId ? (storeState.canvases[activeId]?.georeferenced ?? false) : false;
+
+        if (isGeoref && containerRef.current) {
+          const el = containerRef.current;
+          return await toPng(el, {
+            width: el.offsetWidth,
+            height: el.offsetHeight,
+          });
+        }
+
         const viewport =
           containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
           document.querySelector<HTMLElement>(".react-flow__viewport");
-        if (!viewport || nodes.length === 0) return undefined;
+        if (!viewport) return undefined;
 
-        const bounds = getNodesBounds(nodes);
+        const rawBounds = getNodesBounds(nodes);
+        // Expand by OVERFLOW in flow-space so labels/badges that extend beyond
+        // the node's own bounding box are never clipped in the output image.
+        const OVERFLOW = 40;
+        const bounds = {
+          x: rawBounds.x - OVERFLOW,
+          y: rawBounds.y - OVERFLOW,
+          width: rawBounds.width + 2 * OVERFLOW,
+          height: rawBounds.height + 2 * OVERFLOW,
+        };
         const PADDING = 48;
         const TARGET_MAX = 1600;
 

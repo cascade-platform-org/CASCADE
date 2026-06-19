@@ -15,7 +15,7 @@
  * Debug overlay: add ?geoDebug=1 to the URL.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useReactFlow, useViewport } from "@xyflow/react";
@@ -106,17 +106,14 @@ function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProp
         const s = screenPos[n.id];
         if (!s) return null;
         return (
-          <div
-            key={n.id}
-            style={{
-              position: "absolute",
-              left: s.x,
-              top: s.y,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
+          <React.Fragment key={n.id}>
+            {/* Dot centred exactly on the node's screen position */}
             <div
               style={{
+                position: "absolute",
+                left: s.x,
+                top: s.y,
+                transform: "translate(-50%, -50%)",
                 width: 10,
                 height: 10,
                 borderRadius: "50%",
@@ -125,13 +122,14 @@ function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProp
                 boxShadow: "0 0 4px rgba(0,0,0,0.3)",
               }}
             />
+            {/* Label anchored just above the dot */}
             {n.label && (
               <span
                 style={{
                   position: "absolute",
-                  left: 13,
-                  top: "50%",
-                  transform: "translateY(-50%)",
+                  left: s.x,
+                  top: s.y - 8,
+                  transform: "translate(-50%, -100%)",
                   fontSize: 10,
                   fontWeight: 500,
                   color: "rgba(30,30,30,0.9)",
@@ -139,7 +137,7 @@ function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProp
                   padding: "1px 4px",
                   borderRadius: 3,
                   whiteSpace: "nowrap",
-                  maxWidth: 120,
+                  maxWidth: 220,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   backdropFilter: "blur(2px)",
@@ -148,7 +146,7 @@ function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProp
                 {n.label}
               </span>
             )}
-          </div>
+          </React.Fragment>
         );
       })}
     </div>
@@ -252,6 +250,9 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       interactive: false,
       // Pre-load tiles 2 widths outside the viewport on each side.
       maxTileCacheSize: 400,
+      // Keep the last rendered frame in the WebGL buffer so html-to-image can
+      // read it when the user exports PNG/SVG on a georeferenced canvas.
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     });
 
     map.on("load", () => { setMapReady(true); map.resize(); });
