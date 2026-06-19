@@ -239,6 +239,9 @@ def _make_resolver(nodes, edges_by_id, node_func, edge_func, node_ft):
             return node_func.get(name)
         if attribute == "functionality_time":
             return node_ft.get(name)
-        return getattr(node, attribute, None)
+        result = getattr(node, attribute, None)
+        if result is None and node.properties:
+            result = node.properties.get(attribute)
+        return result
 
     return resolve

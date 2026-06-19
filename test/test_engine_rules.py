@@ -388,6 +388,66 @@ def test_conflicting_intercategorical_rules_warn():
     assert any("replaces an earlier intercategorical" in w for w in res.warnings)
 
 
+# --- node.properties attribute access in specific rule conditions ------------
+
+
+def test_specific_rule_reads_node_properties_attribute():
+    # A node stores a custom boolean in `properties`. A specific rule reads it
+    # via dot-notation and fires normally when the value matches.
+    flag_node = Node(id="flag", functionality=3, node_categories=["x"],
+                     properties={"is_monitored": True})
+    target = Node(id="target", functionality=3,
+                  rules=["if flag.is_monitored is True then target is critical"])
+    by_id, _ = _run([flag_node, target], [], {"x": "Requisite"})
+    assert by_id["target"].functionality == 1
+
+
+def test_specific_rule_properties_guard_prevents_degradation():
+    # A failing supplier degrades the target logically to 1. But a specific rule
+    # on the target intercepts the proposal: when `is_backup_active` is True, the
+    # rule fires and replaces the proposal with "operational" (3). The monotone
+    # commit sees 3 >= current (3) and skips — no degradation is committed.
+    # This is the guard pattern: the rule prevents the drop, not causes it.
+    supplier = Node(id="sup", functionality=1, node_categories=["x"])
+    target = Node(id="target", functionality=3, node_categories=["x"],
+                  properties={"is_backup_active": True},
+                  rules=["if target.is_backup_active is True then target is operational"])
+    edge = Edge(id="e", source="sup", target="target", functionality=3)
+    by_id, _ = _run([supplier, target], [edge], {"x": "Requisite"})
+    assert "target" not in by_id  # guarded: no degradation committed
+
+
+def test_specific_rule_properties_guard_inactive_when_false():
+    # Same topology, but the property is False. The specific rule's condition is
+    # False → rule does not fire → the logical proposal (1) stands → degradation commits.
+    supplier = Node(id="sup", functionality=1, node_categories=["x"])
+    target = Node(id="target", functionality=3, node_categories=["x"],
+                  properties={"is_backup_active": False},
+                  rules=["if target.is_backup_active is True then target is operational"])
+    edge = Edge(id="e", source="sup", target="target", functionality=3)
+    by_id, _ = _run([supplier, target], [edge], {"x": "Requisite"})
+    assert by_id["target"].functionality == 1  # guard inactive, degradation commits
+
+
+def test_specific_rule_properties_on_other_node_guards_target():
+    # The condition checks a property on a *different* node (water Operator) to
+    # guard a third node (Fauglis water Source). This mirrors the rule:
+    # "if water Operator.is_communicating_with_electric_operator is True
+    #  then Fauglis water Source is operational"
+    supplier = Node(id="sup", functionality=1, node_categories=["power"])
+    water_op = Node(id="water_op", label="water Operator",
+                    functionality=3, node_categories=["water"],
+                    properties={"is_communicating_with_electric_operator": True})
+    fauglis = Node(id="fauglis", label="Fauglis water Source",
+                   functionality=3, node_categories=["water"],
+                   rules=["if water Operator.is_communicating_with_electric_operator is True "
+                          "then Fauglis water Source is operational"])
+    edge = Edge(id="e", source="sup", target="fauglis", functionality=3)
+    by_id, _ = _run([supplier, water_op, fauglis], [edge],
+                    {"power": "Requisite", "water": "Requisite"})
+    assert "fauglis" not in by_id  # guarded by the water Operator property
+
+
 def test_unknown_label_in_function_arg_warns_but_keeps_rule():
     # 'ghost' is a typo'd element; 'a' validly selects the water category, so the
     # rule still applies (worst_of) but the unknown arg is surfaced.
