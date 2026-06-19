@@ -139,6 +139,7 @@ class RuleContext:
         self.specific: list[tuple[str, dict[str, Any], int]] = []
         self.intra: dict[str, dict[str, str]] = {}          # target -> {category: operator}
         self.inter: dict[str, tuple[str, list[str]]] = {}   # target -> (operator, categories)
+        self.nested_inter: dict[str, dict[str, Any]] = {}   # target -> full nested function AST
         self.warnings: list[str] = []
 
         for element in [*nodes.values(), *edges]:
@@ -208,6 +209,24 @@ class RuleContext:
                 f"Rule ignored ('{rule_text}'): no category could be resolved from its arguments."
             )
             return
+
+        # Nested function: one or more direct arguments are themselves functions
+        # (e.g. worst_of(best_of(A, B), best_of(C, B))). The flat (operator,
+        # categories) representation loses the nested grouping, so we store the
+        # full AST for dedicated evaluation in the propagation loop.
+        has_nested = any(
+            arg.get("type") == "function"
+            for arg in ast["function"].get("arguments", [])
+        )
+        if has_nested:
+            if target in self.nested_inter:
+                self.warnings.append(
+                    f"Rule ('{rule_text}'): replaces an earlier nested intercategorical rule on "
+                    f"'{target}' (only the last one applies)."
+                )
+            self.nested_inter[target] = ast["function"]
+            return
+
         # Category identity is case-insensitive human vocabulary (ADR-0002): a
         # rule may spell a category differently from the node's `node_categories`
         # or the config's CategoryDefinition.name. Store and look up by the
@@ -266,6 +285,12 @@ class RuleContext:
         return categories
 
     # --- per-target lookups used by the engine ------------------------------
+
+    def nested_inter_ast(self, target_id: str) -> Optional[dict[str, Any]]:
+        """Full nested function AST for targets whose intercategorical rule contains
+        sub-functions (e.g. worst_of(best_of(A, B), best_of(C, B))). Returns None
+        when no such rule exists for this target."""
+        return self.nested_inter.get(target_id)
 
     def intra_operator(self, target_id: str, category: str) -> Optional[str]:
         # `category` arrives in node spelling; match on the normalised form.

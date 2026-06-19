@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from core.topology import build_incoming_index
 from engine import guards
 from engine.flow import flow_category_candidates
-from engine.logical import compose_categories, logical_category_candidates
+from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates
 from engine.rules_eval import RuleContext
 from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
 
@@ -132,6 +132,16 @@ def run(request: PropagationRequest) -> PropagationResult:
             proposal = compose_categories(
                 candidates, rules.inter_override(nid), scale_size
             )
+
+            # Nested intercategorical override: a rule whose outer function contains
+            # sub-functions (e.g. worst_of(best_of(A, B), best_of(C, B))). This
+            # replaces the compose result because it defines a richer grouping that
+            # the flat (operator, categories) API cannot represent.
+            nested_ast = rules.nested_inter_ast(nid)
+            if nested_ast is not None:
+                nested = eval_nested_func_ast(nested_ast, candidates, nodes, scale_size)
+                if nested is not None:
+                    proposal = nested
 
             # Guard 3 — specific-rule override (highest priority): a firing
             # specific rule replaces the proposal outright (blame = the elements

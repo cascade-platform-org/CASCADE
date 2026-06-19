@@ -18,9 +18,9 @@ what makes this the engine's logical heuristic — live here.
 """
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
-from core.aggregation import attributed
+from core.aggregation import OPERATORS, attributed
 from core.utils.normalization import normalize_category_name
 from schemas.network import Edge, Node
 
@@ -192,6 +192,76 @@ def compose_categories(
     # degraded ones); missing-as-N categories contribute no responsibility.
     binding_with_shares = {c: w for c, w in inter.shares.items() if c in cat_shares}
     return inter.level, _compose(binding_with_shares, cat_shares), frozenset(inter.shares)
+
+
+def eval_nested_func_ast(
+    func_ast: dict[str, Any],
+    candidates: dict[str, tuple[int, dict[str, float]]],
+    nodes: dict[str, Node],
+    n: int,
+) -> Optional[tuple[int, dict[str, float], frozenset[str]]]:
+    """Evaluate a nested function AST (e.g. worst_of(best_of(A, B), best_of(C, B)))
+    over per-category candidates, returning (level, responsibility, binding).
+
+    Arguments in the AST can be:
+    - ``reference_node`` / ``reference_edge`` / ``reference_unknown``: resolved to
+      the candidate of the node's primary category (the first category listed in
+      ``node_categories`` that has a candidate). If no candidate exists the argument
+      contributes ``n`` (fully operational, no blame) — the same convention as the
+      flat intercategorical override for an un-degraded category.
+    - ``reference_category``: looked up directly in ``candidates``; absent category
+      → ``n``, no blame.
+    - ``function``: sub-expression evaluated recursively.
+
+    Returns ``None`` only when the entire outer function has no resolvable arguments
+    at all (no candidates whatsoever), so the propagation loop can fall back to the
+    default compose.
+    """
+
+    def _resolve(ast_node: dict[str, Any]) -> tuple[int, dict[str, float]]:
+        kind = ast_node.get("type")
+
+        if kind == "reference_category":
+            cat = ast_node["name"]
+            if cat in candidates:
+                return candidates[cat]
+            return n, {}  # category not degraded → fully operational, no blame
+
+        if kind in ("reference_node", "reference_edge", "reference_unknown"):
+            node = nodes.get(ast_node["name"])
+            if node is not None:
+                for cat in (node.node_categories or []):
+                    if cat in candidates:
+                        return candidates[cat]
+            return n, {}  # no matching candidate → fully operational, no blame
+
+        if kind == "function":
+            op_name = ast_node["name"]
+            if op_name not in OPERATORS:
+                # Unknown operator inside a nested rule — skip, treat as fully operational.
+                return n, {}
+            args = ast_node.get("arguments", [])
+            arg_results = [_resolve(a) for a in args]
+            # Use str indices as keys so attributed() gets unique string keys per arg.
+            levels = {str(i): r[0] for i, r in enumerate(arg_results)}
+            if not levels:
+                return n, {}
+            agg = attributed(op_name, levels)
+            # Propagate blame: weight each arg's element shares by the attribution.
+            combined: dict[str, float] = {}
+            for idx_str, weight in agg.shares.items():
+                _, shares = arg_results[int(idx_str)]
+                for elem, share in shares.items():
+                    combined[elem] = combined.get(elem, 0.0) + weight * share
+            return agg.level, combined
+
+        return n, {}
+
+    if func_ast.get("type") != "function":
+        return None
+
+    level, shares = _resolve(func_ast)
+    return level, shares, frozenset()
 
 
 def _rekey_shares(shares: dict[str, float], binding: dict[str, str]) -> dict[str, float]:
