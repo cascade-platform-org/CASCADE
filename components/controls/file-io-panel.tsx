@@ -20,6 +20,7 @@ import {
   loadBundleFile,
   type ProjectBundle,
 } from "@/lib/file-io";
+import { validateBundle, type ValidationIssue } from "@/lib/project-validation";
 import { loadRecoveryDir, saveRecoveryDir, clearRecoveryDir } from "@/lib/recovery-dir";
 
 export function FileIoPanel() {
@@ -37,6 +38,7 @@ export function FileIoPanel() {
   const [history, setHistory] = useState<ReturnType<typeof getProjectHistory>>([]);
   const [recoveryDirName, setRecoveryDirName] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [saveProject_, setSaveProject_] = useState(true);
   const [saveConfig_, setSaveConfig_] = useState(true);
 
@@ -81,6 +83,7 @@ export function FileIoPanel() {
 
   async function handleFileSelected(file: File) {
     setLoadError(null);
+    setValidationIssues([]);
     let text: string;
     try {
       text = await file.text();
@@ -102,8 +105,17 @@ export function FileIoPanel() {
     if (bundleResult.ok) {
       loadProject(bundleResult.data.project);
       loadConfig(bundleResult.data.config);
-      pushToast({ message: `Loaded bundle — project + config from "${file.name}".`, variant: "success", durationMs: 4000 });
-      closeFileIoPanel();
+      const issues = validateBundle(bundleResult.data);
+      if (issues.length === 0) {
+        pushToast({ message: `Loaded bundle — project + config from "${file.name}".`, variant: "success", durationMs: 4000 });
+        closeFileIoPanel();
+      } else {
+        const errCount = issues.filter((i) => i.severity === "error").length;
+        const warnCount = issues.filter((i) => i.severity === "warning").length;
+        const summary = [errCount && `${errCount} error${errCount > 1 ? "s" : ""}`, warnCount && `${warnCount} warning${warnCount > 1 ? "s" : ""}`].filter(Boolean).join(", ");
+        pushToast({ message: `Loaded "${file.name}" — ${summary} found. Review below.`, variant: "error", durationMs: 6000 });
+        setValidationIssues(issues);
+      }
       return;
     }
 
@@ -189,6 +201,36 @@ export function FileIoPanel() {
             >
               <X size={13} />
             </button>
+          </div>
+        )}
+
+        {/* Data quality issues (shown after a load with warnings/errors) */}
+        {validationIssues.length > 0 && (
+          <div className="border-b border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <AlertTriangle size={13} />
+                Data issues ({validationIssues.length})
+              </span>
+              <button
+                onClick={() => { setValidationIssues([]); closeFileIoPanel(); }}
+                className="text-xs text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"
+              >
+                Dismiss &amp; close
+              </button>
+            </div>
+            <ul className="max-h-64 overflow-y-auto divide-y divide-amber-100 dark:divide-amber-900/40">
+              {validationIssues.map((issue, idx) => (
+                <li key={idx} className="flex gap-2 px-4 py-2">
+                  <span className={`mt-0.5 shrink-0 text-[10px] font-bold uppercase tracking-wide ${
+                    issue.severity === "error" ? "text-red-500" : "text-amber-500"
+                  }`}>
+                    {issue.severity === "error" ? "ERR" : "WRN"}
+                  </span>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 break-words leading-relaxed">{issue.message}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
