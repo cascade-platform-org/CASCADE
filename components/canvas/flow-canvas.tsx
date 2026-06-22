@@ -36,7 +36,6 @@ import {
   type Edge as RFEdge,
   type NodeMouseHandler,
   type OnSelectionChangeFunc,
-  getBezierPath,
   BaseEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -453,9 +452,28 @@ export const nodeTypes: NodeTypes = {
 // Custom edge
 // ---------------------------------------------------------------------------
 
+// Offset applied perpendicular-right of each edge direction so that antiparallel
+// pairs (A→B and B→A) land on opposite sides and are both selectable.
+const EDGE_CURVE_OFFSET = 4;
+
+function curvedEdgePath(
+  sx: number, sy: number,
+  tx: number, ty: number,
+): string {
+  const dx = tx - sx;
+  const dy = ty - sy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  // Right-perpendicular unit vector of the direction sx→tx.
+  const px = dy / len;
+  const py = -dx / len;
+  // Quadratic bezier control point: midpoint shifted right-perpendicular.
+  const cx = (sx + tx) / 2 + px * EDGE_CURVE_OFFSET;
+  const cy = (sy + ty) / 2 + py * EDGE_CURVE_OFFSET;
+  return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
+}
+
 function CascadeEdge({
   id, sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition,
   data,
   selected,
   markerEnd,
@@ -463,21 +481,18 @@ function CascadeEdge({
   id: string;
   sourceX: number; sourceY: number;
   targetX: number; targetY: number;
-  sourcePosition: Parameters<typeof getBezierPath>[0]["sourcePosition"];
-  targetPosition: Parameters<typeof getBezierPath>[0]["targetPosition"];
+  sourcePosition: Position;
+  targetPosition: Position;
   data?: { functionality: number; isInterCanvas: boolean; targetCanvasLabel?: string };
   selected?: boolean;
-  markerEnd?: string;  // provided by React Flow from the edge definition's markerEnd field
+  markerEnd?: string;
 }) {
   const n = useConfigStore(selectN);
   const functionalityColorEdge = useConfigStore(selectLevelColor(data?.functionality ?? n));
   const heatmapOverride = useAnalysisStore((s) => s.heatmapActive && id ? (s.heatmapColors[id] ?? null) : null);
   const levelColor = heatmapOverride ?? functionalityColorEdge;
 
-  const [edgePath] = getBezierPath({
-    sourceX, sourceY, sourcePosition,
-    targetX, targetY, targetPosition,
-  });
+  const edgePath = curvedEdgePath(sourceX, sourceY, targetX, targetY);
 
   return (
     <BaseEdge
