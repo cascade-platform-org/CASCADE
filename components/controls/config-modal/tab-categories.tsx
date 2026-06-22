@@ -26,14 +26,12 @@ function CategoryRow({
   return (
     <div className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
       <TextInput value={cat.name} onChange={onChangeName} className="w-28" placeholder="name" />
-      <select
+      <TextInput
         value={cat.category_type}
-        onChange={(e) => onChangeType(e.target.value)}
-        className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-      >
-        <option value="SourceToDemands">SourceToDemands</option>
-        <option value="Requisite">Requisite</option>
-      </select>
+        onChange={onChangeType}
+        className="flex-1"
+        placeholder="category type (e.g. SourceToDemands)"
+      />
       <IconPickerButton value={cat.icon} onChange={onChangeIcon} />
       <ColBtn variant="danger" onClick={onRemove}>
         <Trash2 size={12} />

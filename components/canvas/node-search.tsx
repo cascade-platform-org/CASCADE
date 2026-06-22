@@ -65,7 +65,12 @@ function ResultRow({ node, highlighted, onSelect }: ResultRowProps) {
 // NodeSearch
 // ---------------------------------------------------------------------------
 
-export function NodeSearch() {
+interface NodeSearchProps {
+  /** Override the node list. When omitted, falls back to the active canvas. */
+  nodes?: Node[];
+}
+
+export function NodeSearch({ nodes: nodesProp }: NodeSearchProps = {}) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState(0);
@@ -78,11 +83,12 @@ export function NodeSearch() {
   const allNodes = useCanvasStore((s) => s.nodes);
 
   const canvasNodes = useMemo(() => {
+    if (nodesProp) return nodesProp;
     if (!activeCanvas) return [];
     return activeCanvas.graph.node_ids
       .map((id) => allNodes[id])
       .filter((n): n is Node => Boolean(n));
-  }, [activeCanvas, allNodes]);
+  }, [nodesProp, activeCanvas, allNodes]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

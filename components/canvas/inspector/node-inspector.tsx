@@ -350,7 +350,6 @@ export function NodeInspector({ node }: { node: Node }) {
             const profile: CategoryDependencyProfile =
               node.category_dependency_profiles?.[cat] ?? { dependency_level: n };
             const catDef = categories.find((c) => c.name === cat);
-            const isStd = catDef?.category_type === "SourceToDemands";
             const isInbound = inboundCategories.has(cat);
             return (
               <div key={cat} className="mb-3">
@@ -409,39 +408,35 @@ export function NodeInspector({ node }: { node: Node }) {
                     />
                   </Field>
                 )}
-                {isStd && (
-                  <>
-                    <Field label="Demand">
-                      <NumberInput
-                        value={profile.demand}
-                        min={0}
-                        onChange={(v) =>
-                          patch({
-                            category_dependency_profiles: {
-                              ...(node.category_dependency_profiles ?? {}),
-                              [cat]: { ...profile, demand: v },
-                            },
-                          })
-                        }
-                      />
-                    </Field>
-                    <Field label="Priority (1–10)">
-                      <NumberInput
-                        value={profile.priority}
-                        min={1}
-                        max={10}
-                        onChange={(v) =>
-                          patch({
-                            category_dependency_profiles: {
-                              ...(node.category_dependency_profiles ?? {}),
-                              [cat]: { ...profile, priority: v },
-                            },
-                          })
-                        }
-                      />
-                    </Field>
-                  </>
-                )}
+                <Field label="Demand">
+                  <NumberInput
+                    value={profile.demand}
+                    min={0}
+                    onChange={(v) =>
+                      patch({
+                        category_dependency_profiles: {
+                          ...(node.category_dependency_profiles ?? {}),
+                          [cat]: { ...profile, demand: v },
+                        },
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Priority (1–10)">
+                  <NumberInput
+                    value={profile.priority}
+                    min={1}
+                    max={10}
+                    onChange={(v) =>
+                      patch({
+                        category_dependency_profiles: {
+                          ...(node.category_dependency_profiles ?? {}),
+                          [cat]: { ...profile, priority: v },
+                        },
+                      })
+                    }
+                  />
+                </Field>
               </div>
             );
           })}

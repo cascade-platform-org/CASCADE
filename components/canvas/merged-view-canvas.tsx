@@ -38,10 +38,13 @@ import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { nodeTypes, edgeTypes, toRFNode } from "./flow-canvas";
+import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
 import { ZoomSlider } from "./zoom-slider";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
+
+const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
 
@@ -113,6 +116,14 @@ function MergedViewCanvas() {
     return () => cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fly to a node requested from outside the ReactFlow tree (attribute scan panel, etc.)
+  const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
+  useEffect(() => {
+    if (!pendingFocusNodeId) return;
+    fitView({ nodes: [{ id: pendingFocusNodeId }], duration: 400, padding: 0.5, maxZoom: 1.5 });
+    useUiStore.getState().clearFocusNode();
+  }, [pendingFocusNodeId, fitView]);
 
   // Register PNG capture for Scorecard / download button.
   useEffect(() => {
@@ -190,6 +201,11 @@ function MergedViewCanvas() {
     }
     return ids;
   }, [canvases]);
+
+  const mergedNodes = useMemo(
+    () => orderedNodeIds.flatMap((id) => allNodes[id] ? [allNodes[id]!] : []),
+    [orderedNodeIds, allNodes],
+  );
 
   const rfNodes = useMemo<RFNode[]>(() =>
     orderedNodeIds.flatMap((id) => {
@@ -353,7 +369,7 @@ function MergedViewCanvas() {
         onPaneClick={onPaneClick}
         onSelectionChange={onSelectionChange}
         onPaneContextMenu={onPaneContextMenu}
-        panOnDrag={panMode ? true : [1]}
+        panOnDrag={panMode ? true : PAN_ON_DRAG_MIDDLE}
         panOnScroll={false}
         selectionOnDrag={false}
         zoomOnDoubleClick={false}
@@ -369,6 +385,7 @@ function MergedViewCanvas() {
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
         )}
         <ZoomSlider />
+        <NodeSearch nodes={mergedNodes} />
 
         {/* Freehand lasso — same as single-canvas FlowCanvas */}
         <Lasso

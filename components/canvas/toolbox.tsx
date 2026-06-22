@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MousePointer2, Plus, Spline, Hand, ArrowLeftRight, Check } from "lucide-react";
+import { MousePointer2, Plus, Spline, Hand, ArrowLeftRight, Check, ScanSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore, type ActiveTool } from "@/store/ui-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -113,6 +113,17 @@ export function Toolbox() {
           </div>
         );
       })}
+      {/* Separator */}
+      <div className="mx-2 my-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+
+      {/* Attribute Scan */}
+      <button
+        title="Attribute Scan"
+        onClick={() => useUiStore.getState().toggleAttributeScanPanel()}
+        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+      >
+        <ScanSearch size={16} />
+      </button>
     </div>
   );
 }

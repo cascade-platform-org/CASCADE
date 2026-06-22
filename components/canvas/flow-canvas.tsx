@@ -70,6 +70,9 @@ import { anchorFlowToGeo } from "@/lib/geo-utils";
 const BASE_SIZE = 36;  // px at importance 0.5
 const MIN_SIZE = 24;
 const MAX_SIZE = 56;
+// Stable reference — avoids new array on every render (which causes ReactFlow's
+// StoreUpdater to repeatedly call store.setState and trigger an infinite loop).
+const PAN_ON_DRAG_MIDDLE: number[] = [1];
 
 function nodeSize(importance: number | undefined): number {
   const imp = importance ?? 0.5;
@@ -626,6 +629,14 @@ export function FlowCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeCanvasId, fitView, getNodes]);
 
+  // Fly to a node requested from outside the ReactFlow tree (attribute scan panel, etc.)
+  const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
+  useEffect(() => {
+    if (!pendingFocusNodeId) return;
+    fitView({ nodes: [{ id: pendingFocusNodeId }], duration: 400, padding: 0.5, maxZoom: 1.5 });
+    useUiStore.getState().clearFocusNode();
+  }, [pendingFocusNodeId, fitView]);
+
   // Register a capture function in ui-store so the Scorecard dialog can call it
   // from outside the ReactFlow context. Captures whatever is currently rendered
   // on screen — the user is responsible for being on the view they want to record.
@@ -1176,7 +1187,7 @@ export function FlowCanvas() {
         onNodeContextMenu={onNodeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
         onDoubleClick={onPaneDoubleClick}
-        panOnDrag={panMode ? true : [1]}
+        panOnDrag={panMode ? true : PAN_ON_DRAG_MIDDLE}
         panOnScroll={false}
         selectionOnDrag={false}
         zoomOnDoubleClick={false}

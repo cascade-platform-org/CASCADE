@@ -109,6 +109,16 @@ export interface UiState {
   /** Key into config.node_defaults. Null = blank node (no template). */
   selectedNodeTemplate: string | null;
 
+  // --- Attribute scan panel ---
+  attributeScanPanelOpen: boolean;
+
+  // --- Programmatic canvas focus ---
+  /**
+   * When set, FlowCanvas / MergedViewCanvas will call fitView on this node and
+   * then clear the field. Used by panels outside the ReactFlow provider tree.
+   */
+  pendingFocusNodeId: string | null;
+
   // --- Unsaved changes ---
   hasUnsavedChanges: boolean;
 
@@ -179,6 +189,14 @@ export interface UiActions {
   toggleInterventionPanel: () => void;
   closeInterventionPanel: () => void;
 
+  // --- Attribute scan panel ---
+  toggleAttributeScanPanel: () => void;
+  closeAttributeScanPanel: () => void;
+
+  // --- Programmatic canvas focus ---
+  requestFocusNode: (id: string) => void;
+  clearFocusNode: () => void;
+
   // --- Inspector ---
   setInspectorOpen: (open: boolean) => void;
 
@@ -233,6 +251,8 @@ const initialState: UiState = {
   scorecardPanelOpen: false,
   scorecardSaveDialogOpen: false,
   interventionPanelOpen: false,
+  attributeScanPanelOpen: false,
+  pendingFocusNodeId: null,
   temporalAutoPropagate: true,
   temporalJumpRevertSnapshot: null,
   temporalJumpElapsedHours: 0,
@@ -393,6 +413,30 @@ export const useUiStore = create<UiStore>()(
 
     closeInterventionPanel() {
       set((state) => { state.interventionPanelOpen = false; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Attribute scan panel
+    // -------------------------------------------------------------------------
+
+    toggleAttributeScanPanel() {
+      set((state) => { state.attributeScanPanelOpen = !state.attributeScanPanelOpen; });
+    },
+
+    closeAttributeScanPanel() {
+      set((state) => { state.attributeScanPanelOpen = false; });
+    },
+
+    // -------------------------------------------------------------------------
+    // Programmatic canvas focus
+    // -------------------------------------------------------------------------
+
+    requestFocusNode(id) {
+      set((state) => { state.pendingFocusNodeId = id; });
+    },
+
+    clearFocusNode() {
+      set((state) => { state.pendingFocusNodeId = null; });
     },
 
     // -------------------------------------------------------------------------

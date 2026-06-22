@@ -16,6 +16,7 @@ import { RulesManualPanel } from "@/components/rules/rules-manual-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { InterventionPanel } from "@/components/canvas/intervention-panel";
+import { AttributeScanPanel } from "@/components/canvas/attribute-scan-panel";
 import { AnalysisPage } from "@/components/analysis/analysis-page";
 import { ToastContainer } from "./toast-container";
 import { useUiStore } from "@/store/ui-store";
@@ -35,6 +36,7 @@ export function EditorShell() {
   const rulesManualPanelOpen = useUiStore((s) => s.rulesManualPanelOpen);
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interventionPanelOpen = useUiStore((s) => s.interventionPanelOpen);
+  const attributeScanPanelOpen = useUiStore((s) => s.attributeScanPanelOpen);
   const interCanvasEdgeDialogOpen = useUiStore((s) => s.interCanvasEdgeDialogOpen);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
   const globalViewLayout = useUiStore((s) => s.globalViewLayout);
@@ -117,6 +119,7 @@ export function EditorShell() {
       {rulesManualPanelOpen && <RulesManualPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
       {interventionPanelOpen && <InterventionPanel />}
+      {attributeScanPanelOpen && <AttributeScanPanel />}
       {interCanvasEdgeDialogOpen && <InterCanvasEdgeDialogWired />}
       {scorecardSaveDialogOpen && (
         <SaveScorecardDialog onClose={closeScorecardSaveDialog} />

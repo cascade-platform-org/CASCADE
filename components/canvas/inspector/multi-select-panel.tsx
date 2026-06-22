@@ -266,14 +266,13 @@ export function MultiSelectPanel({
           if (!node || !(node.node_categories ?? []).includes(batchCat)) return;
           const existing =
             node.category_dependency_profiles?.[batchCat] ?? { dependency_level: n };
-          const catDef = categories.find((c) => c.name === batchCat);
-          const isStd = catDef?.category_type === "SourceToDemands";
           const updated: CategoryDependencyProfile = {
             ...existing,
             dependency_level: batchDepLevel,
             backup: batchBackup,
             ...(batchBackup ? { backup_duration: batchBackupDuration } : {}),
-            ...(isStd ? { demand: batchDemand, priority: batchPriority } : {}),
+            demand: batchDemand,
+            priority: batchPriority,
           };
           updateNode(id, {
             category_dependency_profiles: {
@@ -300,8 +299,6 @@ export function MultiSelectPanel({
     setInspectorOpen(false);
   }
 
-  const batchCatDef = categories.find((c) => c.name === batchCat);
-  const batchCatIsStd = batchCatDef?.category_type === "SourceToDemands";
 
   return (
     <div className="overflow-y-auto">
@@ -587,16 +584,12 @@ export function MultiSelectPanel({
                   <NumberInput value={batchBackupDuration} min={0} onChange={setBatchBackupDuration} />
                 </Field>
               )}
-              {batchCatIsStd && (
-                <>
-                  <Field label="Demand">
-                    <NumberInput value={batchDemand} min={0} onChange={setBatchDemand} />
-                  </Field>
-                  <Field label="Priority (1–10)">
-                    <NumberInput value={batchPriority} min={1} max={10} onChange={setBatchPriority} />
-                  </Field>
-                </>
-              )}
+              <Field label="Demand">
+                <NumberInput value={batchDemand} min={0} onChange={setBatchDemand} />
+              </Field>
+              <Field label="Priority (1–10)">
+                <NumberInput value={batchPriority} min={1} max={10} onChange={setBatchPriority} />
+              </Field>
               <button
                 onClick={applyBatchProfile}
                 className="mt-1 w-full rounded-md bg-blue-50 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300"
