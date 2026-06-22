@@ -124,12 +124,22 @@ export interface AnalysisState {
 
   /** Shapley parameters. */
   shapleyParams: {
-    permutations: number;
+    /** Number of random k-subsets to draw. Each sample evaluates one ordered k-chain. */
+    samples: number;
     /** Maximum coalition size k_max. Only coalitions |S| ≤ k_max are explored. */
     kMax: number;
     nodesOnly: boolean;
     maxTimeSecs: number;
+    /** When true, save worst single/pair/triplet scenarios to the scorecard after the run. */
+    saveWorstToScorecard: boolean;
   };
+
+  /** Worst coalitions of size 1, 2, 3 found during the last Shapley run. Null until computed. */
+  shapleyWorst: {
+    single: { ids: string[]; loss: number } | null;
+    pair:   { ids: string[]; loss: number } | null;
+    triple: { ids: string[]; loss: number } | null;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +169,7 @@ export interface AnalysisActions {
   setWeightExpression: (expr: string) => void;
   setTopologicalEdgeResult: (result: AnalysisResult | null) => void;
   setShapleyParams: (params: Partial<AnalysisState["shapleyParams"]>) => void;
+  setShapleyWorst: (worst: AnalysisState["shapleyWorst"]) => void;
 
   reset: () => void;
 }
@@ -185,11 +196,13 @@ const initialState: AnalysisState = {
   weightExpression: "capacity",
   topologicalEdgeResult: null,
   shapleyParams: {
-    permutations: 100,
-    kMax: 5,
+    samples: 200,
+    kMax: 3,
     nodesOnly: false,
     maxTimeSecs: 60,
+    saveWorstToScorecard: false,
   },
+  shapleyWorst: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -288,6 +301,10 @@ export const useAnalysisStore = create<AnalysisStore>()(
 
     setShapleyParams(params) {
       set((s) => { Object.assign(s.shapleyParams, params); });
+    },
+
+    setShapleyWorst(worst) {
+      set((s) => { s.shapleyWorst = worst; });
     },
 
     reset() {
