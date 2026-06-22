@@ -114,8 +114,12 @@ An aggregate metric computed from any Scenario — the weighted average Function
 _Avoid_: Operativity index, health score, operativity (without "Score")
 
 **Scorecard**:
-An atlas of named before/after Scenario pairs explicitly saved by the user. Each entry stores the Scenario fed to the engine (`scenario_before`), the Scenario after Propagation results are applied (`scenario_after`), and the raw engine delta (`propagation_result`). The user saves an entry by clicking "Save to Scorecard" after a Propagation completes, giving it a label. Nothing is saved automatically. A Scorecard collects multiple entries so the user can compare outcomes across different what-if situations, Events, or time steps. Derived metrics (Operativity Score, cost of disservice, status breakdown, most impacted Elements, causal summary) are computed client-side from the snapshots and never persisted. The Scorecard is persisted as a top-level field on the Project (`Project.scorecard`), separate from `update_history`. A manually crafted Scenario (no Propagation) can also be saved — `scenario_after` and `propagation_result` are optional in that case.
-_Avoid_: Report, dashboard, results panel; do not use "Scorecard" to refer to a single-scenario summary (that is a Scorecard entry); do not treat Scorecard as auto-generated
+An atlas of named entries explicitly saved by the user. A Scorecard entry is a **discriminated union** on `type`:
+- `type: "propagation"` — stores `scenario_before`, optional `scenario_after`, optional `after_temporal_jump`, and optional `propagation_result`. The user saves one by clicking "Save to Scorecard" after a Propagation. See requirements §12.
+- `type: "analysis"` — stores the Analysis Metric name, scope (active Canvas or global), per-Element scores `{ [elementId]: number }`, a GraphSnapshot at time of computation, and an optional PNG capture of the canvas with the Analysis Heatmap applied. Saved from the Analysis page. See ADR-0006.
+
+Nothing is saved automatically. Derived metrics (Operativity Score, cost of disservice, etc.) are computed client-side from snapshots and never persisted. The Scorecard is persisted as a top-level field on the Project (`Project.scorecard`), separate from `update_history`.
+_Avoid_: Report, dashboard, results panel; do not use "Scorecard" to refer to a single entry; do not treat Scorecard as auto-generated; do not assume all entries are Propagation entries
 
 **Model Graph Update**:
 Any modification to a Graph that does NOT change Element Functionality — adding or removing nodes/edges, editing non-Functionality attributes, changing topology. Does not affect the Scenario.
@@ -147,6 +151,34 @@ _Avoid_: treating `position` as the ground truth in geo mode; treating `geo` as 
 **GeoAnchor**:
 The single correspondence that ties a georeferenced Canvas's abstract flow space to real-world geography. It records one flow point and the geographic coordinate it maps to, plus the React Flow and MapLibre zoom levels captured at anchor time (`flow`, `geo`, `rf_zoom`, `ml_zoom`). From this one anchor the **GeoAnchor projection** converts any flow position to a `geo` coordinate and back. The projection is exact Web Mercator: flow space ↔ Mercator world coordinates is a constant affine map, and Mercator world ↔ lng/lat is the standard closed form — the same projection MapLibre uses to draw tiles, so node placement and the map background never disagree. There is exactly one GeoAnchor per georeferenced Canvas, set by the user in the map background's setup mode.
 _Avoid_: flat-earth / linear approximation (the projection is exact Mercator, not a cosine-latitude shortcut); calling it a "calibration" or "registration point"
+
+**Analysis Metric**:
+A named computation run on a Graph (or multi-canvas) that produces a scalar score per Element. Two families exist:
+- **Topological** — computed client-side via graphology on the graph structure alone: degree, betweenness (node and edge), closeness, eigenvector, reachability (upstream/downstream cone), community (Louvain), articulation points, percolation robustness.
+- **Model-based** — computed engine-side via repeated Propagation calls: Vitality Centrality and Shapley Values.
+
+Each metric has a recommended graph type (`SourceToDemands`, `Requisite`, or global) where it is most diagnostic, indicated by a badge in the Analysis page.
+_Avoid_: "analysis type", "metric type" (use Analysis Metric)
+
+**Analysis Heatmap**:
+A colour overlay applied to Elements on the canvas that encodes an Analysis Metric's scores as a light-to-dark gradient. While the Analysis Heatmap is active the canvas is in **Analysis Mode** — Element colours reflect metric scores, not Functionality levels. Cleared by the Reset button, which restores normal Functionality-based colouring. The Analysis Heatmap is toggled from the Analysis page after a metric is computed; the page can be minimised to inspect the heatmap on the live canvas.
+_Avoid_: "heatmap mode", "centrality overlay" (use Analysis Heatmap)
+
+**Vitality Centrality**:
+A model-based Analysis Metric: the drop in Operativity Score that results from removing a single Element from the graph and re-running Propagation. Computed server-side — requires one engine call per Element. The ranked list contains both nodes and edges. Higher Vitality = removing this Element causes a greater loss of Operativity Score.
+_Avoid_: "vitality score" (use Vitality Centrality or Recovery Value depending on context — Vitality is a structural metric from analysis; Recovery Value is the intervention prioritisation metric)
+
+**Shapley Value**:
+A model-based Analysis Metric derived from cooperative game theory: the marginal contribution of each Element averaged over all possible orderings of Element removal. Requires many engine calls (exact: 2^N; Monte Carlo approximation: `permutations × N` calls, configurable). Answers "which Elements contribute most to the total Operativity Score of the network." Only meaningful for networks up to ~30 Elements without approximation; the UI warns and degrades to Monte Carlo above that threshold.
+_Avoid_: "Shapley centrality" (say Shapley Value)
+
+**Coupling Strength**:
+A Network-of-Networks structural metric: the ratio of inter-canvas edges to total edges for a given Canvas pair. High coupling strength means the two Canvases are tightly interdependent and a failure in one is very likely to cascade into the other.
+_Avoid_: "interdependency ratio" (that term is reserved for per-Canvas node-level measurement)
+
+**Interdependency Ratio**:
+A Network-of-Networks structural metric per Canvas: the fraction of that Canvas's nodes that carry at least one inter-canvas dependency (i.e. have at least one inter-canvas incoming or outgoing edge). A Canvas with an Interdependency Ratio near 1.0 is almost entirely reliant on other systems.
+_Avoid_: "coupling ratio"
 
 **Inter-Canvas Edge Creation**:
 Inter-canvas edges are created via a dedicated dialog (not drag-and-drop). The user selects a source Canvas and source node, then a target Canvas and target node. The resulting edge is stored in the global Project registry as a uniform Edge with no special type or fields. The dialog is the only supported creation path — there is no cross-canvas drag-and-drop mode.
