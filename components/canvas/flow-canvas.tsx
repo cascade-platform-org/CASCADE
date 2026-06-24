@@ -338,7 +338,8 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
         />
       ))}
 
-      {/* Pulsing ring for functionality_time */}
+
+      {/* Animated ping for backup state */}
       {hasTimeWarning && (
         <div
           className="animate-ping absolute rounded-full opacity-60"
@@ -347,6 +348,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
             width: size + 8, height: size + 8,
             border: "2px solid #facc15",
             borderRadius: "50%",
+            pointerEvents: "none",
           }}
         />
       )}
@@ -388,12 +390,18 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           </g>
         </g>
 
-        {/* Neutral border — also masked so the outline breaks at the crack */}
+        {/* Border — amber + thick when backup active (time_warning), white otherwise */}
         <g mask={crack ? `url(#${maskId})` : undefined}>
           <g transform="translate(8,0)">
-            <Shape size={size} fill="transparent" stroke="white" strokeWidth={2} />
+            <Shape
+              size={size}
+              fill="transparent"
+              stroke={hasTimeWarning ? "#fbbf24" : "white"}
+              strokeWidth={hasTimeWarning ? 5 : 2}
+            />
           </g>
         </g>
+
 
       </svg>
 

@@ -422,7 +422,7 @@ export function NodeInspector({ node }: { node: Node }) {
                     }
                   />
                 </Field>
-                <Field label="Priority (1–10)">
+                <Field label="Priority (1–10, default 5)">
                   <NumberInput
                     value={profile.priority}
                     min={1}
