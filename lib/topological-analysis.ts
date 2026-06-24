@@ -432,7 +432,7 @@ export function computeNodeBetweenness(
   weightExpr: string = "capacity",
   n: number = 5,
 ): AnalysisResult {
-  const G = buildUndirectedGraph(data.nodes, data.edges, weightExpr, n);
+  const G = buildDirectedGraph(data.nodes, data.edges, weightExpr, n);
   const opts = weightExpr === "1"
     ? { normalized: true }
     : { normalized: true, getEdgeWeight: "distance" as const };
@@ -446,7 +446,7 @@ export function computeCloseness(
   n: number = 5,
 ): AnalysisResult {
   // graphology-metrics closeness is BFS-only (no getEdgeWeight support in this version).
-  const G = buildUndirectedGraph(data.nodes, data.edges, "1", n);
+  const G = buildDirectedGraph(data.nodes, data.edges, "1", n);
   const raw = closeness(G) as Record<string, number>;
   return toResult("closeness", raw);
 }
@@ -456,7 +456,7 @@ export function computeEigenvector(
   weightExpr: string = "capacity",
   n: number = 5,
 ): AnalysisResult {
-  const G = buildUndirectedGraph(data.nodes, data.edges, weightExpr, n);
+  const G = buildDirectedGraph(data.nodes, data.edges, weightExpr, n);
   let raw: Record<string, number>;
   try {
     const opts = weightExpr === "1" ? {} : { getEdgeWeight: "weight" as const };
@@ -573,18 +573,16 @@ export function computeEdgeBetweenness(
   weightExpr: string = "capacity",
   n: number = 5,
 ): AnalysisResult {
-  const G = buildUndirectedGraph(data.nodes, data.edges, weightExpr, n);
+  // buildDirectedGraph keys edges by their original CASCADE edge id, so no
+  // originalEdgeId remapping is needed.
+  const G = buildDirectedGraph(data.nodes, data.edges, weightExpr, n);
   const rawEdges: Record<string, number> = {};
   try {
     const opts = weightExpr === "1"
       ? { normalized: true }
       : { normalized: true, getEdgeWeight: "distance" as const };
     const scores = edgeBetweenness(G, opts) as Record<string, number>;
-    for (const [key, score] of Object.entries(scores)) {
-      const origId = G.getEdgeAttribute(key, "originalEdgeId") as string | undefined;
-      if (origId) rawEdges[origId] = score;
-      else rawEdges[key] = score;
-    }
+    for (const [key, score] of Object.entries(scores)) rawEdges[key] = score;
   } catch {
     // edgeBetweenness may fail on disconnected graphs
   }

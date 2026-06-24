@@ -122,6 +122,13 @@ export interface AnalysisState {
   /** Secondary result slot for the topological section's edge metrics panel. */
   topologicalEdgeResult: AnalysisResult | null;
 
+  /**
+   * Node attribute used as weight in the Operativity Index for model-based metrics.
+   * "constant" = uniform; any other string = that numeric node attribute (falls back
+   * to uniform if all values are zero or absent).
+   */
+  oiWeightAttr: string;
+
   /** Shapley parameters. */
   shapleyParams: {
     /** Number of random k-subsets to draw. Each sample evaluates one ordered k-chain. */
@@ -170,6 +177,7 @@ export interface AnalysisActions {
   setTopologicalEdgeResult: (result: AnalysisResult | null) => void;
   setShapleyParams: (params: Partial<AnalysisState["shapleyParams"]>) => void;
   setShapleyWorst: (worst: AnalysisState["shapleyWorst"]) => void;
+  setOiWeightAttr: (attr: string) => void;
 
   reset: () => void;
 }
@@ -194,6 +202,7 @@ const initialState: AnalysisState = {
   reachabilitySourceId: null,
   labelField: "name",
   weightExpression: "capacity",
+  oiWeightAttr: "constant",
   topologicalEdgeResult: null,
   shapleyParams: {
     samples: 200,
@@ -305,6 +314,10 @@ export const useAnalysisStore = create<AnalysisStore>()(
 
     setShapleyWorst(worst) {
       set((s) => { s.shapleyWorst = worst; });
+    },
+
+    setOiWeightAttr(attr) {
+      set((s) => { s.oiWeightAttr = attr; s.result = null; });
     },
 
     reset() {

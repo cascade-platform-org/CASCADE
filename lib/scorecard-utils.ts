@@ -20,23 +20,43 @@ function isPropagationEntry(e: ScorecardEntry): e is PropagationScorecardEntry {
 /**
  * Compute the Operativity Score for a snapshot.
  *
- * Formula: Σ(importance_i × functionality_i) / (Σ(importance_i) × N) × 100
- * Falls back to unweighted mean when all importances are 0.
+ * Formula: Σ(w_i × functionality_i) / (Σ(w_i) × N) × 100
+ * `weightAttr` names the node attribute used as w_i:
+ *   - "constant" → uniform weight (unweighted mean)
+ *   - any other string → reads that numeric field from the node or its `properties` bag;
+ *     falls back to uniform if all resulting weights are zero or the attribute is absent.
  * Returns a value in [0, 100].
- *
- * Level thresholds: uniform N intervals. Level k = [(k-1)/N, k/N) × 100%.
  */
-export function computeOperativityScore(snapshot: GraphSnapshot, n: number): number {
+export function computeOperativityScore(snapshot: GraphSnapshot, n: number, weightAttr = "importance"): number {
   const nodes = Object.values(snapshot.nodes);
   if (nodes.length === 0) return 100;
 
-  const sumWeight = nodes.reduce((a, nd) => a + (nd.importance ?? 0), 0);
-  if (sumWeight === 0) {
-    // Unweighted fallback
+  if (weightAttr === "constant") {
     const sumFunc = nodes.reduce((a, nd) => a + (nd.functionality ?? n), 0);
     return (sumFunc / (nodes.length * n)) * 100;
   }
-  const sumWF = nodes.reduce((a, nd) => a + (nd.importance ?? 0) * (nd.functionality ?? n), 0);
+
+  const getWeight = (nd: Record<string, unknown>): number => {
+    const v = nd[weightAttr];
+    if (typeof v === "number" && v >= 0) return v;
+    const props = nd["properties"];
+    if (props && typeof props === "object") {
+      const pv = (props as Record<string, unknown>)[weightAttr];
+      if (typeof pv === "number" && pv >= 0) return pv;
+    }
+    return 0;
+  };
+
+  const sumWeight = nodes.reduce((a, nd) => a + getWeight(nd as Record<string, unknown>), 0);
+  if (sumWeight === 0) {
+    // All weights absent or zero — fall back to uniform
+    const sumFunc = nodes.reduce((a, nd) => a + (nd.functionality ?? n), 0);
+    return (sumFunc / (nodes.length * n)) * 100;
+  }
+  const sumWF = nodes.reduce(
+    (a, nd) => a + getWeight(nd as Record<string, unknown>) * (nd.functionality ?? n),
+    0,
+  );
   return (sumWF / (sumWeight * n)) * 100;
 }
 

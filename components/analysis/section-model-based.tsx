@@ -13,6 +13,7 @@ import { HeatmapControls } from "./heatmap-controls";
 import { buildScopedGraph } from "@/lib/analysis-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
+import { SCHEMA_NODE_ATTRS_FOR_OI, detectOiWeightAttrs } from "@/lib/oi-weight-attrs";
 import type { ElementScore } from "@/lib/topological-analysis";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +118,8 @@ export function SectionModelBased() {
   const recordCall = useAnalysisStore((s) => s.recordCallCompletion);
   const shapleyParams = useAnalysisStore((s) => s.shapleyParams);
   const setShapleyParams = useAnalysisStore((s) => s.setShapleyParams);
+  const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
+  const setOiWeightAttr = useAnalysisStore((s) => s.setOiWeightAttr);
   const scope = useAnalysisStore((s) => s.scope);
   const serverReachable = useUiStore((s) => s.serverReachable);
   const n = useConfigStore(selectN);
@@ -134,7 +137,8 @@ export function SectionModelBased() {
   async function runVitality() {
     const { nodes, edges } = getElements();
     const baseline = useCanvasStore.getState().toGraphSnapshot();
-    const baselineScore = computeOperativityScore(baseline, n) / 100;
+    const weightAttr = useAnalysisStore.getState().oiWeightAttr;
+    const baselineScore = computeOperativityScore(baseline, n, weightAttr) / 100;
 
     const allIds = [
       ...Object.keys(nodes).map((id) => ({ id, kind: "node" as const })),
@@ -164,7 +168,7 @@ export function SectionModelBased() {
           snap.edges = rest;
         }
         const afterSnap = await runEphemeralPropagation(snap);
-        const afterScore = computeOperativityScore(afterSnap, n) / 100;
+        const afterScore = computeOperativityScore(afterSnap, n, weightAttr) / 100;
         const vitality = baselineScore - afterScore;
         scores[id] = vitality;
         min = Math.min(min, vitality);
@@ -237,12 +241,13 @@ export function SectionModelBased() {
 
     // Baseline: propagate from current state (may already be partially degraded).
     const baseline = useCanvasStore.getState().toGraphSnapshot();
+    const weightAttr = useAnalysisStore.getState().oiWeightAttr;
     let baselineOI: number;
     try {
       const baseSnap = await runEphemeralPropagation(baseline);
-      baselineOI = computeOperativityScore(baseSnap, n) / 100;
+      baselineOI = computeOperativityScore(baseSnap, n, weightAttr) / 100;
     } catch {
-      baselineOI = computeOperativityScore(baseline, n) / 100;
+      baselineOI = computeOperativityScore(baseline, n, weightAttr) / 100;
     }
     recordCall(0);
 
@@ -280,7 +285,7 @@ export function SectionModelBased() {
               else if (fid in snapEdges) snapEdges[fid] = { ...snapEdges[fid], functionality: 1 };
             }
             const afterSnap = await runEphemeralPropagation({ ...baseline, nodes: snapNodes, edges: snapEdges });
-            curOI = computeOperativityScore(afterSnap, n) / 100;
+            curOI = computeOperativityScore(afterSnap, n, weightAttr) / 100;
             coalitionCache.set(cacheKey, curOI);
           } catch {
             curOI = prevOI; // treat failed call as no additional loss
@@ -397,8 +402,30 @@ export function SectionModelBased() {
     ? ((progress.total - progress.completed) * progress.avgCallMs / 1000).toFixed(0)
     : null;
 
+  const oiWeightOptions = [
+    { value: "constant", label: "Constant (uniform)" },
+    ...detectOiWeightAttrs(useCanvasStore.getState().nodes).map((a) => ({
+      value: a,
+      label: a.replace(/_/g, " "),
+    })),
+  ];
+
   return (
     <div className="space-y-4">
+      {/* OI weight selector */}
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="text-zinc-500 shrink-0">OI node weight</span>
+        <select
+          value={oiWeightAttr}
+          onChange={(e) => setOiWeightAttr(e.target.value)}
+          className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-xs text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+        >
+          {oiWeightOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Metric selector */}
       <div className="space-y-1">
         {([

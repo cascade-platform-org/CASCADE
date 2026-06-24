@@ -22,17 +22,24 @@ interface ResultsListProps {
   limit?: number;
 }
 
+type KindFilter = "all" | "node" | "edge";
+
 export function ResultsList({ result, limit = 15 }: ResultsListProps) {
   const [showAll, setShowAll] = React.useState(false);
+  const [kindFilter, setKindFilter] = React.useState<KindFilter>("all");
   const labelField = useAnalysisStore((s) => s.labelField);
   const setLabelField = useAnalysisStore((s) => s.setLabelField);
   const nodes = useCanvasStore((s) => s.nodes);
   const edges = useCanvasStore((s) => s.edges);
   const n = useConfigStore(selectN);
 
-  const { ranked, min, max } = result;
+  const filtered = kindFilter === "all" ? result.ranked : result.ranked.filter((e) => e.kind === kindFilter);
+  const filteredValues = filtered.map((e) => e.score);
+  const min = filteredValues.length ? Math.min(...filteredValues) : result.min;
+  const max = filteredValues.length ? Math.max(...filteredValues) : result.max;
+  const avg = filteredValues.length ? filteredValues.reduce((a, b) => a + b, 0) / filteredValues.length : result.avg;
   const range = max - min || 1;
-  const visible = showAll ? ranked : ranked.slice(0, limit);
+  const visible = showAll ? filtered : filtered.slice(0, limit);
 
   return (
     <div className="flex flex-col gap-3">
@@ -43,7 +50,7 @@ export function ResultsList({ result, limit = 15 }: ResultsListProps) {
           <div className="text-zinc-400">Max</div>
         </div>
         <div className="text-center">
-          <div className="font-bold text-zinc-800 dark:text-zinc-100">{result.avg.toFixed(3)}</div>
+          <div className="font-bold text-zinc-800 dark:text-zinc-100">{avg.toFixed(3)}</div>
           <div className="text-zinc-400">Avg</div>
         </div>
         <div className="text-center">
@@ -52,8 +59,8 @@ export function ResultsList({ result, limit = 15 }: ResultsListProps) {
         </div>
       </div>
 
-      {/* Label field selector */}
-      <div className="flex items-center gap-2 text-xs">
+      {/* Controls row */}
+      <div className="flex items-center gap-3 text-xs">
         <span className="text-zinc-500">Show as:</span>
         <select
           value={labelField}
@@ -64,6 +71,23 @@ export function ResultsList({ result, limit = 15 }: ResultsListProps) {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+
+        <div className="ml-auto flex overflow-hidden rounded border border-zinc-200 dark:border-zinc-700">
+          {(["all", "node", "edge"] as KindFilter[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => { setKindFilter(k); setShowAll(false); }}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-medium transition-colors",
+                kindFilter === k
+                  ? "bg-indigo-600 text-white"
+                  : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800",
+              )}
+            >
+              {k === "all" ? "All" : k === "node" ? "Nodes" : "Edges"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Ranked list */}
@@ -108,12 +132,12 @@ export function ResultsList({ result, limit = 15 }: ResultsListProps) {
         })}
       </div>
 
-      {ranked.length > limit && (
+      {filtered.length > limit && (
         <button
           onClick={() => setShowAll((v) => !v)}
           className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
         >
-          {showAll ? "Show less" : `Show all ${ranked.length} elements`}
+          {showAll ? "Show less" : `Show all ${filtered.length} elements`}
         </button>
       )}
     </div>
