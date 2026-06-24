@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from core.topology import build_incoming_index
 from engine import guards
 from engine.flow import flow_category_candidates
-from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates
+from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
 from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
 
@@ -65,6 +65,20 @@ def run(request: PropagationRequest) -> PropagationResult:
     )
     max_rounds = (len(nodes) + 1) * scale_size + 5
 
+    # For each node, precompute which SourceToDemands categories to skip in the
+    # Requisite pass. A category is skipped when every parent that supplies it is
+    # explicitly tagged with that same category — meaning the flow pass fully
+    # captures the dependency and the Requisite floor would be an unfair ceiling.
+    # Cross-category parents or untagged feeders prevent the skip.
+    requisite_skip: dict[str, frozenset[str]] = {}
+    for nid in nodes:
+        skip: set[str] = set()
+        all_parents = [nodes[e.source] for e in incoming_index.get(nid, []) if e.source in nodes]
+        for cat in flow_categories:
+            if all_parents and all(cat in parent_categories(p) for p in all_parents):
+                skip.add(cat)
+        requisite_skip[nid] = frozenset(skip)
+
     # --- fixed-point iteration --------------------------------------------
     iterations = 0
     converged = False
@@ -99,9 +113,12 @@ def run(request: PropagationRequest) -> PropagationResult:
 
             # Propose — two sub-steps, merged per category via worst_of (ADR-0005).
             # 1. Universal Requisite pass: logical aggregation over all incoming edges,
-            #    all categories. No skip — SourceToDemands categories included.
+            #    all categories. SourceToDemands categories whose every contributing
+            #    parent is explicitly in that category are skipped — the flow pass
+            #    fully captures those dependencies.
             candidates = logical_category_candidates(
                 node, incoming_index.get(nid, []), node_func, edge_func, nodes,
+                skip=requisite_skip[nid],
                 intra_op=lambda category, _nid=nid: rules.intra_operator(_nid, category),
             )
             # 2. SourceToDemands flow pass: additive layer. Merge each flow candidate

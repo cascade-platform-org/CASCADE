@@ -177,7 +177,7 @@ def _priority(node: Node, category: str) -> int:
     profile = (node.category_dependency_profiles or {}).get(category)
     if profile is not None and profile.priority:
         return profile.priority
-    return 1
+    return 5
 
 
 def _edge_capacity(edge: Edge, func: int, n: int, default_cap: float | None) -> int:
