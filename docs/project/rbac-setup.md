@@ -4,7 +4,7 @@
 
 The platform uses **Role-Based Access Control (RBAC)** layered on top of **OAuth2/OIDC** for identity. This means:
 
-- **Authentication** (who you are) is delegated to an external identity provider — Auth0, Keycloak, Azure AD, Okta, or any OIDC-compliant service.
+- **Authentication** (who you are) is delegated to a self-hosted, open-source OIDC provider — **Zitadel** (chosen; see ADR-0009 context) — or any OIDC-compliant service. Proprietary paid providers (Auth0, Okta, Azure AD) are excluded by the 100%-open-source rule (CLAUDE.md §1).
 - **Authorization** (what you can do) is enforced by the backend using roles and permissions stored in PostgreSQL.
 
 No project data touches the database. Only identity records, role assignments, and permission definitions are stored server-side.

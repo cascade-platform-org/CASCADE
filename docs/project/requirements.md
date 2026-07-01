@@ -12,7 +12,7 @@
 
 - **Local-first by default.** All project data (graphs, rules, configuration, canvas state) lives as JSON on the user's machine. Editing, visualization, CRUD operations, hazard application, and topological analysis happen entirely in the browser with zero server round-trips.
 - **Optional server-side sync.** Users can opt in to storing and syncing project data on the server. When disabled, behaviour is identical to local-only mode.
-- **Private engine.** The propagation algorithm is proprietary IP hosted on a dedicated server. The client sends a payload and receives results. No project data is persisted server-side unless sync is explicitly enabled.
+- **Server-hosted engine.** The propagation algorithm runs on a dedicated server; the client sends a payload and receives results. It is published openly for now (ships with the paper) and becomes proprietary later (ADR-0009). No project **network** is ever persisted server-side unless sync is explicitly enabled — only aggregate run metadata (ADR-0007).
 - **100 % open-source stack.** Every dependency — frontend, backend framework, GIS renderer, auth provider — must be free and open-source.
 
 ---
@@ -25,7 +25,7 @@ CLIENT (Browser)                           SERVER (Private)
   Next.js app shell                          FastAPI
   Zustand stores (local working copy)        Auth / RBAC (OAuth2/OIDC)
   MapLibre GL JS (geo rendering)             PostgreSQL (users, roles, opt. project data)
-  File I/O + versioned auto-save             Propagation engine (private Python)
+  File I/O + versioned auto-save             Propagation engine (Python, server-hosted)
   All CRUD, hazards, local analysis          Returns PropagationResult JSON
 ```
 
@@ -246,7 +246,7 @@ Multiple **scenario variants** of the same event type can be defined with differ
 
 ## 7. Propagation Engine
 
-Runs server-side as private IP.
+Runs server-side. Published openly for now; becomes proprietary later (ADR-0009).
 
 ### 7.1 Client Payload
 
@@ -565,10 +565,11 @@ When enabled, explicit saves are also pushed to PostgreSQL per-user. Version lis
 
 ## 14. Authentication and Access Control
 
-- **OAuth2/OIDC** (provider-agnostic: Keycloak or any compliant IdP).
+- **OAuth2/OIDC** via self-hosted open-source **Zitadel** (any OIDC IdP works in principle; paid SaaS excluded by §1). **Self-service signup** — anyone may register.
 - **RBAC** server-side; stored in PostgreSQL.
-- Roles: `viewer`, `analyst`, `manager`, `admin`.
+- Roles: `viewer`, `analyst`, `manager`, `admin`. New self-service users default to `viewer`, provisioned on first authenticated request; higher roles are granted by an admin.
 - Permissions: `can_propagate`, `can_view_analysis`, `can_sync`, `can_manage_users`, `can_define_roles`.
+- **Entitlements** (per-role quotas, not just permissions — ADR-0008): `max_nodes` and an engine-evaluation budget per minute, enforced server-side before the engine runs. Defaults: `viewer` = 45 nodes / ~10k evals-min; `analyst` = 300 nodes / ~100k evals-min. This is how self-service signup coexists with a protected engine — anyone can explore the full toolset on small graphs, bounded by quota.
 - Single-user local mode requires no auth.
 
 ---

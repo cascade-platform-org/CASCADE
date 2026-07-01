@@ -6,7 +6,7 @@ In CASCADE, your project data lives on your machine as plain JSON. Editing, visu
 
 The server has two purposes:
 
-1. **Run the proprietary propagation engine** when you click Propagate.
+1. **Run the server-hosted propagation engine** when you click Propagate.
 2. **Enforce identity and access control** (OAuth2/OIDC + RBAC).
 
 Optionally, users can enable **server-side sync** to persist and share project files across devices. When sync is disabled (the default), the server never sees or stores project data.

@@ -38,8 +38,10 @@ OIDC_SCOPES=openid profile email
 JWT_ALGORITHM=RS256
 JWT_AUDIENCE=your-api-audience
 
-# Rate limiting: no setting exists yet (nothing enforces one). Add the flag
-# together with its middleware before any multi-user deployment.
+# Rate limiting: enforced per-user via role Entitlements — an engine-evaluation
+# token bucket (ADR-0008), not a global flag. In v1 the bucket is in-process, so
+# run a SINGLE backend instance (the default for the single-VM deployment below).
+# Not yet implemented in code; see the DB-layer slice.
 
 ### Frontend (`CASCADE-app/.env.local`)
 
@@ -53,7 +55,7 @@ NEXT_PUBLIC_MAPLIBRE_STYLE=https://tiles.example.com/style.json
 
 ## Option 1: Docker Compose (Recommended)
 
-> **Status: not yet implemented.** No `docker-compose.yml` exists in the repo yet (an empty placeholder was removed in June 2026). This section is the target design for when it is written: three services — `frontend`, `backend`, and `db`. Until then, use Option 2 (manual deployment).
+> **Status: decided, not yet written (ADR-0009).** The target is a single EU-based VM (e.g. Hetzner) running **four** services via Compose behind **Caddy** (auto-TLS, the only internet-facing process): `frontend` (static export served by Caddy), `backend` (FastAPI + engine, single instance), `db` (PostgreSQL), and `idp` (**Zitadel**, self-hosted OIDC — itself backed by the `db`). Dev vs prod is a `docker-compose.override.yml` / `docker-compose.prod.yml` split driven by `ENV` (see ADR-0009). Until the files exist, use Option 2 (manual deployment).
 
 ### Build & Start
 
@@ -209,7 +211,7 @@ server {
 Both services expose health endpoints for monitoring:
 
 - **Backend:** `GET /api/health` — returns `200` with `{ "status": "healthy" }`.
-- **Frontend:** `GET /api/health` (Next.js API route) — confirms the frontend is reachable.
+- **Frontend:** no health route exists yet. When co-hosted behind Caddy the static app is served directly; add a trivial Next.js `/api/health` route if an app-level probe is needed.
 
 Use these with your load balancer, Docker health checks, or uptime monitoring.
 

@@ -6,7 +6,7 @@ CASCADE follows a **local-first** architecture. All project data — graphs, rul
 
 The server has two core responsibilities:
 
-1. **Execute the proprietary propagation engine** on submitted payloads.
+1. **Execute the propagation engine** on submitted payloads (public now, proprietary later — ADR-0009).
 2. **Enforce identity and access control** via OAuth2/OIDC and role-based policies.
 
 By default, no project data is stored server-side. Optionally, users can enable **server-side sync** to persist and share project files across devices — stored in PostgreSQL per-user. The propagation engine operates identically in both modes.
@@ -180,7 +180,9 @@ Editing, Event application, rule authoring, topological analysis, manual Functio
 
 ### Stateless Compute Model
 
-The server accepts a JSON payload (project + config + scope), runs the propagation engine, and returns results. It holds no session state. Project data is stored only when the user has enabled server sync.
+The server accepts a JSON payload (project + config + scope), runs the propagation engine, and returns results. It holds no session state, and the network is never persisted (ADR-0007) unless the user has enabled server sync.
+
+**One exception to statelessness:** the per-user Entitlement meter (the engine-evaluation token bucket, ADR-0008) is mutable state. In v1 it lives in-process, which assumes a **single backend instance** — the default for the single-VM deployment. Horizontal scaling (multiple backend instances) would require externalising the meter to PostgreSQL; until then, the "run multiple instances" note under *Scaling* is deferred.
 
 ### Engine Capabilities Endpoint
 
@@ -188,17 +190,16 @@ The server accepts a JSON payload (project + config + scope), runs the propagati
 
 ### Engine Isolation
 
-The proprietary propagation algorithm lives in `CASCADE-backend/engine/`, a dedicated Python package that is:
+The propagation algorithm lives in `CASCADE-backend/engine/`, a dedicated Python package. It is **published openly for now** (it ships with the paper) and becomes **proprietary later**, after refinement through company collaboration (ADR-0009). The isolation below is therefore not about secrecy today — it keeps the engine a single extractable package so future privatization is a one-step operation:
 
-- **Not published** to any package registry.
-- **Not exposed** through any API schema or client bundle.
-- **Imported only** by `CASCADE-backend/services/propagation_service.py`.
+- **Exposed** to clients only through `PropagationResult` — never as source in the client bundle.
+- **Imported only** by `CASCADE-backend/services/propagation_service.py` (the single seam for a future private submodule/service split — ADR-0008).
 
-The `CASCADE-backend/core/` package contains open, auditable graph logic (rules, analysis, utilities). The `CASCADE-backend/engine/` package contains the protected IP.
+The `CASCADE-backend/core/` package contains open, auditable graph logic (rules, analysis, utilities); `CASCADE-backend/engine/` is the algorithm proper.
 
 ### Authentication & Authorization
 
-Identity is handled via OAuth2/OIDC (provider-agnostic: Keycloak or any compliant IdP). The server validates JWT access tokens on every request. RBAC policies are stored in PostgreSQL and enforced through FastAPI dependency injection.
+Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `viewer` role. The server validates JWT access tokens on every request. RBAC policies and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL and enforced through FastAPI dependency injection.
 
 Relevant permissions:
 
@@ -310,4 +311,4 @@ CASCADE-v2/
 | Backend validation | Pydantic v2 | — | Request/response schema enforcement |
 | Auth | OAuth2/OIDC (provider-agnostic) | — | Identity, JWT validation |
 | Database | PostgreSQL | — | Users, roles, permissions; opt. project sync |
-| Engine | Python (private module) | — | Proprietary propagation algorithm |
+| Engine | Python (isolated package) | — | Propagation algorithm (public now, proprietary later — ADR-0009) |
