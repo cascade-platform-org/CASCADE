@@ -4,3 +4,10 @@
 # Local backup artifacts from the monorepo migration
 CASCADE-app.bak/
 CASCADE-backend.bak/
+
+# Deployment / runtime secrets — never commit. Only *.example templates are tracked.
+**/.env
+!**/.env.example
+
+# Database backups produced by deploy/backup.sh
+deploy/backups/

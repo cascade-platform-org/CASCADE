@@ -1,0 +1,40 @@
+# Caddy config for CASCADE.
+#
+# Two sites, addresses supplied by environment variables so the same file works
+# locally (HTTP on a port) and in production (real hostnames with automatic TLS):
+#   APP_DOMAIN — the app: static frontend + /api reverse-proxied to the backend
+#   ID_DOMAIN  — Zitadel (the identity provider)
+#
+# When APP_DOMAIN/ID_DOMAIN are real hostnames (e.g. app.example.org), Caddy
+# automatically provisions and renews Let's Encrypt certificates. When they are
+# ":80"/":8081" (local testing) it just serves plain HTTP.
+#
+# Optional: add an ACME contact email in production for expiry notices, e.g.
+#   { email you@example.org }
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# API and IdP share the app's origin, so the browser makes same-origin
+	# requests and needs no CORS. /api/* goes to the backend unchanged.
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Everything else is the static single-page frontend.
+	handle {
+		root * /srv
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+}
+
+{$ID_DOMAIN} {
+	# Zitadel serves gRPC (console + management API) alongside HTTP on 8080.
+	# Proxy over HTTP/2 cleartext (h2c) so the gRPC traffic works.
+	reverse_proxy zitadel:8080 {
+		transport http {
+			versions h2c 2
+		}
+	}
+}

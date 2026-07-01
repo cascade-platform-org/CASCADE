@@ -1,0 +1,27 @@
+# CASCADE — DEV overlay (auto-loaded by `docker compose`).
+#
+# Publishes localhost-only ports so you can poke at each service while
+# developing. NOT used in production (there, Caddy is the only public process).
+#
+#   docker compose up -d --build
+#     app:      http://localhost:8080
+#     api:      http://localhost:8000/api/health   (direct) or :8080/api/... (via Caddy)
+#     zitadel:  http://localhost:8081
+#     db:       localhost:5433
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  backend:
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  web:
+    ports:
+      - "127.0.0.1:8080:80"
+
+  zitadel:
+    ports:
+      - "127.0.0.1:8081:8080"

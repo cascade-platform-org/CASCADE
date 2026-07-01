@@ -1,0 +1,18 @@
+# Build context is the repo root (monorepo). Keep the context small and secrets
+# out of every image built from here (backend, and later the web/frontend image).
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/.pytest_cache/
+**/.ruff_cache/
+**/node_modules/
+**/.next/
+**/out/
+**/.env
+**/.env.*
+!**/.env.example
+CASCADE-backend/test/
+CASCADE-backend.bak/
+CASCADE-app.bak/
+.git/
+.vscode/

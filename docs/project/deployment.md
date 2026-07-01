@@ -85,48 +85,112 @@ NEXT_PUBLIC_MAPLIBRE_STYLE=https://tiles.example.com/style.json
 
 ## Option 1: Docker Compose (Recommended)
 
-> **Status: decided, not yet written (ADR-0009).** The target is a single EU-based VM (e.g. Hetzner) running **four** services via Compose behind **Caddy** (auto-TLS, the only internet-facing process): `frontend` (static export served by Caddy), `backend` (FastAPI + engine, single instance), `db` (PostgreSQL), and `idp` (**Zitadel**, self-hosted OIDC — itself backed by the `db`). Dev vs prod is a `docker-compose.override.yml` / `docker-compose.prod.yml` split driven by `ENV` (see ADR-0009). Until the files exist, use Option 2 (manual deployment).
+All Compose files live in **`deploy/`**. Four services run on a single VM behind
+Caddy (auto-TLS, the only internet-facing process):
 
-### Build & Start
+| Service   | Image / build                    | Role                                             |
+| --------- | -------------------------------- | ------------------------------------------------ |
+| `web`     | `deploy/web.Dockerfile`          | Caddy — TLS + static frontend + reverse proxy    |
+| `backend` | `CASCADE-backend/Dockerfile`     | FastAPI + engine (single instance — ADR-0008)    |
+| `db`      | `postgres:16`                    | Postgres — CASCADE app DB **and** the Zitadel DB |
+| `zitadel` | `ghcr.io/zitadel/zitadel`        | Self-hosted OIDC identity provider               |
 
-cd propagation-platform
+The stack is a base file plus two overlays:
+`docker-compose.yml` (definitions, no host ports) + `docker-compose.override.yml`
+(dev conveniences, **auto-loaded**) + `docker-compose.prod.yml` (prod: only Caddy
+publishes 80/443, Zitadel switched to HTTPS).
 
-# Copy env files
+The database schema is applied **automatically** on backend startup (idempotent
+baseline + numbered migrations under `CASCADE-backend/db/migrations/`), and the
+`zitadel` database is created on first boot by `deploy/db-init/`. There is no
+manual schema step.
 
-cp CASCADE-backend/.env.example CASCADE-backend/.env
+### Configure
 
-# Edit CASCADE-backend/.env with your values
+```bash
+cd deploy
+cp .env.example .env
+# Edit .env: set a strong POSTGRES_PASSWORD, a 32-char ZITADEL_MASTERKEY,
+# ENV=production, APP_DOMAIN, ID_DOMAIN, CORS_ORIGINS=https://<APP_DOMAIN>.
+# Leave OIDC_* blank for now — you fill them after creating the Zitadel app
+# (see "Identity Provider (Zitadel) Setup" below). chmod 600 .env
+```
 
-docker compose up --build -d
+### Development (local, HTTP, auth disabled)
 
-### Service Map
+```bash
+cd deploy
+docker compose up -d --build
+#   app      http://localhost:8080      api  http://localhost:8080/api/health
+#   zitadel  http://localhost:8081      db   localhost:5433
+```
 
-| Service      | Port | Description                                   |
-| ------------ | ---- | --------------------------------------------- |
-| `frontend` | 3000 | Next.js app (static export served by nginx)   |
-| `backend`  | 8000 | FastAPI server                                |
-| `db`       | 5432 | PostgreSQL (internal, not exposed by default) |
+### Production (behind the real domain, HTTPS)
 
-### Initialize the Database
+```bash
+cd deploy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
 
-On first run, apply the schema and seed the default roles:
-
-docker compose exec backend python -c "
-import psycopg2, os
-conn = psycopg2.connect(os.environ['DATABASE_URL'])
-cur = conn.cursor()
-cur.execute(open('db/schema.sql').read())
-cur.execute(open('db/seed.sql').read())
-conn.commit()
-"
-
-Or connect directly:
-
-docker compose exec db psql -U user -d propagation_rbac -f /docker-entrypoint-initdb.d/schema.sql
+DNS must already point `app.<domain>` and `id.<domain>` at the VM's IP so Caddy
+can obtain Let's Encrypt certificates. See "Identity Provider Setup" and the
+"VM Hardening" checklist below before exposing the box.
 
 ### Create the First Admin
 
-docker compose exec backend python scripts/create_admin.py --email admin@yourorg.com
+New users self-register as `viewer` (ADR-0010). To bootstrap yourself: register
+through the app once, then promote your account:
+
+```bash
+docker compose exec backend python scripts/create_admin.py --email you@yourorg.com
+```
+
+---
+
+## Identity Provider (Zitadel) Setup
+
+Do this once, after `id.<domain>` resolves and the stack is up in production.
+
+1. **First admin console login.** Browse to `https://id.<domain>`. Zitadel's
+   initial admin credentials are printed in its logs on first init
+   (`docker compose logs zitadel`); change the password immediately.
+2. **Create a project** (e.g. "CASCADE").
+3. **Create an application** inside it:
+   - Type: **Web**, auth method **PKCE** (or Code + client secret).
+   - **Redirect URI:** `https://app.<domain>/api/auth/callback`
+   - **Post-logout URI:** `https://app.<domain>/`
+4. **Enable self-service registration** and, under the org's Login Policy,
+   turn on **email verification required** and **lockout** (failed-attempt
+   limits). Configure **SMTP** (Settings → Notifications) so verification mail
+   is actually sent — email verification does nothing without a working sender.
+5. **Copy the credentials into `deploy/.env`** and restart the backend:
+   - `OIDC_DISCOVERY_URL=https://id.<domain>/.well-known/openid-configuration`
+   - `OIDC_CLIENT_ID=<application client id>`
+   - `OIDC_CLIENT_SECRET=<secret, if using Code auth>`
+   - `OIDC_REDIRECT_URI=https://app.<domain>/api/auth/callback`
+   - `JWT_AUDIENCE=<the application client id>` (the `aud` the tokens carry)
+
+   With OIDC set and `ENV=production`, the backend enforces auth (it refuses to
+   start otherwise) and reads each user's role from its own DB (ADR-0010).
+
+---
+
+## VM Hardening
+
+Minimum checklist before the box is internet-facing:
+
+- **Firewall** — allow only what's needed: `ufw allow 22`, `ufw allow 80`,
+  `ufw allow 443`, `ufw enable`. Everything else (Postgres, backend, Zitadel)
+  is reachable only inside the Docker network.
+- **SSH** — key-only auth: in `/etc/ssh/sshd_config` set
+  `PasswordAuthentication no` and `PermitRootLogin prohibit-password`, then
+  `systemctl restart ssh`. Consider moving SSH off port 22.
+- **Automatic security updates** — `apt install unattended-upgrades` and enable
+  it, so the OS patches itself.
+- **Secrets** — `deploy/.env` holds every credential; `chmod 600 deploy/.env`
+  and never commit it (it is gitignored).
+- **Single instance** — do not scale the backend horizontally in v1 (the
+  rate-limiter is in-process; see Scaling Notes).
 
 ---
 
@@ -214,6 +278,11 @@ Set `NEXT_PUBLIC_API_URL` to point to your deployed backend.
 
 ## Reverse Proxy Configuration (nginx)
 
+> **Superseded for the recommended (Option 1) deployment.** Caddy in the `web`
+> service handles TLS + routing via `deploy/Caddyfile`; you do not need nginx.
+> The example below is retained only for a manual (Option 2) deployment where
+> you supply your own proxy and certificates.
+
 If co-hosting frontend and backend on the same domain:
 
 server {
@@ -284,17 +353,45 @@ in-process. This constrains scaling:
 
 ## Backup & Recovery
 
-The database always contains user/RBAC data. When server sync is enabled by users, their project versions are stored here too.
+The Postgres instance holds two databases that **must both** be backed up:
 
-# Backup (covers both RBAC data and any synced project files)
+- the **CASCADE app DB** — accounts, roles, entitlements;
+- the **`zitadel` DB** — all identity data (users, password hashes, verification
+  state). If this is lost, every user is locked out permanently.
 
-pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
+Project graph data is **not** stored server-side in v1 (local-first; Sync
+deferred) — it lives as JSON on each user's machine (see
+[Local-First Guide](local-first-guide.md)).
 
-# Restore
+### Nightly backups
 
-psql $DATABASE_URL < backup_20250615.sql
+`deploy/backup.sh` dumps both databases (gzip, optional GPG encryption) and,
+when `BACKUP_RCLONE_REMOTE` is set, copies them **off the VM** — the only copy
+that survives losing the machine. Configure it via `deploy/.env`
+(`BACKUP_DIR`, `BACKUP_RETENTION_DAYS`, `BACKUP_GPG_RECIPIENT`,
+`BACKUP_RCLONE_REMOTE`) and run it from cron:
 
-For users operating in local-only mode (sync disabled), project data lives exclusively on their machines as JSON files. Encourage them to version-control their files with Git (see [Local-First Guide](local-first-guide.md)).
+```cron
+# 03:15 UTC nightly
+15 3 * * *  cd /opt/cascade/deploy && ./backup.sh >> /var/log/cascade-backup.log 2>&1
+```
+
+### Restore (tested procedure)
+
+Restore into a **fresh, empty** database. Example for the app DB:
+
+```bash
+cd deploy
+set -a && . ./.env && set +a          # load POSTGRES_USER / POSTGRES_DB
+docker compose stop backend                 # release its connections
+docker compose exec -T db psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE \"$POSTGRES_DB\";"
+docker compose exec -T db psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$POSTGRES_DB\";"
+gunzip -c "backups/${POSTGRES_DB}_<timestamp>.sql.gz" | docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+docker compose start backend
+```
+
+The same pattern restores the `zitadel` database (stop the `zitadel` service
+first). **Test a restore before go-live** — an untested backup is not a backup.
 
 ---
 
@@ -302,12 +399,16 @@ For users operating in local-only mode (sync disabled), project data lives exclu
 
 Before going live, verify:
 
-- [ ] Backend `.env` is populated with production values
-- [ ] PostgreSQL schema and seed applied
-- [ ] Admin user created
-- [ ] OIDC redirect URI registered with provider
-- [ ] CORS set to frontend origin only
-- [ ] TLS/HTTPS configured on reverse proxy
-- [ ] Health check endpoints responding
-- [ ] Rate limiting enabled
-- [ ] `docker compose logs` shows no errors on startup
+- [ ] `deploy/.env` populated with production values and `chmod 600` (strong
+      `POSTGRES_PASSWORD`, 32-char `ZITADEL_MASTERKEY`, `ENV=production`)
+- [ ] DNS: `app.<domain>` and `id.<domain>` point at the VM; Caddy obtained certs
+- [ ] Zitadel app created; `OIDC_*` + `JWT_AUDIENCE` set; email verification +
+      SMTP + lockout enabled
+- [ ] First admin created (`scripts/create_admin.py`) after self-registering
+- [ ] `CORS_ORIGINS` = `https://app.<domain>` only
+- [ ] **Entitlement enforcement checked**: an over-`max_nodes` propagate returns
+      413; exceeding the per-minute budget returns 429
+- [ ] Backend runs as a **single instance/worker** (in-process rate-limiter)
+- [ ] Health endpoint responding (`/api/health`); `docker compose logs` clean
+- [ ] `deploy/backup.sh` scheduled AND a restore has been tested once
+- [ ] VM hardening done (firewall, key-only SSH, unattended-upgrades)

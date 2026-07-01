@@ -1,0 +1,25 @@
+# CASCADE — PRODUCTION overlay. Load explicitly (it is NOT auto-loaded):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Only Caddy is exposed to the internet; it terminates TLS and reverse-proxies
+# to the internal services. In .env you MUST set: ENV=production, a strong
+# ZITADEL_MASTERKEY (exactly 32 chars), APP_DOMAIN, ID_DOMAIN, and the OIDC_*
+# values once the Zitadel application is created.
+
+services:
+  web:
+    # The only internet-facing ports. Caddy obtains Let's Encrypt certs on :443
+    # (needs :80 for the ACME HTTP challenge and HTTP->HTTPS redirects).
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - zitadel
+
+  zitadel:
+    # Behind Caddy's TLS: Zitadel must know its public identity is HTTPS on 443.
+    environment:
+      ZITADEL_EXTERNALDOMAIN: ${ID_DOMAIN}
+      ZITADEL_EXTERNALPORT: 443
+      ZITADEL_EXTERNALSECURE: "true"

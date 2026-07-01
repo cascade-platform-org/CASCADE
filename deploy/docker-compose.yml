@@ -1,0 +1,104 @@
+# CASCADE — base Compose stack (service definitions, no host ports).
+#
+# Host port publishing lives in the overlay files so the same base works for
+# both environments:
+#   * dev  — docker-compose.override.yml is auto-loaded by `docker compose`
+#            (publishes localhost-only ports for poking at services)
+#   * prod — docker-compose.prod.yml, loaded explicitly:
+#            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Services share a private network and reach each other by service name
+# (backend -> db:5432, caddy -> backend:8000 / zitadel:8080).
+#
+# First run:  cd deploy && cp .env.example .env  (then edit .env)
+
+name: cascade
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: CASCADE-backend/Dockerfile
+    environment:
+      ENV: ${ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      OIDC_DISCOVERY_URL: ${OIDC_DISCOVERY_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Exactly one replica — the in-process rate-limiter (ADR-0008) demands it.
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    environment:
+      # Real hostnames in production (app.<domain> / id.<domain>) => automatic
+      # HTTPS. Defaults are local HTTP ports for testing without a domain.
+      APP_DOMAIN: ${APP_DOMAIN:-:80}
+      ID_DOMAIN: ${ID_DOMAIN:-:8081}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    volumes:
+      # Persist issued TLS certificates + Caddy state across restarts.
+      - caddy-data:/data
+      - caddy-config:/config
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION:-latest}
+    # start-from-init: create the schema on first run, then start. Idempotent on
+    # later runs. tlsMode external: Caddy terminates TLS; Zitadel serves HTTP.
+    command:
+      - start-from-init
+      - --masterkey
+      - ${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}
+      - --tlsMode
+      - external
+    environment:
+      # Database — Zitadel uses its own `zitadel` DB in the shared Postgres.
+      ZITADEL_DATABASE_POSTGRES_HOST: db
+      ZITADEL_DATABASE_POSTGRES_PORT: 5432
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${POSTGRES_USER}
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${POSTGRES_USER}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      # How Zitadel builds issuer/redirect URLs. Overridden for prod (id.<domain>,
+      # port 443, secure) in docker-compose.prod.yml.
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
+      ZITADEL_EXTERNALPORT: ${ZITADEL_EXTERNALPORT:-8081}
+      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
