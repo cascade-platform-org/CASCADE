@@ -24,6 +24,7 @@ import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
+import { useAnalysisStore } from "@/store/analysis-store";
 import {
   computeOperativityScore,
   operativityColor,
@@ -93,6 +94,8 @@ export function SaveScorecardDialog({
   const addScorecardEntry = useScorecardStore((s) => s.addScorecardEntry);
   const config = useConfigStore((s) => s.config);
   const pushToast = useUiStore((s) => s.pushToast);
+  // Shared Operativity weighting (same setting the Scorecard panel exposes).
+  const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
 
   const n = config.functionality_scale.length;
 
@@ -106,24 +109,16 @@ export function SaveScorecardDialog({
     if (beforeSnapshot) {
       return { initialBefore: beforeSnapshot, initialAfter: afterSnapshot, initialEventId: eventId };
     }
-    const propEntry = updateHistory.find((e) => e.update_type === "propagation");
-    if (propEntry) {
-      const propIdx = updateHistory.indexOf(propEntry);
-      // History is newest-first (unshift). Entries before propIdx are newer —
-      // the event that triggered this propagation sits immediately before it.
-      const evEntry = !eventId && propIdx > 0
-        ? updateHistory.slice(0, propIdx).find((e) => e.update_type === "event_applied")
-        : undefined;
-      return {
-        initialBefore: propEntry.before,
-        initialAfter: propEntry.after as GraphSnapshot | undefined,
-        initialEventId: eventId ?? evEntry?.event_id,
-      };
-    }
+    // "Save current": always snapshot the LIVE canvas so the scenario currently
+    // set up (latest hazard / manual edits) is exactly what gets propagated —
+    // never a stale propagation entry from history. `after` is left empty until
+    // the user clicks Run Propagation. We still surface the most recent applied
+    // event for labelling. History is newest-first, so `.find` returns the latest.
+    const latestEvent = updateHistory.find((e) => e.update_type === "event_applied");
     return {
       initialBefore: useCanvasStore.getState().toGraphSnapshot(),
       initialAfter: undefined as GraphSnapshot | undefined,
-      initialEventId: eventId,
+      initialEventId: eventId ?? latestEvent?.event_id,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally stable — snapshots are immutable once the dialog opens
@@ -165,9 +160,9 @@ export function SaveScorecardDialog({
         ? applyTemporalJump(before, temporalJumpHours)
         : undefined;
 
-  const scoreBefore = computeOperativityScore(before, n);
-  const scoreAfter = after ? computeOperativityScore(after, n) : null;
-  const scoreTemporal = temporalSnapshot ? computeOperativityScore(temporalSnapshot, n) : null;
+  const scoreBefore = computeOperativityScore(before, n, oiWeightAttr);
+  const scoreAfter = after ? computeOperativityScore(after, n, oiWeightAttr) : null;
+  const scoreTemporal = temporalSnapshot ? computeOperativityScore(temporalSnapshot, n, oiWeightAttr) : null;
 
   // Check for duplicate on mount and when before snapshot changes
   useEffect(() => {

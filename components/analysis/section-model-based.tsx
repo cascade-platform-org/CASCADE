@@ -13,7 +13,7 @@ import { HeatmapControls } from "./heatmap-controls";
 import { buildScopedGraph } from "@/lib/analysis-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
-import { SCHEMA_NODE_ATTRS_FOR_OI, detectOiWeightAttrs } from "@/lib/oi-weight-attrs";
+import { buildOiWeightOptions } from "@/lib/oi-weight-attrs";
 import type { ElementScore } from "@/lib/topological-analysis";
 import { cn } from "@/lib/utils";
 
@@ -402,13 +402,7 @@ export function SectionModelBased() {
     ? ((progress.total - progress.completed) * progress.avgCallMs / 1000).toFixed(0)
     : null;
 
-  const oiWeightOptions = [
-    { value: "constant", label: "Constant (uniform)" },
-    ...detectOiWeightAttrs(useCanvasStore.getState().nodes).map((a) => ({
-      value: a,
-      label: a.replace(/_/g, " "),
-    })),
-  ];
+  const oiWeightOptions = buildOiWeightOptions(useCanvasStore.getState().nodes);
 
   return (
     <div className="space-y-4">

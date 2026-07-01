@@ -17,6 +17,8 @@ import { useScorecardStore } from "@/store/scorecard-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useHistoryStore } from "@/store/history-store";
+import { useAnalysisStore } from "@/store/analysis-store";
+import { buildOiWeightOptions } from "@/lib/oi-weight-attrs";
 import {
   computeOperativityScore,
   operativityColor,
@@ -44,6 +46,11 @@ export function ScorecardPanel() {
   const serverReachable = useUiStore((s) => s.serverReachable);
   const scope = useUiStore((s) => s.propagationScope);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
+  // Operativity weighting — shared app-wide with the model-based analysis so a
+  // single choice drives every Operativity Score in the app.
+  const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
+  const setOiWeightAttr = useAnalysisStore((s) => s.setOiWeightAttr);
+  const oiWeightOptions = buildOiWeightOptions(useCanvasStore.getState().nodes);
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveDialogProps, setSaveDialogProps] = useState<{
@@ -90,7 +97,7 @@ export function ScorecardPanel() {
     if (scorecard.length === 0) return;
     setExporting(true);
     try {
-      await exportScorecardZip(scorecard, config, projectMeta.name);
+      await exportScorecardZip(scorecard, config, projectMeta.name, oiWeightAttr);
     } catch (err) {
       pushToast({ message: "Export failed — see console for details.", variant: "error", durationMs: 4000 });
       console.error(err);
@@ -116,6 +123,21 @@ export function ScorecardPanel() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Operativity weighting selector — controls how every score below is computed */}
+            <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="shrink-0">Weight</span>
+              <select
+                value={oiWeightAttr}
+                onChange={(e) => setOiWeightAttr(e.target.value)}
+                title="How the Operativity Score is weighted across nodes"
+                className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              >
+                {oiWeightOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+
             <button
               onClick={() => openSaveDialog()}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
@@ -521,18 +543,20 @@ interface EntryCardProps {
 function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Shared Operativity weighting — keeps card scores in step with the selector.
+  const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
 
   // Resolve event name: look up in config, fall back to entry label
   const eventLabel = entry.event_id
     ? (config.events.find((e) => e.id === entry.event_id)?.label ?? entry.label)
     : entry.label;
 
-  const scoreBefore = computeOperativityScore(entry.before_propagation, n);
+  const scoreBefore = computeOperativityScore(entry.before_propagation, n, oiWeightAttr);
   const scoreAfter = entry.after_propagation
-    ? computeOperativityScore(entry.after_propagation, n)
+    ? computeOperativityScore(entry.after_propagation, n, oiWeightAttr)
     : null;
   const scoreTemporal = entry.after_temporal_jump
-    ? computeOperativityScore(entry.after_temporal_jump, n)
+    ? computeOperativityScore(entry.after_temporal_jump, n, oiWeightAttr)
     : null;
 
   const delta = scoreAfter !== null ? scoreAfter - scoreBefore : null;

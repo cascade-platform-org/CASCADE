@@ -27,7 +27,7 @@ function isPropagationEntry(e: ScorecardEntry): e is PropagationScorecardEntry {
  *     falls back to uniform if all resulting weights are zero or the attribute is absent.
  * Returns a value in [0, 100].
  */
-export function computeOperativityScore(snapshot: GraphSnapshot, n: number, weightAttr = "importance"): number {
+export function computeOperativityScore(snapshot: GraphSnapshot, n: number, weightAttr = "constant"): number {
   const nodes = Object.values(snapshot.nodes);
   if (nodes.length === 0) return 100;
 
@@ -193,12 +193,14 @@ export function generateMarkdown(
   entries: ScorecardEntry[],
   config: ModelConfiguration,
   projectName: string,
+  weightAttr = "constant",
 ): string {
   const n = config.functionality_scale.length;
   const now = new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" });
   const lines: string[] = [];
 
-  lines.push(`# Scorecard — ${projectName}`, "", `*Generated: ${now}*`, "");
+  const weightLabel = weightAttr === "constant" ? "equal (uniform)" : weightAttr.replace(/_/g, " ");
+  lines.push(`# Scorecard — ${projectName}`, "", `*Generated: ${now}*`, "", `*Operativity weighting: ${weightLabel}*`, "");
   lines.push("---", "");
 
   // Summary table
@@ -208,12 +210,12 @@ export function generateMarkdown(
   lines.push("| Event | Before O% | After O% | After Temporal O% |");
   lines.push("|---|---|---|---|");
   for (const e of propEntries) {
-    const before = computeOperativityScore(e.before_propagation, n).toFixed(1);
+    const before = computeOperativityScore(e.before_propagation, n, weightAttr).toFixed(1);
     const after = e.after_propagation
-      ? computeOperativityScore(e.after_propagation, n).toFixed(1)
+      ? computeOperativityScore(e.after_propagation, n, weightAttr).toFixed(1)
       : "—";
     const temporal = e.after_temporal_jump
-      ? computeOperativityScore(e.after_temporal_jump, n).toFixed(1)
+      ? computeOperativityScore(e.after_temporal_jump, n, weightAttr).toFixed(1)
       : "—";
     lines.push(`| ${e.label} | ${before}% | ${after}% | ${temporal}% |`);
   }
@@ -225,13 +227,13 @@ export function generateMarkdown(
     lines.push(`**Saved:** ${new Date(e.created_at).toLocaleString()}`, "");
 
     lines.push("### Before Propagation", "");
-    const scoreBefore = computeOperativityScore(e.before_propagation, n);
+    const scoreBefore = computeOperativityScore(e.before_propagation, n, weightAttr);
     lines.push(`**Operativity Score:** ${scoreBefore.toFixed(1)}%`, "");
     lines.push(`![Before Propagation](images/${e.id}-before.png)`, "");
 
     if (e.after_propagation) {
       lines.push("### After Propagation", "");
-      const scoreAfter = computeOperativityScore(e.after_propagation, n);
+      const scoreAfter = computeOperativityScore(e.after_propagation, n, weightAttr);
       lines.push(`**Operativity Score:** ${scoreAfter.toFixed(1)}%`, "");
       lines.push(impactedNodesTable(e.before_propagation, e.after_propagation, n));
       lines.push("", `![After Propagation](images/${e.id}-after.png)`, "");
@@ -239,7 +241,7 @@ export function generateMarkdown(
 
     if (e.after_temporal_jump) {
       lines.push(`### After ${e.temporal_jump_hours ?? "?"}h Temporal Jump`, "");
-      const scoreTemporal = computeOperativityScore(e.after_temporal_jump, n);
+      const scoreTemporal = computeOperativityScore(e.after_temporal_jump, n, weightAttr);
       lines.push(`**Operativity Score:** ${scoreTemporal.toFixed(1)}%`, "");
       lines.push(`![After Temporal Jump](images/${e.id}-temporal.png)`, "");
     }
@@ -274,11 +276,12 @@ export async function exportScorecardZip(
   entries: ScorecardEntry[],
   config: ModelConfiguration,
   projectName: string,
+  weightAttr = "constant",
 ): Promise<void> {
   const zip = new JSZip();
   const imgFolder = zip.folder("images")!;
 
-  const md = generateMarkdown(entries, config, projectName);
+  const md = generateMarkdown(entries, config, projectName, weightAttr);
   zip.file("scorecard.md", md);
 
   for (const e of entries) {

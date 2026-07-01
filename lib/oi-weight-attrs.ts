@@ -31,3 +31,25 @@ export function detectOiWeightAttrs(nodes: Record<string, Node>): string[] {
   }
   return [...seen];
 }
+
+/** A selectable Operativity-weighting option for the UI dropdowns. */
+export interface OiWeightOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Build the list of Operativity-weighting options shared by every selector
+ * (model-based analysis and the Scorecard), so the choices stay identical
+ * wherever the Operativity Score is computed.
+ *
+ * The first option, "constant", maps to uniform (equal) weighting in
+ * `computeOperativityScore`; the remaining options are the numeric node
+ * attributes discovered above (e.g. `importance`, `cost_of_disservice_per_day`).
+ */
+export function buildOiWeightOptions(nodes: Record<string, Node>): OiWeightOption[] {
+  return [
+    { value: "constant", label: "Equal weight (uniform)" },
+    ...detectOiWeightAttrs(nodes).map((a) => ({ value: a, label: a.replace(/_/g, " ") })),
+  ];
+}
