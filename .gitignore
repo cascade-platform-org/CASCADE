@@ -1,6 +1,6 @@
-# The two sub-projects are their own git repositories
-CASCADE-app/
-CASCADE-backend/
-
 # IDE debug junk
 .vscode/.chrome-debug-profile/
+
+# Local backup artifacts from the monorepo migration
+CASCADE-app.bak/
+CASCADE-backend.bak/

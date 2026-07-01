@@ -103,7 +103,7 @@ Types are defined **once** and derived everywhere else. The sequence for any sch
 
 ## 7. The Engine Boundary Is Inviolable
 
-The propagation algorithm lives exclusively in `CASCADE-backend/engine/` and is private IP. This means:
+The propagation algorithm lives exclusively in `CASCADE-backend/engine/`. It is **published openly for now** (it ships with the paper) and becomes **proprietary later**, after refinement through company collaboration (see ADR-0009). The boundary below is therefore not about secrecy today — it exists to keep the engine a single isolated package so that *future* privatization (extracting it into a private submodule/service) is a one-step operation touching only the `propagation_service` seam. Keep the discipline regardless of current openness. This means:
 
 - **Never** implement propagation logic in `CASCADE-backend/core/`, `CASCADE-backend/services/`, or anywhere on the frontend.
 - **Never** expose engine internals through API responses beyond what `PropagationResult` defines.

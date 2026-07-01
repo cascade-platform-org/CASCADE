@@ -183,6 +183,22 @@ _Avoid_: "coupling ratio"
 **Inter-Canvas Edge Creation**:
 Inter-canvas edges are created via a dedicated dialog (not drag-and-drop). The user selects a source Canvas and source node, then a target Canvas and target node. The resulting edge is stored in the global Project registry as a uniform Edge with no special type or fields. The dialog is the only supported creation path — there is no cross-canvas drag-and-drop mode.
 
+**Analysis Log**:
+An append-only, operator-only record of Propagation runs — one row per engine call — storing only input-shape and run metadata (node/edge/canvas counts, category names, functionality-scale N, event-definition and rule counts, graph_type, scope, engine version, compute time) plus the caller's user ID (which clusters all runs by the same user) and role. It never stores the network itself, any Element/Entity name or location, the GeoAnchor, or run outcomes. Governed by the persistence boundary in ADR-0007.
+_Avoid_: "audit log" (that is the who-did-what accountability trail, a distinct concern); "usage log", "telemetry"
+
+**Entitlement**:
+The bundle of quotas a Role grants, scaling up with trust: `max_nodes` (largest network the user may propagate or run model-based analysis on) and an engine-evaluation budget per minute. Defaults: `viewer` = 45 nodes / ~10,000 evals-min; `analyst` = 300 nodes / ~100,000 evals-min. Enforced server-side before the engine runs. Distinct from a Role's boolean **permissions** (`can_propagate`, `can_sync`, …) — permissions say *whether*, the Entitlement says *how much*. Governed by ADR-0008.
+_Avoid_: "plan", "tier", "quota" (use Entitlement; "quota" for an individual knob is fine)
+
+**Engine Evaluation**:
+The unit of engine work and the unit the Entitlement meters. A single Propagation costs 1 Engine Evaluation; a model-based analysis costs `permutations × N`. The token-bucket budget is spent in these units, not in API requests — so a model-based run cannot bypass the limit by being "one call." See ADR-0008.
+_Avoid_: "engine run", "propagation call" (ambiguous between one API request and one evaluation)
+
+**Persistence Boundary**:
+The rule separating what the server may store from what it may not: **config-level vocabulary may be persisted; anything naming or locating a real-world Element or Entity may not.** The network transits the engine in memory but is never written to disk unless the user opts into Sync. See ADR-0007.
+_Avoid_: "privacy policy" (that is a legal document; this is the engineering rule)
+
 ## Flagged ambiguities
 
 - "Canvas" and "Graph" were used interchangeably — resolved: same concept, different register. **Graph** in domain/technical conversation; **Canvas** in UI/data-model context.
