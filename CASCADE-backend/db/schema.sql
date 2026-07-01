@@ -1,0 +1,137 @@
+-- CASCADE Propagation Platform — Database Schema
+--
+-- Only identity, RBAC, optional project sync, and audit data live here.
+-- Project graph data is local-first (JSON on the user's machine) by default.
+-- Server sync is opt-in; see /api/projects endpoints.
+--
+-- Apply: psql $DATABASE_URL -f db/schema.sql
+-- Seed:  psql $DATABASE_URL -f db/seed.sql
+
+-- ---------------------------------------------------------------------------
+-- Extensions
+-- ---------------------------------------------------------------------------
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- gen_random_uuid()
+
+-- ---------------------------------------------------------------------------
+-- RBAC: roles and permissions
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS roles (
+    name        VARCHAR(50)  PRIMARY KEY,
+    description TEXT,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_name   VARCHAR(50)  NOT NULL REFERENCES roles(name) ON DELETE CASCADE,
+    permission  VARCHAR(100) NOT NULL,
+    PRIMARY KEY (role_name, permission)
+);
+
+-- ---------------------------------------------------------------------------
+-- Users (created on first OAuth2/OIDC login)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS users (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(255) UNIQUE NOT NULL,  -- "sub" claim from the OIDC token
+    email       VARCHAR(255) UNIQUE NOT NULL,
+    name        VARCHAR(255),
+    role_name   VARCHAR(50)  NOT NULL DEFAULT 'analyst' REFERENCES roles(name),
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id);
+CREATE INDEX IF NOT EXISTS idx_users_email       ON users(email);
+
+-- ---------------------------------------------------------------------------
+-- Server-side project sync (opt-in)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS projects (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id    UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    description TEXT,
+    -- Full project + config bundle stored as JSONB for indexed queries.
+    -- Only populated when the user has can_sync permission and enables sync.
+    data        JSONB,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
+
+-- ---------------------------------------------------------------------------
+-- Server-side audit log
+--
+-- Records actions taken by authenticated users on the server.
+-- Rows are append-only — never updated or deleted (for compliance purposes).
+-- Only users with can_admin permission can read this table via the API.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID         REFERENCES users(id) ON DELETE SET NULL,
+    user_email  VARCHAR(255),               -- denormalised: preserves identity after user deletion
+    action      VARCHAR(100) NOT NULL,      -- e.g. "propagate", "sync_upload", "role_change", "login"
+    details     JSONB        NOT NULL DEFAULT '{}',
+    -- For propagation runs: { project_name, scope, canvas_count, node_count,
+    --   edge_count, iterations, duration_ms, warnings_count }
+    -- For role changes:     { target_user_id, old_role, new_role }
+    -- For sync operations:  { project_id, project_name, operation }
+    occurred_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id     ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action      ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_occurred_at ON audit_logs(occurred_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Client-side activity log uploads (opt-in, requires can_sync permission)
+--
+-- Users can share their local activity log with the server for support or
+-- collaborative debugging. Entries record local actions (hazard application,
+-- propagation triggers, file saves) with no raw graph data.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS activity_log_uploads (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_id  UUID         NOT NULL,
+    app_version VARCHAR(50),
+    entries     JSONB        NOT NULL DEFAULT '[]',
+    uploaded_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_uploads_user_id    ON activity_log_uploads(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_uploads_session_id ON activity_log_uploads(session_id);
+
+-- ---------------------------------------------------------------------------
+-- Batch propagation jobs
+--
+-- Tracks the lifecycle of async batch propagation requests.
+-- Results are stored as JSONB keyed by caller-assigned item_id.
+-- Rows are written by the background task and read by the polling/SSE
+-- endpoint (GET /api/propagate/batch/{job_id}).
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS batch_propagation_jobs (
+    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status       VARCHAR(20)  NOT NULL DEFAULT 'queued'
+                              CHECK (status IN ('queued', 'running', 'done', 'failed')),
+    total        INT          NOT NULL DEFAULT 0,
+    completed    INT          NOT NULL DEFAULT 0,
+    -- Keyed by item_id. Populated incrementally as items complete.
+    results      JSONB        NOT NULL DEFAULT '{}',
+    -- Keyed by item_id. Error message string for failed items.
+    errors       JSONB        NOT NULL DEFAULT '{}',
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_batch_jobs_user_id ON batch_propagation_jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_batch_jobs_status  ON batch_propagation_jobs(status);

@@ -1,0 +1,47 @@
+# CASCADE Propagation Platform — Backend Dependencies
+#
+# Install:  pip install -r requirements.txt
+# Dev/test: pip install -r requirements.txt -r requirements-dev.txt
+#
+# Python 3.11+ required.
+
+# ---------------------------------------------------------------------------
+# Web framework
+# ---------------------------------------------------------------------------
+
+fastapi==0.136.1
+uvicorn[standard]==0.46.0    # [standard] adds websockets + watchfiles for --reload
+python-multipart==0.0.28     # required for form/file uploads in FastAPI
+
+# ---------------------------------------------------------------------------
+# Data validation (schema-first — single source of truth)
+# ---------------------------------------------------------------------------
+
+pydantic==2.13.4
+pydantic-settings==2.14.1    # Settings class with env-var loading
+
+# ---------------------------------------------------------------------------
+# Database (PostgreSQL)
+# ---------------------------------------------------------------------------
+
+asyncpg==0.31.0              # async PostgreSQL driver (used by FastAPI routes)
+psycopg2-binary==2.9.12      # sync driver — used only in scripts/ and migrations
+
+# ---------------------------------------------------------------------------
+# Authentication (OAuth2 / OIDC + JWT)
+# ---------------------------------------------------------------------------
+
+python-jose[cryptography]==3.5.0   # JWT encode/decode; [cryptography] adds RS256
+httpx==0.28.1                      # async HTTP — fetches OIDC discovery documents
+
+# ---------------------------------------------------------------------------
+# Graph algorithms (open, auditable core — not the engine)
+# ---------------------------------------------------------------------------
+
+networkx==3.6.1              # centrality, clustering, and topological analysis
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+python-dotenv==1.2.2         # load .env files in development
