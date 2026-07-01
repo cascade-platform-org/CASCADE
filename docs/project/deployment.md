@@ -13,6 +13,36 @@ You also need an **OAuth2/OIDC provider** configured as described in [RBAC Setup
 
 ---
 
+## Security Posture — Public v1
+
+The first public deployment is **self-service (anyone may register)**, single small
+EU VM (~4 vCPU), and deliberately minimal in what it stores. The decisions below
+are fixed for v1; revisit them before scaling out.
+
+- **Authentication vs authorization split (ADR-0010).** Zitadel proves *who* a
+  user is; the app's Postgres owns *what they may do*. On first login the backend
+  upserts the user with the least-privileged role **`viewer`**, and RBAC reads the
+  role from the DB (not the token). Promotion to `analyst` is an admin `UPDATE`.
+  *Prerequisite:* the DB must be wired (asyncpg) and `db/schema.sql`'s new-user
+  default changed from `analyst` to `viewer`.
+- **Entitlement enforcement is mandatory before go-live (ADR-0008).** Public +
+  unbounded engine = DoS/cost risk. Enforce per-role `max_nodes` and a per-user,
+  per-minute engine-evaluation **token bucket** *before* calling the engine.
+  Because the bucket is in-process, **run exactly one backend instance** in v1;
+  cap Shapley permutations hard so a single allowed run can't peg the 4-vCPU box.
+- **Signup gating.** Require **email verification** before an account can act, and
+  enable Zitadel **brute-force lockout**. Email verification needs outbound SMTP
+  (a free tier such as Brevo/Mailgun, or an institutional SMTP relay).
+- **Data posture: local-first, Sync OFF.** The server stores only accounts and
+  anonymous metadata (the Analysis Log, ADR-0007). Users' actual networks stay in
+  local JSON on their machines. Server **Sync is deferred** — the sync routes are
+  intentionally unbuilt for v1, which keeps the GDPR/breach surface minimal.
+- **Edge.** Caddy is the only internet-facing process (auto-TLS); CORS is locked
+  to the exact frontend origin; the VM firewall exposes only 80/443 + SSH (key
+  only).
+
+---
+
 ## Environment Variables
 
 ### Backend (`CASCADE-backend/.env`)
