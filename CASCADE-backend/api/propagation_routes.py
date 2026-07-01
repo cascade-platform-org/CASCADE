@@ -12,6 +12,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth.dependencies import get_current_user, require_permission
+from auth.entitlement import get_limiter
 from schemas.auth import AuthUser
 from schemas.engine import EngineAlgorithms, GraphTypeMeta, HeuristicMeta, HeuristicParamMeta
 from schemas.results import PropagationRequest, PropagationResult
@@ -159,6 +160,31 @@ async def run_propagation(
     body: PropagationRequest,
     user: AuthUser = Depends(require_permission("can_propagate")),
 ) -> PropagationResult:
+    # --- Entitlement enforcement (ADR-0008) — before any engine work ---------
+    ent = user.entitlement
+    node_count = len(body.project.nodes)
+    if ent and ent.max_nodes is not None and node_count > ent.max_nodes:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"This network has {node_count} nodes; your role permits at most "
+                f"{ent.max_nodes}. Reduce the network size or request a higher role."
+            ),
+        )
+
+    rate = ent.evals_per_minute if ent else None
+    allowed, _remaining = get_limiter().try_consume(user.sub, rate, cost=1)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Engine-evaluation budget exceeded for the current minute. "
+                "Wait a moment and try again."
+            ),
+            headers={"Retry-After": "5"},
+        )
+    # -------------------------------------------------------------------------
+
     t0 = time.perf_counter()
     try:
         result = await propagate(body)

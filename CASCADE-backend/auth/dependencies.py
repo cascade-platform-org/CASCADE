@@ -20,7 +20,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth.oauth2 import verify_token
 from auth.rbac import has_permission
-from schemas.auth import AuthUser
+from schemas.auth import AuthUser, Entitlement
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +30,19 @@ _bearer = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> AuthUser:
-    """Extract and validate the Bearer token; return an AuthUser.
+    """Validate the Bearer token and resolve the caller's authorization.
 
-    When auth is disabled (local-only mode) the token is optional and
-    verify_token returns a synthetic admin user.
+    Identity comes from the OIDC token; the *role* comes from our own database
+    (ADR-0010). On first sight a user is inserted with the least-privileged
+    default (`viewer`, via migration 002); returning users keep their assigned
+    role. When auth is disabled (local-only mode) a synthetic admin is returned
+    and no database is required.
     """
     from config import get_settings
     settings = get_settings()
 
-    token = credentials.credentials if credentials else ""
-
-    if not settings.auth_enabled and not token:
-        # Local-only mode — no token required, synthetic admin
+    if not settings.auth_enabled:
+        # Local-only mode — no token or database required, synthetic admin.
         return AuthUser(
             sub="local-user",
             email="local@cascade.dev",
@@ -49,6 +50,7 @@ async def get_current_user(
             roles=["admin"],
         )
 
+    token = credentials.credentials if credentials else ""
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,12 +68,44 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    roles: list[str] = claims.get("roles", claims.get("groups", ["viewer"]))
+    sub = claims.get("sub")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is missing the 'sub' claim.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    email = claims.get("email", "")
+    display_name = claims.get("name") or claims.get("preferred_username") or ""
+
+    # ADR-0010: authorization is owned by our DB, never trusted from the token.
+    from db import pool as db_pool
+    from db.users import get_role_entitlement, upsert_user
+
+    try:
+        async with db_pool.get_pool().acquire() as conn:
+            db_user = await upsert_user(
+                conn, external_id=sub, email=email, name=display_name or None
+            )
+            max_nodes, evals_per_minute = await get_role_entitlement(
+                conn, db_user.role_name
+            )
+    except Exception as exc:
+        logger.exception("Failed to resolve user from database: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authorization backend unavailable.",
+        ) from exc
+
     return AuthUser(
-        sub=claims["sub"],
-        email=claims.get("email", ""),
-        display_name=claims.get("name", claims.get("preferred_username", "")),
-        roles=roles,
+        sub=db_user.external_id,
+        email=db_user.email,
+        display_name=display_name,
+        roles=[db_user.role_name],
+        entitlement=Entitlement(
+            max_nodes=max_nodes, evals_per_minute=evals_per_minute
+        ),
     )
 
 

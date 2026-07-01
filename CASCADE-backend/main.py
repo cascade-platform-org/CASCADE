@@ -24,6 +24,8 @@ from api import (
 )
 from auth.oauth2 import fetch_oidc_config
 from config import assert_production_safe, get_settings
+from db import pool as db_pool
+from db.migrate import run_migrations
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,9 +50,39 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         except Exception as exc:
             logger.warning("OIDC discovery failed at startup: %s", exc)
 
-    yield
+    # Database: create the pool and bring the schema up to date. When no
+    # DATABASE_URL is configured we run in local-only mode without a database.
+    db_ready = False
+    if settings.database_url:
+        pool = await db_pool.connect()          # fail-closed: a bad URL aborts startup
+        try:
+            applied = await run_migrations(pool)
+        except Exception:
+            # Don't leak the pool if bringing the schema up to date fails.
+            await db_pool.disconnect()
+            raise
+        logger.info(
+            "Database ready (migrations applied this run: %s).", applied or "none"
+        )
+        db_ready = True
+    else:
+        logger.warning(
+            "DATABASE_URL not set — running WITHOUT a database (local-only mode)."
+        )
 
-    logger.info("CASCADE backend shutting down.")
+    # ADR-0010: authorization is read from the database. Auth without a DB would
+    # fail open, so refuse to serve in that configuration.
+    if settings.auth_enabled and not db_ready:
+        raise RuntimeError(
+            "Auth is enabled but no database is available — authorization cannot "
+            "function (ADR-0010). Set DATABASE_URL."
+        )
+
+    try:
+        yield
+    finally:
+        await db_pool.disconnect()
+        logger.info("CASCADE backend shutting down.")
 
 
 # ---------------------------------------------------------------------------

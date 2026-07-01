@@ -150,9 +150,14 @@ pip install -r requirements.txt
 psql $DATABASE_URL -f db/schema.sql
 psql $DATABASE_URL -f db/seed.sql
 
-# Start the server
+# Start the server (SINGLE worker — see note below)
 
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+
+> **Run exactly one worker/instance in v1.** The engine-evaluation budget
+> (ADR-0008) is an *in-process* token bucket, so each extra worker gives every
+> user another full budget — N workers = N× the intended limit. Scaling out
+> requires moving the bucket to a shared store (e.g. Redis) first.
 
 For production, place behind a reverse proxy (nginx, Caddy) with TLS termination.
 
@@ -186,8 +191,8 @@ npx next export
 
 All three support Python apps with a `Procfile` or `Dockerfile`.
 
-**Procfile:**
-web: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+**Procfile:** (single worker — the rate-limiter is in-process; see Scaling Notes)
+web: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
 
 Set the environment variables in the platform's dashboard. Attach a managed PostgreSQL instance for the RBAC database.
 
@@ -258,12 +263,22 @@ backend:
 
 ## Scaling Notes
 
-The backend is **stateless** — it holds no session data and stores no project content. This means:
+The backend stores no project content and holds no user session, **but it is not
+fully stateless in v1**: the per-user engine-evaluation budget (ADR-0008) lives
+in-process. This constrains scaling:
 
-- **Horizontal scaling** is straightforward. Run multiple backend instances behind a load balancer.
-- **No sticky sessions** required. Any instance can handle any request.
-- **Database load is minimal.** The only DB queries are for user lookup and RBAC checks (~1-2 queries per request). A single small PostgreSQL instance handles thousands of concurrent users.
-- **Engine compute** is the bottleneck. For large networks, consider deploying backend instances on compute-optimized machines (e.g., `c6i.xlarge` on AWS, `c2-standard-4` on GCP).
+- **Run a single backend instance/worker for v1.** Because the rate-limiter
+  state is in-process, multiple instances/workers each grant a separate budget,
+  weakening the limit N-fold. **Horizontal scaling requires first moving the
+  token bucket to a shared store (e.g. Redis).** Until then, no load balancer /
+  multi-instance deployment.
+- **No sticky sessions** are needed for identity (auth is JWT-based), but the
+  rate-limiter still pins you to one instance until it is externalised.
+- **Database load is minimal.** Per authenticated request the backend does a
+  user lookup + entitlement read (a write only on first login or a changed
+  email/name). A single small PostgreSQL instance handles many concurrent users.
+- **Engine compute** is the bottleneck. Scale *up* (a bigger box), not *out*,
+  until the rate-limiter is externalised.
 
 ---
 
