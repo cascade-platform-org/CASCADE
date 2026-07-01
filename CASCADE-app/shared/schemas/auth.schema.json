@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AuthUser": {
+      "description": "Decoded OIDC claims for the authenticated user.",
+      "properties": {
+        "sub": {
+          "title": "Sub",
+          "type": "string"
+        },
+        "email": {
+          "title": "Email",
+          "type": "string"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sub",
+        "email",
+        "display_name",
+        "roles"
+      ],
+      "title": "AuthUser",
+      "type": "object"
+    },
+    "TokenPair": {
+      "properties": {
+        "access_token": {
+          "title": "Access Token",
+          "type": "string"
+        },
+        "refresh_token": {
+          "title": "Refresh Token",
+          "type": "string"
+        },
+        "expires_in": {
+          "title": "Expires In",
+          "type": "integer"
+        },
+        "token_type": {
+          "default": "Bearer",
+          "title": "Token Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "access_token",
+        "refresh_token",
+        "expires_in"
+      ],
+      "title": "TokenPair",
+      "type": "object"
+    }
+  }
+}

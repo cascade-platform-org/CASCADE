@@ -1,0 +1,12 @@
+{
+  "disabled_rule_prefix": "// ",
+  "rule_kinds": ["specific", "intracategorical", "intercategorical", "unknown"],
+  "function_names": ["worst_of", "best_of", "average_of", "median_of", "majority_of"],
+  "operators": ["<", "<=", ">", ">=", "=", "≠"],
+  "node_attributes": [
+    "functionality",
+    "direct_damage",
+    "functionality_time",
+    "expected_repair_time"
+  ]
+}

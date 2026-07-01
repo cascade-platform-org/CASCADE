@@ -1,0 +1,254 @@
+{
+  "project": {
+    "version": "2.0",
+    "meta": {
+      "name": "Engine Sample"
+    },
+    "global_graph_type": "global",
+    "nodes": {
+      "water_src": {
+        "id": "water_src",
+        "label": "Water Source",
+        "functionality": 4,
+        "node_categories": [
+          "water"
+        ],
+        "supply_capacity": {
+          "water": 200
+        }
+      },
+      "power_src": {
+        "id": "power_src",
+        "label": "Power Plant",
+        "functionality": 4,
+        "node_categories": [
+          "power"
+        ],
+        "supply_capacity": {
+          "power": 40
+        }
+      },
+      "dc_a": {
+        "id": "dc_a",
+        "label": "Datacenter A",
+        "functionality": 4,
+        "node_categories": [
+          "power",
+          "digital"
+        ],
+        "category_dependency_profiles": {
+          "power": {
+            "dependency_level": 4,
+            "demand": 80
+          }
+        }
+      },
+      "dc_b": {
+        "id": "dc_b",
+        "label": "Datacenter B",
+        "functionality": 4,
+        "node_categories": [
+          "digital"
+        ]
+      },
+      "hospital": {
+        "id": "hospital",
+        "label": "Hospital",
+        "functionality": 4,
+        "node_categories": [
+          "water",
+          "digital"
+        ],
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 4,
+            "demand": 30,
+            "priority": 8
+          },
+          "digital": {
+            "dependency_level": 4
+          }
+        }
+      },
+      "office": {
+        "id": "office",
+        "label": "Office Park",
+        "functionality": 4,
+        "node_categories": [
+          "water"
+        ],
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 4,
+            "demand": 40,
+            "priority": 2
+          }
+        }
+      },
+      "ops": {
+        "id": "ops",
+        "label": "Ops Center",
+        "functionality": 4,
+        "node_categories": [
+          "digital"
+        ],
+        "rules": [
+          "worst_of(dc_a, dc_b) propagates to ops"
+        ]
+      },
+      "control": {
+        "id": "control",
+        "label": "Control Room",
+        "functionality": 4,
+        "node_categories": [
+          "digital"
+        ]
+      }
+    },
+    "edges": {
+      "e_w_hosp": {
+        "id": "e_w_hosp",
+        "source": "water_src",
+        "target": "hospital",
+        "functionality": 4
+      },
+      "e_w_off": {
+        "id": "e_w_off",
+        "source": "water_src",
+        "target": "office",
+        "functionality": 4
+      },
+      "e_p_dc": {
+        "id": "e_p_dc",
+        "source": "power_src",
+        "target": "dc_a",
+        "functionality": 4
+      },
+      "e_da_hosp": {
+        "id": "e_da_hosp",
+        "source": "dc_a",
+        "target": "hospital",
+        "functionality": 4
+      },
+      "e_da_ops": {
+        "id": "e_da_ops",
+        "source": "dc_a",
+        "target": "ops",
+        "functionality": 4
+      },
+      "e_db_ops": {
+        "id": "e_db_ops",
+        "source": "dc_b",
+        "target": "ops",
+        "functionality": 4
+      },
+      "e_da_ctrl": {
+        "id": "e_da_ctrl",
+        "source": "dc_a",
+        "target": "control",
+        "functionality": 4
+      }
+    },
+    "canvases": [
+      {
+        "id": "main",
+        "label": "City",
+        "color": "#3b82f6",
+        "graph": {
+          "graph_type": "global",
+          "node_ids": [
+            "water_src",
+            "power_src",
+            "dc_a",
+            "dc_b",
+            "hospital",
+            "office",
+            "ops",
+            "control"
+          ],
+          "edge_ids": [
+            "e_w_hosp",
+            "e_w_off",
+            "e_p_dc",
+            "e_da_hosp",
+            "e_da_ops",
+            "e_db_ops",
+            "e_da_ctrl"
+          ]
+        }
+      }
+    ],
+    "update_history": [],
+    "scorecard": []
+  },
+  "config": {
+    "version": "1",
+    "meta": {
+      "name": "Engine Samples Config"
+    },
+    "functionality_scale": [
+      {
+        "level": 1,
+        "label": "critical",
+        "color": "#dc2626"
+      },
+      {
+        "level": 2,
+        "label": "poor",
+        "color": "#f59e0b"
+      },
+      {
+        "level": 3,
+        "label": "degraded",
+        "color": "#eab308"
+      },
+      {
+        "level": 4,
+        "label": "operational",
+        "color": "#16a34a"
+      }
+    ],
+    "categories": [
+      {
+        "name": "water",
+        "category_type": "SourceToDemands",
+        "color": "#0ea5e9"
+      },
+      {
+        "name": "power",
+        "category_type": "SourceToDemands",
+        "color": "#f97316"
+      },
+      {
+        "name": "digital",
+        "category_type": "Requisite",
+        "color": "#8b5cf6"
+      }
+    ],
+    "events": [],
+    "graph_types": [
+      {
+        "name": "water",
+        "heuristics": []
+      },
+      {
+        "name": "power",
+        "heuristics": []
+      },
+      {
+        "name": "digital",
+        "heuristics": []
+      },
+      {
+        "name": "global",
+        "heuristics": [],
+        "local_graph_types": [
+          "water",
+          "power",
+          "digital"
+        ]
+      }
+    ],
+    "node_defaults": {}
+  }
+}
