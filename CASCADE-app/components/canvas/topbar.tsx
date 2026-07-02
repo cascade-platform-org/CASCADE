@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Settings, Save, User, Plus, ChevronDown, Layers, X, BookMarked, Wrench } from "lucide-react";
+import { Settings, Save, Plus, ChevronDown, Layers, X, BookMarked, Wrench } from "lucide-react";
+import { UserButton } from "@/components/auth/user-button";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
@@ -84,9 +85,7 @@ export function Topbar() {
           </div>
         </TopbarIconButton>
 
-        <TopbarIconButton label="User" onClick={() => {}}>
-          <User size={15} />
-        </TopbarIconButton>
+        <UserButton />
       </div>
     </header>
   );

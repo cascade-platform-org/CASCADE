@@ -63,7 +63,7 @@ DATABASE_URL=postgresql://user:pass@db-host:5432/propagation_rbac
 OIDC_DISCOVERY_URL=https://provider/.well-known/openid-configuration
 OIDC_CLIENT_ID=xxx
 OIDC_CLIENT_SECRET=xxx
-OIDC_REDIRECT_URI=https://your-domain.com/api/auth/callback
+OIDC_REDIRECT_URI=https://your-domain.com/auth/callback
 OIDC_SCOPES=openid profile email
 JWT_ALGORITHM=RS256
 JWT_AUDIENCE=your-api-audience
@@ -157,7 +157,8 @@ Do this once, after `id.<domain>` resolves and the stack is up in production.
 2. **Create a project** (e.g. "CASCADE").
 3. **Create an application** inside it:
    - Type: **Web**, auth method **PKCE** (or Code + client secret).
-   - **Redirect URI:** `https://app.<domain>/api/auth/callback`
+   - **Redirect URI:** `https://app.<domain>/auth/callback` (the frontend
+     callback page — it exchanges the code with the backend and stores the session)
    - **Post-logout URI:** `https://app.<domain>/`
 4. **Enable self-service registration** and, under the org's Login Policy,
    turn on **email verification required** and **lockout** (failed-attempt
@@ -167,7 +168,7 @@ Do this once, after `id.<domain>` resolves and the stack is up in production.
    - `OIDC_DISCOVERY_URL=https://id.<domain>/.well-known/openid-configuration`
    - `OIDC_CLIENT_ID=<application client id>`
    - `OIDC_CLIENT_SECRET=<secret, if using Code auth>`
-   - `OIDC_REDIRECT_URI=https://app.<domain>/api/auth/callback`
+   - `OIDC_REDIRECT_URI=https://app.<domain>/auth/callback`
    - `JWT_AUDIENCE=<the application client id>` (the `aud` the tokens carry)
 
    With OIDC set and `ENV=production`, the backend enforces auth (it refuses to

@@ -7,6 +7,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { postPropagate } from "@/lib/api-client";
+import { useAuthStore } from "@/store/auth-store";
 
 /**
  * Returns a stable `propagate` function that sends the current canvas state to
@@ -24,6 +25,16 @@ export function usePropagate() {
 
   async function propagate(): Promise<boolean> {
     if (!serverReachable || isPropagating) return false;
+
+    // Viewer/guest gate (backend also enforces via can_propagate).
+    if (!useAuthStore.getState().hasPermission("can_propagate")) {
+      pushToast({
+        message: "Running the propagation engine requires an account. Sign in to continue.",
+        variant: "warning",
+        durationMs: 4000,
+      });
+      return false;
+    }
 
     const canvasState = useCanvasStore.getState();
     const config = useConfigStore.getState().config;

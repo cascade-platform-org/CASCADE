@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { NewProjectWizard } from "@/components/onboarding/new-project-wizard";
 import { EditorShell } from "@/components/canvas/editor-shell";
 import { ErrorBoundary } from "@/components/canvas/error-boundary";
+import { AuthGate } from "@/components/auth/auth-gate";
 import { getBeforeUnloadSave, clearBeforeUnloadSave, loadAutosave, clearAutosave, type BeforeUnloadSave } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useAuthStore } from "@/store/auth-store";
 
 type AppState = "wizard" | "restore-prompt" | "editor";
 
@@ -15,6 +17,14 @@ export default function Home() {
   const [appState, setAppState] = useState<AppState>("wizard");
   const [pendingSave, setPendingSave] = useState<BeforeUnloadSave | null>(null);
   const [pathCopied, setPathCopied] = useState(false);
+
+  const authInitialized = useAuthStore((s) => s.initialized);
+  const authMode = useAuthStore((s) => s.mode);
+
+  // Learn auth mode + restore any saved session on first load.
+  useEffect(() => {
+    void useAuthStore.getState().init();
+  }, []);
 
   useEffect(() => {
     const buSave = getBeforeUnloadSave();
@@ -69,6 +79,20 @@ export default function Home() {
     clearBeforeUnloadSave();
     clearAutosave();
     setAppState("wizard");
+  }
+
+  // Auth gate: block the app until the user identifies or chooses guest.
+  if (!authInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-zinc-50 text-sm text-zinc-400 dark:bg-zinc-950">
+        Loading…
+      </div>
+    );
+  }
+  if (authMode === "unknown") {
+    // onDone is a no-op: choosing an identity updates the store, which
+    // re-renders this component and falls through to the flow below.
+    return <AuthGate onDone={() => undefined} />;
   }
 
   if (appState === "restore-prompt" && pendingSave) {

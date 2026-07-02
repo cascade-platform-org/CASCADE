@@ -19,6 +19,8 @@ import { InterventionPanel } from "@/components/canvas/intervention-panel";
 import { AttributeScanPanel } from "@/components/canvas/attribute-scan-panel";
 import { AnalysisPage } from "@/components/analysis/analysis-page";
 import { ToastContainer } from "./toast-container";
+import { AnonymousBanner } from "@/components/auth/AnonymousBanner";
+import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
@@ -30,6 +32,7 @@ import { loadAllIconsOnce } from "@/lib/category-icons";
 import { SaveScorecardDialog } from "@/components/scorecard/operativity-scorecard";
 
 export function EditorShell() {
+  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
   const configModalOpen = useUiStore((s) => s.configModalOpen);
   const fileIoPanelOpen = useUiStore((s) => s.fileIoPanelOpen);
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
@@ -89,6 +92,15 @@ export function EditorShell() {
   return (
     <div className="flex flex-col bg-zinc-50 dark:bg-zinc-950" style={{ height: "100dvh" }}>
       <Topbar />
+      {!canPropagate && (
+        <AnonymousBanner
+          onSignIn={() => {
+            const a = useAuthStore.getState();
+            if (a.authEnabled) a.loginWithOidc();
+            else a.signOut();
+          }}
+        />
+      )}
       <ActionBar />
 
       {/* Main workspace */}

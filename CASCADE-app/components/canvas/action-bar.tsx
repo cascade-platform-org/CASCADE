@@ -30,6 +30,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
+import { useAuthStore } from "@/store/auth-store";
 import { resetFunctionality } from "@/lib/network-utils";
 
 // Shared core for both revert call-sites (bar button + panel button).
@@ -80,6 +81,7 @@ export function ActionBar() {
 
   const { undo, redo, canUndo, canRedo } = useNetworkHistory();
   const { propagate, isPropagating, serverReachable } = usePropagate();
+  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
 
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -100,7 +102,7 @@ export function ActionBar() {
         scope={scope}
         onPropagate={propagate}
         onScopeChange={setPropagationScope}
-        disabled={!serverReachable || isPropagating}
+        disabled={!serverReachable || isPropagating || !canPropagate}
         loading={isPropagating}
         serverReachable={serverReachable}
       />

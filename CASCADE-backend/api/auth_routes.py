@@ -35,6 +35,18 @@ class MeResponse(BaseModel):
     auth_enabled: bool
 
 
+class AuthConfig(BaseModel):
+    auth_enabled: bool
+
+
+@router.get("/config", response_model=AuthConfig, summary="Public auth config")
+async def auth_config() -> AuthConfig:
+    """Whether the backend enforces auth. Deliberately UNauthenticated so the
+    frontend can learn this before a user has a token (otherwise a fresh/guest
+    user could never discover that sign-in is required, nor find the login)."""
+    return AuthConfig(auth_enabled=get_settings().auth_enabled)
+
+
 @router.get("/me", response_model=MeResponse, summary="Current user")
 async def me(user: AuthUser = Depends(get_current_user)) -> MeResponse:
     settings = get_settings()
