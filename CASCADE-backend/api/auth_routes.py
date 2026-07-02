@@ -116,8 +116,12 @@ async def login() -> RedirectResponse:
     return RedirectResponse(url=url)
 
 
-@router.get("/callback", summary="OIDC authorization code callback")
-async def callback(code: str = Query(...)) -> dict:
+async def _token_exchange(data: dict[str, str], failure_status: int, failure_detail: str) -> dict:
+    """POST an OAuth grant to the OIDC token endpoint and normalise the tokens.
+
+    Shared by /callback (authorization_code) and /refresh (refresh_token).
+    Requires auth to be enabled; the client_id/secret are added here.
+    """
     settings = get_settings()
     if not settings.auth_enabled:
         raise HTTPException(status_code=501, detail="Auth is disabled in local-only mode.")
@@ -132,16 +136,14 @@ async def callback(code: str = Query(...)) -> dict:
         resp = await client.post(
             token_endpoint,
             data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": settings.oidc_redirect_uri,
+                **data,
                 "client_id": settings.oidc_client_id,
                 "client_secret": settings.oidc_client_secret,
             },
             timeout=15,
         )
         if resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Token exchange failed.")
+            raise HTTPException(status_code=failure_status, detail=failure_detail)
         tokens = resp.json()
 
     return {
@@ -150,3 +152,30 @@ async def callback(code: str = Query(...)) -> dict:
         "expires_in": tokens.get("expires_in"),
         "token_type": tokens.get("token_type", "Bearer"),
     }
+
+
+@router.get("/callback", summary="OIDC authorization code callback")
+async def callback(code: str = Query(...)) -> dict:
+    return await _token_exchange(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": get_settings().oidc_redirect_uri,
+        },
+        failure_status=400,
+        failure_detail="Token exchange failed.",
+    )
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh", summary="Exchange a refresh token for a new access token")
+async def refresh(body: RefreshRequest) -> dict:
+    # 401 on failure => the refresh token is invalid/expired; client must re-login.
+    return await _token_exchange(
+        {"grant_type": "refresh_token", "refresh_token": body.refresh_token},
+        failure_status=401,
+        failure_detail="Token refresh failed.",
+    )

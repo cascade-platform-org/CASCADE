@@ -38,6 +38,53 @@ function authHeaders(base?: Record<string, string>): Record<string, string> {
   return headers;
 }
 
+// A refresh callback registered by the auth store: on a 401 it obtains a fresh
+// access token (or null if refresh failed). Kept as a module-level seam so this
+// file never imports the store (no cycle).
+let _refresher: (() => Promise<string | null>) | null = null;
+
+export function setTokenRefresher(fn: (() => Promise<string | null>) | null): void {
+  _refresher = fn;
+}
+
+// Single-flight the refresh: when several requests 401 at once they must share
+// ONE refresh call. Otherwise each would present the same refresh token, and an
+// IdP that rotates refresh tokens (Zitadel does by default) invalidates it after
+// the first — the rest fail and sign the user out spuriously.
+let _refreshInFlight: Promise<string | null> | null = null;
+
+function refreshOnce(): Promise<string | null> {
+  if (!_refresher) return Promise.resolve(null);
+  if (!_refreshInFlight) {
+    _refreshInFlight = _refresher().finally(() => {
+      _refreshInFlight = null;
+    });
+  }
+  return _refreshInFlight;
+}
+
+/**
+ * fetch with the Bearer header attached; on a 401, transparently refresh the
+ * token once (shared across concurrent callers) and retry. Use for
+ * token-protected endpoints.
+ */
+async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const base = (init.headers as Record<string, string> | undefined) ?? {};
+  const send = () => fetch(url, { ...init, headers: authHeaders(base) });
+  let res = await send();
+  if (res.status === 401 && _authToken && _refresher) {
+    const refreshed = await refreshOnce();
+    if (refreshed) res = await send(); // authHeaders now carries the new token
+  }
+  return res;
+}
+
+export interface OidcTokens {
+  access_token: string;
+  refresh_token: string | null;
+  expires_in: number | null;
+}
+
 /** fetch with an abort-based timeout, so no request can hang the caller. */
 async function fetchWithTimeout(
   url: string,
@@ -90,18 +137,51 @@ export function oidcLoginUrl(): string {
   return `${API_BASE}/api/auth/login`;
 }
 
-/**
- * Exchange an OIDC authorization code for an access token via the backend.
- * Returns the access token, or null on failure.
- */
-export async function exchangeOidcCode(code: string): Promise<string | null> {
+function toTokens(data: {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+}): OidcTokens | null {
+  if (!data.access_token) return null;
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token ?? null,
+    expires_in: data.expires_in ?? null,
+  };
+}
+
+/** Exchange an OIDC authorization code for tokens via the backend. */
+export async function exchangeOidcCode(code: string): Promise<OidcTokens | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${API_BASE}/api/auth/callback?code=${encodeURIComponent(code)}`,
+      {},
+      15_000,
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as { access_token?: string };
-    return data.access_token ?? null;
+    return toTokens(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+/** Exchange a refresh token for a fresh access token. Null => must re-login. */
+export async function refreshTokens(refreshToken: string): Promise<OidcTokens | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/auth/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      },
+      15_000,
+    );
+    if (!res.ok) return null;
+    const tokens = toTokens(await res.json());
+    // Some IdPs don't rotate the refresh token; keep the old one if absent.
+    if (tokens && !tokens.refresh_token) tokens.refresh_token = refreshToken;
+    return tokens;
   } catch {
     return null;
   }
@@ -142,9 +222,9 @@ export async function checkServerHealth(): Promise<boolean> {
  * if the response does not match PropagationResultSchema.
  */
 export async function postPropagate(payload: PropagationRequest): Promise<PropagationResult> {
-  const response = await fetch(`${API_BASE}/api/propagate`, {
+  const response = await authedFetch(`${API_BASE}/api/propagate`, {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -165,9 +245,7 @@ export async function postPropagate(payload: PropagationRequest): Promise<Propag
  * Throws on non-2xx responses or schema mismatch.
  */
 export async function getEngineAlgorithms(): Promise<EngineAlgorithms> {
-  const response = await fetch(`${API_BASE}/api/engine/algorithms`, {
-    headers: authHeaders(),
-  });
+  const response = await authedFetch(`${API_BASE}/api/engine/algorithms`);
   if (!response.ok) throw new Error(`Server returned ${response.status}`);
   return EngineAlgorithmsSchema.parse(await response.json());
 }

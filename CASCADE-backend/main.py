@@ -11,9 +11,11 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from api import (
     admin_router,
@@ -96,6 +98,16 @@ def create_app() -> FastAPI:
     # Covers `uvicorn main:app --workers N` too — every worker imports main.
     assert_production_safe(settings)
 
+    # Error tracking — only active when SENTRY_DSN is set (works with Sentry or a
+    # self-hosted GlitchTip). No-op otherwise, so local/dev is unaffected.
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.env,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+        )
+        logger.info("Sentry error tracking enabled.")
+
     app = FastAPI(
         title="CASCADE Propagation Platform",
         description=(
@@ -140,3 +152,10 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+# Prometheus metrics at /metrics (request counts/latency/etc.). Instrumented on
+# the singleton serving app only — NOT inside create_app(), because tests build
+# many apps and re-registering the collectors would raise duplicate-timeseries
+# errors on Prometheus's global registry. Not under /api, so Caddy never proxies
+# it to the internet — scrape it internally.
+Instrumentator().instrument(app).expose(app, include_in_schema=False)

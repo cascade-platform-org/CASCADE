@@ -9,11 +9,51 @@
 # automatically provisions and renews Let's Encrypt certificates. When they are
 # ":80"/":8081" (local testing) it just serves plain HTTP.
 #
-# Optional: add an ACME contact email in production for expiry notices, e.g.
+# Optional: add an ACME contact email in production for expiry notices:
 #   { email you@example.org }
 
+{
+	# The rate_limit handler (github.com/mholt/caddy-ratelimit, built into the
+	# image via deploy/web.Dockerfile) must be ordered explicitly.
+	order rate_limit before basic_auth
+}
+
+# Reusable security headers for the app site. Zitadel is deliberately excluded —
+# it sets its own headers/CSP and imposing ours would break its console.
+(security_headers) {
+	header {
+		# HTTPS-only for a year (browsers ignore this over plain HTTP locally).
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Permissive-but-safe CSP. 'unsafe-inline' is needed for Next's inline
+		# bootstrap + React inline styles; https:/blob: cover MapLibre tiles and
+		# workers. Tighten to your exact tile hosts if you want a stricter policy.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self' blob:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'"
+		# Don't advertise the server software.
+		-Server
+	}
+}
+
 {$APP_DOMAIN} {
+	import security_headers
 	encode zstd gzip
+
+	# Rate-limit only the abuse-prone auth endpoints (login/callback/refresh) per
+	# client IP — a defence for the login door (the engine-evaluation budget
+	# protects /api/propagate separately). The read-only /config and /me are
+	# deliberately NOT limited: they're called on every page load, so a customer
+	# whose office shares one NAT egress IP would otherwise hit false 429s.
+	@auth path /api/auth/login /api/auth/callback /api/auth/refresh
+	rate_limit @auth {
+		zone auth {
+			key {remote_host}
+			events 60
+			window 1m
+		}
+	}
 
 	# API and IdP share the app's origin, so the browser makes same-origin
 	# requests and needs no CORS. /api/* goes to the backend unchanged.
@@ -31,7 +71,8 @@
 
 {$ID_DOMAIN} {
 	# Zitadel serves gRPC (console + management API) alongside HTTP on 8080.
-	# Proxy over HTTP/2 cleartext (h2c) so the gRPC traffic works.
+	# Proxy over HTTP/2 cleartext (h2c) so the gRPC traffic works. Zitadel sets
+	# its own security headers.
 	reverse_proxy zitadel:8080 {
 		transport http {
 			versions h2c 2

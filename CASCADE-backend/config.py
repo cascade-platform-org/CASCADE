@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_audience: Optional[str] = None
 
+    # ---- Observability ----
+    # Error tracking (Sentry or a self-hosted GlitchTip). Unset => disabled.
+    sentry_dsn: Optional[str] = None
+    # Fraction of requests traced for performance monitoring (0.0..1.0).
+    sentry_traces_sample_rate: float = 0.0
+
     # ---- Zitadel management (for account erasure in the IdP) ----
     # Base URL of the Zitadel instance (e.g. https://id.<domain>) and a service
     # account / PAT with user-delete scope. When unset, account deletion removes

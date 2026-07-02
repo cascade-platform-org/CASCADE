@@ -16,7 +16,15 @@
  * would use an httpOnly cookie + refresh flow — noted as future work.)
  */
 import { create } from "zustand";
-import { fetchAuthConfig, fetchMe, oidcLoginUrl, setAuthToken } from "@/lib/api-client";
+import {
+  fetchAuthConfig,
+  fetchMe,
+  oidcLoginUrl,
+  refreshTokens,
+  setAuthToken,
+  setTokenRefresher,
+  type OidcTokens,
+} from "@/lib/api-client";
 import type { MeResponse } from "@/lib/schemas/auth";
 
 // Frontend mirror of the backend role→permission map (auth/rbac.py). Kept in
@@ -49,6 +57,7 @@ interface Persisted {
   mode: AuthMode;
   user: SessionUser | null;
   token: string | null;
+  refreshToken: string | null;
 }
 
 const STORAGE_KEY = "cascade.auth";
@@ -104,14 +113,15 @@ interface AuthState {
   mode: AuthMode;
   user: SessionUser | null;
   token: string | null;
+  refreshToken: string | null;
 
   /** Run once on app load: learn auth mode and restore any saved session. */
   init: () => Promise<void>;
   continueAsGuest: () => void;
   setLocalProfile: (displayName: string, email: string) => void;
   loginWithOidc: () => void;
-  /** Called by the OIDC callback page once a token has been obtained. */
-  completeOidcLogin: (token: string) => Promise<void>;
+  /** Called by the OIDC callback page once tokens have been obtained. */
+  completeOidcLogin: (tokens: OidcTokens) => Promise<void>;
   signOut: () => void;
   /** UI-level permission check (backend still enforces authoritatively). */
   hasPermission: (permission: string) => boolean;
@@ -123,6 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   mode: "unknown",
   user: null,
   token: null,
+  refreshToken: null,
 
   init: async () => {
     if (get().initialized) return;
@@ -144,6 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         mode: keep ? persisted!.mode : "unknown",
         user: keep ? persisted!.user : null,
         token: null,
+        refreshToken: null,
       });
     };
 
@@ -163,10 +175,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           mode: "oidc",
           user: userFromMe(me),
           token: persisted.token,
+          refreshToken: persisted.refreshToken,
         });
         return;
       }
-      // token invalid/expired — fall through to the gate.
+      // Access token invalid/expired — try to refresh before giving up.
+      if (persisted.refreshToken) {
+        const refreshed = await refreshTokens(persisted.refreshToken);
+        if (refreshed) {
+          setAuthToken(refreshed.access_token);
+          const me2 = await fetchMe();
+          if (me2) {
+            const user = userFromMe(me2);
+            savePersisted({
+              mode: "oidc",
+              user,
+              token: refreshed.access_token,
+              refreshToken: refreshed.refresh_token,
+            });
+            set({
+              initialized: true,
+              authEnabled: true,
+              mode: "oidc",
+              user,
+              token: refreshed.access_token,
+              refreshToken: refreshed.refresh_token,
+            });
+            return;
+          }
+        }
+      }
+      // fall through to the gate.
     }
 
     restoreChoice();
@@ -174,8 +213,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   continueAsGuest: () => {
     setAuthToken(null);
-    savePersisted({ mode: "guest", user: GUEST_USER, token: null });
-    set({ mode: "guest", user: GUEST_USER, token: null });
+    savePersisted({ mode: "guest", user: GUEST_USER, token: null, refreshToken: null });
+    set({ mode: "guest", user: GUEST_USER, token: null, refreshToken: null });
   },
 
   setLocalProfile: (displayName, email) => {
@@ -186,8 +225,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       displayName: displayName || email || "User",
       roles: ["viewer"], // meaningful only when authEnabled; ignored in local dev
     };
-    savePersisted({ mode: "local", user, token: null });
-    set({ mode: "local", user, token: null });
+    savePersisted({ mode: "local", user, token: null, refreshToken: null });
+    set({ mode: "local", user, token: null, refreshToken: null });
   },
 
   loginWithOidc: () => {
@@ -197,22 +236,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  completeOidcLogin: async (token) => {
-    setAuthToken(token);
+  completeOidcLogin: async (tokens) => {
+    setAuthToken(tokens.access_token);
     const me = await fetchMe();
     if (!me) {
       setAuthToken(null);
       return;
     }
     const user = userFromMe(me);
-    savePersisted({ mode: "oidc", user, token });
-    set({ authEnabled: true, mode: "oidc", user, token });
+    savePersisted({
+      mode: "oidc",
+      user,
+      token: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
+    set({
+      authEnabled: true,
+      mode: "oidc",
+      user,
+      token: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
   },
 
   signOut: () => {
     setAuthToken(null);
     clearPersisted();
-    set({ mode: "unknown", user: null, token: null });
+    set({ mode: "unknown", user: null, token: null, refreshToken: null });
   },
 
   hasPermission: (permission) => {
@@ -225,3 +275,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return roleGrants(["viewer"], permission); // labelled local profile in prod
   },
 }));
+
+// Register the 401 refresh handler with the api-client (module-level seam, no
+// import cycle). On a 401 the client calls this; we swap in a fresh access
+// token, or sign out if the refresh token is dead.
+setTokenRefresher(async () => {
+  const { refreshToken, user } = useAuthStore.getState();
+  if (!refreshToken) return null;
+  const tokens = await refreshTokens(refreshToken);
+  if (!tokens) {
+    useAuthStore.getState().signOut();
+    return null;
+  }
+  setAuthToken(tokens.access_token);
+  savePersisted({
+    mode: "oidc",
+    user,
+    token: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+  });
+  useAuthStore.setState({
+    token: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+  });
+  return tokens.access_token;
+});

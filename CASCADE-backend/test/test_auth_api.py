@@ -19,3 +19,17 @@ async def test_auth_config_is_public_and_reports_disabled_in_dev():
     assert resp.status_code == 200
     body = resp.json()
     assert body == {"auth_enabled": False}  # dev/local default (no OIDC configured)
+
+
+async def test_metrics_endpoint_exposed():
+    """The serving app exposes Prometheus metrics at /metrics (internal only)."""
+    from main import app  # the singleton serving app is instrumented on import
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://t"
+    ) as client:
+        resp = await client.get("/metrics")
+
+    assert resp.status_code == 200
+    # Prometheus text exposition format.
+    assert "# HELP" in resp.text

@@ -29,12 +29,12 @@ export default function OidcCallback() {
       return;
     }
     (async () => {
-      const token = await exchangeOidcCode(code);
-      if (!token) {
+      const tokens = await exchangeOidcCode(code);
+      if (!tokens) {
         setError("Sign-in failed. Please try again.");
         return;
       }
-      await useAuthStore.getState().completeOidcLogin(token);
+      await useAuthStore.getState().completeOidcLogin(tokens);
       window.location.replace("/");
     })();
   }, []);

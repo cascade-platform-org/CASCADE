@@ -48,6 +48,8 @@ services:
       # erasure). Without it, deletion removes only the app record.
       ZITADEL_MGMT_URL: ${ZITADEL_MGMT_URL:-}
       ZITADEL_MGMT_TOKEN: ${ZITADEL_MGMT_TOKEN:-}
+      # Error tracking (Sentry / self-hosted GlitchTip). Unset => disabled.
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       db:
         condition: service_healthy

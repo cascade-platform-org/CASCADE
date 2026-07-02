@@ -24,7 +24,13 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # to ./out.
 RUN npm run build
 
-# --- Stage 2: Caddy serves the built site ----------------------------------
+# --- Stage 2: build Caddy with the rate-limit plugin -----------------------
+FROM caddy:2-builder AS caddybuild
+RUN xcaddy build --with github.com/mholt/caddy-ratelimit --output /usr/bin/caddy
+
+# --- Stage 3: Caddy serves the built site ----------------------------------
 FROM caddy:2-alpine
+# Use the custom Caddy (with rate_limit) instead of the stock binary.
+COPY --from=caddybuild /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /app/out /srv
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

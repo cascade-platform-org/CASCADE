@@ -45,3 +45,10 @@ networkx==3.6.1              # centrality, clustering, and topological analysis
 # ---------------------------------------------------------------------------
 
 python-dotenv==1.2.2         # load .env files in development
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+
+sentry-sdk[fastapi]==2.64.0                 # error tracking (Sentry/GlitchTip); enabled via SENTRY_DSN
+prometheus-fastapi-instrumentator==8.0.2    # /metrics endpoint for Prometheus scraping
