@@ -1,0 +1,102 @@
+name: CI
+
+# Runs on direct pushes to main and on every pull request. A red check here
+# means the change is not safe to merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Only keep the latest run per branch/PR; cancel superseded ones.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CASCADE-backend
+    # A throwaway Postgres so the DB-integration tests run for real (they are
+    # skipped when TEST_DATABASE_URL is unset).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: CASCADE-backend/requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests (pytest, incl. DB integration)
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend — type-check + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CASCADE-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: CASCADE-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check (tsc --noEmit)
+        run: npx --no-install tsc --noEmit
+
+      - name: Build (static export)
+        run: npm run build
+
+  docker:
+    name: Docker images + compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Guard the deploy path: the compose files must parse and the images must
+      # build from the repo root (this is what caught the shared-grammar bug).
+      - name: Validate compose (dev + prod)
+        working-directory: deploy
+        run: |
+          cp .env.example .env
+          docker compose config >/dev/null
+          ID_DOMAIN=id.example.org APP_DOMAIN=app.example.org \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml config >/dev/null
+
+      - name: Build backend image
+        run: docker build -f CASCADE-backend/Dockerfile -t cascade-backend:ci .
+
+      - name: Build web image
+        run: docker build -f deploy/web.Dockerfile -t cascade-web:ci .

@@ -1,0 +1,20 @@
+-- Migration 003 — recalibrate engine-evaluation budgets (ADR-0008)
+--
+-- The initial evals_per_minute were guessed. Benchmarking (via
+-- scripts/benchmark_engine.py) showed a single Propagation is cheap — even 300
+-- nodes is ~8 ms, 1000 nodes ~30 ms — so per-request latency is NOT the binding
+-- cost. The real cost is model-based analysis (permutations × N evaluations).
+--
+-- On a ~4-vCPU VM (~240 CPU-seconds/minute total) the old analyst budget of
+-- 100,000 evals/min would require ~1,260 CPU-seconds/minute at the 300-node cap
+-- — roughly 20× the machine's capacity. The CPU saturates long before the token
+-- bucket binds, so the old cap protected nothing. We size the per-user budget to
+-- a fraction of one small box instead (~25% for analyst/manager, leaving room for
+-- other users on the single shared process).
+--
+-- Re-run the benchmark ON THE ACTUAL VM and adjust these numbers. max_nodes is
+-- unchanged: it is now understood as a model-based blast-radius / UX bound, not a
+-- propagation-latency limit.
+UPDATE roles SET evals_per_minute = 5000 WHERE name IN ('analyst', 'manager');
+-- viewer keeps 10,000: its 45-node cap makes each eval cheap enough that this
+-- already fits a small box's budget.

@@ -16,14 +16,13 @@ independently of the data that produces them.
 """
 from __future__ import annotations
 
-import copy
 import json
 from pathlib import Path
 from typing import Any
 
 from schemas.network import Project
 from schemas.config import ModelConfiguration
-from schemas.results import PropagationResult  # resolves Project's forward ref
+from schemas.results import PropagationResult  # noqa: F401  (resolves Project's forward ref)
 
 Project.model_rebuild()
 

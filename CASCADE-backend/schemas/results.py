@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from .network import Project, ResponsibilityShare, ScorecardEntry, PropagationScorecardEntry
+from .network import Project, ResponsibilityShare, PropagationScorecardEntry
 from .config import ModelConfiguration
 
 

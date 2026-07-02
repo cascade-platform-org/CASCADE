@@ -5,15 +5,21 @@ Backed by the `users` table via db/users.py (ADR-0010: roles live in our DB).
 """
 from __future__ import annotations
 
+import logging
+
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from auth.dependencies import require_permission
+from auth.idp import IdPDeletionError, delete_idp_user
 from auth.rbac import ROLE_PERMISSIONS, has_permission
+from db import audit as db_audit
 from db import users as db_users
 from db.pool import get_connection
 from schemas.auth import AuthUser
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -86,11 +92,24 @@ async def assign_role(
             detail="Granting or removing the 'admin' role requires admin privileges.",
         )
 
-    updated = await db_users.set_user_role(conn, user_id, body.role)
-    if updated is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No user with id '{user_id}'.",
+    # Action + audit in one transaction so a change is never left unaudited.
+    async with conn.transaction():
+        updated = await db_users.set_user_role(conn, user_id, body.role)
+        if updated is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No user with id '{user_id}'.",
+            )
+        await db_audit.record(
+            conn,
+            action="role_change",
+            user_email=actor.email,
+            details={
+                "target_user_id": user_id,
+                "target_email": updated.email,
+                "old_role": target.role_name,
+                "new_role": updated.role_name,
+            },
         )
     return UserSummary(
         id=updated.id,
@@ -98,6 +117,55 @@ async def assign_role(
         display_name=updated.name or "",
         role=updated.role_name,
     )
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a user (account erasure)",
+)
+async def delete_user(
+    user_id: str,
+    conn: asyncpg.Connection = Depends(get_connection),
+    actor: AuthUser = Depends(require_permission("can_manage_users")),
+) -> None:
+    target = await db_users.get_user_by_id(conn, user_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No user with id '{user_id}'.",
+        )
+    # Same escalation guard as role changes: removing an admin needs admin.
+    if target.role_name == "admin" and not has_permission(actor.roles, "can_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Deleting an 'admin' user requires admin privileges.",
+        )
+
+    # Erase in the IdP first (prevents re-registration on next login). If that
+    # fails, abort BEFORE touching the app DB so erasure stays all-or-nothing.
+    try:
+        await delete_idp_user(target.external_id)
+    except IdPDeletionError as exc:
+        logger.warning("IdP deletion failed for %s: %s", target.external_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Identity provider deletion failed; account not deleted. Please retry.",
+        ) from exc
+
+    # App-record delete + audit atomically.
+    async with conn.transaction():
+        await db_users.delete_user(conn, user_id)
+        await db_audit.record(
+            conn,
+            action="account_delete",
+            user_email=actor.email,
+            details={
+                "target_email": target.email,
+                "target_external_id": target.external_id,
+                "self": False,
+            },
+        )
 
 
 @router.get(

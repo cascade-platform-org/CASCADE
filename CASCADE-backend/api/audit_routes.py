@@ -32,11 +32,8 @@ async def upload_activity_log(
             detail=f"Too many entries. Maximum per upload: {_MAX_ENTRIES_PER_UPLOAD}.",
         )
 
-    # Derive session_id from the first entry (all entries in one upload share
-    # the same session, enforced by the client ActivityLog builder).
-    session_id = body.entries[0].session_id if body.entries else None
-
-    # TODO: insert into activity_log_uploads:
+    # TODO: insert into activity_log_uploads (not yet wired to the DB):
+    #   session_id = body.entries[0].session_id if body.entries else None
     #   INSERT INTO activity_log_uploads (user_id, session_id, app_version, entries)
     #   VALUES ($user_id, $session_id, $app_version, $entries::jsonb)
     # where user_id comes from the authenticated user (Depends(get_current_user)).

@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "RS256"
     jwt_audience: Optional[str] = None
 
+    # ---- Zitadel management (for account erasure in the IdP) ----
+    # Base URL of the Zitadel instance (e.g. https://id.<domain>) and a service
+    # account / PAT with user-delete scope. When unset, account deletion removes
+    # the app record but NOT the IdP identity (erasure is then incomplete — the
+    # operator must delete the Zitadel user manually).
+    zitadel_mgmt_url: Optional[str] = None
+    zitadel_mgmt_token: Optional[str] = None
+
     # NOTE: no rate-limiting setting exists yet — deliberately. A flag that is
     # read by nothing would let an operator "enable" a control with no effect.
     # Reintroduce the setting in the same commit as the enforcing middleware.

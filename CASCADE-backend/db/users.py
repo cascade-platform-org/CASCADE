@@ -131,6 +131,31 @@ async def list_users(conn: asyncpg.Connection) -> list[DBUser]:
     return [_row_to_user(r) for r in rows]
 
 
+async def delete_user(conn: asyncpg.Connection, user_id: str) -> Optional[DBUser]:
+    """Delete by primary key. Returns the deleted row, or None if id is
+    malformed / not found. FK cascades remove the user's owned rows; audit_logs
+    keep the trail (ON DELETE SET NULL)."""
+    try:
+        uuid.UUID(user_id)
+    except ValueError:
+        return None
+    row = await conn.fetchrow(
+        f"DELETE FROM users WHERE id = $1::uuid RETURNING {_USER_COLUMNS}", user_id
+    )
+    return _row_to_user(row) if row else None
+
+
+async def delete_user_by_external_id(
+    conn: asyncpg.Connection, external_id: str
+) -> Optional[DBUser]:
+    """Delete by OIDC subject (used for self-service erasure)."""
+    row = await conn.fetchrow(
+        f"DELETE FROM users WHERE external_id = $1 RETURNING {_USER_COLUMNS}",
+        external_id,
+    )
+    return _row_to_user(row) if row else None
+
+
 async def get_role_entitlement(
     conn: asyncpg.Connection, role_name: str
 ) -> tuple[Optional[int], Optional[int]]:

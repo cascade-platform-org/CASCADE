@@ -91,6 +91,37 @@ async def test_upsert_profile_change_writes(migrated_db):
     assert changed.email == "b@x"  # email refreshed on change
 
 
+async def test_delete_user_removes_row(migrated_db):
+    async with migrated_db.acquire() as conn:
+        u = await db_users.upsert_user(
+            conn, external_id="s-del", email="d@x", name="D"
+        )
+        deleted = await db_users.delete_user(conn, u.id)
+        gone = await db_users.get_user_by_external_id(conn, "s-del")
+    assert deleted is not None and deleted.id == u.id
+    assert gone is None
+
+
+async def test_delete_user_unknown_or_malformed_returns_none(migrated_db):
+    async with migrated_db.acquire() as conn:
+        assert (
+            await db_users.delete_user(
+                conn, "00000000-0000-0000-0000-000000000000"
+            )
+            is None
+        )
+        assert await db_users.delete_user(conn, "not-a-uuid") is None
+
+
+async def test_delete_user_by_external_id(migrated_db):
+    async with migrated_db.acquire() as conn:
+        await db_users.upsert_user(conn, external_id="s-ext", email="e@x", name=None)
+        deleted = await db_users.delete_user_by_external_id(conn, "s-ext")
+        gone = await db_users.get_user_by_external_id(conn, "s-ext")
+    assert deleted is not None and deleted.external_id == "s-ext"
+    assert gone is None
+
+
 async def test_upsert_email_collision_keeps_existing(migrated_db):
     """A returning user whose email now collides must not be locked out."""
     async with migrated_db.acquire() as conn:

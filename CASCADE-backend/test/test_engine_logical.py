@@ -13,7 +13,6 @@ from schemas.config import (
 )
 from schemas.network import (
     Canvas,
-    CategoryDependencyProfile,
     Edge,
     Graph,
     Node,

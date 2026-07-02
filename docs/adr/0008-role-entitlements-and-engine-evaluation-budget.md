@@ -28,12 +28,35 @@ warn above ~30 elements).
 | Knob | viewer | analyst |
 |---|---|---|
 | max nodes (propagation & model-based) | 45 | 300 |
-| engine-eval budget / minute (tunable config) | ~10,000 | ~100,000 |
+| engine-eval budget / minute (calibrated) | ~10,000 | **~5,000** |
 
-Node caps are firm decisions; eval budgets are tunable config, derived from the
-rule *"one full model-based analysis per minute at the role's max graph size."*
-`analyst` is deliberately **big-but-finite** (300 nodes) because large graphs are
-untested and model-based cost grows with size.
+Node caps are firm decisions; eval budgets are tunable config.
+
+## Calibration (measured, not guessed) — 2026-07
+
+`scripts/benchmark_engine.py` measures the real cost. Findings:
+
+- **A single Propagation is cheap** — ~1 ms at 45 nodes, ~8 ms at 300, ~30 ms at
+  1000. So per-request latency is *not* the binding constraint, and `max_nodes` is
+  best understood as a **model-based blast-radius / UX bound**, not a
+  propagation-latency limit.
+- **The old analyst budget (100,000/min) was decorative.** On a ~4-vCPU VM
+  (~240 CPU-seconds/minute) spending 100k evals at the 300-node cost (~13 ms)
+  needs ~1,260 CPU-s/min — ~20× the box. The CPU saturates long before the token
+  bucket binds, so the cap throttled nothing. It is recalibrated to **~5,000/min**
+  (~25% of one small box), so the throttle is real (migration 003).
+- `viewer` stays ~10,000: its 45-node cap keeps each eval cheap enough to fit.
+
+**Re-run the benchmark on the actual VM and set the final numbers there.**
+
+### Known weakness / future refinement
+
+The token bucket charges **1 unit per evaluation regardless of node count**, but a
+300-node eval costs ~6× a 45-node eval. So the budget is only accurate at one
+size; sizing it for the worst case (`max_nodes`) is conservative but
+over-restrictive for small graphs. A future refinement: charge
+`cost = ceil(node_count / K)` so big networks debit proportionally, making the
+budget size-aware.
 
 ## Considered options
 

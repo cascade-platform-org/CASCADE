@@ -8,13 +8,18 @@ from __future__ import annotations
 
 import logging
 
+import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from auth.dependencies import get_current_user
+from auth.idp import IdPDeletionError, delete_idp_user
 from auth.oauth2 import fetch_oidc_config
 from config import get_settings
+from db import audit as db_audit
+from db import users as db_users
+from db.pool import get_connection
 from schemas.auth import AuthUser
 
 logger = logging.getLogger(__name__)
@@ -40,6 +45,41 @@ async def me(user: AuthUser = Depends(get_current_user)) -> MeResponse:
         roles=user.roles,
         auth_enabled=settings.auth_enabled,
     )
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete my own account (GDPR erasure)",
+)
+async def delete_me(
+    user: AuthUser = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_connection),
+) -> None:
+    # Erase in the IdP first so the identity can't silently re-register. If that
+    # fails, abort BEFORE touching the app DB so erasure stays all-or-nothing.
+    try:
+        await delete_idp_user(user.sub)
+    except IdPDeletionError as exc:
+        logger.warning("IdP deletion failed for %s: %s", user.sub, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Identity provider deletion failed; account not deleted. Please retry.",
+        ) from exc
+
+    # App-record delete + audit atomically.
+    async with conn.transaction():
+        deleted = await db_users.delete_user_by_external_id(conn, user.sub)
+        if deleted is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Account not found."
+            )
+        await db_audit.record(
+            conn,
+            action="account_delete",
+            user_email=deleted.email,
+            details={"external_id": deleted.external_id, "self": True},
+        )
 
 
 @router.get("/login", summary="Redirect to OIDC provider login page")

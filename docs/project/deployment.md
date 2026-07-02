@@ -276,6 +276,37 @@ Set `NEXT_PUBLIC_API_URL` to point to your deployed backend.
 
 ---
 
+## Data Erasure (GDPR) & Audit Trail
+
+- **Account deletion.** A user can erase their own account via
+  `DELETE /api/auth/me`; a platform admin can delete any user via
+  `DELETE /api/admin/users/{id}` (deleting an `admin` requires `admin`). Both
+  remove the app record and its owned rows.
+- **Full erasure needs the IdP.** The identity PII (email, name, credentials)
+  lives in Zitadel. Set `ZITADEL_MGMT_URL` + `ZITADEL_MGMT_TOKEN` (a service
+  account with user-delete scope) so deletion also removes the Zitadel user —
+  **without this the account can silently re-register on next login and erasure
+  is incomplete.**
+- **Audit trail.** Sensitive actions (`role_change`, `account_delete`) are
+  appended to the `audit_logs` table with the actor's email (denormalised so the
+  trail survives the actor's own deletion). It is append-only.
+
+## Engine Capacity & Entitlement Calibration
+
+The entitlement caps (ADR-0008) must fit the VM. Run the benchmark **on the
+actual box** and set the numbers from real measurements:
+
+```bash
+docker compose exec backend python scripts/benchmark_engine.py
+```
+
+A single propagation is cheap (ms); the binding cost is model-based analysis
+(`permutations × N` evaluations). Size `evals_per_minute` to a fraction of the
+box's CPU-seconds/minute (a migration seeds sane defaults; adjust via a new
+numbered migration).
+
+---
+
 ## Reverse Proxy Configuration (nginx)
 
 > **Superseded for the recommended (Option 1) deployment.** Caddy in the `web`
@@ -412,3 +443,6 @@ Before going live, verify:
 - [ ] Health endpoint responding (`/api/health`); `docker compose logs` clean
 - [ ] `deploy/backup.sh` scheduled AND a restore has been tested once
 - [ ] VM hardening done (firewall, key-only SSH, unattended-upgrades)
+- [ ] Entitlement caps calibrated: `benchmark_engine.py` run on the VM, numbers set
+- [ ] Account erasure complete: `ZITADEL_MGMT_URL`/`ZITADEL_MGMT_TOKEN` set so
+      deletion also removes the Zitadel identity

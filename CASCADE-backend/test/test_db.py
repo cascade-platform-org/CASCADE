@@ -75,9 +75,10 @@ async def test_entitlements_seeded(clean_db):
                 "SELECT name, max_nodes, evals_per_minute FROM roles"
             )
         }
+    # evals_per_minute recalibrated in migration 003 (ADR-0008) from measured cost.
     assert rows["viewer"] == (45, 10000)
-    assert rows["analyst"] == (300, 100000)
-    assert rows["manager"] == (300, 100000)
+    assert rows["analyst"] == (300, 5000)
+    assert rows["manager"] == (300, 5000)
     assert rows["admin"] == (None, None)
 
 

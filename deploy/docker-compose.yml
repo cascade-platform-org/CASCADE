@@ -44,6 +44,10 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-}
+      # Optional: lets account deletion erase the user in Zitadel too (full GDPR
+      # erasure). Without it, deletion removes only the app record.
+      ZITADEL_MGMT_URL: ${ZITADEL_MGMT_URL:-}
+      ZITADEL_MGMT_TOKEN: ${ZITADEL_MGMT_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

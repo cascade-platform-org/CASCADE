@@ -10,7 +10,7 @@ import logging
 from typing import Any, Optional
 
 import httpx
-from jose import JWTError, jwt
+from jose import jwt
 
 from config import get_settings
 
