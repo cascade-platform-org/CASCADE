@@ -8,7 +8,7 @@
     {
       "label": "CASCADE: Start Frontend",
       "type": "shell",
-      "command": "npm run dev",
+      "command": "[ -d node_modules ] || npm ci; npm run dev",
       "options": {
         "cwd": "${workspaceFolder}/CASCADE-app"
       },
@@ -37,7 +37,7 @@
     {
       "label": "CASCADE: Start Frontend (debug)",
       "type": "shell",
-      "command": "npm run dev",
+      "command": "[ -d node_modules ] || npm ci; npm run dev",
       "options": {
         "cwd": "${workspaceFolder}/CASCADE-app",
         "env": {
@@ -164,6 +164,60 @@
         }
       },
       "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+
+    // -------------------------------------------------------------------------
+    // Dev Postgres — throwaway container for local backend debugging.
+    // Starts (or reuses) `cascade-dev-pg` on :5432 and blocks until it accepts
+    // connections, so backend startup migrations don't race it. Used as the
+    // preLaunchTask of "CASCADE: Backend — FastAPI + DB (debug)".
+    // Stop/remove it with: docker rm -f cascade-dev-pg
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Dev Postgres",
+      "type": "shell",
+      "command": "docker start cascade-dev-pg 2>/dev/null || docker run -d --name cascade-dev-pg -e POSTGRES_USER=cascade -e POSTGRES_PASSWORD=cascade -e POSTGRES_DB=cascade -p 5432:5432 postgres:16; for i in $(seq 1 30); do docker exec cascade-dev-pg pg_isready -U cascade >/dev/null 2>&1 && exit 0; sleep 1; done; echo 'postgres did not become ready'; exit 1",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+
+    // -------------------------------------------------------------------------
+    // Full containerized stack — db + backend + web (Caddy) + Zitadel.
+    // This is the REAL full stack (auth-capable). Creates deploy/.env from the
+    // example on first run. App at http://localhost:8080, Zitadel :8081.
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Full Stack (Docker Compose)",
+      "type": "shell",
+      "command": "[ -f .env ] || cp .env.example .env; docker compose up -d --build",
+      "options": {
+        "cwd": "${workspaceFolder}/deploy"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+
+    // -------------------------------------------------------------------------
+    // Tear down the containerized stack (add ` -v` by hand to also wipe data).
+    // -------------------------------------------------------------------------
+    {
+      "label": "CASCADE: Full Stack (Docker Compose) — Down",
+      "type": "shell",
+      "command": "docker compose down",
+      "options": {
+        "cwd": "${workspaceFolder}/deploy"
+      },
       "presentation": {
         "reveal": "always",
         "panel": "shared"

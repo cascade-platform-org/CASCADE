@@ -122,6 +122,39 @@
       },
       "justMyCode": true,
       "envFile": "${workspaceFolder}/CASCADE-backend/.env"
+    },
+
+    // -------------------------------------------------------------------------
+    // FastAPI + database (debugpy)
+    //
+    // Same as the FastAPI debug config, but first starts a throwaway dev
+    // Postgres (preLaunchTask) and points DATABASE_URL at it, so startup
+    // migrations run and the DB-backed features (users, roles, entitlements,
+    // account deletion, audit log) actually work while you debug.
+    //
+    // Auth is still OFF (no OIDC) => every request is a synthetic admin with
+    // unbounded entitlement. To exercise the auth/entitlement gates by hand use
+    // the Docker Compose stack (with Zitadel); otherwise use the pytest suite.
+    // -------------------------------------------------------------------------
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "CASCADE: Backend — FastAPI + DB (debug)",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000"
+      ],
+      "cwd": "${workspaceFolder}/CASCADE-backend",
+      "python": "${workspaceFolder}/CASCADE-backend/.venv/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/CASCADE-backend",
+        "DATABASE_URL": "postgresql://cascade:cascade@localhost:5432/cascade"
+      },
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/CASCADE-backend/.env",
+      "preLaunchTask": "CASCADE: Dev Postgres"
     }
 
   ],
@@ -132,16 +165,19 @@
   "compounds": [
 
     // -------------------------------------------------------------------------
-    // Full Stack — backend debugger + Chrome client debugger
+    // Full Stack — DB + backend debugger + Chrome client debugger
     //
-    // Starts the frontend dev server automatically (preLaunchTask on the
-    // Chrome config), then starts the backend under debugpy.
+    // Starts a dev Postgres (preLaunchTask on the backend), the frontend dev
+    // server (preLaunchTask on the Chrome config), and the backend under
+    // debugpy. Frontend (:3000) -> API (:8000); CORS already allows :3000.
+    // For the FULL containerized stack incl. Zitadel, run the task
+    // "CASCADE: Full Stack (Docker Compose)" instead.
     // -------------------------------------------------------------------------
     {
       "name": "CASCADE: Full Stack",
       "configurations": [
         "CASCADE: Frontend — Client (Chrome)",
-        "CASCADE: Backend — FastAPI (debug)"
+        "CASCADE: Backend — FastAPI + DB (debug)"
       ],
       "stopAll": true,
       "presentation": {

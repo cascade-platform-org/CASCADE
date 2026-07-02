@@ -14,6 +14,7 @@ import {
   ReactFlowProvider,
   Background,
   BackgroundVariant,
+  ConnectionMode,
   MarkerType,
   type Node as RFNode,
   type Edge as RFEdge,
@@ -67,6 +68,10 @@ function SnapshotFlow({ snapshot }: Props) {
       edges={rfEdges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
+      // Handles are all type="source"; Loose lets them act as edge targets too
+      // (matches the editor and global view). Without this, target handles like
+      // "ml"/"mr" aren't found in Strict mode and edges silently drop (RF #008).
+      connectionMode={ConnectionMode.Loose}
       fitView
       fitViewOptions={{ padding: 0.25, minZoom: 0.1, maxZoom: 2 }}
       nodesDraggable={false}
