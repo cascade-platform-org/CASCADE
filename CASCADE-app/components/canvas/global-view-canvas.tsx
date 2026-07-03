@@ -35,8 +35,9 @@ import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
-import { nodeTypes } from "./flow-canvas";
+import { nodeTypes } from "./cascade-node";
 import { ZoomSlider } from "./zoom-slider";
+import { levelColor } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Group node — coloured background labelled with the canvas name
@@ -124,7 +125,7 @@ const NODE_BOX = 72;           // conservative bounding-box size per node (px)
 // Main component
 // ---------------------------------------------------------------------------
 
-export function GlobalViewCanvas() {
+function GlobalViewCanvas() {
   const allNodes = useCanvasStore((s) => s.nodes);
   const allEdges = useCanvasStore((s) => s.edges);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
@@ -167,9 +168,7 @@ export function GlobalViewCanvas() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // register once — capture() reads live DOM state on every call
 
-  function levelColor(functionality: number): string {
-    return scaleLevels.find((l) => l.level === functionality)?.color ?? "#94a3b8";
-  }
+
 
   const { rfNodes, rfEdges } = useMemo(() => {
     const nodes: RFNode[] = [];
@@ -258,7 +257,7 @@ export function GlobalViewCanvas() {
         if (!renderedNodeIds.has(edge.source) || !renderedNodeIds.has(edge.target)) return;
         // Inter-canvas = endpoints are in different visual groups
         const isInterCanvas = nodeGroupMap.get(edge.source) !== nodeGroupMap.get(edge.target);
-        const edgeColor = levelColor(edge.functionality);
+        const edgeColor = levelColor(scaleLevels, edge.functionality);
         edges.push({
           id: edge.id,
           source: edge.source,
@@ -303,13 +302,12 @@ export function GlobalViewCanvas() {
   );
 }
 
-export function GlobalViewCanvasWithProvider() {
+// Named for its actual caller (editor-shell renders the "grouped" — i.e.
+// global — view): one export, not a definition plus a same-file alias.
+export function GroupedViewCanvasWithProvider() {
   return (
     <ReactFlowProvider>
       <GlobalViewCanvas />
     </ReactFlowProvider>
   );
 }
-
-// Re-export the grouped variant under a stable name used by editor-shell.
-export { GlobalViewCanvasWithProvider as GroupedViewCanvasWithProvider };

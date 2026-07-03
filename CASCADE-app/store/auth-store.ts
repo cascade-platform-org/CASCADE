@@ -16,6 +16,7 @@
  * would use an httpOnly cookie + refresh flow — noted as future work.)
  */
 import { create } from "zustand";
+import { z } from "zod";
 import {
   fetchAuthConfig,
   fetchMe,
@@ -53,20 +54,35 @@ export interface SessionUser {
   roles: string[];
 }
 
-interface Persisted {
-  mode: AuthMode;
-  user: SessionUser | null;
-  token: string | null;
-  refreshToken: string | null;
-}
+// localStorage is a boundary like any other (a user, extension, or attacker can
+// write anything there) — validate on load instead of casting.
+const PersistedSchema = z.object({
+  mode: z.enum(["unknown", "guest", "local", "oidc"]),
+  user: z
+    .object({
+      sub: z.string(),
+      email: z.string(),
+      displayName: z.string(),
+      roles: z.array(z.string()),
+    })
+    .nullable(),
+  token: z.string().nullable(),
+  refreshToken: z.string().nullable(),
+});
+
+type Persisted = z.infer<typeof PersistedSchema>;
 
 const STORAGE_KEY = "cascade.auth";
+/** sessionStorage key for the OAuth anti-CSRF `state` round-trip. */
+export const OIDC_STATE_KEY = "cascade.oidc.state";
 
 function loadPersisted(): Persisted | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Persisted) : null;
+    if (!raw) return null;
+    const parsed = PersistedSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
@@ -231,8 +247,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginWithOidc: () => {
     // Full-page redirect to the backend, which redirects on to Zitadel.
+    // A random `state` is stashed in sessionStorage; the callback page rejects
+    // any response whose state does not match (login-CSRF protection).
     if (typeof window !== "undefined") {
-      window.location.href = oidcLoginUrl();
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+      try {
+        window.sessionStorage.setItem(OIDC_STATE_KEY, state);
+      } catch {
+        // Without a stored state the callback cannot verify the round-trip and
+        // will reject (fail closed). Surface that here rather than sending the
+        // user through a full redirect only to be rejected on return.
+        window.alert(
+          "Sign-in cannot proceed: browser storage is unavailable (private mode?). " +
+            "Enable site data for this page and try again.",
+        );
+        return;
+      }
+      window.location.href = oidcLoginUrl(state);
     }
   },
 

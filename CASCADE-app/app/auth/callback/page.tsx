@@ -10,8 +10,9 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { exchangeOidcCode } from "@/lib/api-client";
-import { useAuthStore } from "@/store/auth-store";
+import { OIDC_STATE_KEY, useAuthStore } from "@/store/auth-store";
 
 export default function OidcCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -23,9 +24,22 @@ export default function OidcCallback() {
     if (exchanged.current) return;
     exchanged.current = true;
 
-    const code = new URLSearchParams(window.location.search).get("code");
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
     if (!code) {
       setError("Missing authorization code.");
+      return;
+    }
+
+    // Anti-CSRF: the state we sent must come back unchanged. A missing or
+    // mismatched state means this callback was not initiated by this browser
+    // session (e.g. an attacker-crafted URL trying to log the user into a
+    // foreign account). Fail closed — if no state was stored, we cannot prove
+    // this session started the flow, so we must reject rather than accept.
+    const expectedState = window.sessionStorage.getItem(OIDC_STATE_KEY);
+    window.sessionStorage.removeItem(OIDC_STATE_KEY);
+    if (!expectedState || params.get("state") !== expectedState) {
+      setError("Sign-in rejected: state mismatch. Please start again from the app.");
       return;
     }
     (async () => {
@@ -45,12 +59,12 @@ export default function OidcCallback() {
         {error ? (
           <>
             <p className="mb-4 text-sm text-red-600">{error}</p>
-            <a
+            <Link
               href="/"
               className="text-sm font-medium text-blue-600 hover:underline"
             >
               Back to CASCADE
-            </a>
+            </Link>
           </>
         ) : (
           <p className="text-sm text-zinc-500">Signing you in…</p>

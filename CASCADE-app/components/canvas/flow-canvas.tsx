@@ -1,21 +1,13 @@
 "use client";
 
 /**
- * FlowCanvas — React Flow canvas for a single CASCADE Canvas.
+ * FlowCanvas — React Flow canvas controller for a single CASCADE Canvas.
  *
- * Custom SVG node shapes per Node Type:
- *   Source        → diamond
- *   Infrastructure → octagon
- *   Service       → circle
- *   Personnel     → rounded-square
- *
- * Node size ∝ importance; fill = functionality level color from config.
- * Border ring = category color; segmented if multi-category.
- * functionality_time > 0 → pulsing yellow ring.
- * direct_damage = true  → red ⚡ overlay.
- *
- * Edges: directed arrow, getSmoothStepPath, color = edge functionality color.
- * Inter-canvas edges: dashed + target canvas name label.
+ * Owns interaction and state wiring only: drag/connect/paste/delete (each an
+ * undoable Any Graph Update via runWithHistory), selection, keyboard
+ * shortcuts, context menu, geo background. Rendering lives in the sibling
+ * modules: cascade-node.tsx (shapes + node renderer), cascade-edge.tsx
+ * (edge renderer), canvas-legend.tsx (legend overlay).
  *
  * Performance: onlyRenderVisibleElements=true; selection in network-store.
  */
@@ -26,592 +18,46 @@ import {
   BackgroundVariant,
   useReactFlow,
   getNodesBounds,
-  Handle,
-  Position,
   ConnectionMode,
   MarkerType,
-  type NodeTypes,
-  type EdgeTypes,
   type Node as RFNode,
   type Edge as RFEdge,
   type NodeMouseHandler,
   type OnSelectionChangeFunc,
-  BaseEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { useCallback, useEffect, useMemo, memo, useState, useRef, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
-import { ChevronDown } from "lucide-react";
-import { categoryToIcon, subscribeIconsReady } from "@/lib/category-icons";
-import { cn } from "@/lib/utils";
-import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
+import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
 import { NodeSearch } from "./node-search";
 import { ZoomSlider } from "./zoom-slider";
 import { Lasso } from "./lasso";
 import { useNetworkStore } from "@/store/network-store";
 import { useClipboardStore } from "@/store/clipboard-store";
-import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store";
+import { useConfigStore, selectN } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
-import { useAnalysisStore } from "@/store/analysis-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
 import { pickHandles } from "@/lib/edge-routing";
 import { CanvasContextMenu } from "./canvas-context-menu";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import { anchorFlowToGeo } from "@/lib/geo-utils";
+import { nodeTypes, toRFNode } from "./cascade-node";
+import { edgeTypes, toRFEdge } from "./cascade-edge";
+import { CanvasLegend } from "./canvas-legend";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
-const BASE_SIZE = 36;  // px at importance 0.5
-const MIN_SIZE = 24;
-const MAX_SIZE = 56;
 // Stable reference — avoids new array on every render (which causes ReactFlow's
 // StoreUpdater to repeatedly call store.setState and trigger an infinite loop).
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
-
-function nodeSize(importance: number | undefined): number {
-  const imp = importance ?? 0.5;
-  return Math.round(MIN_SIZE + (MAX_SIZE - MIN_SIZE) * Math.min(1, Math.max(0, imp)));
-}
-
-// ---------------------------------------------------------------------------
-// Helpers — convert CASCADE nodes/edges → React Flow format
-// ---------------------------------------------------------------------------
-
-export function toRFNode(node: CascadeNode, selected: boolean): RFNode {
-  return {
-    id: node.id,
-    type: (node.node_type?.toLowerCase() ?? "service") as string,
-    position: node.position ?? { x: 0, y: 0 },
-    data: node,
-    selected,
-  };
-}
-
-function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean, targetCanvasLabel?: string): RFEdge {
-  return {
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    // Restore the handle ids stored when the edge was first drawn so React Flow
-    // routes the curve from/to the correct connection dot on each node.
-    sourceHandle: edge.sourceHandle ?? null,
-    targetHandle: edge.targetHandle ?? null,
-    type: "cascadeEdge",
-    data: { ...edge, isInterCanvas, targetCanvasLabel },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// SVG shape helpers
-// ---------------------------------------------------------------------------
-
-interface ShapeProps {
-  size: number;
-  fill: string;
-  stroke?: string;
-  strokeWidth?: number;
-  strokeDasharray?: string;
-  strokeDashoffset?: number;
-}
-
-function Diamond({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
-  const h = size * 0.5;
-  return (
-    <polygon
-      points={`${h},0 ${size},${h} ${h},${size} 0,${h}`}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray}
-      strokeDashoffset={strokeDashoffset}
-    />
-  );
-}
-
-function Octagon({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
-  const o = size * 0.2;
-  const e = size - o;
-  const points = [
-    [o, 0], [e, 0], [size, o], [size, e],
-    [e, size], [o, size], [0, e], [0, o],
-  ].map(([x, y]) => `${x},${y}`).join(" ");
-  return (
-    <polygon
-      points={points}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray}
-      strokeDashoffset={strokeDashoffset}
-    />
-  );
-}
-
-function Circle({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
-  const r = size * 0.5;
-  return (
-    <circle
-      cx={r} cy={r} r={r - 1}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray}
-      strokeDashoffset={strokeDashoffset}
-    />
-  );
-}
-
-function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
-  return (
-    <rect
-      x={1} y={1}
-      width={size - 2} height={size - 2}
-      rx={size * 0.2} ry={size * 0.2}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray}
-      strokeDashoffset={strokeDashoffset}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Category → Lucide icon mapping
-// Matched by keyword so no schema change is needed. Add more keywords as new
-// category names appear in user configs.
-// ---------------------------------------------------------------------------
-
-type ShapeType = typeof Diamond | typeof Octagon | typeof Circle | typeof RoundedSquare;
-
-// ---------------------------------------------------------------------------
-// Category icons — rendered as absolutely-positioned Lucide icons inside the shape
-// ---------------------------------------------------------------------------
-
-interface CategoryItem { name: string; icon?: string }
-
-function CategoryIcons({
-  categories,
-  size,
-}: {
-  categories: CategoryItem[];
-  size: number;
-}) {
-  if (categories.length === 0) return null;
-
-  const visible = categories.slice(0, 3);
-  const gap = 3;
-  const maxTotalW = size * 0.78;
-  const iconSize = Math.max(8, Math.min(
-    Math.floor(size * 0.45),
-    Math.floor((maxTotalW - (visible.length - 1) * gap) / visible.length),
-  ));
-  const totalW = visible.length * iconSize + (visible.length - 1) * gap;
-  const startX = 8 + (size - totalW) / 2;
-  const startY = (size - iconSize) / 2;
-
-  return (
-    <>
-      {visible.map(({ name, icon }, i) => {
-        const Icon = categoryToIcon(name, icon);
-        return (
-          <div
-            key={name}
-            style={{
-              position: "absolute",
-              left: startX + i * (iconSize + gap),
-              top: startY,
-              width: iconSize,
-              height: iconSize,
-              pointerEvents: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon size={iconSize} color="black" strokeWidth={2.2} />
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Crack geometry — coordinates in SVG root space (shape starts at x = offsetX)
-// ---------------------------------------------------------------------------
-
-function buildCrackPaths(size: number, offsetX: number) {
-  const cx = offsetX + size * 0.5;
-  const s = size;
-  const main = [
-    `M ${cx - s * 0.04},0`,
-    `L ${cx + s * 0.10},${s * 0.18}`,
-    `L ${cx - s * 0.06},${s * 0.26}`,
-    `L ${cx + s * 0.12},${s * 0.48}`,
-    `L ${cx - s * 0.08},${s * 0.56}`,
-    `L ${cx + s * 0.08},${s * 0.75}`,
-    `L ${cx - s * 0.04},${s * 0.82}`,
-    `L ${cx + s * 0.06},${s}`,
-  ].join(" ");
-  const branch = [
-    `M ${cx + s * 0.12},${s * 0.48}`,
-    `L ${cx + s * 0.26},${s * 0.62}`,
-    `L ${cx + s * 0.18},${s * 0.72}`,
-  ].join(" ");
-  return { main, branch };
-}
-
-// ---------------------------------------------------------------------------
-// Base custom node renderer
-// ---------------------------------------------------------------------------
-
-type NodeData = CascadeNode;
-
-// React Flow passes `selected` as a top-level prop, not inside `data`.
-function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: ShapeType; selected?: boolean }) {
-  // Re-render once when the full icon cache becomes ready so stored icons show immediately.
-  const [, forceRender] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => subscribeIconsReady(forceRender), []);
-
-  const size = nodeSize(data.importance);
-  const functionalityColor = useConfigStore(selectLevelColor(data.functionality));
-  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive ? (s.heatmapColors[data.id] ?? null) : null);
-  const levelColor = heatmapOverride ?? functionalityColor;
-  const configCategories = useConfigStore((s) => s.config.categories);
-  const activeTool = useUiStore((s) => s.activeTool);
-  // Build CategoryItem list so CategoryIcons can resolve stored icon names
-  const nodeCategories: CategoryItem[] = (data.node_categories ?? []).map((name) => ({
-    name,
-    icon: configCategories.find((c) => c.name === name)?.icon,
-  }));
-
-  const hasTimeWarning = (data.functionality_time ?? 0) > 0;
-  const hasDamage = data.direct_damage === true;
-
-  // Crack geometry — computed once; coordinates are in SVG root space (shape offset = 8px)
-  const crack = hasDamage ? buildCrackPaths(size, 8) : null;
-  // SVG IDs must not contain characters invalid in id/url() — replace anything non-alphanumeric
-  const maskId = `frac-${data.id.replace(/[^a-zA-Z0-9]/g, "-")}`;
-  const label = data.label ?? data.id;
-  const showHandles = activeTool === "add-edge";
-
-  // 6 connection points distributed around the shape perimeter.
-  // The shape is drawn inside the SVG with an 8px left offset, so:
-  //   shape left edge  = x=8, right edge = x=8+size
-  //   shape top = y=0, bottom = y=size
-  // All handles are type="source"; ConnectionMode.Loose allows them to act as
-  // targets too. Each carries a unique id so React Flow can pick the closest one.
-  const handleDot: React.CSSProperties = {
-    width: 10, height: 10,
-    background: "#3b82f6",
-    border: "2px solid #fff",
-    borderRadius: "50%",
-    opacity: showHandles ? 1 : 0,
-    transition: "opacity 0.15s",
-    // We override position with left/top below; transform centers the dot.
-    transform: "translate(-50%, -50%)",
-  };
-  const handles = [
-    { id: "tl", pos: Position.Top,    x: 8 + size * 0.25, y: 0        },
-    { id: "tr", pos: Position.Top,    x: 8 + size * 0.75, y: 0        },
-    { id: "ml", pos: Position.Left,   x: 8,               y: size * 0.5 },
-    { id: "mr", pos: Position.Right,  x: 8 + size,        y: size * 0.5 },
-    { id: "bl", pos: Position.Bottom, x: 8 + size * 0.25, y: size     },
-    { id: "br", pos: Position.Bottom, x: 8 + size * 0.75, y: size     },
-  ];
-
-  return (
-    <div style={{ position: "relative", width: size + 16, height: size + 24 }}>
-      {handles.map(({ id, pos, x, y }) => (
-        <Handle
-          key={id}
-          id={id}
-          type="source"
-          position={pos}
-          style={{ ...handleDot, left: x, top: y }}
-        />
-      ))}
-
-
-      {/* Animated ping for backup state */}
-      {hasTimeWarning && (
-        <div
-          className="animate-ping absolute rounded-full opacity-60"
-          style={{
-            top: 0, left: 4,
-            width: size + 8, height: size + 8,
-            border: "2px solid #facc15",
-            borderRadius: "50%",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      <svg
-        width={size + 16}
-        height={size + 16}
-        style={{ overflow: "visible", display: "block" }}
-      >
-        {/* Selected highlight ring — driven by RF `selected` prop, not data */}
-        {selected && (
-          <rect
-            x={0} y={0}
-            width={size + 16} height={size + 16}
-            rx={4}
-            fill="none"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
-        )}
-
-        {/* SVG mask that cuts the crack gap out of the node when damaged */}
-        {crack && (
-          <defs>
-            <mask id={maskId} maskUnits="userSpaceOnUse">
-              {/* White = keep, black = cut through */}
-              <rect x={8} y={0} width={size} height={size} fill="white" />
-              <path d={crack.main}   stroke="black" strokeWidth={2}   strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d={crack.branch} stroke="black" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </mask>
-          </defs>
-        )}
-
-        {/* Filled shape (functionality colour) — masked to show crack gap */}
-        <g mask={crack ? `url(#${maskId})` : undefined}>
-          <g transform="translate(8,0)">
-            <Shape size={size} fill={levelColor} stroke="none" />
-          </g>
-        </g>
-
-        {/* Border — amber + thick when backup active (time_warning), white otherwise */}
-        <g mask={crack ? `url(#${maskId})` : undefined}>
-          <g transform="translate(8,0)">
-            <Shape
-              size={size}
-              fill="transparent"
-              stroke={hasTimeWarning ? "#fbbf24" : "white"}
-              strokeWidth={hasTimeWarning ? 5 : 2}
-            />
-          </g>
-        </g>
-
-
-      </svg>
-
-      {/* Category icons centered inside the shape */}
-      <CategoryIcons categories={nodeCategories} size={size} />
-
-      {/* Label below */}
-      <div
-        style={{
-          position: "absolute",
-          top: size + 2,
-          left: "50%",
-          transform: "translateX(-50%)",
-          textAlign: "center",
-          fontSize: 10,
-          color: "#52525b",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          maxWidth: 200,
-          lineHeight: "14px",
-        }}
-      >
-        {label.length > 30 ? label.slice(0, 29) + "…" : label}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Typed node components
-// ---------------------------------------------------------------------------
-
-type RFNodeProps = { data: NodeData; selected?: boolean };
-
-const SourceNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={Diamond} selected={selected} />);
-SourceNode.displayName = "SourceNode";
-
-const InfrastructureNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={Octagon} selected={selected} />);
-InfrastructureNode.displayName = "InfrastructureNode";
-
-const ServiceNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={Circle} selected={selected} />);
-ServiceNode.displayName = "ServiceNode";
-
-const PersonnelNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={RoundedSquare} selected={selected} />);
-PersonnelNode.displayName = "PersonnelNode";
-
-export const nodeTypes: NodeTypes = {
-  source: SourceNode as NodeTypes[string],
-  infrastructure: InfrastructureNode as NodeTypes[string],
-  service: ServiceNode as NodeTypes[string],
-  personnel: PersonnelNode as NodeTypes[string],
-};
-
-// ---------------------------------------------------------------------------
-// Custom edge
-// ---------------------------------------------------------------------------
-
-// Offset applied perpendicular-right of each edge direction so that antiparallel
-// pairs (A→B and B→A) land on opposite sides and are both selectable.
-const EDGE_CURVE_OFFSET = 4;
-
-function curvedEdgePath(
-  sx: number, sy: number,
-  tx: number, ty: number,
-): string {
-  const dx = tx - sx;
-  const dy = ty - sy;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  // Right-perpendicular unit vector of the direction sx→tx.
-  const px = dy / len;
-  const py = -dx / len;
-  // Quadratic bezier control point: midpoint shifted right-perpendicular.
-  const cx = (sx + tx) / 2 + px * EDGE_CURVE_OFFSET;
-  const cy = (sy + ty) / 2 + py * EDGE_CURVE_OFFSET;
-  return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
-}
-
-function CascadeEdge({
-  id, sourceX, sourceY, targetX, targetY,
-  data,
-  selected,
-  markerEnd,
-}: {
-  id: string;
-  sourceX: number; sourceY: number;
-  targetX: number; targetY: number;
-  sourcePosition: Position;
-  targetPosition: Position;
-  data?: { functionality: number; isInterCanvas: boolean; targetCanvasLabel?: string };
-  selected?: boolean;
-  markerEnd?: string;
-}) {
-  const n = useConfigStore(selectN);
-  const functionalityColorEdge = useConfigStore(selectLevelColor(data?.functionality ?? n));
-  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive && id ? (s.heatmapColors[id] ?? null) : null);
-  const levelColor = heatmapOverride ?? functionalityColorEdge;
-
-  const edgePath = curvedEdgePath(sourceX, sourceY, targetX, targetY);
-
-  return (
-    <BaseEdge
-      id={id}
-      path={edgePath}
-      style={{
-        stroke: selected ? "#3b82f6" : levelColor,
-        strokeWidth: selected ? 2.5 : 1.5,
-        strokeDasharray: data?.isInterCanvas ? "5,4" : undefined,
-      }}
-      markerEnd={markerEnd}
-    />
-  );
-}
-
-export const edgeTypes: EdgeTypes = {
-  cascadeEdge: CascadeEdge as EdgeTypes[string],
-};
-
-// ---------------------------------------------------------------------------
-// Canvas Legend — replaces MiniMap, bottom-right overlay
-// ---------------------------------------------------------------------------
-
-function LegendShape({ type, size = 14, fill }: { type: string; size?: number; fill: string }) {
-  const h = size * 0.5;
-  if (type === "source") {
-    return (
-      <svg width={size} height={size} style={{ flexShrink: 0 }}>
-        <polygon points={`${h},0 ${size},${h} ${h},${size} 0,${h}`} fill={fill} />
-      </svg>
-    );
-  }
-  if (type === "infrastructure") {
-    const o = size * 0.2; const e = size - o;
-    const pts = [[o,0],[e,0],[size,o],[size,e],[e,size],[o,size],[0,e],[0,o]]
-      .map(([x,y]) => `${x},${y}`).join(" ");
-    return <svg width={size} height={size} style={{ flexShrink: 0 }}><polygon points={pts} fill={fill} /></svg>;
-  }
-  if (type === "personnel") {
-    return <svg width={size} height={size} style={{ flexShrink: 0 }}><rect x={1} y={1} width={size-2} height={size-2} rx={size*0.2} fill={fill} /></svg>;
-  }
-  // service / default → circle
-  return <svg width={size} height={size} style={{ flexShrink: 0 }}><circle cx={h} cy={h} r={h-1} fill={fill} /></svg>;
-}
-
-function CanvasLegend() {
-  const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
-  const [open, setOpen] = useState(true);
-
-  const NODE_TYPES = [
-    { type: "source", label: "Source" },
-    { type: "infrastructure", label: "Infrastructure" },
-    { type: "service", label: "Service" },
-    { type: "personnel", label: "Personnel" },
-  ];
-
-  return (
-    <div className="absolute bottom-3 right-3 z-10 max-w-[180px]">
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white/90 text-xs shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-3 py-1.5 font-semibold text-zinc-500 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-        >
-          <span>Legend</span>
-          <ChevronDown size={11} className={cn("transition-transform", !open && "-rotate-90")} />
-        </button>
-
-        {open && (
-          <div className="space-y-2.5 border-t border-zinc-100 px-3 py-2 dark:border-zinc-800">
-            {/* Functionality levels */}
-            <div>
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-zinc-400">
-                Functionality
-              </div>
-              <div className="space-y-0.5">
-                {[...scaleLevels].reverse().map((lvl) => (
-                  <div key={lvl.level} className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: lvl.color }} />
-                    <span className="text-zinc-600 dark:text-zinc-400 truncate">{lvl.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Node types */}
-            <div>
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-zinc-400">
-                Node Types
-              </div>
-              <div className="space-y-0.5">
-                {NODE_TYPES.map(({ type, label }) => (
-                  <div key={type} className="flex items-center gap-1.5">
-                    <LegendShape type={type} size={13} fill="#94a3b8" />
-                    <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main FlowCanvas component
 // ---------------------------------------------------------------------------
 
-export function FlowCanvas() {
+function FlowCanvas() {
   const activeCanvas = useCanvasStore(selectActiveCanvas);
   const allNodes = useCanvasStore((s) => s.nodes);
   const allEdges = useCanvasStore((s) => s.edges);
@@ -623,7 +69,6 @@ export function FlowCanvas() {
   const removeEdge = useCanvasStore((s) => s.removeEdge);
   const addNodeToCanvas = useCanvasStore((s) => s.addNodeToCanvas);
   const addEdgeToCanvas = useCanvasStore((s) => s.addEdgeToCanvas);
-  const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
@@ -778,7 +223,6 @@ export function FlowCanvas() {
 
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
-  const graphTypes = useConfigStore((s) => s.config.graph_types);
   const nodeDefaults = useConfigStore(useShallow((s) => s.config.node_defaults ?? {}));
 
   // Build React Flow nodes/edges from store.
@@ -820,7 +264,7 @@ export function FlowCanvas() {
             (c) => c.id !== activeCanvas.id && c.graph.node_ids.includes(otherNodeId),
           )
         : undefined;
-      const edgeColor = scaleLevels.find((l) => l.level === edge.functionality)?.color ?? "#94a3b8";
+      const edgeColor = levelColor(scaleLevels, edge.functionality);
       return [{
         ...toRFEdge(edge, isInterCanvas, targetCanvas?.label),
         selected: selectedEdgeIds.has(id),
@@ -831,23 +275,16 @@ export function FlowCanvas() {
 
   // ── Node drag end → update position + push undoable history entry ──
   const onNodeDragStop = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
-    const before = toGraphSnapshot();
     const geoAnchor = activeCanvas?.geo_anchor ?? null;
     const nodePatch: Partial<CascadeNode> = { position: rfNode.position };
     if (geoAnchor) {
       nodePatch.geo = anchorFlowToGeo(rfNode.position, geoAnchor);
     }
-    updateNode(rfNode.id, nodePatch);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "graph_update",
-      label: "Move node",
-      canvas_id: activeCanvas?.id,
-      before,
-      after: toGraphSnapshot(),
+    runWithHistory(() => updateNode(rfNode.id, nodePatch), "Move node", {
+      updateType: "graph_update",
+      canvasId: activeCanvas?.id,
     });
-  }, [updateNode, toGraphSnapshot, activeCanvas]);
+  }, [updateNode, activeCanvas]);
 
   // ── Click → select ──
   // Ctrl/Meta+click: XOR-toggle into a homogeneous selection (nodes only OR edges only).
@@ -929,7 +366,6 @@ export function FlowCanvas() {
     targetHandle: string | null;
   }) => {
     if (!connection.source || !connection.target || !activeCanvas) return;
-    const before = toGraphSnapshot();
 
     let sourceHandle = connection.sourceHandle ?? undefined;
     let targetHandle = connection.targetHandle ?? undefined;
@@ -955,18 +391,11 @@ export function FlowCanvas() {
       targetHandle,
       functionality: n,
     };
-    upsertEdge(edge);
-    addEdgeToCanvas(edge.id, activeCanvas.id);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "graph_update",
-      label: "Add edge",
-      canvas_id: activeCanvas.id,
-      before,
-      after: toGraphSnapshot(),
-    });
-  }, [activeCanvas, n, upsertEdge, addEdgeToCanvas, toGraphSnapshot]);
+    runWithHistory(() => {
+      upsertEdge(edge);
+      addEdgeToCanvas(edge.id, activeCanvas.id);
+    }, "Add edge", { updateType: "graph_update", canvasId: activeCanvas.id });
+  }, [activeCanvas, n, allNodes, upsertEdge, addEdgeToCanvas]);
 
   // ── Delete selected ──
   const deleteSelected = useCallback(() => {
@@ -978,21 +407,15 @@ export function FlowCanvas() {
       const ok = window.confirm(`Delete ${total} selected elements?`);
       if (!ok) return;
     }
-    const before = toGraphSnapshot();
-    selectedNodeIds.forEach((id) => removeNode(id));
-    selectedEdgeIds.forEach((id) => removeEdge(id));
-    clearSelection();
-    if (!activeCanvas) return;
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "graph_update",
-      label: `Delete ${total} element${total > 1 ? "s" : ""}`,
-      canvas_id: activeCanvas.id,
-      before,
-      after: toGraphSnapshot(),
+    runWithHistory(() => {
+      selectedNodeIds.forEach((id) => removeNode(id));
+      selectedEdgeIds.forEach((id) => removeEdge(id));
+      clearSelection();
+    }, `Delete ${total} element${total > 1 ? "s" : ""}`, {
+      updateType: "graph_update",
+      canvasId: activeCanvas?.id,
     });
-  }, [selectedNodeIds, selectedEdgeIds, removeNode, removeEdge, clearSelection, toGraphSnapshot, activeCanvas]);
+  }, [selectedNodeIds, selectedEdgeIds, removeNode, removeEdge, clearSelection, activeCanvas]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
@@ -1027,43 +450,35 @@ export function FlowCanvas() {
       // Ctrl+V — paste
       if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
         if (!clipboard || !activeCanvas) return;
-        const before = toGraphSnapshot();
-        const idMap: Record<string, string> = {};
-        const newNodeIds: string[] = [];
+        runWithHistory(() => {
+          const idMap: Record<string, string> = {};
 
-        clipboard.nodes.forEach((node) => {
-          const newId = `node-${nanoid(8)}`;
-          idMap[node.id] = newId;
-          const newNode: CascadeNode = {
-            ...node,
-            id: newId,
-            position: { x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40 },
-          };
-          upsertNode(newNode);
-          addNodeToCanvas(newId, activeCanvas.id);
-          newNodeIds.push(newId);
-        });
+          clipboard.nodes.forEach((node) => {
+            const newId = `node-${nanoid(8)}`;
+            idMap[node.id] = newId;
+            const newNode: CascadeNode = {
+              ...node,
+              id: newId,
+              position: { x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40 },
+            };
+            upsertNode(newNode);
+            addNodeToCanvas(newId, activeCanvas.id);
+          });
 
-        clipboard.edges.forEach((edge) => {
-          const newId = `edge-${nanoid(8)}`;
-          const newEdge: CascadeEdge = {
-            ...edge,
-            id: newId,
-            source: idMap[edge.source] ?? edge.source,
-            target: idMap[edge.target] ?? edge.target,
-          };
-          upsertEdge(newEdge);
-          addEdgeToCanvas(newId, activeCanvas.id);
-        });
-
-        useHistoryStore.getState().pushUpdateEntry({
-          id: nanoid(),
-          timestamp: new Date().toISOString(),
-          update_type: "graph_update",
-          label: `Paste ${clipboard.nodes.length} node${clipboard.nodes.length > 1 ? "s" : ""}`,
-          canvas_id: activeCanvas.id,
-          before,
-          after: toGraphSnapshot(),
+          clipboard.edges.forEach((edge) => {
+            const newId = `edge-${nanoid(8)}`;
+            const newEdge: CascadeEdge = {
+              ...edge,
+              id: newId,
+              source: idMap[edge.source] ?? edge.source,
+              target: idMap[edge.target] ?? edge.target,
+            };
+            upsertEdge(newEdge);
+            addEdgeToCanvas(newId, activeCanvas.id);
+          });
+        }, `Paste ${clipboard.nodes.length} node${clipboard.nodes.length > 1 ? "s" : ""}`, {
+          updateType: "graph_update",
+          canvasId: activeCanvas.id,
         });
         return;
       }
@@ -1115,8 +530,7 @@ export function FlowCanvas() {
     deleteSelected, activeCanvas, selectAll, setInspectorOpen,
     selectedNodeIds, selectedEdgeIds, allNodes, allEdges,
     copyToClipboard, clipboard, upsertNode, upsertEdge,
-    addNodeToCanvas, addEdgeToCanvas,
-    toGraphSnapshot, pushToast,
+    addNodeToCanvas, addEdgeToCanvas, pushToast,
   ]);
 
   // ── Double-click on pane → add node (when add-node tool active) ──
@@ -1124,7 +538,6 @@ export function FlowCanvas() {
     if (activeTool !== "add-node" || !activeCanvas) return;
     e.preventDefault();
     const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    const before = toGraphSnapshot();
     const tpl = selectedNodeTemplate ? (nodeDefaults[selectedNodeTemplate] ?? {}) : {};
     const node: CascadeNode = {
       ...tpl,
@@ -1134,20 +547,13 @@ export function FlowCanvas() {
       functionality: n,
       position,
     };
-    upsertNode(node);
-    addNodeToCanvas(node.id, activeCanvas.id);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "graph_update",
-      label: "Add node",
-      canvas_id: activeCanvas.id,
-      before,
-      after: toGraphSnapshot(),
-    });
+    runWithHistory(() => {
+      upsertNode(node);
+      addNodeToCanvas(node.id, activeCanvas.id);
+    }, "Add node", { updateType: "graph_update", canvasId: activeCanvas.id });
     selectNode(node.id);
     setInspectorOpen(true);
-  }, [activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition, upsertNode, addNodeToCanvas, toGraphSnapshot, selectNode, setInspectorOpen]);
+  }, [activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition, upsertNode, addNodeToCanvas, selectNode, setInspectorOpen]);
 
   // ── Right-click on pane → context menu ──
   const onPaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
@@ -1266,6 +672,7 @@ export function FlowCanvas() {
 // ---------------------------------------------------------------------------
 
 import { ReactFlowProvider } from "@xyflow/react";
+import { levelColor } from "@/lib/colors";
 
 export function FlowCanvasWithProvider() {
   return (

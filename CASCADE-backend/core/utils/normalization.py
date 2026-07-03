@@ -13,9 +13,20 @@ vocabulary.
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Optional, overload
+
+# Overloaded so callers that pass a definitely-str value (the common case —
+# `node.label`, a schema-validated non-optional field) get back `str`, not
+# `str | None`. Callers with a genuinely optional value still get `str | None`
+# and must narrow it themselves — the overload doesn't hide real absence.
 
 
+@overload
+def _normalize_basic(name: str) -> str: ...
+@overload
+def _normalize_basic(name: None) -> None: ...
+@overload
+def _normalize_basic(name: Optional[str]) -> Optional[str]: ...
 def _normalize_basic(name: Optional[str]) -> Optional[str]:
     """Strip, collapse internal whitespace to '_', replace '.' with '_', lowercase.
 
@@ -29,11 +40,23 @@ def _normalize_basic(name: Optional[str]) -> Optional[str]:
     return collapsed.lower()
 
 
+@overload
+def normalize_category_name(name: str) -> str: ...
+@overload
+def normalize_category_name(name: None) -> None: ...
+@overload
+def normalize_category_name(name: Optional[str]) -> Optional[str]: ...
 def normalize_category_name(name: Optional[str]) -> Optional[str]:
     """Normalise a category name for case-insensitive lookup."""
     return _normalize_basic(name)
 
 
+@overload
+def normalize_label(name: str) -> str: ...
+@overload
+def normalize_label(name: None) -> None: ...
+@overload
+def normalize_label(name: Optional[str]) -> Optional[str]: ...
 def normalize_label(name: Optional[str]) -> Optional[str]:
     """Normalise a Functionality-scale label (e.g. 'Operational Warning') for
     case-insensitive lookup against the Model Configuration.

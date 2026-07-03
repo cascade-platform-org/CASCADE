@@ -11,15 +11,11 @@ import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 import type { Canvas } from "@/lib/schemas/network";
+import { CANVAS_PALETTE } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Canvas colors for + Canvas popover
 // ---------------------------------------------------------------------------
-
-const CANVAS_COLORS = [
-  "#3b82f6", "#22c55e", "#eab308", "#f97316",
-  "#ef4444", "#a855f7", "#06b6d4", "#ec4899",
-];
 
 // ---------------------------------------------------------------------------
 // Topbar
@@ -626,7 +622,7 @@ function AddCanvasButton() {
                   Color
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {CANVAS_COLORS.map((c) => (
+                  {CANVAS_PALETTE.map((c) => (
                     <button
                       key={c}
                       onClick={() => setColor(c)}

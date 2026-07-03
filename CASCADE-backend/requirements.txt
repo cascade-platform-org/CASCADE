@@ -11,14 +11,14 @@
 
 fastapi==0.136.1
 uvicorn[standard]==0.46.0    # [standard] adds websockets + watchfiles for --reload
-python-multipart==0.0.28     # required for form/file uploads in FastAPI
+python-multipart==0.0.32     # required for form/file uploads in FastAPI
 
 # ---------------------------------------------------------------------------
 # Data validation (schema-first — single source of truth)
 # ---------------------------------------------------------------------------
 
 pydantic==2.13.4
-pydantic-settings==2.14.1    # Settings class with env-var loading
+pydantic-settings==2.14.2    # Settings class with env-var loading
 
 # ---------------------------------------------------------------------------
 # Database (PostgreSQL)

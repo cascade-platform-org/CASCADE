@@ -188,7 +188,7 @@ An append-only, operator-only record of Propagation runs — one row per engine 
 _Avoid_: "audit log" (that is the who-did-what accountability trail, a distinct concern); "usage log", "telemetry"
 
 **Entitlement**:
-The bundle of quotas a Role grants, scaling up with trust: `max_nodes` (largest network the user may propagate or run model-based analysis on) and an engine-evaluation budget per minute. Defaults: `viewer` = 45 nodes / ~10,000 evals-min; `analyst` = 300 nodes / ~100,000 evals-min. Enforced server-side before the engine runs. Distinct from a Role's boolean **permissions** (`can_propagate`, `can_sync`, …) — permissions say *whether*, the Entitlement says *how much*. Governed by ADR-0008.
+The bundle of quotas a Role grants, scaling up with trust: `max_nodes` (largest network the user may propagate or run model-based analysis on) and an engine-evaluation budget per minute. Defaults after recalibration (migration 003): `viewer` = 45 nodes / 10,000 evals-min; `analyst`/`manager` = 300 nodes / 5,000 evals-min; `admin` = unbounded. Enforced server-side before the engine runs. Distinct from a Role's boolean **permissions** (`can_propagate`, `can_sync`, …) — permissions say *whether*, the Entitlement says *how much*. Note the interplay: `viewer` lacks `can_propagate`, so its Entitlement row is a **dormant default** — it only binds if an operator grants a viewer-like role engine access. Governed by ADR-0008.
 _Avoid_: "plan", "tier", "quota" (use Entitlement; "quota" for an individual knob is fine)
 
 **Engine Evaluation**:

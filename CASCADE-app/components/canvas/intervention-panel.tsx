@@ -12,6 +12,7 @@ import {
   type AtRiskElement,
 } from "@/lib/intervention-prioritisation";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import { levelColor } from "@/lib/colors";
 
 type SortMode = "efficiency" | "importance" | "cost";
 
@@ -51,9 +52,7 @@ export function InterventionPanel() {
     return id;
   }
 
-  function levelColor(level: number): string {
-    return config.functionality_scale.find((l) => l.level === level)?.color ?? "#94a3b8";
-  }
+  const levelColorFn = (level: number) => levelColor(config.functionality_scale, level);
 
   const recoverySum = summary.byValue.reduce((s, c) => s + c.recoveryValue, 0);
 
@@ -92,7 +91,7 @@ export function InterventionPanel() {
                 sort={sort}
                 onSort={setSort}
                 elementLabel={elementLabel}
-                levelColor={levelColor}
+                levelColor={levelColorFn}
                 N={N}
               />
 
@@ -113,7 +112,7 @@ export function InterventionPanel() {
                     <AtRiskTable
                       items={summary.atRisk}
                       elementLabel={elementLabel}
-                      levelColor={levelColor}
+                      levelColor={levelColorFn}
                       N={N}
                     />
                   )}
@@ -160,6 +159,38 @@ export function InterventionPanel() {
 // Unified candidate table
 // ---------------------------------------------------------------------------
 
+// Module-level (not defined inside the table render): a component created
+// during render gets a new identity every render, defeating reconciliation.
+function SortTh({
+  mode,
+  sort,
+  onSort,
+  children,
+  className,
+}: {
+  mode: SortMode;
+  sort: SortMode;
+  onSort: (mode: SortMode) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const active = sort === mode;
+  return (
+    <th
+      onClick={() => onSort(mode)}
+      className={cn(
+        "cursor-pointer select-none px-3 py-2.5 text-right font-semibold transition-colors",
+        active
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
+        className,
+      )}
+    >
+      {children}{active ? " ▼" : ""}
+    </th>
+  );
+}
+
 function CandidateTable({
   candidates,
   sort,
@@ -185,24 +216,6 @@ function CandidateTable({
     );
   }
 
-  function SortTh({ mode, children, className }: { mode: SortMode; children: React.ReactNode; className?: string }) {
-    const active = sort === mode;
-    return (
-      <th
-        onClick={() => onSort(mode)}
-        className={cn(
-          "cursor-pointer select-none px-3 py-2.5 text-right font-semibold transition-colors",
-          active
-            ? "text-amber-600 dark:text-amber-400"
-            : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
-          className,
-        )}
-      >
-        {children}{active ? " ▼" : ""}
-      </th>
-    );
-  }
-
   return (
     <table className="w-full text-xs">
       <thead>
@@ -210,16 +223,16 @@ function CandidateTable({
           <th className="w-8 px-4 py-2.5 font-semibold text-zinc-400">#</th>
           <th className="px-4 py-2.5 font-semibold text-zinc-500">Element</th>
           <th className="px-3 py-2.5 text-center font-semibold text-zinc-500">f</th>
-          <SortTh mode="importance">
+          <SortTh mode="importance" sort={sort} onSort={onSort}>
             <span className="block text-[9px] font-normal leading-tight opacity-60">Expected Recovery By</span>
             Importance
           </SortTh>
-          <SortTh mode="cost">
+          <SortTh mode="cost" sort={sort} onSort={onSort}>
             <span className="block text-[9px] font-normal leading-tight opacity-60">Expected Recovery By</span>
             Value
           </SortTh>
           <th className="px-3 py-2.5 text-right font-semibold text-zinc-500">Repair Time</th>
-          <SortTh mode="efficiency">Value / h</SortTh>
+          <SortTh mode="efficiency" sort={sort} onSort={onSort}>Value / h</SortTh>
         </tr>
       </thead>
       <tbody>

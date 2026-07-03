@@ -199,7 +199,7 @@ The `CASCADE-backend/core/` package contains open, auditable graph logic (rules,
 
 ### Authentication & Authorization
 
-Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `viewer` role. The server validates JWT access tokens on every request. RBAC policies and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL and enforced through FastAPI dependency injection.
+Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `viewer` role. The server validates JWT access tokens on every request. RBAC role assignments and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL; the role→permission mapping is code-owned (`auth/rbac.py`). Both are enforced through FastAPI dependency injection.
 
 Relevant permissions:
 
@@ -212,7 +212,7 @@ Relevant permissions:
 
 ### Database — PostgreSQL
 
-The database stores identity and access data (users, roles, permissions, audit logs) always. When server sync is enabled for a user, their project versions are stored here too. No project data is stored for users who have not opted in to sync.
+The database stores identity and access data (users, roles + entitlements, audit logs) and the per-run Analysis Log (ADR-0007) always. When server sync is enabled for a user, their project versions are stored here too. No project data is stored for users who have not opted in to sync.
 
 ---
 

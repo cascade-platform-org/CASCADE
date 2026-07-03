@@ -13,10 +13,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth.dependencies import get_current_user, require_permission
 from auth.entitlement import get_limiter
+from db import analysis_log
 from schemas.auth import AuthUser
 from schemas.engine import EngineAlgorithms, GraphTypeMeta, HeuristicMeta, HeuristicParamMeta
 from schemas.results import PropagationRequest, PropagationResult
-from services.propagation_service import propagate
+from services.propagation_service import (
+    EngineBusyError,
+    EngineTimeoutError,
+    propagate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +198,17 @@ async def run_propagation(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+    except EngineTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        ) from exc
+    except EngineBusyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+            headers={"Retry-After": "5"},
+        ) from exc
     except Exception as exc:
         logger.exception("Propagation failed for user %s: %s", user.email, exc)
         raise HTTPException(
@@ -208,5 +224,14 @@ async def run_propagation(
         len(result.updates),
         len(result.warnings),
         elapsed_ms,
+    )
+
+    # Analysis Log (ADR-0007): input shape + run metadata only, best-effort —
+    # a logging failure never fails the run.
+    await analysis_log.record_run(
+        body,
+        user_db_id=user.db_id,
+        role_name=user.roles[0] if user.roles else None,
+        compute_time_ms=elapsed_ms,
     )
     return result

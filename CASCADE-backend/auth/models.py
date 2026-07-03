@@ -9,7 +9,7 @@ from typing import Optional
 class DBUser:
     id: str
     external_id: str
-    email: str
+    email: Optional[str]  # OIDC email claim is optional; identity is external_id
     name: Optional[str]
     role_name: str
 

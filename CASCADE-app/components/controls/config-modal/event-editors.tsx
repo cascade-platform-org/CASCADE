@@ -65,7 +65,7 @@ export function DirectDamageEditor({ defaultRepairTime, effects, onChangeDefault
   const allFilteredSelected = filtered.length > 0 && filtered.every((el) => selected.has(el.id));
 
   function toggleSelect(id: string) {
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
 
   function toggleSelectAll() {
@@ -268,7 +268,7 @@ export function VulnerabilityLevelsEditor({ eventId }: { eventId: string }) {
   const allFilteredSelected = filtered.length > 0 && filtered.every((el) => selected.has(el.id));
 
   function toggleSelect(id: string) {
-    setSelected((s) => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setSelected((s) => { const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
   function toggleSelectAll() {
     if (allFilteredSelected) {

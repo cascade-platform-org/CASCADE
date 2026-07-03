@@ -30,14 +30,14 @@ import "@xyflow/react/dist/style.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { nanoid } from "nanoid";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
-import { nodeTypes, edgeTypes, toRFNode } from "./flow-canvas";
+import { nodeTypes, toRFNode } from "./cascade-node";
+import { edgeTypes } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
 import { ZoomSlider } from "./zoom-slider";
@@ -47,6 +47,7 @@ import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/net
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
+import { levelColor } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,7 +74,6 @@ function MergedViewCanvas() {
   const allEdges = useCanvasStore((s) => s.edges);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const updateNode = useCanvasStore((s) => s.updateNode);
-  const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
 
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
@@ -245,7 +245,7 @@ function MergedViewCanvas() {
       const srcCanvas = nodeCanvasMap.get(edge.source);
       const tgtCanvas = nodeCanvasMap.get(edge.target);
       const isInterCanvas = !!(srcCanvas && tgtCanvas && srcCanvas !== tgtCanvas);
-      const edgeColor = scaleLevels.find((l) => l.level === edge.functionality)?.color ?? "#94a3b8";
+      const edgeColor = levelColor(scaleLevels, edge.functionality);
       return [{
         ...toRFEdge(edge, isInterCanvas),
         selected: selectedEdgeIds.has(eid),
@@ -267,20 +267,15 @@ function MergedViewCanvas() {
   const panMode = activeTool === "pan";
 
   const onNodeDragStop = useCallback((_: React.MouseEvent, rfNode: RFNode) => {
-    const before = toGraphSnapshot();
     const geoAnchor = geoAnchorByNodeId.get(rfNode.id) ?? null;
     const patch: Partial<CascadeNode> = { position: rfNode.position };
     if (geoAnchor) patch.geo = anchorFlowToGeo(rfNode.position, geoAnchor);
-    updateNode(rfNode.id, patch);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "graph_update",
-      label: "Move node",
-      before,
-      after: toGraphSnapshot(),
+    // canvasId: null — the merged view spans all Canvases, no single owner.
+    runWithHistory(() => updateNode(rfNode.id, patch), "Move node", {
+      updateType: "graph_update",
+      canvasId: null,
     });
-  }, [updateNode, toGraphSnapshot, geoAnchorByNodeId]);
+  }, [updateNode, geoAnchorByNodeId]);
 
   const onNodeClick: NodeMouseHandler = useCallback((e, rfNode) => {
     if (e.ctrlKey || e.metaKey) toggleNode(rfNode.id);

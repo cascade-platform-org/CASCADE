@@ -1,0 +1,64 @@
+# Config for audit tooling only (bandit, deptry, vulture, pyright). Runtime
+# packaging, pytest, and ruff configs stay where they already lived
+# (requirements*.txt, pytest.ini) — this file does not become a new source of
+# truth for those. Run via scripts/audit.sh.
+
+[tool.bandit]
+exclude_dirs = [".venv", "test", ".pytest_cache", ".ruff_cache", "__pycache__"]
+# No project-wide rule skips here on purpose — false positives (B608 in
+# db/users.py, B104 in config.py, B311 in scripts/benchmark_engine.py) are
+# suppressed with a `# nosec BXXX: <reason>` comment at each specific line
+# instead, so a *different*, real instance of the same rule elsewhere still
+# fires.
+
+[tool.deptry]
+exclude = [".venv", "test", ".pytest_cache", ".ruff_cache", "__pycache__"]
+
+[tool.deptry.per_rule_ignores]
+# DEP002 "declared but unused" false positives — used, but not via a Python
+# `import` statement deptry's static scan can see:
+#   python-dotenv — loaded implicitly by FastAPI/uvicorn's own .env handling.
+#   uvicorn       — invoked as a CLI entrypoint (`uvicorn main:app`), the
+#                   [standard] extras (websockets, watchfiles) are runtime-only.
+#   python-multipart — imported internally by FastAPI/Starlette to parse
+#                   multipart form bodies; our code never imports it directly.
+DEP002 = ["python-dotenv", "uvicorn", "python-multipart"]
+
+[tool.vulture]
+exclude = [".venv/", "test/", ".pytest_cache/", ".ruff_cache/"]
+min_confidence = 80
+# `cls` in @field_validator(mode="before") classmethods is required by the
+# classmethod protocol even when the validator body never reads it — a
+# structural false positive vulture can't distinguish from real dead code.
+ignore_names = ["cls"]
+
+[tool.importlinter]
+# The backend has no single top-level package — main.py runs with the repo
+# root on PYTHONPATH and imports `api`, `auth`, `core`, `db`, `engine`,
+# `schemas`, `services`, `scripts` as independent top-level packages.
+root_packages = ["api", "auth", "core", "db", "engine", "schemas", "services", "scripts"]
+
+[[tool.importlinter.contracts]]
+name = "Engine isolation (CLAUDE.md §7 / ADR-0009)"
+type = "forbidden"
+source_modules = ["api", "auth", "core", "db", "schemas", "services", "scripts"]
+forbidden_modules = ["engine"]
+ignore_imports = [
+    # The one seam permitted to import engine — a future extraction into a
+    # private submodule/service touches only this file (ADR-0009).
+    "services.propagation_service -> engine.*",
+    # Benchmarks the engine's raw performance directly, bypassing the API —
+    # a deliberate, pre-existing exception for a dev-only ops script, not
+    # part of the request path CLAUDE.md §7 protects.
+    "scripts.benchmark_engine -> engine.*",
+]
+
+[tool.pyright]
+include = ["."]
+exclude = [".venv", "test", "scripts", ".pytest_cache", ".ruff_cache", "**/__pycache__"]
+# Pydantic + FastAPI's dependency-injection style (Depends(...) defaults,
+# dynamic model construction) trips strict mode with a lot of noise unrelated
+# to real bugs. "basic" catches unreachable code, undefined names, and
+# obvious type mismatches without that noise; tighten later if desired.
+typeCheckingMode = "basic"
+pythonVersion = "3.12"

@@ -13,11 +13,19 @@ Sync (deferred for v1).
 from __future__ import annotations
 
 import logging
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Union
 
 import asyncpg
 
 from config import get_settings
+
+# What `pool.acquire()` actually yields (a PoolConnectionProxy, which proxies
+# every Connection method via __getattr__ at runtime) is not a subtype of
+# Connection in asyncpg's type stubs. Every route/repo function that receives
+# a request-scoped connection via Depends(get_connection) should type its
+# parameter as DBConn, not bare asyncpg.Connection, to match what is actually
+# passed at runtime.
+DBConn = Union[asyncpg.Connection, asyncpg.pool.PoolConnectionProxy]
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +89,7 @@ def get_pool() -> asyncpg.Pool:
     return _pool
 
 
-async def get_connection() -> AsyncIterator[asyncpg.Connection]:
+async def get_connection() -> AsyncIterator[DBConn]:
     """FastAPI dependency: borrow a connection for the lifetime of one request.
 
     Usage:

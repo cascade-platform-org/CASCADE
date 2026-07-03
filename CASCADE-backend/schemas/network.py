@@ -64,7 +64,7 @@ class GeoCoords(BaseModel):
     lng: float
     lat: float
     alt: Optional[float] = None
-    crs: Optional[str] = Field(None, description="Override the parent Canvas CRS for this point. Inherits Canvas.crs when absent.")
+    crs: Optional[str] = Field(default=None, description="Override the parent Canvas CRS for this point. Inherits Canvas.crs when absent.")
 
 
 # ---------------------------------------------------------------------------
@@ -85,11 +85,11 @@ class CategoryDependencyProfile(BaseModel):
     demand and priority are SourceToDemands-only; leave absent for Requisite.
     """
     dependency_level: int = Field(..., ge=1)
-    capacity: Optional[float] = Field(None, ge=0, description="Maximum throughput for this category.")
+    capacity: Optional[float] = Field(default=None, ge=0, description="Maximum throughput for this category.")
     backup: Optional[bool] = None
-    backup_duration: Optional[int] = Field(None, ge=0, description="Hours. Applies when backup is true.")
-    demand: Optional[float] = Field(None, ge=0, description="Resource amount requested. SourceToDemands only.")
-    priority: Optional[int] = Field(None, ge=1, le=10, description="Flow allocation priority. SourceToDemands only.")
+    backup_duration: Optional[int] = Field(default=None, ge=0, description="Hours. Applies when backup is true.")
+    demand: Optional[float] = Field(default=None, ge=0, description="Resource amount requested. SourceToDemands only.")
+    priority: Optional[int] = Field(default=None, ge=1, le=10, description="Flow allocation priority. SourceToDemands only.")
 
 
 # ---------------------------------------------------------------------------
@@ -102,9 +102,9 @@ class Node(BaseModel):
     label: Optional[str] = None
     node_type: Optional[str] = None
     node_categories: Optional[list[str]] = None
-    functionality_time: Optional[int] = Field(None, ge=0, description="Hours")
+    functionality_time: Optional[int] = Field(default=None, ge=0, description="Hours")
     direct_damage: Optional[bool] = None
-    expected_repair_time: Optional[int] = Field(None, ge=0, description="Hours")
+    expected_repair_time: Optional[int] = Field(default=None, ge=0, description="Hours")
     importance: Optional[float] = None
     cost_of_disservice_per_day: Optional[float] = None
     position: Optional[Position] = None
@@ -116,7 +116,7 @@ class Node(BaseModel):
     supply_capacity: Optional[dict[str, float]] = None
     category_dependency_profiles: Optional[dict[str, CategoryDependencyProfile]] = None
     vulnerability_levels: Optional[VulnerabilityLevels] = Field(
-        None,
+        default=None,
         description=(
             "Keyed by EventId. Value 0..N−1 (N = max configured functionality level): "
             "higher = more vulnerable, 0 = immune (same as absent). "
@@ -124,7 +124,7 @@ class Node(BaseModel):
         ),
     )
     responsibility_share: Optional[ResponsibilityShare] = Field(
-        None,
+        default=None,
         description=(
             "Persisted last-known responsibility share for this node's current Functionality. "
             "Keyed by ElementId or EventId; values in (0, 1] summing to 1 — zero shares are "
@@ -155,19 +155,19 @@ class Edge(BaseModel):
     source: str
     target: str
     functionality: int = Field(..., ge=1)
-    functionality_time: Optional[int] = Field(None, ge=0, description="Hours")
+    functionality_time: Optional[int] = Field(default=None, ge=0, description="Hours")
     direct_damage: Optional[bool] = None
-    expected_repair_time: Optional[int] = Field(None, ge=0, description="Hours")
+    expected_repair_time: Optional[int] = Field(default=None, ge=0, description="Hours")
     capacity: Optional[float] = None
     vulnerability_levels: Optional[VulnerabilityLevels] = Field(
-        None,
+        default=None,
         description=(
             "Keyed by EventId. Value 0..N−1: higher = more vulnerable, 0 = immune "
             "(same as absent). The event imposes functionality = max(1, N − vulnerability_level)."
         ),
     )
     responsibility_share: Optional[ResponsibilityShare] = Field(
-        None,
+        default=None,
         description=(
             "Persisted last-known responsibility share for this edge's current Functionality. "
             "Keyed by ElementId or EventId; values in (0, 1] summing to 1 — zero shares are "
@@ -177,14 +177,14 @@ class Edge(BaseModel):
     # Raw rule strings — parsed and validated client-side; evaluated by the engine.
     rules: Optional[list[str]] = None
     sourceHandle: Optional[str] = Field(
-        None,
+        default=None,
         description=(
             "React Flow handle id on the source node — which connection dot the edge "
             "was drawn from. UI-only; ignored by the engine."
         ),
     )
     targetHandle: Optional[str] = Field(
-        None,
+        default=None,
         description=(
             "React Flow handle id on the target node — which connection dot the edge "
             "attaches to. UI-only; ignored by the engine."
@@ -255,28 +255,28 @@ class Canvas(BaseModel):
     id: str
     label: Optional[str] = None
     color: Optional[str] = Field(
-        None,
+        default=None,
         description="Hex colour string for canvas tabs and layer controls, e.g. '#3b82f6'.",
     )
     crs: Optional[str] = Field(
-        None,
+        default=None,
         description="EPSG code for the CRS of node geo fields. Defaults to EPSG:4326.",
     )
     georeferenced: Optional[bool] = None
     map_style: Optional[str] = Field(
-        None,
+        default=None,
         description="Tile style id last used in the geo editor: 'liberty' | 'bright' | 'positron'.",
     )
     map_center: Optional[GeoCoords] = Field(
-        None,
+        default=None,
         description="Last map viewport centre (lng, lat). Restored when the canvas is reopened.",
     )
     map_zoom: Optional[float] = Field(
-        None,
+        default=None,
         description="Last map zoom level. Restored when the canvas is reopened.",
     )
     geo_anchor: Optional[GeoAnchor] = Field(
-        None,
+        default=None,
         description=(
             "Bijective anchor between one React Flow coordinate and one geographic coordinate. "
             "When present, all node positions can be converted to/from geographic coordinates "
@@ -344,7 +344,7 @@ class AnyUpdateEntry(BaseModel):
     after: GraphSnapshot
     propagation_meta: Optional[PropagationMeta] = None  # set for propagation entries
     mutation_reversal: Optional[dict[str, Any]] = Field(
-        None,
+        default=None,
         description=(
             "Populated only on event_applied entries. "
             "Keys are '<elementId>.<fieldName>' (same dot-notation as "
@@ -387,7 +387,7 @@ class PropagationScorecardEntry(BaseModel):
     before_propagation: GraphSnapshot
     after_propagation: Optional[GraphSnapshot] = None
     after_temporal_jump: Optional[GraphSnapshot] = None
-    temporal_jump_hours: Optional[int] = Field(None, ge=1)
+    temporal_jump_hours: Optional[int] = Field(default=None, ge=1)
     propagation_result: Optional[PropagationResult] = None
     # Base64-encoded PNG of the GlobalViewCanvas at each snapshot state.
     # Captured once at save time; stored so the Scorecard renders offline.
@@ -444,7 +444,7 @@ class Project(BaseModel):
     version: Literal["2.0"]
     meta: ProjectMeta
     global_graph_type: Optional[str] = Field(
-        None,
+        default=None,
         description=(
             "Graph type assigned to the Global view (all Canvases rendered together). "
             "References a name in ModelConfiguration.graph_types. "

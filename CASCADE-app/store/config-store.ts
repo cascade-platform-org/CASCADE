@@ -492,10 +492,6 @@ export const selectScaleLevels = (state: ConfigStore): FunctionalityScaleLevel[]
 export const selectLevelColor = (level: number) => (state: ConfigStore): string =>
   state.config.functionality_scale.find((l) => l.level === level)?.color ?? "#94a3b8";
 
-/** All event definitions from the committed config. */
-export const selectEvents = (state: ConfigStore): EventDefinition[] =>
-  state.config.events;
-
 /** First 5 events shown in the Action Bar. */
 export const selectActionBarEvents = (state: ConfigStore): EventDefinition[] =>
   state.config.events.slice(0, 5);

@@ -20,7 +20,7 @@ export function TabEvents() {
   return (
     <div>
       <p className="mb-3 text-xs text-zinc-500">
-        First 5 events appear in the Action Bar. Events 6+ appear in "More ▼".
+        First 5 events appear in the Action Bar. Events 6+ appear in &ldquo;More ▼&rdquo;.
       </p>
 
       {events.length === 0 && (

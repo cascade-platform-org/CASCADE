@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 
-import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
@@ -16,7 +15,7 @@ from auth.idp import IdPDeletionError, delete_idp_user
 from auth.rbac import ROLE_PERMISSIONS, has_permission
 from db import audit as db_audit
 from db import users as db_users
-from db.pool import get_connection
+from db.pool import DBConn, get_connection
 from schemas.auth import AuthUser
 
 logger = logging.getLogger(__name__)
@@ -46,13 +45,13 @@ class RoleAssignment(BaseModel):
     summary="List users",
 )
 async def list_users(
-    conn: asyncpg.Connection = Depends(get_connection),
+    conn: DBConn = Depends(get_connection),
     actor: AuthUser = Depends(require_permission("can_manage_users")),
 ) -> list[UserSummary]:
     users = await db_users.list_users(conn)
     return [
         UserSummary(
-            id=u.id, email=u.email, display_name=u.name or "", role=u.role_name
+            id=u.id, email=u.email or "", display_name=u.name or "", role=u.role_name
         )
         for u in users
     ]
@@ -66,7 +65,7 @@ async def list_users(
 async def assign_role(
     user_id: str,
     body: RoleAssignment,
-    conn: asyncpg.Connection = Depends(get_connection),
+    conn: DBConn = Depends(get_connection),
     actor: AuthUser = Depends(require_permission("can_manage_users")),
 ) -> UserSummary:
     if body.role not in ROLE_PERMISSIONS:
@@ -113,7 +112,7 @@ async def assign_role(
         )
     return UserSummary(
         id=updated.id,
-        email=updated.email,
+        email=updated.email or "",
         display_name=updated.name or "",
         role=updated.role_name,
     )
@@ -126,7 +125,7 @@ async def assign_role(
 )
 async def delete_user(
     user_id: str,
-    conn: asyncpg.Connection = Depends(get_connection),
+    conn: DBConn = Depends(get_connection),
     actor: AuthUser = Depends(require_permission("can_manage_users")),
 ) -> None:
     target = await db_users.get_user_by_id(conn, user_id)

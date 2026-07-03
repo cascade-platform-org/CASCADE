@@ -93,7 +93,9 @@ export function Lasso({ active, partial = true, onSelect }: LassoProps) {
   // Keep stable ref to onSelect so the effect doesn't re-run when the
   // callback identity changes between renders.
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     if (!active) {
@@ -123,7 +125,7 @@ export function Lasso({ active, partial = true, onSelect }: LassoProps) {
       }
     }
 
-    function onMouseUp(e: MouseEvent) {
+    function onMouseUp(_e: MouseEvent) {
       if (!dragging) return;
       dragging = false;
       setDrawing(false);

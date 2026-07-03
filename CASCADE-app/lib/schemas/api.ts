@@ -33,15 +33,18 @@ export const AuthUserSchema = z.object({
   email: z.string().email(),
   display_name: z.string(),
   roles: z.array(UserRoleSchema),
+  /** users.id UUID (as text); absent in local-only mode. Mirrors AuthUser.db_id. */
+  db_id: z.string().nullable().optional(),
 });
 
 export const TokenPairSchema = z.object({
-  access_token: z.string(),
-  /** Opaque token used to obtain a new access_token without re-login. */
-  refresh_token: z.string(),
-  /** Seconds until the access_token expires. */
-  expires_in: z.number().int().positive(),
-  token_type: z.literal("Bearer"),
+  access_token: z.string().min(1),
+  /** Opaque token used to obtain a new access_token without re-login.
+   *  Null when the IdP does not issue one (e.g. refresh grant without rotation). */
+  refresh_token: z.string().nullable(),
+  /** Seconds until the access_token expires. Null when the IdP omits it. */
+  expires_in: z.number().int().positive().nullable(),
+  token_type: z.string(),
 });
 
 // ---------------------------------------------------------------------------
@@ -130,25 +133,6 @@ export const EngineAlgorithmsSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Generic API envelope
-// ---------------------------------------------------------------------------
-
-export const ApiErrorSchema = z.object({
-  ok: z.literal(false),
-  /** Machine-readable error code, e.g. "VALIDATION_ERROR", "UNAUTHORIZED". */
-  code: z.string(),
-  message: z.string(),
-});
-
-export function ApiSuccessSchema<T extends z.ZodTypeAny>(dataSchema: T) {
-  return z.object({ ok: z.literal(true), data: dataSchema });
-}
-
-export function ApiResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
-  return z.discriminatedUnion("ok", [ApiSuccessSchema(dataSchema), ApiErrorSchema]);
-}
-
-// ---------------------------------------------------------------------------
 // Inferred TypeScript types
 // ---------------------------------------------------------------------------
 
@@ -156,7 +140,6 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type TokenPair = z.infer<typeof TokenPairSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
-export type ApiError = z.infer<typeof ApiErrorSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;
 export type HeuristicMeta = z.infer<typeof HeuristicMetaSchema>;
 export type GraphTypeMeta = z.infer<typeof GraphTypeMetaSchema>;

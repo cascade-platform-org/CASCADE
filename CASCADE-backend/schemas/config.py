@@ -33,17 +33,17 @@ class EventDefinition(BaseModel):
     icon: Optional[str] = None  # Lucide icon name shown on the Action Bar button
     frequency_per_10y: float = Field(default=0.0, ge=0)
     expected_recovery_time: Optional[int] = Field(
-        None, ge=0, description="Hours until self-resolution. Disservices only."
+        default=None, ge=0, description="Hours until self-resolution. Disservices only."
     )
     duration_hours: Optional[int] = Field(
-        None, ge=1,
+        default=None, ge=1,
         description=(
             "Hours to advance the clock. Temporal Jump events only. "
             "Used as the default when saving to Scorecard."
         ),
     )
     default_repair_time: Optional[int] = Field(
-        None,
+        default=None,
         ge=0,
         description=(
             "Global default repair time (hours) applied to all elements when this hazard fires. "
@@ -51,7 +51,7 @@ class EventDefinition(BaseModel):
         ),
     )
     direct_damage_effects: Optional[dict[str, DirectDamageEffect]] = Field(
-        None, description="Per-element repair time overrides. Hazards only. Key = ElementId."
+        default=None, description="Per-element repair time overrides. Hazards only. Key = ElementId."
     )
     attribute_mutations: dict[str, Any] = Field(
         default_factory=dict,
@@ -80,7 +80,7 @@ class HeuristicConfig(BaseModel):
     id: str
     enabled: bool = True
     params: Optional[dict[str, Any]] = Field(
-        None,
+        default=None,
         description="Heuristic-specific parameters. Keys and value ranges are engine-defined.",
     )
 
@@ -112,7 +112,7 @@ class GraphTypeConfig(BaseModel):
         description="Ordered heuristic pipeline for this graph type.",
     )
     local_graph_types: Optional[list[str]] = Field(
-        None,
+        default=None,
         description=(
             "Global graph type only: names of the constituent local graph types "
             "whose heuristic pipelines compose for a global Propagation. Absent "

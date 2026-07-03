@@ -53,7 +53,7 @@ def _config() -> ModelConfiguration:
 def _build_request(num_nodes: int, seed: int = 0) -> tuple[PropagationRequest, int]:
     """A synthetic dependency network: ~10% degraded sources, the rest each
     depending on 1-3 upstream nodes (a random DAG so failures cascade)."""
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311
     nodes: list[Node] = []
     edges: list[Edge] = []
 

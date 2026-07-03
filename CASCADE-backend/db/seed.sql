@@ -15,25 +15,5 @@ INSERT INTO roles (name, description) VALUES
     ('admin',   'Full access including role and permission management')
 ON CONFLICT (name) DO NOTHING;
 
--- ---------------------------------------------------------------------------
--- Default permissions per role
--- ---------------------------------------------------------------------------
-
-INSERT INTO role_permissions (role_name, permission) VALUES
-    -- viewer
-    ('viewer',  'can_view_analysis'),
-
-    -- analyst
-    ('analyst', 'can_propagate'),
-    ('analyst', 'can_view_analysis'),
-    ('analyst', 'can_sync'),
-
-    -- manager
-    ('manager', 'can_propagate'),
-    ('manager', 'can_view_analysis'),
-    ('manager', 'can_sync'),
-    ('manager', 'can_manage_users'),
-
-    -- admin (wildcard — checked via can_admin in rbac.py)
-    ('admin',   'can_admin')
-ON CONFLICT (role_name, permission) DO NOTHING;
+-- NOTE: role→permission mapping is defined in code (auth/rbac.py) — the
+-- single source of truth the API enforces. No permissions table is seeded.

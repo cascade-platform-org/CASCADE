@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import type { Node } from "@/lib/schemas/network";
+import { levelColor } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Result row
@@ -28,7 +29,7 @@ interface ResultRowProps {
 
 function ResultRow({ node, highlighted, onSelect }: ResultRowProps) {
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
-  const levelColor = scaleLevels.find((l) => l.level === node.functionality)?.color ?? "#94a3b8";
+  const nodeColor = levelColor(scaleLevels, node.functionality);
 
   return (
     <button
@@ -47,7 +48,7 @@ function ResultRow({ node, highlighted, onSelect }: ResultRowProps) {
       {/* Functionality colour dot */}
       <span
         className="h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: levelColor }}
+        style={{ backgroundColor: nodeColor }}
       />
       {/* Label */}
       <span className="flex-1 truncate font-medium text-zinc-800 dark:text-zinc-200">

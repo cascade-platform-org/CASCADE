@@ -10,11 +10,10 @@
 import { useCallback } from "react";
 import { useReactFlow, getNodesBounds } from "@xyflow/react";
 import { Waypoints, FileCode, ImageDown, BoxSelect, Spline } from "lucide-react";
-import { nanoid } from "nanoid";
 
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
 import { useUiStore } from "@/store/ui-store";
 import { pickHandles } from "@/lib/edge-routing";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
@@ -63,7 +62,6 @@ export function CanvasContextMenu({
 
   const allEdges = useCanvasStore((s) => s.edges);
   const updateEdge = useCanvasStore((s) => s.updateEdge);
-  const toGraphSnapshot = useCanvasStore((s) => s.toGraphSnapshot);
   const pushToast = useUiStore((s) => s.pushToast);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
 
@@ -71,30 +69,23 @@ export function CanvasContextMenu({
 
   const applyEdgeLayout = useCallback(() => {
     onClose();
-    const before = toGraphSnapshot();
-    let count = 0;
+    // Compute the patches first so a no-op layout pushes no history entry.
+    const patches: Array<[string, { sourceHandle: string; targetHandle: string }]> = [];
     for (const eid of edgeIds) {
       const edge = allEdges[eid] as CascadeEdge | undefined;
       if (!edge) continue;
       const srcRF = getNode(edge.source);
       const tgtRF = getNode(edge.target);
       if (!srcRF || !tgtRF) continue;
-      const { sourceHandle, targetHandle } = pickHandles(srcRF, tgtRF);
-      updateEdge(eid, { sourceHandle, targetHandle });
-      count++;
+      patches.push([eid, pickHandles(srcRF, tgtRF)]);
     }
-    if (count > 0) {
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: "Edge layout",
-        before,
-        after: toGraphSnapshot(),
-      });
-      pushToast({ message: `Laid out ${count} edge${count !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
+    if (patches.length > 0) {
+      runWithHistory(() => {
+        for (const [eid, handles] of patches) updateEdge(eid, handles);
+      }, "Edge layout", { updateType: "graph_update" });
+      pushToast({ message: `Laid out ${patches.length} edge${patches.length !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
     }
-  }, [edgeIds, allEdges, getNode, updateEdge, toGraphSnapshot, pushToast, onClose]);
+  }, [edgeIds, allEdges, getNode, updateEdge, pushToast, onClose]);
 
   const selectAllNodes = useCallback(() => {
     onClose();

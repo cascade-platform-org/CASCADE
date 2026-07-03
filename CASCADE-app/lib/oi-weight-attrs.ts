@@ -16,7 +16,7 @@ const NON_WEIGHT_KEYS = new Set([
  * Return all numeric node attribute names available as OI weight candidates.
  * Schema-known attrs appear first; custom attrs discovered in live data follow.
  */
-export function detectOiWeightAttrs(nodes: Record<string, Node>): string[] {
+function detectOiWeightAttrs(nodes: Record<string, Node>): string[] {
   const seen = new Set<string>(SCHEMA_NODE_ATTRS_FOR_OI);
   for (const node of Object.values(nodes).slice(0, 20)) {
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {

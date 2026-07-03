@@ -28,6 +28,8 @@ import type {
 } from "@/lib/schemas";
 import type { PropagationResult, EventDefinition } from "@/lib/schemas";
 import { assignElementUpdate } from "@/lib/element-update";
+import { pickHandles } from "@/lib/edge-routing";
+import { nanoid } from "nanoid";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -132,6 +134,19 @@ export interface CanvasActions {
    * Records a graph_update history entry.
    */
   moveNodesToCanvas: (nodeIds: string[], sourceCanvasId: string, targetCanvasId: string) => void;
+  /**
+   * Create an inter-canvas edge (the dialog is the only creation path — see
+   * CONTEXT.md → Inter-Canvas Edge Creation). Registers the edge once in the
+   * global registry, references it from BOTH canvases so it renders from
+   * either side, and pushes one undoable history entry.
+   */
+  addInterCanvasEdge: (args: {
+    sourceNodeId: string;
+    sourceCanvasId: string;
+    targetNodeId: string;
+    targetCanvasId: string;
+    functionality: number;
+  }) => void;
 
   // --- Project meta ---
   setProjectMeta: (meta: { name?: string; description?: string }) => void;
@@ -621,6 +636,47 @@ export const useCanvasStore = create<CanvasStore>()(
         timestamp: new Date().toISOString(),
         update_type: "graph_update",
         label: `Move ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
+        before,
+        after: get().toGraphSnapshot(),
+      });
+    },
+
+    addInterCanvasEdge({ sourceNodeId, sourceCanvasId, targetNodeId, targetCanvasId, functionality }) {
+      const state = get();
+      const sourceNode = state.nodes[sourceNodeId];
+      const targetNode = state.nodes[targetNodeId];
+      // Both endpoints and both canvases must exist. Validating the target the
+      // same way as the source avoids registering an edge that points at a
+      // nonexistent node (which would route from (0,0) and dangle in history).
+      if (
+        !sourceNode ||
+        !targetNode ||
+        !state.canvases[sourceCanvasId] ||
+        !state.canvases[targetCanvasId]
+      )
+        return;
+      const { sourceHandle, targetHandle } = pickHandles(
+        { position: sourceNode.position ?? { x: 0, y: 0 } },
+        { position: targetNode.position ?? { x: 0, y: 0 } },
+      );
+      const edge: Edge = {
+        id: `edge-${nanoid(8)}`,
+        source: sourceNodeId,
+        target: targetNodeId,
+        sourceHandle,
+        targetHandle,
+        functionality,
+      };
+      const before = state.toGraphSnapshot();
+      state.upsertEdge(edge);
+      state.addEdgeToCanvas(edge.id, sourceCanvasId);
+      state.addEdgeToCanvas(edge.id, targetCanvasId);
+      useHistoryStore.getState().pushUpdateEntry({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        update_type: "graph_update",
+        label: "Add inter-canvas edge",
+        canvas_id: sourceCanvasId,
         before,
         after: get().toGraphSnapshot(),
       });

@@ -1,8 +1,39 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Entitlement": {
+      "description": "Per-role quotas (ADR-0008). None means unbounded (e.g. admin).",
+      "properties": {
+        "max_nodes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Nodes"
+        },
+        "evals_per_minute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evals Per Minute"
+        }
+      },
+      "title": "Entitlement",
+      "type": "object"
+    },
     "AuthUser": {
-      "description": "Decoded OIDC claims for the authenticated user.",
+      "description": "Decoded OIDC claims for the authenticated user, plus DB-owned authz.",
       "properties": {
         "sub": {
           "title": "Sub",
@@ -22,6 +53,29 @@
           },
           "title": "Roles",
           "type": "array"
+        },
+        "db_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Db Id"
+        },
+        "entitlement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Entitlement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -40,12 +94,28 @@
           "type": "string"
         },
         "refresh_token": {
-          "title": "Refresh Token",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Refresh Token"
         },
         "expires_in": {
-          "title": "Expires In",
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires In"
         },
         "token_type": {
           "default": "Bearer",
@@ -54,9 +124,7 @@
         }
       },
       "required": [
-        "access_token",
-        "refresh_token",
-        "expires_in"
+        "access_token"
       ],
       "title": "TokenPair",
       "type": "object"

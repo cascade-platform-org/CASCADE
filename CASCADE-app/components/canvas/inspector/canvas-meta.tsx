@@ -12,15 +12,11 @@ import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { cn, Field, TextInput, Toggle } from "./primitives";
+import { CANVAS_PALETTE } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Colour palette for Canvas colour picker
 // ---------------------------------------------------------------------------
-
-const CANVAS_PALETTE = [
-  "#3b82f6", "#22c55e", "#eab308", "#f97316",
-  "#ef4444", "#a855f7", "#06b6d4", "#ec4899",
-];
 
 // ---------------------------------------------------------------------------
 // CanvasMeta — active Canvas (nothing selected)

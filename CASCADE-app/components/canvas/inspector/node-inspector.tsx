@@ -349,7 +349,6 @@ export function NodeInspector({ node }: { node: Node }) {
           {profileCategories.map((cat) => {
             const profile: CategoryDependencyProfile =
               node.category_dependency_profiles?.[cat] ?? { dependency_level: n };
-            const catDef = categories.find((c) => c.name === cat);
             const isInbound = inboundCategories.has(cat);
             return (
               <div key={cat} className="mb-3">

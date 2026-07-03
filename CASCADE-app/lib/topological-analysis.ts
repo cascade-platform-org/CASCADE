@@ -7,7 +7,7 @@
  */
 
 import Graph from "graphology";
-import { betweenness, edgeBetweenness, closeness, eigenvector, degree, inDegree, outDegree } from "graphology-metrics/centrality";
+import { betweenness, edgeBetweenness, closeness, eigenvector } from "graphology-metrics/centrality";
 import louvain from "graphology-communities-louvain";
 import { singleSource } from "graphology-shortest-path/unweighted";
 
@@ -401,26 +401,6 @@ function edgeScoresToResult(metric: string, rawScores: Record<string, number>): 
     .sort((a, b) => b.score - a.score);
   ranked.forEach((r, i) => (r.rank = i + 1));
   return { metric, scores: rawScores, ranked, min, max, avg };
-}
-
-function mixedToResult(
-  metric: string,
-  nodeScores: Record<string, number>,
-  edgeScores: Record<string, number>,
-): AnalysisResult {
-  const allScores = { ...nodeScores, ...edgeScores };
-  const entries = Object.entries(allScores);
-  if (entries.length === 0) return { metric, scores: {}, ranked: [], min: 0, max: 0, avg: 0 };
-  const values = entries.map(([, v]) => v);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const ranked: ElementScore[] = [
-    ...Object.entries(nodeScores).map(([id, score]) => ({ id, kind: "node" as const, score, rank: 0 })),
-    ...Object.entries(edgeScores).map(([id, score]) => ({ id, kind: "edge" as const, score, rank: 0 })),
-  ].sort((a, b) => b.score - a.score);
-  ranked.forEach((r, i) => (r.rank = i + 1));
-  return { metric, scores: allScores, ranked, min, max, avg };
 }
 
 // ---------------------------------------------------------------------------
@@ -825,7 +805,7 @@ export function computePercolationCurve(
 // ---------------------------------------------------------------------------
 
 export function computeNofNMetrics(data: AnalysisGraph): NofNMetrics {
-  const { nodes, edges, canvases } = data;
+  const { edges, canvases } = data;
 
   const canvasNodeIds: Record<string, Set<string>> = {};
   for (const canvas of canvases) canvasNodeIds[canvas.id] = new Set(canvas.graph.node_ids);

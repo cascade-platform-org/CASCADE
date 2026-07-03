@@ -140,6 +140,10 @@ export function AttributeScanPanel() {
   const [customAttr, setCustomAttr] = useState("");
 
   // Build full attribute list including per-event vulnerabilities
+  // Identity keys: memos depend on the *set* of ids/names, not array identity.
+  const eventIdsKey = events.map((e) => e.id).join(",");
+  const categoryNamesKey = categories.map((c) => c.name).join(",");
+
   const vulnAttrs: AttrDef[] = useMemo(() =>
     events.map((ev) => ({
       key: `vuln:${ev.id}`,
@@ -155,7 +159,7 @@ export function AttributeScanPanel() {
       },
     })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events.map((e) => e.id).join(",")],
+    [eventIdsKey],
   );
 
   // Per-category dependency profile entries
@@ -177,10 +181,13 @@ export function AttributeScanPanel() {
       extractEdge: null,
     })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [categories.map((c) => c.name).join(",")],
+    [categoryNamesKey],
   );
 
-  const allAttrs = [...STANDARD_ATTRS, ...STRUCTURE_ATTRS, ...vulnAttrs, ...profileAttrs];
+  const allAttrs = useMemo(
+    () => [...STANDARD_ATTRS, ...STRUCTURE_ATTRS, ...vulnAttrs, ...profileAttrs],
+    [vulnAttrs, profileAttrs],
+  );
 
   // Canvas elements — include all canvases when in merged ("all") view
   const { canvasNodes, canvasEdges, scanLabel } = useMemo(() => {

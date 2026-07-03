@@ -1,10 +1,6 @@
 /**
- * useHistoryAction — wraps any mutation in a before/after snapshot pair and
- * pushes one undoable entry to the history store.
- *
- * Replaces the private `withHistory` helper that was buried in inspector.tsx.
- * Any component or hook that needs undo support imports this instead of
- * re-implementing the snapshot-wrap-push pattern.
+ * useHistoryAction — hook-style wrapper around `runWithHistory` (the single
+ * seam for undoable mutations; see lib/run-with-history.ts).
  *
  * Usage:
  *   const historyAction = useHistoryAction();
@@ -13,9 +9,7 @@
  */
 
 import { useCallback } from "react";
-import { nanoid } from "nanoid";
-import { useCanvasStore } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
 
 type UpdateType = "manual_functionality_update" | "graph_update";
 
@@ -26,21 +20,7 @@ export function useHistoryAction() {
       label: string,
       update_type: UpdateType = "manual_functionality_update",
     ) => {
-      const store = useCanvasStore.getState();
-      const before = store.toGraphSnapshot();
-      updateFn();
-      // Re-read via getState() so `after` reflects the committed state, not the
-      // snapshot captured before updateFn ran.
-      const after = useCanvasStore.getState().toGraphSnapshot();
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type,
-        label,
-        canvas_id: store.activeCanvasId ?? undefined,
-        before,
-        after,
-      });
+      runWithHistory(updateFn, label, { updateType: update_type });
     },
     [],
   );

@@ -6,9 +6,9 @@
  * match the rest of the rules UI (zinc palette, dark-mode aware).
  *
  * This is the canonical, human-readable source of the rule DSL. When the DSL
- * changes, update this component together with {@link RuleExamples} and the
- * backend parser (CASCADE-backend/core/rule_parser.py). The grammar and
- * interpretation here mirror that parser and ADR-0003 exactly.
+ * changes, update this component together with the backend parser
+ * (CASCADE-backend/core/rule_parser.py). The grammar and interpretation here
+ * mirror that parser and ADR-0003 exactly.
  */
 
 import type { ReactNode } from "react";

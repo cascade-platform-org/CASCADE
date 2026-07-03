@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     )
 
     # ---- Server ----
-    host: str = "0.0.0.0"
+    # Binds all interfaces inside the container by design: the actual network
+    # boundary is Caddy + the VM firewall (deployment.md → VM Hardening), not
+    # this process — it is never directly internet-facing.
+    host: str = "0.0.0.0"  # nosec B104
     port: int = 8000
     # Literal (not free string) so a typo like ENV=prod fails LOUDLY at startup
     # instead of silently not matching the == "production" checks below — a

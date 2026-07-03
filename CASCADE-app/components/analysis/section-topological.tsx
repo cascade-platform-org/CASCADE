@@ -161,7 +161,7 @@ export function SectionTopological() {
   const attrCtx = useMemo(() => {
     const graph = buildScopedGraph(scope, activeCanvasId);
     return detectAttributes(graph);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [scope, activeCanvasId]);
 
   // Preview the weight of the first edge for the current expression
@@ -175,7 +175,7 @@ export function SectionTopological() {
     } catch {
       return "error";
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [exprInput, scope, activeCanvasId, n]);
 
   const commitExpr = useCallback(() => {

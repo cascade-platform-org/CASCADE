@@ -3,7 +3,7 @@
 import React from "react";
 import { Palette, X } from "lucide-react";
 import { useAnalysisStore } from "@/store/analysis-store";
-import { buildColorMap, CATEGORICAL_METRICS } from "@/lib/topological-analysis";
+import { buildColorMap } from "@/lib/topological-analysis";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 
 interface HeatmapControlsProps {

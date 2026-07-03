@@ -32,7 +32,7 @@ import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
 import { SaveScorecardDialog } from "./operativity-scorecard";
 import { SnapshotFlowView } from "./snapshot-flow-view";
-import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnalysisScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
@@ -699,7 +699,7 @@ function ScorePill({
   label,
   value,
   config,
-  n,
+  n: _n,
 }: {
   label: string;
   value: number;

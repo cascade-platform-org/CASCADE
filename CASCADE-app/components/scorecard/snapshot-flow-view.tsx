@@ -20,7 +20,8 @@ import {
   type Edge as RFEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { nodeTypes, edgeTypes } from "@/components/canvas/flow-canvas";
+import { nodeTypes } from "@/components/canvas/cascade-node";
+import { edgeTypes } from "@/components/canvas/cascade-edge";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
 interface Props {
@@ -41,7 +42,7 @@ function SnapshotFlow({ snapshot }: Props) {
         selectable: false,
         focusable: false,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [snapshot],
   );
 
@@ -58,7 +59,7 @@ function SnapshotFlow({ snapshot }: Props) {
         selectable: false,
         focusable: false,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [snapshot],
   );
 

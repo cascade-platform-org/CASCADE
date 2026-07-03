@@ -1,13 +1,15 @@
 """
 auth/rbac.py — Permission definitions and role-to-permission mapping.
 
-Roles and their permissions are also stored in PostgreSQL (db/seed.sql).
-This module defines the same mapping in Python so the dependency injection
-layer can check permissions without a DB round-trip in common cases.
+This module is the SOLE source of truth for role -> permission mapping (the
+former `role_permissions` table was dropped in migration 004 — two mappings
+drifting apart was worse than one). `db/seed.sql` and `db/schema.sql` only
+seed/store role *names* and their Entitlement quotas (ADR-0008); role
+*assignment* per user lives in the `users` table (ADR-0010).
 """
 from __future__ import annotations
 
-# Canonical permission names — keep in sync with db/seed.sql
+# Canonical permission names — keep in sync with docs/project/rbac-setup.md
 PERMISSIONS = {
     "can_propagate",
     "can_view_analysis",

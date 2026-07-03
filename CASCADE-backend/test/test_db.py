@@ -35,12 +35,14 @@ async def test_run_migrations_creates_core_tables(clean_db):
         }
     assert {
         "roles",
-        "role_permissions",
         "users",
         "projects",
         "audit_logs",
         "schema_migrations",
     } <= tables
+    # role_permissions was dropped in migration 004 (the role→permission map
+    # now lives in code, not the DB). Guard against it being reintroduced.
+    assert "role_permissions" not in tables
 
 
 async def test_seed_roles_present(clean_db):

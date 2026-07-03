@@ -13,7 +13,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
-import { resolveIcon, loadAllIconsOnce, subscribeIconsReady } from "@/lib/category-icons";
+import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -27,7 +27,7 @@ import {
   selectN,
 } from "@/store/config-store";
 import { useCanvasStore } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
@@ -48,19 +48,11 @@ function executeRevert({
   scope: "local" | "global";
   clearTemporalJumpProgress: () => void;
 }) {
-  const canvasState = useCanvasStore.getState();
-  const current = canvasState.toGraphSnapshot();
-  canvasState.restoreSnapshot(revertSnapshot);
-  useHistoryStore.getState().pushUpdateEntry({
-    id: nanoid(),
-    timestamp: new Date().toISOString(),
-    update_type: "manual_functionality_update",
-    label: `Revert temporal jumps (−${elapsedHours}h)`,
-    scope,
-    canvas_id: canvasState.activeCanvasId ?? undefined,
-    before: current,
-    after: revertSnapshot,
-  });
+  runWithHistory(
+    () => useCanvasStore.getState().restoreSnapshot(revertSnapshot),
+    `Revert temporal jumps (−${elapsedHours}h)`,
+    { scope },
+  );
   clearTemporalJumpProgress();
 }
 
@@ -301,23 +293,14 @@ function TemporalJumpControls({
   async function applyJump(hours: number) {
     const event = buildSyntheticEvent(hours);
     const canvasState = useCanvasStore.getState();
-    const before = canvasState.toGraphSnapshot();
     // Save pre-jump state on the very first jump so revert can restore it.
     if (revertSnapshot === null) {
-      saveTemporalRevertSnapshot(before);
+      saveTemporalRevertSnapshot(canvasState.toGraphSnapshot());
     }
+    // applyEvent pushes its own event_applied entry (with mutation_reversal) —
+    // pushing a second one here would double the undo stack per jump and let
+    // clearEvent find the reversal-less duplicate first.
     canvasState.applyEvent(event, n);
-    useHistoryStore.getState().pushUpdateEntry({
-      id: nanoid(),
-      timestamp: new Date().toISOString(),
-      update_type: "event_applied",
-      label: event.label,
-      scope,
-      canvas_id: canvasState.activeCanvasId ?? undefined,
-      event_id: event.id,
-      before,
-      after: useCanvasStore.getState().toGraphSnapshot(),
-    });
     addTemporalElapsedHours(hours);
     if (autoPropagate) {
       await propagate();
@@ -538,15 +521,15 @@ function TimelineSlider({
   // intermediate labels to avoid overlap. Minimum spacing: ~28px in a ~224px track.
   const TRACK_PX = 224; // w-72 minus padding
   const MIN_LABEL_SPACING_PCT = (28 / TRACK_PX) * 100;
-  let lastLabelPct = -Infinity;
-  const showLabel = ticks.map((t) => {
-    const p = pct(t);
-    if (p - lastLabelPct >= MIN_LABEL_SPACING_PCT) {
-      lastLabelPct = p;
-      return true;
-    }
-    return false;
-  });
+  const showLabel = ticks.reduce<{ last: number; flags: boolean[] }>(
+    (acc, t) => {
+      const p = pct(t);
+      const show = p - acc.last >= MIN_LABEL_SPACING_PCT;
+      acc.flags.push(show);
+      return show ? { last: p, flags: acc.flags } : acc;
+    },
+    { last: -Infinity, flags: [] },
+  ).flags;
 
   return (
     // Extra bottom padding to hold tick labels (positioned absolutely below the track).

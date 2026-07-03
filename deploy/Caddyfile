@@ -57,7 +57,14 @@
 
 	# API and IdP share the app's origin, so the browser makes same-origin
 	# requests and needs no CORS. /api/* goes to the backend unchanged.
+	# request_body caps what FastAPI would otherwise buffer in memory — without
+	# it one authenticated client POSTing a huge JSON body can OOM the small VM.
+	# 10MB comfortably fits entitlement-capped networks (a 300-node project
+	# serialises to well under 1MB).
 	handle /api/* {
+		request_body {
+			max_size 10MB
+		}
 		reverse_proxy backend:8000
 	}
 

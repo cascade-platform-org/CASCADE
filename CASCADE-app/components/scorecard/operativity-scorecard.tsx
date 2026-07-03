@@ -10,7 +10,7 @@
  *    ephemeral propagation run triggered inside the dialog — no side effects)
  *  - Optional ephemeral Temporal Jump: enter hours → client-side preview
  *    (applies functionality_time countdown math only; no backend call, no side effects)
- *  - Saves the entry to the Scorecard, capturing canvas snapshots via html2canvas
+ *  - Saves the entry to the Scorecard, capturing canvas snapshots via html-to-image
  *
  * Deduplication: blocks save if before_propagation hash matches an existing entry.
  */
@@ -31,7 +31,7 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
-import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
 // Ephemeral temporal jump math (client-side, no propagation call)
@@ -388,7 +388,7 @@ function ScoreCard({
   label,
   score,
   config,
-  n,
+  n: _n,
 }: {
   label: string;
   score: number;

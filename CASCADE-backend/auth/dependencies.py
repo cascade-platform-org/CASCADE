@@ -76,7 +76,10 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    email = claims.get("email", "")
+    # The email claim is optional (scope not granted / IdP without email).
+    # Store NULL rather than "" — two empty-string emails would collide on the
+    # UNIQUE constraint and lock the second user out.
+    email = claims.get("email") or None
     display_name = claims.get("name") or claims.get("preferred_username") or ""
 
     # ADR-0010: authorization is owned by our DB, never trusted from the token.
@@ -100,9 +103,10 @@ async def get_current_user(
 
     return AuthUser(
         sub=db_user.external_id,
-        email=db_user.email,
+        email=db_user.email or "",
         display_name=display_name,
         roles=[db_user.role_name],
+        db_id=db_user.id,
         entitlement=Entitlement(
             max_nodes=max_nodes, evals_per_minute=evals_per_minute
         ),

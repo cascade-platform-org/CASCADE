@@ -7,7 +7,7 @@ The platform uses **Role-Based Access Control (RBAC)** layered on top of **OAuth
 - **Authentication** (who you are) is delegated to a self-hosted, open-source OIDC provider — **Zitadel** (chosen; see ADR-0009 context) — or any OIDC-compliant service. Proprietary paid providers (Auth0, Okta, Azure AD) are excluded by the 100%-open-source rule (CLAUDE.md §1).
 - **Authorization** (what you can do) is enforced by the backend using roles and permissions stored in PostgreSQL.
 
-No project data touches the database. Only identity records, role assignments, and permission definitions are stored server-side.
+No project data touches the database. Only identity records and role assignments are stored server-side; permission definitions are code-owned (`auth/rbac.py`).
 
 ---
 
@@ -15,7 +15,7 @@ No project data touches the database. Only identity records, role assignments, a
 
 ### Default Roles
 
-The platform ships with four built-in roles. Admins can create custom roles via the API.
+The platform ships with four built-in roles. Role definitions are code-owned (`auth/rbac.py`); adding a custom role means adding it there plus a `roles` row (with its Entitlement) via a migration.
 
 | Role        | Description                                            | Permissions                                                   |
 | ----------- | ------------------------------------------------------ | ------------------------------------------------------------- |
@@ -40,35 +40,30 @@ Permissions are additive. A user's effective permissions are the union of all pe
 
 ## Database Schema
 
-The RBAC data model consists of three tables in PostgreSQL:
+The RBAC data model is two tables in PostgreSQL (see `db/schema.sql` for the authoritative DDL):
 
--- Users: created on first OAuth2 login
+-- Users: created on first OAuth2 login (default role 'viewer' — migration 002)
 CREATE TABLE users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     external_id VARCHAR(255) UNIQUE NOT NULL,   -- sub claim from OIDC
-    email       VARCHAR(255) UNIQUE NOT NULL,
+    email       VARCHAR(255) UNIQUE,            -- nullable: OIDC email claim is optional
     name        VARCHAR(255),
-    role_name   VARCHAR(50) NOT NULL DEFAULT 'analyst',
+    role_name   VARCHAR(50) NOT NULL DEFAULT 'viewer',
     created_at  TIMESTAMPTZ DEFAULT now(),
     updated_at  TIMESTAMPTZ DEFAULT now(),
     FOREIGN KEY (role_name) REFERENCES roles(name)
 );
 
--- Roles: named groupings of permissions
+-- Roles: names + Entitlement quotas (ADR-0008). NULL = unbounded.
 CREATE TABLE roles (
-    name        VARCHAR(50) PRIMARY KEY,
-    description TEXT,
-    created_at  TIMESTAMPTZ DEFAULT now()
+    name             VARCHAR(50) PRIMARY KEY,
+    description      TEXT,
+    max_nodes        INT,
+    evals_per_minute INT,
+    created_at       TIMESTAMPTZ DEFAULT now()
 );
 
--- Role-permission mapping
-CREATE TABLE role_permissions (
-    role_name       VARCHAR(50) REFERENCES roles(name) ON DELETE CASCADE,
-    permission      VARCHAR(100) NOT NULL,
-    PRIMARY KEY (role_name, permission)
-);
-
-The `db/seed.sql` file populates the four default roles and their permissions on first deployment.
+The **role→permission mapping lives in code** (`auth/rbac.py`), not in a table — one source of truth the API enforces; the former `role_permissions` table was dropped in migration 004. `db/seed.sql` populates the four default roles on first deployment; migrations 002/003 seed and calibrate their Entitlements.
 
 ---
 

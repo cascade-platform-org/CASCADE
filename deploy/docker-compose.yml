@@ -21,6 +21,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Consumed by db-init/01-create-zitadel-db.sh (first boot only) to create
+      # Zitadel's dedicated least-privilege runtime role.
+      ZITADEL_DB_PASSWORD: ${ZITADEL_DB_PASSWORD}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./db-init:/docker-entrypoint-initdb.d:ro
@@ -88,8 +91,11 @@ services:
       ZITADEL_DATABASE_POSTGRES_HOST: db
       ZITADEL_DATABASE_POSTGRES_PORT: 5432
       ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${POSTGRES_USER}
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${POSTGRES_PASSWORD}
+      # Runtime queries use a dedicated role confined to the `zitadel` DB —
+      # never the superuser (least privilege; the ADMIN_* creds below are used
+      # only by start-from-init to create Zitadel's schemas).
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel_user
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${ZITADEL_DB_PASSWORD}
       ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
       ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${POSTGRES_USER}
       ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD}

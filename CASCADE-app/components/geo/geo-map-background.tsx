@@ -43,16 +43,20 @@ function GhostGraphOverlay({ canvasId, vpX, vpY, rfZoom }: GhostGraphOverlayProp
   const nodeIds: string[] = canvas?.graph.node_ids ?? [];
   const edgeIds: string[] = canvas?.graph.edge_ids ?? [];
 
+  // Identity keys: memos depend on the *set* of ids, not array identity.
+  const nodeIdsKey = nodeIds.join(",");
+  const edgeIdsKey = edgeIds.join(",");
+
   const nodes = useMemo(
     () => nodeIds.map((id) => allNodes[id]).filter(Boolean),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodeIds.join(","), allNodes],
+    [nodeIdsKey, allNodes],
   );
 
   const edges = useMemo(
     () => edgeIds.map((id) => allEdges[id]).filter(Boolean),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [edgeIds.join(","), allEdges],
+    [edgeIdsKey, allEdges],
   );
 
   // Map from node id → screen {x, y}

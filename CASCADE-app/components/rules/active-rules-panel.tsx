@@ -328,7 +328,7 @@ export function ActiveRulesPanel() {
   ];
 
   // ── Element options for the target picker ─────────────────────────────────
-  const elementOptions: ElementOption[] = [
+  const elementOptions: ElementOption[] = useMemo(() => [
     ...(nodes as (Node & { _canvasLabel?: string })[]).map((n) => ({
       id: n.id,
       label: n.label ?? n.id,
@@ -347,7 +347,7 @@ export function ActiveRulesPanel() {
         canvasLabel: (e as Edge & { _canvasLabel?: string })._canvasLabel,
       };
     }),
-  ];
+  ], [nodes, edges]);
 
   // ── Suggestion context (stable reference) ─────────────────────────────────
   const suggestionCtx: RuleSuggestionCtx = {
@@ -357,17 +357,19 @@ export function ActiveRulesPanel() {
     functionalityN,
   };
 
-  // Memoised wrapper passed down to each RuleTextArea
+  // Memoised wrapper passed down to each RuleTextArea. Depends on the
+  // *content* of the suggestion context, not its object identity.
+  const suggestionCtxKey = [
+    suggestionCtx.elementLabels.join(","),
+    suggestionCtx.categoryNames.join(","),
+    suggestionCtx.functionalityLabels.join(","),
+    String(suggestionCtx.functionalityN),
+  ].join("|");
   const getSuggestions = useCallback(
     (text: string, cursor: number) =>
       computeRuleSuggestions(text, cursor, suggestionCtx),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      suggestionCtx.elementLabels.join(","),
-      suggestionCtx.categoryNames.join(","),
-      suggestionCtx.functionalityLabels.join(","),
-      suggestionCtx.functionalityN,
-    ],
+    [suggestionCtxKey],
   );
 
   // ── Target detection ──────────────────────────────────────────────────────

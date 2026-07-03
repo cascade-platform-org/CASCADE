@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/**/page.tsx",
+    "app/**/layout.tsx",
+    "app/globals.css",
+    "lib/schemas/*.ts"
+  ],
+  "project": ["**/*.{ts,tsx}"],
+  "ignoreDependencies": ["autoprefixer"]
+}

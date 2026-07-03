@@ -77,13 +77,18 @@ export function useMapViewportSync({
 
   // Stable refs for use inside async / non-reactive callbacks.
   const anchorRef = useRef(anchor);
-  anchorRef.current = anchor;
   const mapReadyRef = useRef(mapReady);
-  mapReadyRef.current = mapReady;
   const rfVpRef = useRef({ x: vpX, y: vpY, zoom: rfZoom });
-  rfVpRef.current = { x: vpX, y: vpY, zoom: rfZoom };
   const onDebugRef = useRef(onDebug);
-  onDebugRef.current = onDebug;
+  // Latest-value refs, written after render (not during — React forbids render
+  // writes). useLayoutEffect keeps them fresh before the browser paints, so
+  // the per-frame sync loop and map callbacks always read current values.
+  useLayoutEffect(() => {
+    anchorRef.current = anchor;
+    mapReadyRef.current = mapReady;
+    rfVpRef.current = { x: vpX, y: vpY, zoom: rfZoom };
+    onDebugRef.current = onDebug;
+  });
 
   // Flow position shown at the map centre after the last completed tile reload.
   // Updated only inside map.once('render'). Default = anchor.flow (the RF
@@ -191,7 +196,7 @@ export function useMapViewportSync({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [containerRef, baseFor]);
+  }, [containerRef, baseFor, mapRef]);
 
   // Clear cached base whenever the anchor is cleared (including resets that
   // bypass this hook), so a stale base can't leak into the next anchor.

@@ -6,7 +6,7 @@
  * only via `import("@/lib/lucide-all")` inside the icon-picker search path,
  * so the initial page bundle is unaffected.
  */
-// eslint-disable-next-line import/no-namespace
+ 
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

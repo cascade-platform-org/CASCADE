@@ -6,3 +6,16 @@ pytest-asyncio==1.3.0        # async test support (mark tests with @pytest.mark.
 httpx==0.28.1                # also serves as an async test client via ASGITransport
 coverage==7.14.0             # code coverage reporting
 ruff==0.15.12                # fast Python linter + formatter (replaces flake8/black)
+
+# ---------------------------------------------------------------------------
+# Audit tooling — run via scripts/audit.sh (see CLAUDE.md §5)
+# ---------------------------------------------------------------------------
+
+pip-audit==2.10.1            # scans requirements.txt against the OSV/PyPI vulnerability DB
+bandit==1.9.4                # static security linter (hardcoded secrets, eval, unsafe deserialization)
+vulture==2.16                # dead-code finder (unused functions/imports/classes)
+deptry==0.25.1               # unused / missing / misplaced dependency finder
+import-linter==2.12          # enforces the engine-isolation layering rule (ADR-0009) in CI
+pyright==1.1.411             # static type checker — the backend's tsc-strict equivalent
+asyncpg-stubs==0.31.2        # asyncpg ships no inline types; this fixes PoolConnectionProxy/Connection mismatches
+detect-secrets==1.5.0        # git-history secrets baseline (no Go binary required)

@@ -39,7 +39,15 @@ are fixed for v1; revisit them before scaling out.
   intentionally unbuilt for v1, which keeps the GDPR/breach surface minimal.
 - **Edge.** Caddy is the only internet-facing process (auto-TLS); CORS is locked
   to the exact frontend origin; the VM firewall exposes only 80/443 + SSH (key
-  only).
+  only). Caddy also rate-limits the auth endpoints per IP and caps `/api`
+  request bodies at 10MB (a huge JSON body would otherwise be buffered in the
+  backend's memory).
+- **Engine runaway guard.** A single Propagation is hard-capped at 30s wall
+  clock (`ENGINE_TIMEOUT_SECONDS`); the request fails with 504 instead of
+  wedging an engine worker forever.
+- **Backend token checks.** JWT validation checks `aud` and `iss`, rejects
+  `email_verified: false` tokens (belt-and-braces on top of the Zitadel login
+  policy), and refreshes JWKS on key rotation automatically.
 
 ---
 
@@ -111,6 +119,7 @@ manual schema step.
 cd deploy
 cp .env.example .env
 # Edit .env: set a strong POSTGRES_PASSWORD, a 32-char ZITADEL_MASTERKEY,
+# a ZITADEL_DB_PASSWORD (dedicated least-privilege Postgres role for Zitadel),
 # ENV=production, APP_DOMAIN, ID_DOMAIN, CORS_ORIGINS=https://<APP_DOMAIN>.
 # Leave OIDC_* blank for now — you fill them after creating the Zitadel app
 # (see "Identity Provider (Zitadel) Setup" below). chmod 600 .env
@@ -139,7 +148,9 @@ can obtain Let's Encrypt certificates. See "Identity Provider Setup" and the
 ### Create the First Admin
 
 New users self-register as `viewer` (ADR-0010). To bootstrap yourself: register
-through the app once, then promote your account:
+through the app once, then promote your account (the script only promotes an
+EXISTING user — running it before registering is refused, because a pre-created
+placeholder row would permanently break that email's first login):
 
 ```bash
 docker compose exec backend python scripts/create_admin.py --email you@yourorg.com
@@ -438,6 +449,7 @@ Before going live, verify:
       SMTP + lockout enabled
 - [ ] First admin created (`scripts/create_admin.py`) after self-registering
 - [ ] `CORS_ORIGINS` = `https://app.<domain>` only
+- [ ] `ZITADEL_DB_PASSWORD` set (Zitadel runs as `zitadel_user`, not the superuser)
 - [ ] **Entitlement enforcement checked**: an over-`max_nodes` propagate returns
       413; exceeding the per-minute budget returns 429
 - [ ] Backend runs as a **single instance/worker** (in-process rate-limiter)
@@ -447,3 +459,6 @@ Before going live, verify:
 - [ ] Entitlement caps calibrated: `benchmark_engine.py` run on the VM, numbers set
 - [ ] Account erasure complete: `ZITADEL_MGMT_URL`/`ZITADEL_MGMT_TOKEN` set so
       deletion also removes the Zitadel identity
+- [ ] Audit tooling clean: `CASCADE-backend/scripts/audit.sh` and
+      `npm run lint && npm run type-check && npm run audit:deadcode && npm run audit:circular`
+      (see CLAUDE.md §8a)

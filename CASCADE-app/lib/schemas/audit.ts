@@ -36,9 +36,9 @@ export const ActivityActionSchema = z.enum([
 
 export const ActivityLogEntrySchema = z.object({
   /** Random UUID generated at log time. */
-  id: z.string(),
+  id: z.string().uuid(),
   /** UUID generated at session start; groups entries from one browser session. */
-  session_id: z.string(),
+  session_id: z.string().uuid(),
   action: ActivityActionSchema,
   /**
    * Action-specific context. For "propagate": { project_name, scope, canvas_id,
@@ -56,8 +56,8 @@ export const ActivityLogSchema = z.array(ActivityLogEntrySchema);
 
 export const ActivityLogUploadSchema = z.object({
   entries: ActivityLogSchema,
-  /** Semver string, e.g. "1.0.0". Helps server interpret entry details. */
-  app_version: z.string(),
+  /** Semver string, e.g. "1.0.0". Max 50 chars to match the DB column. */
+  app_version: z.string().max(50),
 });
 
 // ---------------------------------------------------------------------------

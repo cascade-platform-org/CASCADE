@@ -23,11 +23,8 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_name   VARCHAR(50)  NOT NULL REFERENCES roles(name) ON DELETE CASCADE,
-    permission  VARCHAR(100) NOT NULL,
-    PRIMARY KEY (role_name, permission)
-);
+-- NOTE: the role→permission mapping lives in code (auth/rbac.py), not in a
+-- table — one source of truth. Role *assignment* lives on users (ADR-0010).
 
 -- ---------------------------------------------------------------------------
 -- Users (created on first OAuth2/OIDC login)
@@ -36,7 +33,8 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 CREATE TABLE IF NOT EXISTS users (
     id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     external_id VARCHAR(255) UNIQUE NOT NULL,  -- "sub" claim from the OIDC token
-    email       VARCHAR(255) UNIQUE NOT NULL,
+    -- Nullable: the OIDC email claim is optional. Identity is external_id.
+    email       VARCHAR(255) UNIQUE,
     name        VARCHAR(255),
     role_name   VARCHAR(50)  NOT NULL DEFAULT 'analyst' REFERENCES roles(name),
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -88,6 +86,35 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id     ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action      ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_occurred_at ON audit_logs(occurred_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Analysis Log (ADR-0007) — one append-only, operator-only row per Propagation
+--
+-- Stores ONLY input shape + run metadata. Config-level vocabulary (category
+-- names, graph types) may be persisted; anything naming or locating a
+-- real-world Element or Entity may not. No outcomes, no geo, no labels.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS analysis_logs (
+    id                     UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                UUID        REFERENCES users(id) ON DELETE SET NULL,
+    role_name              VARCHAR(50),
+    scope                  VARCHAR(10) NOT NULL,          -- 'local' | 'global'
+    node_count             INT         NOT NULL,
+    edge_count             INT         NOT NULL,
+    canvas_count           INT         NOT NULL,
+    category_names         TEXT[]      NOT NULL DEFAULT '{}',
+    functionality_scale_n  INT         NOT NULL,
+    event_definition_count INT         NOT NULL,
+    rule_count             INT         NOT NULL,
+    graph_types            TEXT[]      NOT NULL DEFAULT '{}',
+    engine_version         VARCHAR(50),
+    compute_time_ms        INT,
+    occurred_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_analysis_logs_user_id     ON analysis_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_analysis_logs_occurred_at ON analysis_logs(occurred_at DESC);
 
 -- ---------------------------------------------------------------------------
 -- Client-side activity log uploads (opt-in, requires can_sync permission)

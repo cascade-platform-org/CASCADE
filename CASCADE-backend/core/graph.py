@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from schemas.network import Canvas, GraphSnapshot, Node, Edge, Project
+from schemas.network import Canvas, Node, Edge, Project
 
 
 # ---------------------------------------------------------------------------
@@ -93,50 +93,3 @@ def _find_canvas(canvases: list[Canvas], canvas_id: str) -> Optional[Canvas]:
         if canvas.id == canvas_id:
             return canvas
     return None
-
-
-# ---------------------------------------------------------------------------
-# Graph snapshot helpers
-# ---------------------------------------------------------------------------
-
-def project_to_snapshot(project: Project) -> GraphSnapshot:
-    """Extract a GraphSnapshot from the current project state.
-
-    Used by the service layer to capture before/after states for
-    AnyUpdateEntry history without duplicating project meta or history.
-    """
-    return GraphSnapshot(
-        nodes=project.nodes,
-        edges=project.edges,
-        canvases=project.canvases,
-    )
-
-
-def canvas_graph_type(canvas: Canvas) -> str:
-    """Return the graph_type of a Canvas — the engine's subgraph dispatch key."""
-    return canvas.graph.graph_type
-
-
-def canvas_ids(project: Project) -> list[str]:
-    """Return the ordered list of canvas ids in a project."""
-    return [c.id for c in project.canvases]
-
-
-def node_ids_for_canvas(canvas: Canvas) -> list[str]:
-    """Return the node ids referenced by this Canvas's graph."""
-    return list(canvas.graph.node_ids)
-
-
-def edge_ids_for_canvas(canvas: Canvas) -> list[str]:
-    """Return the edge ids referenced by this Canvas's graph."""
-    return list(canvas.graph.edge_ids)
-
-
-def resolve_canvas_nodes(project: Project, canvas: Canvas) -> list[Node]:
-    """Resolve a Canvas's node_ids to actual Node objects from the global registry."""
-    return [project.nodes[nid] for nid in canvas.graph.node_ids if nid in project.nodes]
-
-
-def resolve_canvas_edges(project: Project, canvas: Canvas) -> list[Edge]:
-    """Resolve a Canvas's edge_ids to actual Edge objects from the global registry."""
-    return [project.edges[eid] for eid in canvas.graph.edge_ids if eid in project.edges]

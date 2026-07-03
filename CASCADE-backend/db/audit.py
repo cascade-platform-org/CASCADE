@@ -11,11 +11,12 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-import asyncpg
+
+from db.pool import DBConn
 
 
 async def record(
-    conn: asyncpg.Connection,
+    conn: DBConn,
     *,
     action: str,
     user_email: Optional[str],

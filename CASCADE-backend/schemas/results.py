@@ -23,7 +23,7 @@ class PropagationRequest(BaseModel):
     config: ModelConfiguration
     scope: Literal["local", "global"]
     active_canvas_id: Optional[str] = Field(
-        None, description="Canvas to restrict propagation when scope = local."
+        default=None, description="Canvas to restrict propagation when scope = local."
     )
 
 
@@ -39,11 +39,11 @@ class ElementUpdate(BaseModel):
     """
     id: str
     functionality: int = Field(..., ge=1)
-    functionality_time: Optional[int] = Field(None, ge=0)
+    functionality_time: Optional[int] = Field(default=None, ge=0)
     direct_damage: Optional[bool] = None
-    expected_repair_time: Optional[int] = Field(None, ge=0)
+    expected_repair_time: Optional[int] = Field(default=None, ge=0)
     responsibility_share: Optional[ResponsibilityShare] = Field(
-        None,
+        default=None,
         description=(
             "Keyed by ElementId or EventId. Values are in (0, 1] and sum to 1 — "
             "zero shares are never emitted (a blameless element is simply absent). "

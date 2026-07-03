@@ -9,6 +9,7 @@
 import { PropagationResultSchema, type PropagationResult } from "@/lib/schemas/propagation";
 import {
   EngineAlgorithmsSchema,
+  TokenPairSchema,
   type EngineAlgorithms,
   type PropagationRequest,
 } from "@/lib/schemas/api";
@@ -132,21 +133,21 @@ export async function fetchMe(): Promise<MeResponse | null> {
   }
 }
 
-/** The URL that starts the OIDC (Zitadel) login redirect. */
-export function oidcLoginUrl(): string {
-  return `${API_BASE}/api/auth/login`;
+/** The URL that starts the OIDC (Zitadel) login redirect. `state` is the
+ *  anti-CSRF value the callback page validates when the IdP returns it. */
+export function oidcLoginUrl(state: string): string {
+  return `${API_BASE}/api/auth/login?state=${encodeURIComponent(state)}`;
 }
 
-function toTokens(data: {
-  access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-}): OidcTokens | null {
-  if (!data.access_token) return null;
+/** Validate a token-endpoint response at the boundary (Zod, like every other
+ *  endpoint) instead of trusting its shape. Null on mismatch. */
+function toTokens(data: unknown): OidcTokens | null {
+  const parsed = TokenPairSchema.safeParse(data);
+  if (!parsed.success) return null;
   return {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token ?? null,
-    expires_in: data.expires_in ?? null,
+    access_token: parsed.data.access_token,
+    refresh_token: parsed.data.refresh_token,
+    expires_in: parsed.data.expires_in,
   };
 }
 

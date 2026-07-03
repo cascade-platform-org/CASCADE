@@ -127,6 +127,25 @@ Concretely:
 
 ---
 
+## 8a. Audit Tooling
+
+Run before considering non-trivial backend or frontend work done, and always before a deploy:
+
+| Layer | Command | Checks |
+|---|---|---|
+| Backend | `CASCADE-backend/scripts/audit.sh` | ruff, pyright, bandit (security), pip-audit (CVEs), vulture (dead code), deptry (deps), import-linter (engine isolation, ADR-0009), pytest |
+| Frontend | `npm run lint` (CASCADE-app) | eslint (correctness + React hooks) |
+| Frontend | `npm run type-check` | tsc --noEmit |
+| Frontend | `npm run audit:deadcode` | knip (unused exports/deps/files) |
+| Frontend | `npm run audit:circular` | madge (circular imports) |
+| Both | `git ls-files \| xargs detect-secrets scan --baseline .secrets.baseline` | secrets in tracked files |
+
+`import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` dev exception) imports `engine.*`.
+
+`.secrets.baseline` (repo root) is the reviewed set of known non-secret matches (local-dev credentials in docs/examples, content hashes in `skills-lock.json`). Re-run `detect-secrets scan --baseline .secrets.baseline $(git ls-files)` after adding new tracked files; a genuinely new finding needs `detect-secrets audit .secrets.baseline` to classify before it's safe to commit.
+
+---
+
 ## 9. Requirements Are the Source of Truth
 
 Before implementing any feature, read `docs/project/requirements.md`. If the feature is not described there, ask before building it. If the implementation deviates from the spec, update the spec with the rationale — don't silently diverge.

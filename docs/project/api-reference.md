@@ -9,9 +9,9 @@ Interactive documentation is always available at **`/api/docs`** (Swagger UI) an
 Two modes, selected by configuration (see `CASCADE-backend/config.py`):
 
 - **Local-only mode** (default): no OIDC env vars set. Every request is treated as a synthetic admin user — no token required. This is for single-user desktop use only. The server **refuses to start** with `ENV=production` in this mode.
-- **OIDC mode**: `OIDC_DISCOVERY_URL` + `OIDC_CLIENT_ID` set. Endpoints require an `Authorization: Bearer <JWT>` header; roles are read from the token's `roles` (or `groups`) claim.
+- **OIDC mode**: `OIDC_DISCOVERY_URL` + `OIDC_CLIENT_ID` set. Endpoints require an `Authorization: Bearer <JWT>` header. The token proves *identity* only; the user's **role is read from the app database** (ADR-0010), where a new user is upserted as `viewer` on first authenticated request. Access-token validation checks signature, `aud`, and `iss`. Email verification is enforced once, at login: the `/callback` exchange validates the returned **id token** (which, unlike the access token, carries `email_verified`) and rejects an account whose email is unverified. JWKS keys are cached with a 1-hour TTL and refetched on an unknown `kid` (IdP key rotation).
 
-Permissions per role are defined in `CASCADE-backend/auth/rbac.py` (mirrored in `db/seed.sql`):
+Permissions per role are defined **in code** — `CASCADE-backend/auth/rbac.py` is the single source of truth (the former `role_permissions` table was dropped in migration 004):
 
 | Role | Permissions |
 | --- | --- |
@@ -19,6 +19,8 @@ Permissions per role are defined in `CASCADE-backend/auth/rbac.py` (mirrored in 
 | `analyst` | `can_propagate`, `can_view_analysis`, `can_sync` |
 | `manager` | analyst + `can_manage_users` |
 | `admin` | `can_admin` (wildcard — implies all) |
+
+Each role also carries an **Entitlement** (ADR-0008): `max_nodes` and `evals_per_minute`, stored on the `roles` table and enforced before the engine runs.
 
 ---
 
@@ -47,7 +49,18 @@ Response (`PropagationResult`): `scope`, `updates: ElementUpdate[]` (deltas only
 
 `ElementUpdate.responsibility_share` values are in `(0, 1]` and sum to 1; zero shares are never emitted.
 
-Errors: `422` for invalid scope/canvas (`ValueError` from scope filtering), `500` for engine failures (details only in server logs, never in the response).
+Every successful run appends one row to the **Analysis Log** (`analysis_logs` table, ADR-0007): input shape + run metadata only — node/edge/canvas counts, category names, scale N, event/rule counts, graph types, scope, engine version, compute time, caller's user id and role. Never the network itself. Best-effort: a log failure never fails the run.
+
+Errors:
+
+| Status | Cause |
+| --- | --- |
+| `413` | Network exceeds the role's `max_nodes` Entitlement. |
+| `429` | Per-user engine-evaluation budget exhausted (token bucket, `Retry-After: 5`). |
+| `422` | Invalid scope/canvas (`ValueError` from scope filtering). |
+| `503` | All engine workers occupied (e.g. by threads still wedged on timed-out runs); the run is rejected without queueing (`Retry-After: 5`). |
+| `504` | Engine exceeded the 30 s wall-clock cap (`ENGINE_TIMEOUT_SECONDS`). |
+| `500` | Engine failure (details only in server logs, never in the response). |
 
 ### `GET /api/engine/algorithms` — any authenticated user
 
@@ -57,30 +70,41 @@ Read-only metadata about the engine's graph types and heuristics (`EngineAlgorit
 
 ## Auth
 
+### `GET /api/auth/config`
+
+**Unauthenticated.** Returns `{ auth_enabled }` so a fresh/guest browser can discover whether sign-in exists before having a token.
+
 ### `GET /api/auth/me`
 
 Returns the current user (`sub`, `email`, `display_name`, `roles`) plus `auth_enabled`, so the frontend can tell local-only mode from a real session.
 
-### `GET /api/auth/login`
+### `DELETE /api/auth/me`
 
-Redirects to the OIDC provider's authorization page. `501` in local-only mode.
+Self-service GDPR erasure. Deletes the identity in Zitadel **first** (via `ZITADEL_MGMT_URL`/`ZITADEL_MGMT_TOKEN`; aborts with `502` if that fails so erasure stays all-or-nothing), then removes the app record and appends an `account_delete` audit entry. `204` on success.
+
+### `GET /api/auth/login?state=…`
+
+Redirects to the OIDC provider's authorization page, forwarding the client-generated `state` (anti-CSRF: the frontend stores it in `sessionStorage` and the callback page rejects a mismatch). `501` in local-only mode.
 
 ### `GET /api/auth/callback?code=…`
 
-Exchanges the authorization code for tokens and returns `{ access_token, refresh_token, expires_in, token_type }`. `501` in local-only mode.
+Exchanges the authorization code for tokens and returns `{ access_token, refresh_token, expires_in, token_type }` (`refresh_token`/`expires_in` may be `null` if the IdP omits them). `501` in local-only mode; `403` if the id token's email is unverified. (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state is rejected, not accepted; the IdP echoes it in the redirect.)
 
-> ⚠️ **Hardening before production**: this flow does not yet implement the `state` parameter or PKCE, and the JWT validation does not yet check the `iss` claim or refresh cached JWKS keys. Tracked as a pre-deployment requirement — do not expose the OIDC flow publicly until addressed.
+### `POST /api/auth/refresh`
+
+Body `{ refresh_token }`. Returns a fresh token set, or `401` when the refresh token is invalid/expired (client must re-login).
 
 ---
 
 ## Admin — require `can_manage_users`
 
-Stubs until a database is connected: they validate input and permissions but return empty lists or `501`.
+Fully implemented against the `users` table (ADR-0010).
 
 | Endpoint | Behaviour |
 | --- | --- |
-| `GET /api/admin/users` | List users. Currently returns `[]`. |
-| `PATCH /api/admin/users/{id}/role` | Assign a role. Validates the role name, then `501`. |
+| `GET /api/admin/users` | List users (id, email, display name, role). |
+| `PATCH /api/admin/users/{id}/role` | Assign a role. Validates the role name. Granting **or removing** `admin` requires `can_admin` (escalation guard). Audited (`role_change`). |
+| `DELETE /api/admin/users/{id}` | Account erasure: Zitadel first, then app record (same all-or-nothing rule as self-deletion). Deleting an `admin` requires `can_admin`. Audited (`account_delete`). `204`. |
 | `GET /api/admin/roles` | Lists the built-in roles and their permissions (live from `rbac.py`). |
 
 ---
@@ -89,7 +113,7 @@ Stubs until a database is connected: they validate input and permissions but ret
 
 ### `POST /api/audit/activity`
 
-Accepts a batch (max 1 000 entries) of client-side activity-log entries — action metadata only (type, timestamps, counts), never raw graph data. Returns `202` with `{ ok, accepted }`. Server-side storage is a TODO until the database is connected.
+Accepts a batch (max 1 000 entries) of client-side activity-log entries — action metadata only (type, timestamps, counts), never raw graph data. Stored in `activity_log_uploads` keyed by the caller's user id and session. Each entry's `id`/`session_id` must be a valid UUID and `app_version` at most 50 chars — malformed input is rejected as `422` at the boundary (never reaches the DB). Returns `202` with `{ ok, accepted }`; `501` in local-only mode (no database).
 
 ---
 

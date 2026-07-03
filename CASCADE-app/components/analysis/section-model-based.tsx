@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { RefreshCw, Zap, X, BookmarkPlus } from "lucide-react";
+import { RefreshCw, Zap, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useCanvasStore } from "@/store/canvas-store";

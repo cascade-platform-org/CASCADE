@@ -189,7 +189,7 @@ export function findUncoveredEvents(
 // Markdown generation
 // ---------------------------------------------------------------------------
 
-export function generateMarkdown(
+function generateMarkdown(
   entries: ScorecardEntry[],
   config: ModelConfiguration,
   projectName: string,
