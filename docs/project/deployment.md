@@ -79,7 +79,8 @@ JWT_AUDIENCE=your-api-audience
 # Rate limiting: enforced per-user via role Entitlements — an engine-evaluation
 # token bucket (ADR-0008), not a global flag. In v1 the bucket is in-process, so
 # run a SINGLE backend instance (the default for the single-VM deployment below).
-# Not yet implemented in code; see the DB-layer slice.
+# Implemented: auth/entitlement.py (TokenBucketLimiter) + api/propagation_routes.py
+# reject over-max_nodes with 413 and over-budget with 429 before any engine work.
 
 ### Frontend (`CASCADE-app/.env.local`)
 

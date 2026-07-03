@@ -9,7 +9,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Install deps against the lockfile first (cached until the lockfile changes).
-COPY CASCADE-app/package.json CASCADE-app/package-lock.json ./
+# .npmrc carries legacy-peer-deps so npm ci tolerates madge's TS-5 peer.
+COPY CASCADE-app/package.json CASCADE-app/package-lock.json CASCADE-app/.npmrc ./
 RUN npm ci
 
 COPY CASCADE-app/ .
