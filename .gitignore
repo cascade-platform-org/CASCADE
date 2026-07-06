@@ -11,3 +11,6 @@ CASCADE-backend.bak/
 
 # Database backups produced by deploy/backup.sh
 deploy/backups/
+
+# Personal ops runbook (VM IP, SSH notes) — not for the repo
+deploy/READ.me
