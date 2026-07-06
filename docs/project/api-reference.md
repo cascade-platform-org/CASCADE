@@ -82,13 +82,17 @@ Returns the current user (`sub`, `email`, `display_name`, `roles`) plus `auth_en
 
 Self-service GDPR erasure. Deletes the identity in Zitadel **first** (via `ZITADEL_MGMT_URL`/`ZITADEL_MGMT_TOKEN`; aborts with `502` if that fails so erasure stays all-or-nothing), then removes the app record and appends an `account_delete` audit entry. `204` on success.
 
-### `GET /api/auth/login?state=…`
+### `GET /api/auth/login?state=…&code_challenge=…&code_challenge_method=S256`
 
-Redirects to the OIDC provider's authorization page, forwarding the client-generated `state` (anti-CSRF: the frontend stores it in `sessionStorage` and the callback page rejects a mismatch). `501` in local-only mode.
+Redirects to the OIDC provider's authorization page, forwarding the client-generated `state` (anti-CSRF: the frontend stores it in `sessionStorage` and the callback page rejects a mismatch) and the PKCE (RFC 7636) `code_challenge`. `501` in local-only mode.
 
-### `GET /api/auth/callback?code=…`
+This app is a **public OIDC client** (no `client_secret`): PKCE proves the browser session that requests the token exchange is the one that started this authorize request, replacing a shared static secret. The frontend generates a random `code_verifier`, derives `code_challenge = BASE64URL(SHA256(code_verifier))`, stashes the verifier in `sessionStorage`, and sends only the challenge here.
 
-Exchanges the authorization code for tokens and returns `{ access_token, refresh_token, expires_in, token_type }` (`refresh_token`/`expires_in` may be `null` if the IdP omits them). `501` in local-only mode; `403` if the id token's email is unverified. (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state is rejected, not accepted; the IdP echoes it in the redirect.)
+### `GET /api/auth/callback?code=…&code_verifier=…`
+
+Exchanges the authorization code for tokens (sending the PKCE `code_verifier` instead of a `client_secret`) and returns `{ access_token, refresh_token, expires_in, token_type }` (`refresh_token`/`expires_in` may be `null` if the IdP omits them). `501` in local-only mode; `403` if the id token's email is unverified. (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state or verifier is rejected, not accepted; the IdP echoes `state` in the redirect.)
+
+`OIDC_CLIENT_SECRET` is optional: if set (a confidential-client IdP registration), it's sent alongside `client_id` on every token-endpoint call; if unset (the default, PKCE), only `client_id` + `code_verifier`/`refresh_token` are sent.
 
 ### `POST /api/auth/refresh`
 

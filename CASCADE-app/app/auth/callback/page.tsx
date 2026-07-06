@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { exchangeOidcCode } from "@/lib/api-client";
-import { OIDC_STATE_KEY, useAuthStore } from "@/store/auth-store";
+import { OIDC_STATE_KEY, OIDC_VERIFIER_KEY, useAuthStore } from "@/store/auth-store";
 
 export default function OidcCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +42,18 @@ export default function OidcCallback() {
       setError("Sign-in rejected: state mismatch. Please start again from the app.");
       return;
     }
+
+    // PKCE: the verifier generated before the redirect proves this session
+    // (not a static secret) requested the code being exchanged. Missing =
+    // fail closed, same reasoning as the state check above.
+    const codeVerifier = window.sessionStorage.getItem(OIDC_VERIFIER_KEY);
+    window.sessionStorage.removeItem(OIDC_VERIFIER_KEY);
+    if (!codeVerifier) {
+      setError("Sign-in rejected: missing PKCE verifier. Please start again from the app.");
+      return;
+    }
     (async () => {
-      const tokens = await exchangeOidcCode(code);
+      const tokens = await exchangeOidcCode(code, codeVerifier);
       if (!tokens) {
         setError("Sign-in failed. Please try again.");
         return;

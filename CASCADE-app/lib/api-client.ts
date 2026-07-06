@@ -134,9 +134,16 @@ export async function fetchMe(): Promise<MeResponse | null> {
 }
 
 /** The URL that starts the OIDC (Zitadel) login redirect. `state` is the
- *  anti-CSRF value the callback page validates when the IdP returns it. */
-export function oidcLoginUrl(state: string): string {
-  return `${API_BASE}/api/auth/login?state=${encodeURIComponent(state)}`;
+ *  anti-CSRF value the callback page validates when the IdP returns it.
+ *  `codeChallenge` is the PKCE (RFC 7636) S256 challenge — the backend is a
+ *  public client, so this replaces a client_secret at token exchange. */
+export function oidcLoginUrl(state: string, codeChallenge: string): string {
+  const params = new URLSearchParams({
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
+  });
+  return `${API_BASE}/api/auth/login?${params.toString()}`;
 }
 
 /** Validate a token-endpoint response at the boundary (Zod, like every other
@@ -151,11 +158,17 @@ function toTokens(data: unknown): OidcTokens | null {
   };
 }
 
-/** Exchange an OIDC authorization code for tokens via the backend. */
-export async function exchangeOidcCode(code: string): Promise<OidcTokens | null> {
+/** Exchange an OIDC authorization code for tokens via the backend.
+ *  `codeVerifier` is the PKCE verifier generated before the redirect — the
+ *  backend forwards it to the IdP's token endpoint in place of a client_secret. */
+export async function exchangeOidcCode(
+  code: string,
+  codeVerifier: string,
+): Promise<OidcTokens | null> {
   try {
+    const params = new URLSearchParams({ code, code_verifier: codeVerifier });
     const res = await fetchWithTimeout(
-      `${API_BASE}/api/auth/callback?code=${encodeURIComponent(code)}`,
+      `${API_BASE}/api/auth/callback?${params.toString()}`,
       {},
       15_000,
     );

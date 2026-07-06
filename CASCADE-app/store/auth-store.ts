@@ -75,6 +75,27 @@ type Persisted = z.infer<typeof PersistedSchema>;
 const STORAGE_KEY = "cascade.auth";
 /** sessionStorage key for the OAuth anti-CSRF `state` round-trip. */
 export const OIDC_STATE_KEY = "cascade.oidc.state";
+/** sessionStorage key for the PKCE `code_verifier` (RFC 7636). */
+export const OIDC_VERIFIER_KEY = "cascade.oidc.verifier";
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** RFC 7636 PKCE pair: a random verifier, and its SHA-256 challenge (S256).
+ *  The backend is a public client (no client_secret) — PKCE is what proves
+ *  this specific browser session, not a shared static secret, initiated the
+ *  authorization-code exchange. */
+async function generatePkcePair(): Promise<{ verifier: string; challenge: string }> {
+  const verifierBytes = new Uint8Array(32);
+  window.crypto.getRandomValues(verifierBytes);
+  const verifier = base64UrlEncode(verifierBytes);
+  const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  const challenge = base64UrlEncode(new Uint8Array(digest));
+  return { verifier, challenge };
+}
 
 function loadPersisted(): Persisted | null {
   if (typeof window === "undefined") return null;
@@ -135,7 +156,7 @@ interface AuthState {
   init: () => Promise<void>;
   continueAsGuest: () => void;
   setLocalProfile: (displayName: string, email: string) => void;
-  loginWithOidc: () => void;
+  loginWithOidc: () => Promise<void>;
   /** Called by the OIDC callback page once tokens have been obtained. */
   completeOidcLogin: (tokens: OidcTokens) => Promise<void>;
   signOut: () => void;
@@ -245,27 +266,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ mode: "local", user, token: null, refreshToken: null });
   },
 
-  loginWithOidc: () => {
+  loginWithOidc: async () => {
     // Full-page redirect to the backend, which redirects on to Zitadel.
     // A random `state` is stashed in sessionStorage; the callback page rejects
-    // any response whose state does not match (login-CSRF protection).
+    // any response whose state does not match (login-CSRF protection). The
+    // PKCE `code_verifier` is stashed alongside it — the callback sends it to
+    // the backend's token exchange in place of a client_secret.
     if (typeof window !== "undefined") {
       const bytes = new Uint8Array(16);
       window.crypto.getRandomValues(bytes);
       const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+      const { verifier, challenge } = await generatePkcePair();
       try {
         window.sessionStorage.setItem(OIDC_STATE_KEY, state);
+        window.sessionStorage.setItem(OIDC_VERIFIER_KEY, verifier);
       } catch {
-        // Without a stored state the callback cannot verify the round-trip and
-        // will reject (fail closed). Surface that here rather than sending the
-        // user through a full redirect only to be rejected on return.
+        // Without stored state/verifier the callback cannot complete the
+        // round-trip and will reject (fail closed). Surface that here rather
+        // than sending the user through a full redirect only to be rejected
+        // on return.
         window.alert(
           "Sign-in cannot proceed: browser storage is unavailable (private mode?). " +
             "Enable site data for this page and try again.",
         );
         return;
       }
-      window.location.href = oidcLoginUrl(state);
+      window.location.href = oidcLoginUrl(state, challenge);
     }
   },
 
