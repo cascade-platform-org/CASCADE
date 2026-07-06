@@ -144,7 +144,7 @@ async def _token_exchange(
     failure_status: int,
     failure_detail: str,
     verify_email: bool = False,
-) -> dict:
+) -> tuple[dict, dict | None]:
     """POST an OAuth grant to the OIDC token endpoint and normalise the tokens.
 
     Shared by /callback (authorization_code) and /refresh (refresh_token).
@@ -156,6 +156,11 @@ async def _token_exchange(
     When `verify_email` is set (login only), the returned id token is validated
     and its email must be verified — the one point in the flow where the id
     token, which carries `email_verified`, is available.
+
+    Returns (token payload for the client, id-token claims or None). The claims
+    are only produced on the verify_email path; /callback uses them to persist
+    email/name — the access token carries no profile claims, so login is the
+    single moment the backend can learn them.
     """
     settings = get_settings()
     if not settings.auth_enabled:
@@ -181,12 +186,13 @@ async def _token_exchange(
             raise HTTPException(status_code=failure_status, detail=failure_detail)
         tokens = resp.json()
 
+    id_claims: dict | None = None
     if verify_email:
         id_token = tokens.get("id_token")
         if not id_token:
             raise HTTPException(status_code=403, detail="No id token returned; cannot verify email.")
         try:
-            await verify_id_token(id_token)
+            id_claims = await verify_id_token(id_token)
         except Exception:
             raise HTTPException(status_code=403, detail="Email address is not verified.")
 
@@ -195,12 +201,16 @@ async def _token_exchange(
         "refresh_token": tokens.get("refresh_token"),
         "expires_in": tokens.get("expires_in"),
         "token_type": tokens.get("token_type", "Bearer"),
-    }
+    }, id_claims
 
 
 @router.get("/callback", summary="OIDC authorization code callback")
-async def callback(code: str = Query(...), code_verifier: str = Query(...)) -> dict:
-    return await _token_exchange(
+async def callback(
+    code: str = Query(...),
+    code_verifier: str = Query(...),
+    conn: DBConn = Depends(get_connection),
+) -> dict:
+    payload, id_claims = await _token_exchange(
         {
             "grant_type": "authorization_code",
             "code": code,
@@ -211,6 +221,22 @@ async def callback(code: str = Query(...), code_verifier: str = Query(...)) -> d
         failure_detail="Token exchange failed.",
         verify_email=True,
     )
+    # Persist email/name NOW: the id token is the only token carrying profile
+    # claims (access tokens omit them), so login is the single moment the app
+    # DB can learn who this sub is. Without this, users exist as sub-only rows
+    # and admin tooling that looks up by email (create_admin.py) can't find
+    # them. Best-effort: a failed write must not fail the login.
+    if id_claims is not None and id_claims.get("sub"):
+        try:
+            await db_users.upsert_user(
+                conn,
+                external_id=str(id_claims["sub"]),
+                email=id_claims.get("email") or None,
+                name=id_claims.get("name") or id_claims.get("preferred_username") or None,
+            )
+        except Exception:  # noqa: BLE001 — profile capture is best-effort
+            logger.warning("Could not persist profile claims at login.", exc_info=True)
+    return payload
 
 
 class RefreshRequest(BaseModel):
@@ -220,8 +246,9 @@ class RefreshRequest(BaseModel):
 @router.post("/refresh", summary="Exchange a refresh token for a new access token")
 async def refresh(body: RefreshRequest) -> dict:
     # 401 on failure => the refresh token is invalid/expired; client must re-login.
-    return await _token_exchange(
+    payload, _ = await _token_exchange(
         {"grant_type": "refresh_token", "refresh_token": body.refresh_token},
         failure_status=401,
         failure_detail="Token refresh failed.",
     )
+    return payload

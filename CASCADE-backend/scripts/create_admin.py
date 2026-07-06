@@ -16,6 +16,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
+
+# Allow `python scripts/create_admin.py` (docs/deployment.md's invocation):
+# run as a file, sys.path[0] is scripts/, not the backend root where config
+# lives. Running as a module (`python -m scripts.create_admin`) needs no help.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import psycopg2
 

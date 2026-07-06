@@ -79,6 +79,10 @@ async def upsert_user(
       one row during a client-driven model-based analysis.)
     - Returning login, email/name changed: UPDATE those columns only. The role
       is never touched, so an admin's assignment survives.
+    - A None email/name means "claim not present in this token", NOT "clear the
+      stored value": access tokens routinely omit profile claims that the id
+      token carried at login, so None keeps whatever is stored (otherwise every
+      access-token request would wipe the email captured at /callback).
     - Email now collides with a *different* account: keep the stored record
       rather than raising — a stale email must never lock a user out.
     """
@@ -112,6 +116,12 @@ async def upsert_user(
             # Otherwise the email belongs to another account; genuinely cannot
             # create a second account with a duplicate email.
             raise
+
+    # None = claim absent from this token; keep the stored value (see docstring).
+    if email is None:
+        email = existing.email
+    if name is None:
+        name = existing.name
 
     # Returning user — skip the write entirely when nothing changed.
     if existing.email == email and existing.name == name:
