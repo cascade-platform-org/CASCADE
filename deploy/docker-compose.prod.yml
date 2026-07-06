@@ -28,6 +28,11 @@ services:
       - zitadel-login
 
   zitadel:
+    # Root, like Zitadel's reference compose: setup must write the bootstrap
+    # PAT into the shared volume, which is root-owned on first creation.
+    # Without this, 03_default_instance fails with "permission denied" and
+    # leaves the instance half-initialized.
+    user: "0"
     # Behind Caddy's TLS: Zitadel must know its public identity is HTTPS on 443.
     environment:
       ZITADEL_EXTERNALDOMAIN: ${ID_DOMAIN}
@@ -66,6 +71,9 @@ services:
   # keeps the classic embedded login for simplicity; only prod needs this.
   zitadel-login:
     image: ghcr.io/zitadel/zitadel-login:${ZITADEL_VERSION}
+    # Root (reference compose does the same): must read the root-owned PAT
+    # from the shared bootstrap volume.
+    user: "0"
     environment:
       ZITADEL_API_URL: http://zitadel:8080
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login
