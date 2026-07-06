@@ -94,20 +94,25 @@ NEXT_PUBLIC_MAPLIBRE_STYLE=https://tiles.example.com/style.json
 
 ## Option 1: Docker Compose (Recommended)
 
-All Compose files live in **`deploy/`**. Four services run on a single VM behind
+All Compose files live in **`deploy/`**. Services run on a single VM behind
 Caddy (auto-TLS, the only internet-facing process):
 
-| Service   | Image / build                    | Role                                             |
-| --------- | -------------------------------- | ------------------------------------------------ |
-| `web`     | `deploy/web.Dockerfile`          | Caddy — TLS + static frontend + reverse proxy    |
-| `backend` | `CASCADE-backend/Dockerfile`     | FastAPI + engine (single instance — ADR-0008)    |
-| `db`      | `postgres:16`                    | Postgres — CASCADE app DB **and** the Zitadel DB |
-| `zitadel` | `ghcr.io/zitadel/zitadel`        | Self-hosted OIDC identity provider               |
+| Service         | Image / build                      | Role                                             |
+| --------------- | ----------------------------------- | ------------------------------------------------ |
+| `web`           | `deploy/web.Dockerfile`            | Caddy — TLS + static frontend + reverse proxy    |
+| `backend`       | `CASCADE-backend/Dockerfile`       | FastAPI + engine (single instance — ADR-0008)    |
+| `db`            | `postgres:16`                      | Postgres — CASCADE app DB **and** the Zitadel DB |
+| `zitadel`       | `ghcr.io/zitadel/zitadel`          | Self-hosted OIDC identity provider (API + admin console) |
+| `zitadel-login` | `ghcr.io/zitadel/zitadel-login`    | **Production only.** Zitadel v3+ split its login screen into this separate Next.js app ("Login V2"); Caddy routes `/ui/v2/login*` on `ID_DOMAIN` to it. Absent in dev (local dev keeps the classic embedded login). |
+
+`ZITADEL_VERSION` **must be pinned** in `.env` (no `:latest`) — `zitadel` and
+`zitadel-login` must run matching, tested versions. Check available tags at
+[github.com/zitadel/zitadel/releases](https://github.com/zitadel/zitadel/releases).
 
 The stack is a base file plus two overlays:
 `docker-compose.yml` (definitions, no host ports) + `docker-compose.override.yml`
 (dev conveniences, **auto-loaded**) + `docker-compose.prod.yml` (prod: only Caddy
-publishes 80/443, Zitadel switched to HTTPS).
+publishes 80/443, Zitadel switched to HTTPS, adds `zitadel-login`).
 
 The database schema is applied **automatically** on backend startup (idempotent
 baseline + numbered migrations under `CASCADE-backend/db/migrations/`), and the
@@ -163,9 +168,14 @@ docker compose exec backend python scripts/create_admin.py --email you@yourorg.c
 
 Do this once, after `id.<domain>` resolves and the stack is up in production.
 
-1. **First admin console login.** Browse to `https://id.<domain>`. Zitadel's
-   initial admin credentials are printed in its logs on first init
-   (`docker compose logs zitadel`); change the password immediately.
+1. **First admin console login.** Browse to `https://id.<domain>`. Admin
+   credentials are the `ZITADEL_ADMIN_USERNAME`/`ZITADEL_ADMIN_EMAIL`/
+   `ZITADEL_ADMIN_PASSWORD` you set in `.env` — Zitadel's `FIRSTINSTANCE_ORG_HUMAN_*`
+   bootstrap vars apply them on the very first `start-from-init` run. These only
+   take effect against a **fresh** `zitadel` database; if you're re-bootstrapping
+   after a failed attempt, drop and recreate that database first (see Backup &
+   Recovery's restore procedure for the drop/create commands, applied to `zitadel`
+   instead of the app DB).
 2. **Create a project** (e.g. "CASCADE").
 3. **Create an application** inside it:
    - Type: **Web**, auth method **PKCE** (or Code + client secret).
