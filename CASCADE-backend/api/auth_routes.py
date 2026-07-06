@@ -114,6 +114,11 @@ async def login(
     settings = get_settings()
     if not settings.auth_enabled:
         raise HTTPException(status_code=501, detail="Auth is disabled in local-only mode.")
+    if code_challenge_method != "S256":
+        # "plain" would gut PKCE (verifier == challenge, visible in the
+        # redirect URL). Our frontend only ever sends S256; anything else is
+        # a downgrade attempt, not a legitimate client.
+        raise HTTPException(status_code=422, detail="code_challenge_method must be S256.")
 
     oidc_cfg = await fetch_oidc_config()
     auth_endpoint = oidc_cfg.get("authorization_endpoint")

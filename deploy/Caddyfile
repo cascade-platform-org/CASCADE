@@ -71,6 +71,18 @@
 	# Everything else is the static single-page frontend.
 	handle {
 		root * /srv
+
+		# Next.js chunk filenames are content-hashed => safe to cache forever.
+		@immutable path /_next/static/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# Everything else (HTML above all — it is NOT content-hashed) defaults
+		# to no-cache: browsers must revalidate (ETag/304) on each load. A
+		# cached index.html kept referencing old JS after a redeploy and the
+		# stale bundle called the API with outdated parameters — a real
+		# incident. `?` sets the header only where not already set above.
+		header ?Cache-Control "no-cache"
+
 		try_files {path} {path}.html /index.html
 		file_server
 	}
