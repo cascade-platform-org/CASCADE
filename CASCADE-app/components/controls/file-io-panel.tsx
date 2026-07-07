@@ -4,11 +4,12 @@
  * File I/O Panel (F9) — save, load, and version history.
  */
 
-import { useRef, useState, useEffect } from "react";
-import { X, Download, Upload, History, RotateCcw, AlertTriangle, FolderOpen } from "lucide-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { X, Download, Upload, History, RotateCcw, AlertTriangle, FolderOpen, Cloud, CloudUpload, Trash2 } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useAuthStore } from "@/store/auth-store";
 import {
   saveBundle,
   saveProject,
@@ -22,6 +23,13 @@ import {
 } from "@/lib/file-io";
 import { validateBundle, type ValidationIssue } from "@/lib/project-validation";
 import { loadRecoveryDir, saveRecoveryDir, clearRecoveryDir } from "@/lib/recovery-dir";
+import {
+  syncSaveProject,
+  syncListProjects,
+  syncLoadProject,
+  syncDeleteProject,
+} from "@/lib/api-client";
+import type { ProjectVersionSummary } from "@/lib/schemas/api";
 
 export function FileIoPanel() {
   const closeFileIoPanel = useUiStore((s) => s.closeFileIoPanel);
@@ -35,6 +43,9 @@ export function FileIoPanel() {
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
+  const canSync = useAuthStore((s) => s.hasPermission("can_sync"));
+  const authMode = useAuthStore((s) => s.mode);
+
   const [history, setHistory] = useState<ReturnType<typeof getProjectHistory>>([]);
   const [recoveryDirName, setRecoveryDirName] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -42,13 +53,32 @@ export function FileIoPanel() {
   const [saveProject_, setSaveProject_] = useState(true);
   const [saveConfig_, setSaveConfig_] = useState(true);
 
+  const [syncVersions, setSyncVersions] = useState<ProjectVersionSummary[]>([]);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncBusyId, setSyncBusyId] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const reloadSyncVersions = useCallback(async () => {
+    if (!canSync || authMode !== "oidc") return;
+    setSyncLoading(true);
+    try {
+      setSyncVersions(await syncListProjects());
+      setSyncError(null);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Could not load synced versions.");
+    } finally {
+      setSyncLoading(false);
+    }
+  }, [canSync, authMode]);
+
   useEffect(() => {
     loadRecoveryDir().then((dir) => setRecoveryDirName(dir?.name ?? null));
     setHistory(getProjectHistory());
     // Re-read history every 30 s so automatic snapshots appear without reopening the panel.
     const interval = setInterval(() => setHistory(getProjectHistory()), 30_000);
+    void reloadSyncVersions();
     return () => clearInterval(interval);
-  }, []);
+  }, [reloadSyncVersions]);
 
   function currentBundle(): ProjectBundle {
     return { project: toProject(), config };
@@ -76,6 +106,62 @@ export function FileIoPanel() {
     } catch (err) {
       console.error("[CASCADE] Save failed:", err);
       pushToast({ message: "Save failed.", variant: "error", durationMs: 4000 });
+    }
+  }
+
+  // ---- Server Sync (requirements.md §13.4) ----
+
+  async function handleSyncSave() {
+    const bundle = currentBundle();
+    setSyncError(null);
+    try {
+      await syncSaveProject(bundle.project.meta.name, bundle.project.meta.description ?? null, bundle);
+      pushToast({ message: "Saved to server.", variant: "success", durationMs: 3000 });
+      await reloadSyncVersions();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sync save failed.";
+      setSyncError(message);
+      pushToast({ message: "Sync save failed.", variant: "error", durationMs: 4000 });
+    }
+  }
+
+  async function handleSyncLoad(version: ProjectVersionSummary) {
+    if (
+      !window.confirm(
+        `Load "${version.name}" (saved ${new Date(version.created_at).toLocaleString()})? Unsaved changes will be lost.`,
+      )
+    )
+      return;
+    setSyncBusyId(version.id);
+    try {
+      const detail = await syncLoadProject(version.id);
+      loadProject(detail.data.project);
+      loadConfig(detail.data.config);
+      pushToast({ message: `Loaded "${version.name}" from server.`, variant: "success", durationMs: 4000 });
+      closeFileIoPanel();
+    } catch (err) {
+      pushToast({
+        message: err instanceof Error ? err.message : "Load failed.",
+        variant: "error",
+        durationMs: 4000,
+      });
+    } finally {
+      setSyncBusyId(null);
+    }
+  }
+
+  async function handleSyncDelete(version: ProjectVersionSummary) {
+    if (!window.confirm(`Delete "${version.name}" (server copy only) permanently?`)) return;
+    setSyncBusyId(version.id);
+    try {
+      const err = await syncDeleteProject(version.id);
+      if (err) {
+        pushToast({ message: err, variant: "error", durationMs: 4000 });
+      } else {
+        await reloadSyncVersions();
+      }
+    } finally {
+      setSyncBusyId(null);
     }
   }
 
@@ -260,6 +346,75 @@ export function FileIoPanel() {
               </div>
             </button>
           </section>
+
+          {/* Server Sync (requirements.md §13.4) — only meaningful when signed
+              in with can_sync; a guest/local session has nowhere to sync to. */}
+          {canSync && authMode === "oidc" && (
+            <section>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                  <Cloud size={12} /> Server sync
+                </h3>
+                {syncVersions.length > 0 && (
+                  <span className="text-xs text-zinc-400">{syncVersions.length} saved</span>
+                )}
+              </div>
+              <button
+                onClick={() => void handleSyncSave()}
+                className="mb-2 flex w-full items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-left text-xs text-zinc-700 hover:border-blue-300 hover:bg-blue-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-blue-900/20"
+              >
+                <CloudUpload size={14} className="shrink-0 text-zinc-400" />
+                <span className="font-medium">Save current project to server</span>
+              </button>
+              {syncError && (
+                <p className="mb-2 text-xs text-red-500 break-words">{syncError}</p>
+              )}
+              {syncLoading ? (
+                <p className="text-xs text-zinc-400 italic">Loading…</p>
+              ) : syncVersions.length === 0 ? (
+                <p className="text-xs text-zinc-400 italic">
+                  No synced versions yet. Up to 10 kept per project name — older
+                  ones are pruned automatically.
+                </p>
+              ) : (
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                  {syncVersions.map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center justify-between rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          {v.name}
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          {new Date(v.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={() => void handleSyncLoad(v)}
+                          disabled={syncBusyId === v.id}
+                          title="Load this version"
+                          className="rounded p-1 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-40 dark:hover:bg-zinc-800"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                        <button
+                          onClick={() => void handleSyncDelete(v)}
+                          disabled={syncBusyId === v.id}
+                          title="Delete this version"
+                          className="rounded p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-40 dark:hover:bg-red-950/40"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Load */}
           <section>

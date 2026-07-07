@@ -125,6 +125,28 @@ Accepts a batch (max 1 000 entries) of client-side activity-log entries — acti
 
 ---
 
+## Server Sync — requires `can_sync` (requirements.md §13.4)
+
+Owner-scoped: every route below only ever sees the caller's own saved versions, never another user's — not even an admin's. `501` in local-only mode (no database). Each save is a **new version**, never an overwrite; up to 10 versions are kept per project `name`, older ones pruned automatically on the next save for that name (mirrors the local save-history cap in `lib/file-io.ts`).
+
+### `POST /api/projects`
+
+Body `{ name, description?, data: { project, config } }` — `data` is validated against the same `Project`/`ModelConfiguration` Pydantic models the rest of the app uses, so a save can never write something Load would later choke on. Returns the new version's summary `{ id, name, description, created_at, updated_at }` (no bundle data in the response).
+
+### `GET /api/projects`
+
+Lists the caller's saved versions, newest first, as summaries (no bundle data — a version list, not a bulk download).
+
+### `GET /api/projects/{id}`
+
+Full bundle for one version, for Load. `404` (not `403`) if the id doesn't belong to the caller — existence of another user's version is never leaked.
+
+### `DELETE /api/projects/{id}`
+
+Deletes one version. `404` if it doesn't belong to the caller.
+
+---
+
 ## Not implemented (by design, yet)
 
-Batch propagation (`POST /api/propagate/batch`) and server-side project sync (`/api/projects`) appear in older planning documents but have **no endpoints and no schemas** — the speculative schema definitions were removed. Re-derive them from Pydantic when the feature is actually built (requirements §16).
+Batch propagation (`POST /api/propagate/batch`) appears in older planning documents but has **no endpoint and no schema** — the speculative schema definition was removed. Re-derive it from Pydantic when the feature is actually built (requirements §16).

@@ -362,9 +362,11 @@ Explicit saves are version-tracked: up to **10 previous explicit saves** are ret
 2. Click **Upload Project** or **Upload Config**.
 3. Select the `.json` file. The app validates the schema and hydrates the stores.
 
-### Server Sync (opt-in)
+### Server Sync (opt-in) — signed-in analyst role and above
 
-When sync is enabled in Settings, explicit saves are also pushed to your account on the server. You can load your project from any device without manual file transfer. Sync requires authentication.
+The **File** panel shows a **Server sync** section when you're signed in with `can_sync` permission (analyst, manager, admin). **Save current project to server** pushes the current bundle as a new version — sync never overwrites, so every save is kept, up to 10 versions per project name (older ones are pruned automatically, same cap as local history). The version list shows every synced save with load/delete actions; you can load your project from any device this way, no manual file transfer. Deleting your account (self-service or by an admin) deletes all your synced versions too.
+
+API: `POST/GET /api/projects`, `GET/DELETE /api/projects/{id}` — see api-reference.md.
 
 ---
 

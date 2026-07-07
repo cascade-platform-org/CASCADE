@@ -43,6 +43,30 @@ export const AuthUserSchema = z.object({
 // response body left to describe.
 
 // ---------------------------------------------------------------------------
+// Server Sync — GET/POST/DELETE /api/projects (requirements.md §13.4)
+// ---------------------------------------------------------------------------
+
+/** The exact envelope lib/file-io.ts already saves/loads locally
+ *  (ProjectBundle) — reused here so sync round-trips the identical shape. */
+export const ProjectBundleSchema = z.object({
+  project: ProjectSchema,
+  config: ModelConfigurationSchema,
+});
+
+/** One saved version, without the (potentially large) bundle — the list view. */
+export const ProjectVersionSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ProjectVersionDetailSchema = ProjectVersionSummarySchema.extend({
+  data: ProjectBundleSchema,
+});
+
+// ---------------------------------------------------------------------------
 // Propagation — POST /api/propagate
 // ---------------------------------------------------------------------------
 
@@ -133,6 +157,8 @@ export const EngineAlgorithmsSchema = z.object({
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
+export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
+export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;
 export type HeuristicMeta = z.infer<typeof HeuristicMetaSchema>;

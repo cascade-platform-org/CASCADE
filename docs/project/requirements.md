@@ -557,9 +557,9 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 - Upload a `.json` file; validate schema; hydrate stores.
 - Multi-canvas projects serialised under a `canvases` array.
 
-### 13.4 Server Sync (opt-in)
+### 13.4 Server Sync (opt-in) — implemented
 
-When enabled, explicit saves are also pushed to PostgreSQL per-user. Version list is accessible across devices.
+`can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.
 
 ---
 
@@ -592,6 +592,6 @@ When enabled, explicit saves are also pushed to PostgreSQL per-user. Version lis
 | Georeferenced hazard footprints | Future enhancement |
 | Additional category types beyond `SourceToDemands` and `Requisite` | Extensibility confirmed; types TBD |
 | Exact scorecard layout and visual design | To be defined during UI design |
-| Server sync conflict resolution strategy | To be defined |
+| Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
 | Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |

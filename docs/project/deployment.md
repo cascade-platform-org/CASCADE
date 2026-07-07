@@ -34,10 +34,16 @@ are fixed for v1; revisit them before scaling out.
 - **Signup gating.** Require **email verification** before an account can act, and
   enable Zitadel **brute-force lockout**. Email verification needs outbound SMTP
   (a free tier such as Brevo/Mailgun, or an institutional SMTP relay).
-- **Data posture: local-first, Sync OFF.** The server stores only accounts and
-  anonymous metadata (the Analysis Log, ADR-0007). Users' actual networks stay in
-  local JSON on their machines. Server **Sync is deferred** — the sync routes are
-  intentionally unbuilt for v1, which keeps the GDPR/breach surface minimal.
+- **Data posture: local-first, Sync opt-in per user.** By default the server
+  stores only accounts and anonymous metadata (the Analysis Log, ADR-0007);
+  users' networks stay in local JSON. **Server Sync** (`/api/projects`,
+  requirements.md §13.4) lets any `can_sync`-permitted user (analyst and above)
+  explicitly push versions to the server — each save is a new version, up to 10
+  kept per project name, older ones pruned. This is the one place actual
+  network data (not just metadata) is stored server-side, strictly opt-in and
+  owner-scoped (not even an admin reads another user's synced projects back).
+  `projects.owner_id` cascades on user deletion, so GDPR erasure (`DELETE
+  /api/auth/me`, admin delete) removes synced projects automatically.
 - **Edge.** Caddy is the only internet-facing process (auto-TLS); CORS is locked
   to the exact frontend origin; the VM firewall exposes only 80/443 + SSH (key
   only). Caddy also rate-limits the auth endpoints per IP and caps `/api`

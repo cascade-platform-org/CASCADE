@@ -23,6 +23,7 @@ from api import (
     auth_router,
     health_router,
     propagation_router,
+    sync_router,
 )
 from auth.oauth2 import fetch_oidc_config
 from config import assert_production_safe, get_settings
@@ -137,6 +138,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(admin_router)
     app.include_router(audit_router)
+    app.include_router(sync_router)
 
     # Root → API docs (eliminates the 404 when a browser hits /)
     @app.get("/", include_in_schema=False)

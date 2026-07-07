@@ -10,9 +10,14 @@ import { z } from "zod";
 import { PropagationResultSchema, type PropagationResult } from "@/lib/schemas/propagation";
 import {
   EngineAlgorithmsSchema,
+  ProjectVersionSummarySchema,
+  ProjectVersionDetailSchema,
   type EngineAlgorithms,
   type PropagationRequest,
+  type ProjectVersionSummary,
+  type ProjectVersionDetail,
 } from "@/lib/schemas/api";
+import type { ProjectBundle } from "@/lib/file-io";
 import {
   MeResponseSchema,
   AuthConfigSchema,
@@ -302,4 +307,54 @@ export async function adminDeleteUser(userId: string): Promise<string | null> {
   if (res.ok) return null;
   const detail = await res.text().catch(() => res.statusText);
   return `Deletion failed (${res.status}): ${detail}`;
+}
+
+// ---------------------------------------------------------------------------
+// Server Sync (requirements.md §13.4; requires can_sync, opt-in per user)
+// ---------------------------------------------------------------------------
+
+/** POST /api/projects — save a NEW version (never overwrites; server prunes
+ *  versions past 10 per name, same policy as the local save history). Throws
+ *  with the server detail on non-2xx (e.g. 501 in local-only mode, 403
+ *  without can_sync). */
+export async function syncSaveProject(
+  name: string,
+  description: string | null,
+  data: ProjectBundle,
+): Promise<ProjectVersionSummary> {
+  const res = await authedFetch(`${API_BASE}/api/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, description, data }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => res.statusText);
+    throw new Error(`Save failed (${res.status}): ${detail}`);
+  }
+  return ProjectVersionSummarySchema.parse(await res.json());
+}
+
+/** GET /api/projects — this user's saved versions, newest first, no bundle
+ *  data (kept light — a version list, not a bulk download). Throws on non-2xx. */
+export async function syncListProjects(): Promise<ProjectVersionSummary[]> {
+  const res = await authedFetch(`${API_BASE}/api/projects`);
+  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  return z.array(ProjectVersionSummarySchema).parse(await res.json());
+}
+
+/** GET /api/projects/{id} — one version's full bundle, for Load. Throws on non-2xx. */
+export async function syncLoadProject(versionId: string): Promise<ProjectVersionDetail> {
+  const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`);
+  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  return ProjectVersionDetailSchema.parse(await res.json());
+}
+
+/** DELETE /api/projects/{id}. Returns an error message, or null on success. */
+export async function syncDeleteProject(versionId: string): Promise<string | null> {
+  const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`, {
+    method: "DELETE",
+  });
+  if (res.ok) return null;
+  const detail = await res.text().catch(() => res.statusText);
+  return `Delete failed (${res.status}): ${detail}`;
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Upload, FlaskConical } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import { ModelConfigurationSchema } from "@/lib/schemas/config";
 import { loadBundleFile, loadProjectFile } from "@/lib/file-io";
+import { loadSampleManifest, loadSampleBundle, type SampleManifestEntry } from "@/lib/samples";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
 import type { ModelConfiguration } from "@/lib/schemas/config";
@@ -102,6 +103,19 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
     setLoadError("Could not load file — make sure it is a valid CASCADE project or bundle JSON.");
   }
 
+  // Load a bundled sample — same effect as loading an uploaded bundle file.
+  async function handleLoadSample(sample: SampleManifestEntry) {
+    setLoadError(null);
+    const bundle = await loadSampleBundle(sample.file);
+    if (!bundle) {
+      setLoadError(`Could not load sample "${sample.label}".`);
+      return;
+    }
+    fromProject(bundle.project);
+    loadConfig(bundle.config);
+    onComplete();
+  }
+
   function canAdvance(): boolean {
     if (step === 1) return data.name.trim().length > 0;
     if (step === 2) {
@@ -167,7 +181,15 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
         <WizardHeader step={step} />
 
         <div className="mb-8 min-h-[200px]">
-          {step === 1 && <Step1 data={data} onChange={patch} onLoadFile={handleLoadFile} loadError={loadError} />}
+          {step === 1 && (
+            <Step1
+              data={data}
+              onChange={patch}
+              onLoadFile={handleLoadFile}
+              onLoadSample={handleLoadSample}
+              loadError={loadError}
+            />
+          )}
           {step === 2 && <Step2 data={data} onChange={patch} />}
           {step === 3 && <Step3 data={data} onChange={patch} config={
             data.configSource === "upload" && data.uploadedConfig
@@ -253,15 +275,23 @@ function Step1({
   data,
   onChange,
   onLoadFile,
+  onLoadSample,
   loadError,
 }: {
   data: WizardData;
   onChange: (p: Partial<WizardData>) => void;
   onLoadFile: (file: File) => Promise<void>;
+  onLoadSample: (sample: SampleManifestEntry) => Promise<void>;
   loadError: string | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [samples, setSamples] = useState<SampleManifestEntry[]>([]);
+  const [loadingSample, setLoadingSample] = useState<string | null>(null);
+
+  useEffect(() => {
+    void loadSampleManifest().then(setSamples);
+  }, []);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -335,6 +365,42 @@ function Step1({
         <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
           ✗ {loadError}
         </p>
+      )}
+
+      {samples.length > 0 && (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+            <span className="text-xs text-zinc-400">or start from a sample</span>
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+          </div>
+          <div className="max-h-40 space-y-1 overflow-y-auto">
+            {samples.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={loadingSample !== null}
+                onClick={async () => {
+                  setLoadingSample(s.id);
+                  await onLoadSample(s);
+                  setLoadingSample(null);
+                }}
+                className="flex w-full items-start gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-left hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-blue-900/20"
+              >
+                <FlaskConical size={14} className="mt-0.5 shrink-0 text-zinc-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    {s.label}
+                    {loadingSample === s.id && " — loading…"}
+                  </span>
+                  <span className="block truncate text-xs text-zinc-400">
+                    {s.description} · {s.sizeLabel}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       <input

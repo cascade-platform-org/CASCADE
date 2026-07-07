@@ -65,6 +65,12 @@ from schemas.results import (                        # noqa: E402
     PropagationResult,
 )
 from schemas.auth import AuthUser                    # noqa: E402
+from schemas.sync import (                            # noqa: E402
+    ProjectBundle,
+    SaveProjectRequest,
+    ProjectVersionSummary,
+    ProjectVersionDetail,
+)
 
 OUTPUT_DIR = ROOT / "CASCADE-app" / "shared" / "schemas"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -104,6 +110,10 @@ def main() -> None:
     export(
         "auth.schema.json",
         AuthUser,
+    )
+    export(
+        "sync.schema.json",
+        ProjectBundle, SaveProjectRequest, ProjectVersionSummary, ProjectVersionDetail,
     )
 
     print("\nDone. Diff CASCADE-app/shared/schemas/ and update CASCADE-app/lib/schemas/ accordingly.")
