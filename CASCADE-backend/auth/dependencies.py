@@ -33,10 +33,10 @@ async def get_current_user(
     """Validate the Bearer token and resolve the caller's authorization.
 
     Identity comes from the OIDC token; the *role* comes from our own database
-    (ADR-0010). On first sight a user is inserted with the least-privileged
-    default (`viewer`, via migration 002); returning users keep their assigned
-    role. When auth is disabled (local-only mode) a synthetic admin is returned
-    and no database is required.
+    (ADR-0010). On first sight a user is inserted with the default role
+    (`analyst`, via migration 005 — sign-in already implies a verified email);
+    returning users keep their assigned role. When auth is disabled (local-only
+    mode) a synthetic admin is returned and no database is required.
     """
     from config import get_settings
     settings = get_settings()
@@ -104,7 +104,11 @@ async def get_current_user(
     return AuthUser(
         sub=db_user.external_id,
         email=db_user.email or "",
-        display_name=display_name,
+        # Access tokens rarely carry profile claims; the DB row holds the
+        # name/email captured from the id token at login (/callback), so fall
+        # back to it — otherwise /me reports an empty name and the UI shows
+        # a blank identity chip.
+        display_name=display_name or db_user.name or db_user.email or "",
         roles=[db_user.role_name],
         db_id=db_user.id,
         entitlement=Entitlement(
