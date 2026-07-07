@@ -94,6 +94,55 @@ async def test_analyst_can_save_list_load_delete(migrated_db):
         assert get_after_delete.status_code == 404
 
 
+async def test_load_omits_null_optionals(migrated_db):
+    """Regression: the frontend Zod schema uses `.optional()` (accepts an absent
+    key, rejects `null`). Pydantic otherwise serialises every unset Optional as
+    explicit `null`, which broke Load. The detail route sets
+    response_model_exclude_none=True so the bundle round-trips null-free — the
+    same shape a local file save produces. See §13.4."""
+    from schemas.network import Edge, Node
+
+    bundle = _minimal_bundle_json("nulls")
+    # A node and an edge that leave every Optional field unset.
+    node = Node(id="n1", functionality=4)
+    edge = Edge(id="e1", source="n1", target="n1", functionality=4)
+    bundle["project"]["nodes"] = {"n1": node.model_dump(mode="json")}
+    bundle["project"]["edges"] = {"e1": edge.model_dump(mode="json")}
+
+    client, _ = await _client_as(migrated_db, ["analyst"])
+    async with client:
+        save_resp = await client.post(
+            "/api/projects", json={"name": "nulls", "description": None, "data": bundle}
+        )
+        assert save_resp.status_code == 200
+        version_id = save_resp.json()["id"]
+
+        get_resp = await client.get(f"/api/projects/{version_id}")
+        assert get_resp.status_code == 200
+        loaded = get_resp.json()
+
+        # No `null` anywhere in the typed node/edge maps (free-form dicts aside).
+        def null_paths(obj, path=""):
+            found = []
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    p = f"{path}.{k}" if path else k
+                    if v is None:
+                        found.append(p)
+                    else:
+                        found += null_paths(v, p)
+            elif isinstance(obj, list):
+                for i, v in enumerate(obj):
+                    found += null_paths(v, f"{path}[{i}]")
+            return found
+
+        got_edge = loaded["data"]["project"]["edges"]["e1"]
+        assert "capacity" not in got_edge  # excluded, not null
+        assert "sourceHandle" not in got_edge
+        assert null_paths(loaded["data"]["project"]["nodes"]) == []
+        assert null_paths(loaded["data"]["project"]["edges"]) == []
+
+
 async def test_save_never_overwrites_creates_new_version(migrated_db):
     client, _ = await _client_as(migrated_db, ["analyst"])
     async with client:

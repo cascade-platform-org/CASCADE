@@ -567,6 +567,8 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.
 
+**Null-free bundle contract (Load):** the Load response (`GET /api/projects/{id}`) must serialise the bundle **without `null` keys**, via `response_model_exclude_none=True` (`api/sync_routes.py`). This makes the payload byte-shape-identical to a local file save (frontend `JSON.stringify` drops `undefined` keys), which the Zod schema requires: its `.optional()` fields accept an *absent* key but **reject `null`**. Without this flag Pydantic emits every unset `Optional` as explicit `null` and Load fails client-side Zod validation (`expected string, received null`). Do not remove the flag; if the frontend must instead accept `null`, its optional fields need `.nullish()` — but the null-free contract is the canonical one.
+
 ---
 
 ## 14. Authentication and Access Control

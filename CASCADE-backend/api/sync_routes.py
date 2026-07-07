@@ -57,7 +57,14 @@ async def list_projects(
 
 
 @router.get(
-    "/{version_id}", response_model=ProjectVersionDetail, summary="Load one saved version"
+    "/{version_id}",
+    response_model=ProjectVersionDetail,
+    # Serialise the bundle null-free so it round-trips the *identical* shape the
+    # frontend produces on a local save (JSON.stringify drops `undefined` keys).
+    # Pydantic otherwise emits every unset Optional as explicit `null`, which the
+    # frontend Zod schema's `.optional()` fields reject on Load. See §13.4.
+    response_model_exclude_none=True,
+    summary="Load one saved version",
 )
 async def get_project(
     version_id: str,
