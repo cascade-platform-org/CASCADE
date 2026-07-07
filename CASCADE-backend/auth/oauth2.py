@@ -143,13 +143,18 @@ async def verify_id_token(id_token: str) -> dict[str, Any]:
 
     The IdP login policy should already block unverified accounts, but a single
     misconfigured checkbox there must not grant access, so the claim must be
-    explicitly true — an ABSENT claim is rejected too (fail closed: "we could
-    not confirm verification" must not be treated as "verified"; a guard that
-    only catches an explicit false defeats its own misconfiguration purpose).
-    Raises jose.JWTError / ValueError on invalid or unverified tokens.
+    truthy — an ABSENT claim is rejected too (fail closed: "we could not
+    confirm verification" must not be treated as "verified"). Compared
+    case-insensitively against the string "true" as well as the JSON boolean:
+    Zitadel's id token (confirmed against a real login) carries this claim as
+    the *string* "true", not a boolean — `is not True` rejected every real
+    verified user, a live incident this fixes. Raises jose.JWTError / ValueError
+    on invalid or unverified tokens.
     """
     settings = get_settings()
     claims = await _decode_verified(id_token, settings.oidc_client_id)
-    if claims.get("email_verified") is not True:
+    email_verified = claims.get("email_verified")
+    verified = email_verified is True or str(email_verified).lower() == "true"
+    if not verified:
         raise ValueError("Email address is not verified.")
     return claims
