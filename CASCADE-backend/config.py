@@ -42,7 +42,11 @@ class Settings(BaseSettings):
     oidc_client_id: Optional[str] = None
     oidc_client_secret: Optional[str] = None
     oidc_redirect_uri: str = "http://localhost:3000/api/auth/callback"
-    oidc_scopes: str = "openid profile email"
+    # offline_access requests a refresh token — without it the IdP issues only
+    # a short-lived access token, so the httpOnly-cookie session (api/auth_routes.py)
+    # cannot be refreshed and dies on access-token expiry, forcing a full
+    # re-login. Zitadel honours it when the app has the refresh-token grant.
+    oidc_scopes: str = "openid profile email offline_access"
     jwt_algorithm: str = "RS256"
     jwt_audience: Optional[str] = None
 

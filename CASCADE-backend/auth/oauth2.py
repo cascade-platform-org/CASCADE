@@ -141,20 +141,21 @@ async def verify_id_token(id_token: str) -> dict[str, Any]:
     email is verified. Called at login; the id token — unlike the access token —
     carries `email_verified`.
 
-    The IdP login policy should already block unverified accounts, but a single
-    misconfigured checkbox there must not grant access, so the claim must be
-    truthy — an ABSENT claim is rejected too (fail closed: "we could not
-    confirm verification" must not be treated as "verified"). Compared
-    case-insensitively against the string "true" as well as the JSON boolean:
-    Zitadel's id token (confirmed against a real login) carries this claim as
-    the *string* "true", not a boolean — `is not True` rejected every real
-    verified user, a live incident this fixes. Raises jose.JWTError / ValueError
-    on invalid or unverified tokens.
+    Enforcement model: the IdP's own login policy is the PRIMARY gate — Zitadel
+    is configured to block unverified accounts at sign-in. This check is a
+    secondary backstop against an explicit `email_verified: false` only. An
+    ABSENT claim is allowed: whether the id token even carries `email_verified`
+    depends on IdP scope/token-mapping config ("include profile info in the ID
+    token"), so treating absent as unverified rejected legitimate users on a
+    correctly-policied IdP — two live incidents. We do not weaken real security
+    by trusting the IdP policy here, but we do stop punishing config we don't
+    control. The claim can arrive as a JSON boolean or the string "false"
+    (Zitadel encodes it as a string), so both are caught. Raises
+    jose.JWTError / ValueError on an invalid or explicitly-unverified token.
     """
     settings = get_settings()
     claims = await _decode_verified(id_token, settings.oidc_client_id)
     email_verified = claims.get("email_verified")
-    verified = email_verified is True or str(email_verified).lower() == "true"
-    if not verified:
+    if email_verified is False or str(email_verified).lower() == "false":
         raise ValueError("Email address is not verified.")
     return claims
