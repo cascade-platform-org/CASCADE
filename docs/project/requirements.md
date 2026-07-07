@@ -454,13 +454,19 @@ Auto-populated from context, editable before saving:
 
 A Scorecard entry is a **duplicate** if its `before_propagation` snapshot is identical to an existing entry's `before_propagation`. Comparison is done by content hash (stable JSON serialisation → SHA-256). If a duplicate is detected at save time, the save is blocked and the user sees a toast: *"This scenario is already in the Scorecard."* No entry is overwritten.
 
+### 12.3a Situation Window
+
+After an Event is applied, a small floating **Situation window** appears over the top-right of the canvas. It is a live read-out of the current Situation, derived entirely from `update_history` via `deriveSituation()` (`CASCADE-app/lib/situation.ts`): the most recent `event_applied` entry, plus the `propagation` entry that ran *after* it (a Propagation older than the latest Event is ignored as stale). It shows the Event's own icon and label, a "Propagation run / not run yet" status, and a **Save to Scorecard** button that opens the Save Dialog. The window can be **minimised** to an icon pill or **dismissed** (it reappears when a newer Event is applied). It is purely informational — dismissing it changes no graph state.
+
+Because the Save Dialog resolves its snapshots from the same Situation (§12.4), the entry saved from the Situation window captures the real before→after of the current scenario (post-Event `before_propagation`, propagated `after_propagation`) rather than storing the live canvas as an un-propagated "initial" state.
+
 ### 12.4 Save Dialog
 
 When the user clicks "Save to Scorecard" the dialog opens and shows:
 
 1. **Label** — editable text, pre-filled per §12.2.
 2. **Snapshot previews** — one card per snapshot already available in history:
-   - `before_propagation` — always shown (pulled from `update_history`: `before` of the most recent `propagation` entry, or current state if no Propagation has been run).
+   - `before_propagation` — always shown. Resolved from the current Situation (§12.3a): the `before` of the Propagation that ran for the latest Event when one exists, otherwise the post-Event state (the latest `event_applied` entry's `after`). Falls back to the live canvas only when no Event is in history (a pure Manual What-If).
    - `after_propagation` — shown if a Propagation has been run; absent card otherwise.
    - `after_temporal_jump` — shown if a Temporal Jump event followed the most recent Propagation in history; absent card otherwise.
 3. **Temporal Jump option** — shown only when `after_propagation` is present but `after_temporal_jump` is absent. Contains:

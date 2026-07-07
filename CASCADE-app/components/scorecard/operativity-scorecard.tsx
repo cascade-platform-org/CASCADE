@@ -31,6 +31,7 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { deriveSituation, situationSnapshots } from "@/lib/situation";
 import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -109,16 +110,27 @@ export function SaveScorecardDialog({
     if (beforeSnapshot) {
       return { initialBefore: beforeSnapshot, initialAfter: afterSnapshot, initialEventId: eventId };
     }
-    // "Save current": always snapshot the LIVE canvas so the scenario currently
-    // set up (latest hazard / manual edits) is exactly what gets propagated —
-    // never a stale propagation entry from history. `after` is left empty until
-    // the user clicks Run Propagation. We still surface the most recent applied
-    // event for labelling. History is newest-first, so `.find` returns the latest.
-    const latestEvent = updateHistory.find((e) => e.update_type === "event_applied");
+    // "Save current": reconstruct the Situation from history so the entry stores
+    // the real before→after of the current scenario. When a Propagation has been
+    // run for the latest Event, `before` is the post-Event / pre-engine state and
+    // `after` is the propagated state (requirements §12.1) — i.e. the already-run
+    // Propagation is captured, not discarded. When only the Event has been applied
+    // (no Propagation yet), `after` is left empty until the user clicks Run
+    // Propagation. With no Event at all it is a manual what-if: snapshot the live
+    // canvas as `before`.
+    const situation = deriveSituation(updateHistory);
+    if (situation) {
+      const { before, after } = situationSnapshots(situation);
+      return {
+        initialBefore: before,
+        initialAfter: after,
+        initialEventId: eventId ?? situation.eventEntry.event_id,
+      };
+    }
     return {
       initialBefore: useCanvasStore.getState().toGraphSnapshot(),
       initialAfter: undefined as GraphSnapshot | undefined,
-      initialEventId: eventId ?? latestEvent?.event_id,
+      initialEventId: eventId,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally stable — snapshots are immutable once the dialog opens
@@ -130,7 +142,14 @@ export function SaveScorecardDialog({
   const before = initialBefore;
   const resolvedEventId = initialEventId;
   const [after, setAfter] = useState<GraphSnapshot | undefined>(initialAfter);
-  const [label, setLabel] = useState(defaultLabel);
+  // Pre-fill the label from the Event that set up this scenario (§12.2), unless
+  // the caller supplied an explicit default.
+  const resolvedDefaultLabel =
+    defaultLabel ||
+    (resolvedEventId
+      ? config.events.find((e) => e.id === resolvedEventId)?.label ?? ""
+      : "");
+  const [label, setLabel] = useState(resolvedDefaultLabel);
   const [temporalHours, setTemporalHours] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [duplicate, setDuplicate] = useState(false);

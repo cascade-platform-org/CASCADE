@@ -1,38 +1,38 @@
 "use client";
 
 /**
- * AuthGate — the first screen: identify yourself, or continue as a guest.
+ * AuthGate — the first screen: sign in / register, or continue as a guest.
  *
- * - "Continue" with a name/email = a local session identity (full rights in
- *   local dev; a labelled viewer against a real backend).
- * - "Sign in with Zitadel" (only shown when the backend enforces auth) starts
- *   the OIDC redirect.
- * - "Continue as guest" = anonymous viewer.
+ * - "Sign-In or Register" (only shown when the backend enforces auth) starts the
+ *   OIDC redirect to Zitadel, which hosts both login and self-service sign-up.
+ * - "Continue as a Guest" = a local session identity. The Name is optional; when
+ *   left blank a random guest name is generated. Guests have full rights in local
+ *   dev and are a labelled viewer against a real backend.
  */
 
 import { useState } from "react";
-import { User, LogIn, Eye } from "lucide-react";
+import { LogIn, Eye } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
+
+/** Friendly random guest name used when the visitor leaves the Name field blank. */
+function randomGuestName(): string {
+  const adjectives = ["Swift", "Calm", "Bright", "Quiet", "Bold", "Clever", "Gentle", "Brave"];
+  const animals = ["Otter", "Falcon", "Heron", "Fox", "Lynx", "Ibis", "Marten", "Wren"];
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  return `${pick(adjectives)} ${pick(animals)}`;
+}
 
 export function AuthGate({ onDone }: { onDone: () => void }) {
   const authEnabled = useAuthStore((s) => s.authEnabled);
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const setLocalProfile = useAuthStore((s) => s.setLocalProfile);
-  const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   const loginWithOidc = useAuthStore((s) => s.loginWithOidc);
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
 
-  function handleContinue(e: React.FormEvent) {
+  function handleGuest(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() && !email.trim()) return;
-    setLocalProfile(name.trim(), email.trim());
-    onDone();
-  }
-
-  function handleGuest() {
-    continueAsGuest();
+    setLocalProfile(name.trim() || randomGuestName(), "");
     onDone();
   }
 
@@ -59,7 +59,7 @@ export function AuthGate({ onDone }: { onDone: () => void }) {
               onClick={loginWithOidc}
               className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
-              <LogIn size={16} /> Sign in with Zitadel
+              <LogIn size={16} /> Sign-In or Register
             </button>
             <div className="mb-4 flex items-center gap-3 text-xs text-zinc-400">
               <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
@@ -69,44 +69,26 @@ export function AuthGate({ onDone }: { onDone: () => void }) {
           </>
         )}
 
-        <form onSubmit={handleContinue} className="space-y-3">
+        <form onSubmit={handleGuest} className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-500">Name</span>
+            <span className="mb-1 block text-xs font-medium text-zinc-500">
+              Name <span className="text-zinc-400">(optional)</span>
+            </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder="Left blank → a random name is used"
               autoFocus
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-500">
-              Email <span className="text-zinc-400">(optional)</span>
-            </span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
               className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />
           </label>
           <button
             type="submit"
-            disabled={!name.trim() && !email.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
-            <User size={16} /> Continue
+            <Eye size={16} /> Continue as a Guest
           </button>
         </form>
-
-        <button
-          onClick={handleGuest}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-        >
-          <Eye size={16} /> Continue as guest (viewer)
-        </button>
 
         <p className="mt-4 text-center text-xs text-zinc-400">
           Guests and viewers can build, analyse, and save locally. Running the

@@ -7,6 +7,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import { useNetworkStore } from "@/store/network-store";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,6 +68,14 @@ export interface UiState {
   scorecardPanelOpen: boolean;
   /** When true, the Save-to-Scorecard dialog is open independently of the Scorecard panel. */
   scorecardSaveDialogOpen: boolean;
+
+  // --- Situation window ---
+  /**
+   * The `event_applied` history entry id the user has dismissed the floating
+   * Situation window for. The window reappears automatically when a newer Event
+   * (a different entry id) is applied.
+   */
+  dismissedSituationId: string | null;
 
   // --- Intervention prioritisation panel ---
   interventionPanelOpen: boolean;
@@ -185,6 +194,9 @@ export interface UiActions {
   openScorecardSaveDialog: () => void;
   closeScorecardSaveDialog: () => void;
 
+  // --- Situation window ---
+  dismissSituation: (eventEntryId: string) => void;
+
   // --- Intervention panel ---
   toggleInterventionPanel: () => void;
   closeInterventionPanel: () => void;
@@ -235,7 +247,7 @@ export type UiStore = UiState & UiActions;
 // ---------------------------------------------------------------------------
 
 const initialState: UiState = {
-  propagationScope: "local",
+  propagationScope: "global",
   isPropagating: false,
   serverReachable: false,
   globalViewActive: false,
@@ -250,6 +262,7 @@ const initialState: UiState = {
   rulesManualPanelOpen: false,
   scorecardPanelOpen: false,
   scorecardSaveDialogOpen: false,
+  dismissedSituationId: null,
   interventionPanelOpen: false,
   attributeScanPanelOpen: false,
   pendingFocusNodeId: null,
@@ -300,6 +313,10 @@ export const useUiStore = create<UiStore>()(
     },
     setGlobalViewLayout(layout) {
       set((state) => { state.globalViewLayout = layout; });
+      // Grouped is a read-only layout: drop any lingering element selection so
+      // the Inspector shows the "All canvases" summary (with the toggle back to
+      // merged) rather than an editable node/edge panel.
+      if (layout === "grouped") useNetworkStore.getState().clearSelection();
     },
 
     // -------------------------------------------------------------------------
@@ -401,6 +418,10 @@ export const useUiStore = create<UiStore>()(
 
     closeScorecardSaveDialog() {
       set((state) => { state.scorecardSaveDialogOpen = false; });
+    },
+
+    dismissSituation(eventEntryId) {
+      set((state) => { state.dismissedSituationId = eventEntryId; });
     },
 
     // -------------------------------------------------------------------------

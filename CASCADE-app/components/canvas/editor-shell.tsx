@@ -8,6 +8,7 @@ import { FlowCanvasWithProvider } from "./flow-canvas";
 import { GroupedViewCanvasWithProvider } from "./global-view-canvas";
 import { MergedViewCanvasWithProvider } from "./merged-view-canvas";
 import { Inspector } from "./inspector";
+import { SituationWindow } from "./situation-window";
 import { Toolbox } from "./toolbox";
 import { ConfigModal } from "@/components/controls/config-modal";
 import { FileIoPanel } from "@/components/controls/file-io-panel";
@@ -116,10 +117,13 @@ export function EditorShell() {
             ? <MergedViewCanvasWithProvider />
             : <GroupedViewCanvasWithProvider />
           }
+          <SituationWindow />
         </div>
 
-        {/* Inspector: visible in single-canvas mode and merged global view (both editable) */}
-        {(!globalViewActive || globalViewLayout === "merged") && <Inspector />}
+        {/* Inspector: always visible. In grouped global view it stays mounted so
+            the "All" summary (with the view-mode toggle back to merged) is reachable
+            — only the editing Toolbox is hidden in that read-only layout. */}
+        <Inspector />
       </div>
 
       <StatusBar />
