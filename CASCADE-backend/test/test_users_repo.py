@@ -4,12 +4,12 @@ from __future__ import annotations
 from db import users as db_users
 
 
-async def test_upsert_new_user_defaults_to_viewer(migrated_db):
+async def test_upsert_new_user_defaults_to_analyst(migrated_db):
     async with migrated_db.acquire() as conn:
         user = await db_users.upsert_user(
             conn, external_id="sub-1", email="a@example.com", name="Ada"
         )
-    assert user.role_name == "viewer"  # least privilege by default
+    assert user.role_name == "analyst"  # ADR-0010 amendment (migration 005)
     assert user.email == "a@example.com"
     assert user.external_id == "sub-1"
 
@@ -19,14 +19,15 @@ async def test_upsert_returning_user_keeps_role_and_updates_profile(migrated_db)
         first = await db_users.upsert_user(
             conn, external_id="sub-2", email="old@example.com", name="Old"
         )
-        # An admin promotes them...
-        await db_users.set_user_role(conn, first.id, "analyst")
+        # An admin promotes them (manager: distinct from the analyst default,
+        # so this test still proves the role survives, not just the default)...
+        await db_users.set_user_role(conn, first.id, "manager")
         # ...then they log in again with a changed email/name.
         again = await db_users.upsert_user(
             conn, external_id="sub-2", email="new@example.com", name="New"
         )
     assert again.id == first.id            # same user
-    assert again.role_name == "analyst"    # role preserved across logins
+    assert again.role_name == "manager"    # role preserved across logins
     assert again.email == "new@example.com"  # profile refreshed
     assert again.name == "New"
 

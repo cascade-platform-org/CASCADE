@@ -52,8 +52,11 @@ async def test_seed_roles_present(clean_db):
     assert {"viewer", "analyst", "manager", "admin"} <= names
 
 
-async def test_new_user_defaults_to_viewer(clean_db):
-    """ADR-0010: a self-registered stranger must land at least privilege."""
+async def test_new_user_defaults_to_analyst(clean_db):
+    """ADR-0010 (amended, migration 005): a signed-in user (email verified by
+    definition — /callback rejects unverified id tokens) lands as analyst; the
+    entitlement caps, not the role gate, are the abuse defense. viewer is the
+    guest-preview/demotion role."""
     await run_migrations(clean_db)
     async with clean_db.acquire() as conn:
         await conn.execute(
@@ -64,7 +67,7 @@ async def test_new_user_defaults_to_viewer(clean_db):
         role = await conn.fetchval(
             "SELECT role_name FROM users WHERE external_id = $1", "sub-abc"
         )
-    assert role == "viewer"
+    assert role == "analyst"
 
 
 async def test_entitlements_seeded(clean_db):

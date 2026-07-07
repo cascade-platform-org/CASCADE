@@ -42,13 +42,14 @@ Permissions are additive. A user's effective permissions are the union of all pe
 
 The RBAC data model is two tables in PostgreSQL (see `db/schema.sql` for the authoritative DDL):
 
--- Users: created on first OAuth2 login (default role 'viewer' — migration 002)
+-- Users: created on first OAuth2 login (default role 'analyst' — migration 005;
+-- 'viewer' is the guest-preview/demotion role)
 CREATE TABLE users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     external_id VARCHAR(255) UNIQUE NOT NULL,   -- sub claim from OIDC
     email       VARCHAR(255) UNIQUE,            -- nullable: OIDC email claim is optional
     name        VARCHAR(255),
-    role_name   VARCHAR(50) NOT NULL DEFAULT 'viewer',
+    role_name   VARCHAR(50) NOT NULL DEFAULT 'analyst',
     created_at  TIMESTAMPTZ DEFAULT now(),
     updated_at  TIMESTAMPTZ DEFAULT now(),
     FOREIGN KEY (role_name) REFERENCES roles(name)

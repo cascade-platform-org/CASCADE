@@ -253,12 +253,12 @@ async def test_role_change_rolls_back_when_audit_fails(migrated_db, monkeypatch)
         raise RuntimeError("audit backend down")
 
     monkeypatch.setattr("db.audit.record", boom)
-    uid = await _make_user(migrated_db, "s-rcfail", "rcfail@x")  # starts as viewer
+    uid = await _make_user(migrated_db, "s-rcfail", "rcfail@x")  # starts as analyst (migration 005)
     async with _client_as(["admin"], raise_app_exceptions=False) as client:
         resp = await client.patch(
-            f"/api/admin/users/{uid}/role", json={"role": "analyst"}
+            f"/api/admin/users/{uid}/role", json={"role": "manager"}
         )
     assert resp.status_code == 500
     async with migrated_db.acquire() as conn:
         u = await db_users.get_user_by_id(conn, uid)
-    assert u.role_name == "viewer"  # role change rolled back with the audit failure
+    assert u.role_name == "analyst"  # role change rolled back with the audit failure

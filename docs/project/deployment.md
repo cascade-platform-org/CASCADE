@@ -19,12 +19,13 @@ The first public deployment is **self-service (anyone may register)**, single sm
 EU VM (~4 vCPU), and deliberately minimal in what it stores. The decisions below
 are fixed for v1; revisit them before scaling out.
 
-- **Authentication vs authorization split (ADR-0010).** Zitadel proves *who* a
-  user is; the app's Postgres owns *what they may do*. On first login the backend
-  upserts the user with the least-privileged role **`viewer`**, and RBAC reads the
-  role from the DB (not the token). Promotion to `analyst` is an admin `UPDATE`.
-  *Prerequisite:* the DB must be wired (asyncpg) and `db/schema.sql`'s new-user
-  default changed from `analyst` to `viewer`.
+- **Authentication vs authorization split (ADR-0010, amended).** Zitadel proves
+  *who* a user is; the app's Postgres owns *what they may do*. On first login the
+  backend upserts the user as **`analyst`** (migration 005) — sign-in already
+  requires a verified email, and the entitlement caps below (not the role gate)
+  are the abuse defense. `viewer` is the guest-preview/demotion role; not-signed-in
+  visitors hold no DB row at all. RBAC reads the role from the DB (not the token);
+  role changes are an admin `UPDATE`.
 - **Entitlement enforcement is mandatory before go-live (ADR-0008).** Public +
   unbounded engine = DoS/cost risk. Enforce per-role `max_nodes` and a per-user,
   per-minute engine-evaluation **token bucket** *before* calling the engine.
@@ -153,7 +154,7 @@ can obtain Let's Encrypt certificates. See "Identity Provider Setup" and the
 
 ### Create the First Admin
 
-New users self-register as `viewer` (ADR-0010). To bootstrap yourself: register
+New users self-register as `analyst` (ADR-0010 amendment). To bootstrap yourself: register
 through the app once, then promote your account (the script only promotes an
 EXISTING user — running it before registering is refused, because a pre-created
 placeholder row would permanently break that email's first login):

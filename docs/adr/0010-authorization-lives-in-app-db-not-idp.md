@@ -1,14 +1,28 @@
 # Authorization (role + entitlement) lives in the app DB, not the IdP
 
-**Status:** accepted
+**Status:** accepted (amended 2026-07-06: default role `viewer` → `analyst`, see below)
 
 For the public self-service deployment, Zitadel (the OIDC provider) is responsible
 only for **authentication** — proving *who* a caller is. **Authorization** — what
 role a user holds and which Entitlement (ADR-0008) that role grants — lives
 exclusively in the application's Postgres `users` / `roles` tables. On a user's
-first authenticated request the backend upserts them with the least-privileged
-role (`viewer`), and request-time RBAC reads `users.role_name` from the DB, not
+first authenticated request the backend upserts them with the default role,
+and request-time RBAC reads `users.role_name` from the DB, not
 from a JWT claim. Promotion is a single `UPDATE`.
+
+## Amendment (2026-07-06): default role is `analyst`, `viewer` is for guests
+
+Originally new users landed as `viewer` and required manual promotion. In
+practice sign-in already requires a **verified email** (the `/callback`
+exchange rejects unverified id tokens), and the actual abuse defenses are the
+per-role Entitlements (ADR-0008: `max_nodes` → 413, evals/minute bucket →
+429) — the role gate added operator toil (promote every signup) without
+adding safety. New posture (migration 005):
+
+- **not signed in (guest)** → viewer experience, no DB row;
+- **signed in (verified email)** → `analyst` by default — may propagate/sync
+  within entitlement caps;
+- `viewer` remains as an explicit demotion target and the guest preview role.
 
 ## Why
 
