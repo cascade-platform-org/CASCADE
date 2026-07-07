@@ -175,9 +175,14 @@ export default function AdminPage() {
                       <td className="px-4 py-3">
                         <select
                           value={u.role}
-                          disabled={busyId === u.id}
+                          disabled={busyId === u.id || isSelf}
+                          title={
+                            isSelf
+                              ? "You cannot change your own role — ask another admin (avoids locking yourself out)."
+                              : undefined
+                          }
                           onChange={(e) => void changeRole(u, e.target.value)}
-                          className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                          className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         >
                           {roles.map((r) => (
                             <option key={r.name} value={r.name}>
@@ -189,9 +194,13 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => void removeUser(u)}
-                          disabled={busyId === u.id}
-                          title="Delete account (app + identity provider)"
-                          className="rounded-md p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40"
+                          disabled={busyId === u.id || isSelf}
+                          title={
+                            isSelf
+                              ? "Use 'Delete account' in your own profile menu instead."
+                              : "Delete account (app + identity provider)"
+                          }
+                          className="rounded-md p-1.5 text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/40"
                         >
                           <Trash2 size={15} />
                         </button>

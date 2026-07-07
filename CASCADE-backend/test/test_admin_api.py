@@ -109,6 +109,31 @@ async def test_admin_can_demote_admin(migrated_db):
     assert resp.json()["role"] == "analyst"
 
 
+async def test_admin_cannot_change_own_role(migrated_db):
+    """Regression test for a live incident: an admin demoted themselves via
+    the panel with no guard, leaving zero admins able to grant it back
+    through the UI (the escalation guard requires can_admin, which they just
+    gave up) — recovery needed SSH + create_admin.py."""
+    uid = await _make_admin(migrated_db, "actor", "self@x")  # sub matches _client_as default
+    async with _client_as(["admin"], sub="actor", email="self@x") as client:
+        resp = await client.patch(
+            f"/api/admin/users/{uid}/role", json={"role": "manager"}
+        )
+    assert resp.status_code == 400
+    async with migrated_db.acquire() as conn:
+        u = await db_users.get_user_by_id(conn, uid)
+    assert u.role_name == "admin"  # unchanged
+
+
+async def test_admin_cannot_delete_own_account_via_admin_route(migrated_db):
+    uid = await _make_admin(migrated_db, "actor", "self2@x")
+    async with _client_as(["admin"], sub="actor", email="self2@x") as client:
+        resp = await client.delete(f"/api/admin/users/{uid}")
+    assert resp.status_code == 400
+    async with migrated_db.acquire() as conn:
+        assert await db_users.get_user_by_id(conn, uid) is not None  # not deleted
+
+
 async def test_admin_can_mint_admin(migrated_db):
     uid = await _make_user(migrated_db, "s-4", "four@x")
     async with _client_as(["admin"]) as client:

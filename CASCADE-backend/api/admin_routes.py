@@ -81,6 +81,19 @@ async def assign_role(
             detail=f"No user with id '{user_id}'.",
         )
 
+    # Self-lockout guard: an admin demoting THEIR OWN account (e.g. the only
+    # admin clicking their own row) leaves nothing in the UI able to grant
+    # admin back — the escalation guard below requires can_admin, which they
+    # just gave up. Recovery would need SSH + scripts/create_admin.py. Refuse
+    # outright: changing your own role is not this route's job (this incident
+    # happened in production before this guard existed).
+    if target.external_id == actor.sub:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own role. Ask another admin, or use "
+            "scripts/create_admin.py if none remain.",
+        )
+
     # Escalation guard: any change that grants OR removes 'admin' requires admin
     # privileges. Otherwise a manager could mint admins, or strip every existing
     # admin (locking out the admin tier, since managers cannot restore it).
@@ -133,6 +146,17 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No user with id '{user_id}'.",
+        )
+    # Self-deletion has its own dedicated, self-service route (DELETE
+    # /api/auth/me) with its own audit trail (self=True). This admin route is
+    # for acting on OTHERS; the same self-lockout reasoning as assign_role
+    # applies (an only-admin deleting themselves here leaves no one to recover
+    # the account, and no admin to grant a fresh one).
+    if target.external_id == actor.sub:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use 'Delete account' in your own profile menu to delete "
+            "your own account, not this admin route.",
         )
     # Same escalation guard as role changes: removing an admin needs admin.
     if target.role_name == "admin" and not has_permission(actor.roles, "can_admin"):
