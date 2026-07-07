@@ -86,48 +86,6 @@
       ],
       "title": "AuthUser",
       "type": "object"
-    },
-    "TokenPair": {
-      "properties": {
-        "access_token": {
-          "title": "Access Token",
-          "type": "string"
-        },
-        "refresh_token": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Refresh Token"
-        },
-        "expires_in": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Expires In"
-        },
-        "token_type": {
-          "default": "Bearer",
-          "title": "Token Type",
-          "type": "string"
-        }
-      },
-      "required": [
-        "access_token"
-      ],
-      "title": "TokenPair",
-      "type": "object"
     }
   }
 }

@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth.oauth2 import verify_token
@@ -26,9 +26,14 @@ logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
 
+# Name shared with api/auth_routes.py (defined there next to the set/clear
+# helpers); duplicated as a literal to avoid a routes->dependencies import cycle.
+_ACCESS_COOKIE = "cascade_access"
+
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    access_cookie: Annotated[str | None, Cookie(alias=_ACCESS_COOKIE)] = None,
 ) -> AuthUser:
     """Validate the Bearer token and resolve the caller's authorization.
 
@@ -50,7 +55,9 @@ async def get_current_user(
             roles=["admin"],
         )
 
-    token = credentials.credentials if credentials else ""
+    # Browser sessions authenticate via the httpOnly cookie (set at /callback);
+    # a Bearer header still wins when present (API clients, tests, tools).
+    token = credentials.credentials if credentials else (access_cookie or "")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

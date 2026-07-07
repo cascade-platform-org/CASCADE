@@ -37,15 +37,10 @@ export const AuthUserSchema = z.object({
   db_id: z.string().nullable().optional(),
 });
 
-export const TokenPairSchema = z.object({
-  access_token: z.string().min(1),
-  /** Opaque token used to obtain a new access_token without re-login.
-   *  Null when the IdP does not issue one (e.g. refresh grant without rotation). */
-  refresh_token: z.string().nullable(),
-  /** Seconds until the access_token expires. Null when the IdP omits it. */
-  expires_in: z.number().int().positive().nullable(),
-  token_type: z.string(),
-});
+// TokenPair was removed on both sides of the boundary when tokens moved into
+// httpOnly cookies (backend schemas/auth.py has the matching note): /callback
+// and /refresh now return {"ok": true} and set cookies, so there is no token
+// response body left to describe.
 
 // ---------------------------------------------------------------------------
 // Propagation — POST /api/propagate
@@ -138,7 +133,6 @@ export const EngineAlgorithmsSchema = z.object({
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
-export type TokenPair = z.infer<typeof TokenPairSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;
 export type HeuristicMeta = z.infer<typeof HeuristicMetaSchema>;

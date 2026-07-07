@@ -2,29 +2,31 @@
  * auth-store.ts — who the current user is, and what they may do.
  *
  * Three modes:
- *   - "oidc"  : signed in via Zitadel (production). Carries a real access token.
+ *   - "oidc"  : signed in via Zitadel (production). The session lives in
+ *     httpOnly cookies set by the backend — this store never sees a token.
  *   - "local" : a named local session (dev, or a labelled guest in production).
  *   - "guest" : anonymous viewer.
  *
  * The backend's /api/auth/me tells us whether auth is actually enforced
  * (`authEnabled`). In local-only mode (no IdP) every request is a synthetic
  * admin, so a "local" profile has full rights; with a real IdP, only a genuine
- * OIDC token does — a "local" profile is then treated as a labelled viewer.
+ * OIDC session does — a "local" profile is then treated as a labelled viewer.
  *
- * Session choice is persisted to localStorage so the gate isn't shown on every
- * reload. (The OIDC token is persisted too for convenience; a hardened setup
- * would use an httpOnly cookie + refresh flow — noted as future work.)
+ * Session choice (mode + display user) is persisted to localStorage so the
+ * gate isn't shown on every reload. Tokens are NOT stored here: they live in
+ * httpOnly cookies (cascade_access / cascade_refresh) that JavaScript cannot
+ * read, so an XSS cannot exfiltrate the session.
  */
 import { create } from "zustand";
 import { z } from "zod";
 import {
+  deleteMyAccount,
   fetchAuthConfig,
   fetchMe,
+  logoutSession,
   oidcLoginUrl,
-  refreshTokens,
-  setAuthToken,
+  refreshSession,
   setTokenRefresher,
-  type OidcTokens,
 } from "@/lib/api-client";
 import type { MeResponse } from "@/lib/schemas/auth";
 
@@ -55,7 +57,9 @@ export interface SessionUser {
 }
 
 // localStorage is a boundary like any other (a user, extension, or attacker can
-// write anything there) — validate on load instead of casting.
+// write anything there) — validate on load instead of casting. Tokens are NOT
+// part of this (httpOnly cookies own them); entries written by older versions
+// carried token/refreshToken keys, which Zod simply ignores here.
 const PersistedSchema = z.object({
   mode: z.enum(["unknown", "guest", "local", "oidc"]),
   user: z
@@ -66,8 +70,6 @@ const PersistedSchema = z.object({
       roles: z.array(z.string()),
     })
     .nullable(),
-  token: z.string().nullable(),
-  refreshToken: z.string().nullable(),
 });
 
 type Persisted = z.infer<typeof PersistedSchema>;
@@ -149,17 +151,31 @@ interface AuthState {
   authEnabled: boolean;
   mode: AuthMode;
   user: SessionUser | null;
-  token: string | null;
-  refreshToken: string | null;
+  /** True when a previously signed-in session could not be restored (cookies
+   *  expired and the refresh failed) — the gate shows a notice instead of
+   *  silently demoting the user to guest with no explanation. */
+  sessionExpired: boolean;
 
   /** Run once on app load: learn auth mode and restore any saved session. */
   init: () => Promise<void>;
   continueAsGuest: () => void;
   setLocalProfile: (displayName: string, email: string) => void;
   loginWithOidc: () => Promise<void>;
-  /** Called by the OIDC callback page once tokens have been obtained. */
-  completeOidcLogin: (tokens: OidcTokens) => Promise<void>;
-  signOut: () => void;
+  /** Called by the OIDC callback page after the code exchange set the session
+   *  cookies. Resolves the identity via /me. */
+  completeOidcLogin: () => Promise<void>;
+  /** Ends the session: clears cookies server-side and follows the IdP's
+   *  end_session URL so the SSO session dies too (otherwise the next sign-in
+   *  silently re-authenticates the same account). */
+  signOut: () => Promise<void>;
+  /** Return to the identity gate WITHOUT ending any session — used by
+   *  "Cancel" flows (e.g. the project wizard) where the user wants to change
+   *  who they are, not log out. An OIDC session's cookies stay valid, so
+   *  re-picking sign-in is instant. */
+  showGate: () => void;
+  /** Self-service GDPR erasure (app DB + IdP), then sign-out. Returns an
+   *  error message, or null on success. */
+  deleteAccount: () => Promise<string | null>;
   /** UI-level permission check (backend still enforces authoritatively). */
   hasPermission: (permission: string) => boolean;
 }
@@ -169,8 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   authEnabled: false,
   mode: "unknown",
   user: null,
-  token: null,
-  refreshToken: null,
+  sessionExpired: false,
 
   init: async () => {
     if (get().initialized) return;
@@ -182,17 +197,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // null (server unreachable) is treated as not-enforced (local-only).
     const authEnabled = (await fetchAuthConfig()) ?? false;
 
-    const restoreChoice = (): void => {
+    const restoreChoice = (expired = false): void => {
       // Restore a prior guest/local choice; otherwise show the gate.
-      setAuthToken(null);
       const keep = persisted?.mode === "guest" || persisted?.mode === "local";
       set({
         initialized: true,
         authEnabled,
         mode: keep ? persisted!.mode : "unknown",
         user: keep ? persisted!.user : null,
-        token: null,
-        refreshToken: null,
+        sessionExpired: expired && !keep,
       });
     };
 
@@ -201,69 +214,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    // Auth is enforced: validate any persisted OIDC token via /me.
-    if (persisted?.token) {
-      setAuthToken(persisted.token);
+    // Auth is enforced: a prior OIDC session lives in httpOnly cookies the
+    // browser sends automatically — probe /me to see if it is still valid.
+    if (persisted?.mode === "oidc") {
       const me = await fetchMe();
       if (me) {
+        const user = userFromMe(me);
+        savePersisted({ mode: "oidc", user });
         set({
           initialized: true,
           authEnabled: true,
           mode: "oidc",
-          user: userFromMe(me),
-          token: persisted.token,
-          refreshToken: persisted.refreshToken,
+          user,
+          sessionExpired: false,
         });
         return;
       }
-      // Access token invalid/expired — try to refresh before giving up.
-      if (persisted.refreshToken) {
-        const refreshed = await refreshTokens(persisted.refreshToken);
-        if (refreshed) {
-          setAuthToken(refreshed.access_token);
-          const me2 = await fetchMe();
-          if (me2) {
-            const user = userFromMe(me2);
-            savePersisted({
-              mode: "oidc",
-              user,
-              token: refreshed.access_token,
-              refreshToken: refreshed.refresh_token,
-            });
-            set({
-              initialized: true,
-              authEnabled: true,
-              mode: "oidc",
-              user,
-              token: refreshed.access_token,
-              refreshToken: refreshed.refresh_token,
-            });
-            return;
-          }
+      // Access cookie expired — try rotating via the refresh cookie.
+      if (await refreshSession()) {
+        const me2 = await fetchMe();
+        if (me2) {
+          const user = userFromMe(me2);
+          savePersisted({ mode: "oidc", user });
+          set({
+            initialized: true,
+            authEnabled: true,
+            mode: "oidc",
+            user,
+            sessionExpired: false,
+          });
+          return;
         }
       }
-      // fall through to the gate.
+      // The session is genuinely gone: fall through to the gate, flagged so
+      // the user sees WHY they are suddenly signed out.
+      clearPersisted();
+      restoreChoice(true);
+      return;
     }
 
     restoreChoice();
   },
 
   continueAsGuest: () => {
-    setAuthToken(null);
-    savePersisted({ mode: "guest", user: GUEST_USER, token: null, refreshToken: null });
-    set({ mode: "guest", user: GUEST_USER, token: null, refreshToken: null });
+    savePersisted({ mode: "guest", user: GUEST_USER });
+    set({ mode: "guest", user: GUEST_USER, sessionExpired: false });
   },
 
   setLocalProfile: (displayName, email) => {
-    setAuthToken(null);
     const user: SessionUser = {
       sub: `local:${email || displayName}`,
       email,
       displayName: displayName || email || "User",
       roles: ["viewer"], // meaningful only when authEnabled; ignored in local dev
     };
-    savePersisted({ mode: "local", user, token: null, refreshToken: null });
-    set({ mode: "local", user, token: null, refreshToken: null });
+    savePersisted({ mode: "local", user });
+    set({ mode: "local", user, sessionExpired: false });
   },
 
   loginWithOidc: async () => {
@@ -295,33 +301,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  completeOidcLogin: async (tokens) => {
-    setAuthToken(tokens.access_token);
+  completeOidcLogin: async () => {
+    // The code exchange already set the httpOnly cookies; /me proves they work
+    // and tells us who we are.
     const me = await fetchMe();
-    if (!me) {
-      setAuthToken(null);
-      return;
-    }
+    if (!me) return;
     const user = userFromMe(me);
-    savePersisted({
-      mode: "oidc",
-      user,
-      token: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-    });
-    set({
-      authEnabled: true,
-      mode: "oidc",
-      user,
-      token: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-    });
+    savePersisted({ mode: "oidc", user });
+    set({ authEnabled: true, mode: "oidc", user, sessionExpired: false });
   },
 
-  signOut: () => {
-    setAuthToken(null);
+  signOut: async () => {
+    const wasOidc = get().mode === "oidc";
     clearPersisted();
-    set({ mode: "unknown", user: null, token: null, refreshToken: null });
+    set({ mode: "unknown", user: null, sessionExpired: false });
+    if (wasOidc) {
+      // Backend clears the cookies and hands back the IdP end_session URL.
+      // Following it is what actually logs the user out of Zitadel — without
+      // it the SSO session survives and the next sign-in silently
+      // re-authenticates the same account (bad on a shared computer).
+      const logoutUrl = await logoutSession();
+      if (logoutUrl) window.location.href = logoutUrl;
+    }
+  },
+
+  showGate: () => {
+    clearPersisted();
+    set({ mode: "unknown", user: null, sessionExpired: false });
+  },
+
+  deleteAccount: async () => {
+    const error = await deleteMyAccount();
+    if (error) return error;
+    await get().signOut();
+    return null;
   },
 
   hasPermission: (permission) => {
@@ -336,26 +349,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 // Register the 401 refresh handler with the api-client (module-level seam, no
-// import cycle). On a 401 the client calls this; we swap in a fresh access
-// token, or sign out if the refresh token is dead.
+// import cycle). On a 401 the client calls this; the backend rotates the
+// session cookies, or we sign out if the refresh session is dead.
 setTokenRefresher(async () => {
-  const { refreshToken, user } = useAuthStore.getState();
-  if (!refreshToken) return null;
-  const tokens = await refreshTokens(refreshToken);
-  if (!tokens) {
-    useAuthStore.getState().signOut();
-    return null;
+  if (useAuthStore.getState().mode !== "oidc") return false;
+  const ok = await refreshSession();
+  if (!ok) {
+    clearPersisted();
+    useAuthStore.setState({ mode: "unknown", user: null, sessionExpired: true });
   }
-  setAuthToken(tokens.access_token);
-  savePersisted({
-    mode: "oidc",
-    user,
-    token: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-  });
-  useAuthStore.setState({
-    token: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-  });
-  return tokens.access_token;
+  return ok;
 });

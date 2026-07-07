@@ -53,12 +53,14 @@ export default function OidcCallback() {
       return;
     }
     (async () => {
-      const tokens = await exchangeOidcCode(code, codeVerifier);
-      if (!tokens) {
+      // On success the backend set the httpOnly session cookies; no tokens
+      // ever reach this page's JavaScript.
+      const ok = await exchangeOidcCode(code, codeVerifier);
+      if (!ok) {
         setError("Sign-in failed. Please try again.");
         return;
       }
-      await useAuthStore.getState().completeOidcLogin(tokens);
+      await useAuthStore.getState().completeOidcLogin();
       window.location.replace("/");
     })();
   }, []);

@@ -64,7 +64,7 @@ from schemas.results import (                        # noqa: E402
     ElementUpdate,
     PropagationResult,
 )
-from schemas.auth import AuthUser, TokenPair         # noqa: E402
+from schemas.auth import AuthUser                    # noqa: E402
 
 OUTPUT_DIR = ROOT / "CASCADE-app" / "shared" / "schemas"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,7 @@ def main() -> None:
     )
     export(
         "auth.schema.json",
-        AuthUser, TokenPair,
+        AuthUser,
     )
 
     print("\nDone. Diff CASCADE-app/shared/schemas/ and update CASCADE-app/lib/schemas/ accordingly.")

@@ -6,10 +6,10 @@
  * are defined once. When auth lands (Slice 4), the Authorization header is
  * added here and every caller gets it for free.
  */
+import { z } from "zod";
 import { PropagationResultSchema, type PropagationResult } from "@/lib/schemas/propagation";
 import {
   EngineAlgorithmsSchema,
-  TokenPairSchema,
   type EngineAlgorithms,
   type PropagationRequest,
 } from "@/lib/schemas/api";
@@ -22,40 +22,30 @@ import {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
-// Auth token — set by the auth store when a user signs in. Kept module-level
-// (not imported from the store) so this file has no dependency on the store,
-// avoiding an import cycle. Every request below picks it up automatically.
+// Session transport: httpOnly cookies. The backend sets cascade_access /
+// cascade_refresh at /callback; the browser attaches them automatically on
+// same-origin requests. JavaScript never sees a token — an XSS can ride the
+// session while the page is open but cannot exfiltrate credentials, which was
+// the main risk of the previous localStorage scheme.
 // ---------------------------------------------------------------------------
 
-let _authToken: string | null = null;
+// A refresh callback registered by the auth store: on a 401 it rotates the
+// session cookies via POST /refresh (true = retry is worthwhile). Kept as a
+// module-level seam so this file never imports the store (no cycle).
+let _refresher: (() => Promise<boolean>) | null = null;
 
-export function setAuthToken(token: string | null): void {
-  _authToken = token;
-}
-
-function authHeaders(base?: Record<string, string>): Record<string, string> {
-  const headers: Record<string, string> = { ...(base ?? {}) };
-  if (_authToken) headers.Authorization = `Bearer ${_authToken}`;
-  return headers;
-}
-
-// A refresh callback registered by the auth store: on a 401 it obtains a fresh
-// access token (or null if refresh failed). Kept as a module-level seam so this
-// file never imports the store (no cycle).
-let _refresher: (() => Promise<string | null>) | null = null;
-
-export function setTokenRefresher(fn: (() => Promise<string | null>) | null): void {
+export function setTokenRefresher(fn: (() => Promise<boolean>) | null): void {
   _refresher = fn;
 }
 
 // Single-flight the refresh: when several requests 401 at once they must share
-// ONE refresh call. Otherwise each would present the same refresh token, and an
+// ONE refresh call. Otherwise each would present the same refresh cookie, and an
 // IdP that rotates refresh tokens (Zitadel does by default) invalidates it after
 // the first — the rest fail and sign the user out spuriously.
-let _refreshInFlight: Promise<string | null> | null = null;
+let _refreshInFlight: Promise<boolean> | null = null;
 
-function refreshOnce(): Promise<string | null> {
-  if (!_refresher) return Promise.resolve(null);
+function refreshOnce(): Promise<boolean> {
+  if (!_refresher) return Promise.resolve(false);
   if (!_refreshInFlight) {
     _refreshInFlight = _refresher().finally(() => {
       _refreshInFlight = null;
@@ -65,25 +55,17 @@ function refreshOnce(): Promise<string | null> {
 }
 
 /**
- * fetch with the Bearer header attached; on a 401, transparently refresh the
- * token once (shared across concurrent callers) and retry. Use for
- * token-protected endpoints.
+ * fetch for session-protected endpoints; on a 401, transparently rotate the
+ * session cookies once (shared across concurrent callers) and retry.
  */
 async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const base = (init.headers as Record<string, string> | undefined) ?? {};
-  const send = () => fetch(url, { ...init, headers: authHeaders(base) });
+  const send = () => fetch(url, init);
   let res = await send();
-  if (res.status === 401 && _authToken && _refresher) {
+  if (res.status === 401 && _refresher) {
     const refreshed = await refreshOnce();
-    if (refreshed) res = await send(); // authHeaders now carries the new token
+    if (refreshed) res = await send(); // the rotated cookie rides automatically
   }
   return res;
-}
-
-export interface OidcTokens {
-  access_token: string;
-  refresh_token: string | null;
-  expires_in: number | null;
 }
 
 /** fetch with an abort-based timeout, so no request can hang the caller. */
@@ -120,12 +102,10 @@ export async function fetchAuthConfig(): Promise<boolean | null> {
   }
 }
 
-/** GET /api/auth/me — current identity (requires a valid token when auth is on). */
+/** GET /api/auth/me — current identity (session cookie carries the auth). */
 export async function fetchMe(): Promise<MeResponse | null> {
   try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/auth/me`, {
-      headers: authHeaders(),
-    });
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/me`);
     if (!res.ok) return null;
     return MeResponseSchema.parse(await res.json());
   } catch {
@@ -146,25 +126,13 @@ export function oidcLoginUrl(state: string, codeChallenge: string): string {
   return `${API_BASE}/api/auth/login?${params.toString()}`;
 }
 
-/** Validate a token-endpoint response at the boundary (Zod, like every other
- *  endpoint) instead of trusting its shape. Null on mismatch. */
-function toTokens(data: unknown): OidcTokens | null {
-  const parsed = TokenPairSchema.safeParse(data);
-  if (!parsed.success) return null;
-  return {
-    access_token: parsed.data.access_token,
-    refresh_token: parsed.data.refresh_token,
-    expires_in: parsed.data.expires_in,
-  };
-}
-
-/** Exchange an OIDC authorization code for tokens via the backend.
- *  `codeVerifier` is the PKCE verifier generated before the redirect — the
- *  backend forwards it to the IdP's token endpoint in place of a client_secret. */
+/** Exchange an OIDC authorization code via the backend, which sets the
+ *  httpOnly session cookies on success (no tokens in the body — JS never sees
+ *  them). `codeVerifier` is the PKCE verifier generated before the redirect. */
 export async function exchangeOidcCode(
   code: string,
   codeVerifier: string,
-): Promise<OidcTokens | null> {
+): Promise<boolean> {
   try {
     const params = new URLSearchParams({ code, code_verifier: codeVerifier });
     const res = await fetchWithTimeout(
@@ -172,32 +140,50 @@ export async function exchangeOidcCode(
       {},
       15_000,
     );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Rotate the session cookies via the refresh cookie. false => must re-login. */
+export async function refreshSession(): Promise<boolean> {
+  try {
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/auth/refresh`,
+      { method: "POST" },
+      15_000,
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** POST /api/auth/logout — clears the session cookies; returns the IdP's
+ *  end_session URL the browser must visit to kill the SSO session too (null
+ *  when auth is off or the IdP exposes none). */
+export async function logoutSession(): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/logout`, { method: "POST" });
     if (!res.ok) return null;
-    return toTokens(await res.json());
+    const body = (await res.json()) as { logout_url?: string | null };
+    return body.logout_url ?? null;
   } catch {
     return null;
   }
 }
 
-/** Exchange a refresh token for a fresh access token. Null => must re-login. */
-export async function refreshTokens(refreshToken: string): Promise<OidcTokens | null> {
+/** DELETE /api/auth/me — self-service GDPR account erasure (app DB + IdP).
+ *  Returns an error message, or null on success. */
+export async function deleteMyAccount(): Promise<string | null> {
   try {
-    const res = await fetchWithTimeout(
-      `${API_BASE}/api/auth/refresh`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      },
-      15_000,
-    );
-    if (!res.ok) return null;
-    const tokens = toTokens(await res.json());
-    // Some IdPs don't rotate the refresh token; keep the old one if absent.
-    if (tokens && !tokens.refresh_token) tokens.refresh_token = refreshToken;
-    return tokens;
+    const res = await authedFetch(`${API_BASE}/api/auth/me`, { method: "DELETE" });
+    if (res.ok) return null;
+    const detail = await res.text().catch(() => res.statusText);
+    return `Deletion failed (${res.status}): ${detail}`;
   } catch {
-    return null;
+    return "Deletion failed: network error.";
   }
 }
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -262,4 +248,58 @@ export async function getEngineAlgorithms(): Promise<EngineAlgorithms> {
   const response = await authedFetch(`${API_BASE}/api/engine/algorithms`);
   if (!response.ok) throw new Error(`Server returned ${response.status}`);
   return EngineAlgorithmsSchema.parse(await response.json());
+}
+
+// ---------------------------------------------------------------------------
+// Admin (requires can_manage_users; the backend enforces, this just calls)
+// ---------------------------------------------------------------------------
+
+const AdminUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  display_name: z.string(),
+  role: z.string(),
+});
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+const AdminRoleSchema = z.object({
+  name: z.string(),
+  permissions: z.array(z.string()),
+});
+export type AdminRole = z.infer<typeof AdminRoleSchema>;
+
+/** GET /api/admin/users — all accounts. Throws on non-2xx. */
+export async function adminListUsers(): Promise<AdminUser[]> {
+  const res = await authedFetch(`${API_BASE}/api/admin/users`);
+  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  return z.array(AdminUserSchema).parse(await res.json());
+}
+
+/** GET /api/admin/roles — role names + permissions. Throws on non-2xx. */
+export async function adminListRoles(): Promise<AdminRole[]> {
+  const res = await authedFetch(`${API_BASE}/api/admin/roles`);
+  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  return z.array(AdminRoleSchema).parse(await res.json());
+}
+
+/** PATCH /api/admin/users/{id}/role. Returns error message or null. */
+export async function adminSetRole(userId: string, role: string): Promise<string | null> {
+  const res = await authedFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(userId)}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+  if (res.ok) return null;
+  const detail = await res.text().catch(() => res.statusText);
+  return `Role change failed (${res.status}): ${detail}`;
+}
+
+/** DELETE /api/admin/users/{id} — full account erasure. Error message or null. */
+export async function adminDeleteUser(userId: string): Promise<string | null> {
+  const res = await authedFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+  if (res.ok) return null;
+  const detail = await res.text().catch(() => res.statusText);
+  return `Deletion failed (${res.status}): ${detail}`;
 }

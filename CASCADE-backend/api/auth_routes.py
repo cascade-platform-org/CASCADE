@@ -7,9 +7,9 @@ synthetic admin user and the OIDC routes return 501.
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
@@ -25,6 +25,48 @@ from schemas.auth import AuthUser
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# ---------------------------------------------------------------------------
+# Token cookies (httpOnly). Tokens never reach JavaScript: an XSS can still
+# *use* the session while the page is open, but cannot exfiltrate the refresh
+# token for offline reuse — the main risk of the previous localStorage scheme.
+# SameSite=Lax blocks cross-site POST/PATCH/DELETE from carrying the cookies
+# (our state-changing routes are all non-GET), which is the CSRF story.
+# ---------------------------------------------------------------------------
+
+ACCESS_COOKIE = "cascade_access"
+REFRESH_COOKIE = "cascade_refresh"
+_REFRESH_MAX_AGE = 30 * 24 * 3600  # 30 days; Zitadel rotates it on each use
+
+
+def _set_token_cookies(response: Response, tokens: dict) -> None:
+    secure = get_settings().env == "production"
+    response.set_cookie(
+        ACCESS_COOKIE,
+        tokens["access_token"] or "",
+        max_age=int(tokens.get("expires_in") or 3600),
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/api",
+    )
+    if tokens.get("refresh_token"):
+        response.set_cookie(
+            REFRESH_COOKIE,
+            tokens["refresh_token"],
+            max_age=_REFRESH_MAX_AGE,
+            httponly=True,
+            secure=secure,
+            samesite="lax",
+            # Narrow path: the refresh token is only ever needed by /refresh,
+            # so no other request carries it.
+            path="/api/auth/refresh",
+        )
+
+
+def _clear_token_cookies(response: Response) -> None:
+    response.delete_cookie(ACCESS_COOKIE, path="/api")
+    response.delete_cookie(REFRESH_COOKIE, path="/api/auth/refresh")
 
 
 class MeResponse(BaseModel):
@@ -206,6 +248,7 @@ async def _token_exchange(
 
 @router.get("/callback", summary="OIDC authorization code callback")
 async def callback(
+    response: Response,
     code: str = Query(...),
     code_verifier: str = Query(...),
     conn: DBConn = Depends(get_connection),
@@ -236,19 +279,57 @@ async def callback(
             )
         except Exception:  # noqa: BLE001 — profile capture is best-effort
             logger.warning("Could not persist profile claims at login.", exc_info=True)
-    return payload
+
+    # Tokens travel as httpOnly cookies only — never in the body, so page
+    # JavaScript (and any XSS running as it) can never read them.
+    _set_token_cookies(response, payload)
+    return {"ok": True}
 
 
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
-@router.post("/refresh", summary="Exchange a refresh token for a new access token")
-async def refresh(body: RefreshRequest) -> dict:
+@router.post("/refresh", summary="Rotate the session cookies via the refresh token")
+async def refresh(
+    response: Response,
+    refresh_cookie: str | None = Cookie(None, alias=REFRESH_COOKIE),
+) -> dict:
     # 401 on failure => the refresh token is invalid/expired; client must re-login.
+    if not refresh_cookie:
+        raise HTTPException(status_code=401, detail="No refresh session.")
     payload, _ = await _token_exchange(
-        {"grant_type": "refresh_token", "refresh_token": body.refresh_token},
+        {"grant_type": "refresh_token", "refresh_token": refresh_cookie},
         failure_status=401,
         failure_detail="Token refresh failed.",
     )
-    return payload
+    _set_token_cookies(response, payload)
+    return {"ok": True}
+
+
+@router.post("/logout", summary="End the session (cookies + IdP SSO session)")
+async def logout(response: Response) -> dict:
+    """Clear the token cookies and hand back the IdP's end_session URL.
+
+    Clearing cookies alone is NOT a logout: the Zitadel SSO session survives,
+    so the next 'sign in' silently re-authenticates the same account — on a
+    shared computer that user cannot actually leave. The frontend must follow
+    `logout_url` (RP-initiated logout, OIDC session management) so the IdP
+    session dies too; Zitadel then redirects back to `post_logout_redirect_uri`
+    (registered on the app as https://app.<domain>/).
+    """
+    _clear_token_cookies(response)
+
+    settings = get_settings()
+    if not settings.auth_enabled:
+        return {"logout_url": None}
+
+    oidc_cfg = await fetch_oidc_config()
+    end_session = oidc_cfg.get("end_session_endpoint")
+    if not end_session:
+        return {"logout_url": None}
+
+    # The app's public origin, derived from the registered redirect URI
+    # (https://app.<domain>/auth/callback -> https://app.<domain>/).
+    parts = urlsplit(settings.oidc_redirect_uri)
+    post_logout = f"{parts.scheme}://{parts.netloc}/"
+    params = urlencode(
+        {"post_logout_redirect_uri": post_logout, "client_id": settings.oidc_client_id}
+    )
+    return {"logout_url": f"{end_session}?{params}"}

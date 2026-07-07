@@ -16,6 +16,7 @@ import { useAuthStore } from "@/store/auth-store";
 
 export function AuthGate({ onDone }: { onDone: () => void }) {
   const authEnabled = useAuthStore((s) => s.authEnabled);
+  const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const setLocalProfile = useAuthStore((s) => s.setLocalProfile);
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   const loginWithOidc = useAuthStore((s) => s.loginWithOidc);
@@ -44,6 +45,13 @@ export function AuthGate({ onDone }: { onDone: () => void }) {
             Welcome to CASCADE
           </h1>
         </div>
+
+        {sessionExpired && (
+          <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+            Your session expired — please sign in again to continue where you
+            left off. Local work is unaffected.
+          </p>
+        )}
 
         {authEnabled && (
           <>

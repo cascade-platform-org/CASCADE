@@ -6,7 +6,8 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { User, LogOut, LogIn } from "lucide-react";
+import { User, LogOut, LogIn, Users, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useAuthStore, type AuthMode, type SessionUser } from "@/store/auth-store";
 
 function effectiveRole(
@@ -25,9 +26,12 @@ export function UserButton() {
   const authEnabled = useAuthStore((s) => s.authEnabled);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const loginWithOidc = useAuthStore((s) => s.loginWithOidc);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const [open, setOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,21 +74,57 @@ export function UserButton() {
           <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
           {authEnabled && mode !== "oidc" && (
             <button
-              onClick={loginWithOidc}
+              onClick={() => void loginWithOidc()}
               className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
             >
               <LogIn size={14} /> Sign in with Zitadel
             </button>
           )}
+          {mode === "oidc" && hasPermission("can_manage_users") && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <Users size={14} /> Manage users
+            </Link>
+          )}
           <button
             onClick={() => {
               setOpen(false);
-              signOut();
+              void signOut();
             }}
             className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <LogOut size={14} /> {mode === "guest" ? "Switch account" : "Sign out"}
           </button>
+          {mode === "oidc" && (
+            <>
+              <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+              <button
+                onClick={() => {
+                  // GDPR self-service erasure — irreversible, so double-confirm.
+                  if (
+                    !window.confirm(
+                      "Delete your account permanently? This removes your login and " +
+                        "server-side records. Projects saved as local files are NOT deleted.",
+                    )
+                  )
+                    return;
+                  void (async () => {
+                    const err = await deleteAccount();
+                    if (err) setDeleteError(err);
+                  })();
+                }}
+                className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+              >
+                <Trash2 size={14} /> Delete account
+              </button>
+              {deleteError && (
+                <p className="px-3 py-1 text-xs text-red-500">{deleteError}</p>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

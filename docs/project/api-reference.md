@@ -90,13 +90,17 @@ This app is a **public OIDC client** (no `client_secret`): PKCE proves the brows
 
 ### `GET /api/auth/callback?code=…&code_verifier=…`
 
-Exchanges the authorization code for tokens (sending the PKCE `code_verifier` instead of a `client_secret`) and returns `{ access_token, refresh_token, expires_in, token_type }` (`refresh_token`/`expires_in` may be `null` if the IdP omits them). `501` in local-only mode; `403` if the id token's email is unverified. (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state or verifier is rejected, not accepted; the IdP echoes `state` in the redirect.)
+Exchanges the authorization code (sending the PKCE `code_verifier` instead of a `client_secret`), then **sets the session as httpOnly cookies** — `cascade_access` (path `/api`) and `cascade_refresh` (path `/api/auth/refresh`) — and returns `{ "ok": true }`. Tokens never appear in a response body, so page JavaScript (and any XSS running as it) cannot read them; `SameSite=Lax` keeps cross-site non-GET requests from carrying them (CSRF). Also persists the id token's `email`/`name` claims to the user row (the access token carries no profile claims). `501` in local-only mode; `403` if the id token's email is not explicitly verified (an absent `email_verified` claim is rejected too — fail closed). (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state or verifier is rejected, not accepted.)
 
 `OIDC_CLIENT_SECRET` is optional: if set (a confidential-client IdP registration), it's sent alongside `client_id` on every token-endpoint call; if unset (the default, PKCE), only `client_id` + `code_verifier`/`refresh_token` are sent.
 
+### `POST /api/auth/logout`
+
+Clears the session cookies and returns `{ "logout_url": <IdP end_session URL or null> }`. The frontend must navigate to `logout_url` (RP-initiated logout): clearing cookies alone leaves the Zitadel SSO session alive, and the next sign-in would silently re-authenticate the same account.
+
 ### `POST /api/auth/refresh`
 
-Body `{ refresh_token }`. Returns a fresh token set, or `401` when the refresh token is invalid/expired (client must re-login).
+No body — the refresh token rides in the `cascade_refresh` httpOnly cookie. Rotates both session cookies and returns `{ "ok": true }`, or `401` when the refresh session is missing/expired (client must re-login).
 
 ---
 

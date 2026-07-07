@@ -142,7 +142,11 @@ export default function Home() {
     return (
       <NewProjectWizard
         onComplete={() => setAppState("editor")}
-        onCancel={() => {/* no-op: wizard is the only entry point */}}
+        // Cancel = back to the identity gate ("Welcome to CASCADE"), so the
+        // user can switch identity or sign in. Sessions are untouched —
+        // showGate only re-opens the chooser (authMode "unknown" re-renders
+        // this component into <AuthGate/> above).
+        onCancel={() => useAuthStore.getState().showGate()}
       />
     );
   }

@@ -24,13 +24,7 @@ class AuthUser(BaseModel):
     # Populated from the DB (ADR-0010). Absent in local-only mode == unbounded.
     entitlement: Optional[Entitlement] = None
 
-
-class TokenPair(BaseModel):
-    access_token: str
-    # None when the IdP does not issue one (e.g. a refresh grant without
-    # rotation). Kept in sync with TokenPairSchema in app/lib/schemas/api.ts.
-    refresh_token: Optional[str] = None
-    # Seconds until the access_token expires. None when the IdP omits it.
-    expires_in: Optional[int] = None
-    # Widened from a "Bearer" literal: some IdPs return other casings/schemes.
-    token_type: str = "Bearer"
+# TokenPair was removed when tokens moved into httpOnly cookies: no endpoint
+# returns tokens in a response body anymore (/callback and /refresh return
+# {"ok": true} and set cookies), so a token response schema has nothing to
+# describe on either side of the boundary.
