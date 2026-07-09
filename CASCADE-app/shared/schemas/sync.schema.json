@@ -1621,17 +1621,12 @@
           "title": "Created At",
           "type": "string"
         },
-        "event_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Event Id"
+        "event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Event Ids",
+          "type": "array"
         },
         "before_propagation": {
           "$ref": "#/$defs/GraphSnapshot"

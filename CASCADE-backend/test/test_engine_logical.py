@@ -227,3 +227,31 @@ def test_multi_category_parent_no_phantom_dependency():
         "dc_a's power category must not create a phantom power dependency in ops"
     )
 
+
+def test_requisite_parent_category_not_swallowed_by_shared_category():
+    """A parent's Requisite category must reach the target even when the parent
+    ALSO shares a category with the target (unlike a SourceToDemands category,
+    which is legitimately excluded in that situation — see
+    test_multi_category_parent_no_phantom_dependency).
+
+    Topology (mirrors the .inp importer's inline pump, ADR-0012):
+        pump  (water+pumping, level=1) ──> junction (water, level=4)
+
+    pump has failed (level=1) on its Requisite "pumping" category. Even though
+    pump and junction share the "water" category, junction must still see the
+    "pumping" dependency and degrade to pump's level — a threshold dependency
+    can never be silently dropped just because a shared category also exists.
+    """
+    nodes = [
+        _node("pump", 1, categories=["water", "pumping"]),
+        _node("junction", 4, categories=["water"]),
+    ]
+    edges = [_edge("e_pump_junction", "pump", "junction")]
+    result = run(
+        _request(nodes, edges, {"water": "SourceToDemands", "pumping": "Requisite"})
+    )
+
+    junction = _updates_by_id(result)["junction"]
+    assert junction.functionality == 1
+    assert junction.responsibility_share == {"pump": 1.0}
+

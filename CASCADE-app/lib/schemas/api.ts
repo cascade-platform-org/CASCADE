@@ -67,6 +67,20 @@ export const ProjectVersionDetailSchema = ProjectVersionSummarySchema.extend({
 });
 
 // ---------------------------------------------------------------------------
+// EPANET .inp import — POST /api/import/inp
+// ---------------------------------------------------------------------------
+
+/** Server response for the .inp importer: the converted bundle plus import
+ *  provenance for the toast (original vs imported node count, warnings). */
+export const ImportInpResponseSchema = z.object({
+  bundle: ProjectBundleSchema,
+  warnings: z.array(z.string()).default([]),
+  original_nodes: z.number().int(),
+  imported_nodes: z.number().int(),
+  skeleton_threshold_m: z.number().optional(),
+});
+
+// ---------------------------------------------------------------------------
 // Propagation — POST /api/propagate
 // ---------------------------------------------------------------------------
 
@@ -159,6 +173,7 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
 export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
+export type ImportInpResponse = z.infer<typeof ImportInpResponseSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;
 export type HeuristicMeta = z.infer<typeof HeuristicMetaSchema>;

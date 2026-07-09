@@ -80,6 +80,7 @@ def logical_category_candidates(
     nodes: dict[str, Node],
     skip: frozenset[str] = frozenset(),
     intra_op: Optional[Callable[[str], Optional[str]]] = None,
+    category_types: Optional[dict[str, str]] = None,
 ) -> dict[str, tuple[int, dict[str, float]]]:
     """Per-category logical candidates: ``{category -> (level, shares)}``.
 
@@ -89,7 +90,14 @@ def logical_category_candidates(
     (e.g. `SourceToDemands` categories handled by flow), so the dispatcher can run
     logical only for the categories flow does not cover and merge the two before
     composing.
+
+    `category_types` (category name -> "Requisite" | "SourceToDemands") lets a
+    parent's Requisite-typed categories always reach the target — see the
+    unconditional-Requisite-inclusion note below. Omit only from call sites that
+    have no config category types available (in which case the pre-existing
+    overlap-only behaviour applies uniformly).
     """
+    category_types = category_types or {}
     # Build the set of categories the target depends on.
     # Start from what the target itself declares.
     categories: set[str] = declared_categories(target)
@@ -99,15 +107,31 @@ def logical_category_candidates(
         if parent is None:
             continue
         parent_cats = parent_categories(parent)
-        # Add a parent's categories only when there is NO overlap with the
-        # target's declared categories. A parent that shares a category with the
-        # target already contributes through that shared category; blindly adding
-        # its OTHER categories would create spurious cross-category dependencies
-        # (e.g., a digital+power node attaching a phantom power dependency to a
-        # digital-only child that has its own redundant digital suppliers).
-        # When there IS no overlap — or the parent is an untagged generic feeder
-        # (parent_cats empty) — the edge represents a genuine cross-category or
-        # generic dependency and the parent's categories flow through normally.
+
+        # A Requisite category the parent supplies always becomes a dependency
+        # for the target, regardless of any overlap with the target's own
+        # declared categories — a threshold dependency must never be silently
+        # dropped just because the parent also happens to share another
+        # category with the target. (Concretely: an inline pump/valve node
+        # tagged ["water", "pumping"] feeding a "water"-declared consumer must
+        # still gate that consumer on "pumping" — the shared "water" category
+        # must not swallow the pump's Requisite dependency.)
+        requisite_parent_cats = {
+            c for c in parent_cats if category_types.get(c) == "Requisite"
+        }
+        categories.update(requisite_parent_cats)
+
+        # Add the parent's OTHER (non-Requisite) categories only when there is
+        # NO overlap between the target's declared categories and the parent's
+        # FULL category set. A parent that shares a category with the target
+        # already contributes through that shared category; blindly adding its
+        # remaining categories would create spurious cross-category
+        # dependencies (e.g., a digital+power node attaching a phantom power
+        # dependency to a digital-only child that has its own redundant
+        # digital suppliers). When there IS no overlap — or the parent is an
+        # untagged generic feeder (parent_cats empty) — the edge represents a
+        # genuine cross-category or generic dependency and the parent's
+        # categories flow through normally.
         if not parent_cats or not target_cats.intersection(parent_cats):
             categories.update(parent_cats)
     categories -= skip

@@ -725,12 +725,21 @@ function EventButton({
 }
 
 function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): number {
+  // The store is Immer-backed (canvas-store.ts): applying an event `set`s a
+  // fresh object reference only for the nodes/edges it actually touches,
+  // untouched ones keep their old reference. So a plain reference check
+  // catches ANY mutated field (functionality_time, category_dependency_profiles,
+  // direct_damage, ...), not just `functionality` — a Disservice like
+  // "Demand Surge" or "Tank Reserve" changes fields other than functionality
+  // by design (the element stays fully functional until its own countdown/
+  // condition triggers), so checking functionality alone always reported
+  // "no elements matched" for those events even though the mutation landed.
   let count = 0;
   for (const id of Object.keys(after.nodes)) {
-    if (before.nodes[id]?.functionality !== after.nodes[id]?.functionality) count++;
+    if (before.nodes[id] !== after.nodes[id]) count++;
   }
   for (const id of Object.keys(after.edges)) {
-    if (before.edges[id]?.functionality !== after.edges[id]?.functionality) count++;
+    if (before.edges[id] !== after.edges[id]) count++;
   }
   return count;
 }

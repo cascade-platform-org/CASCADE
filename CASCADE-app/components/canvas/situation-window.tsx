@@ -56,14 +56,22 @@ export function SituationWindow() {
 
   const situation = deriveSituation(updateHistory);
   if (!situation) return null;
-  if (situation.eventEntry.id === dismissedSituationId) return null;
+  // The newest applied Event — identifies the Situation for dismissal purposes;
+  // a newer Event brings the window back regardless of how many are stacked.
+  const newestEntry = situation.eventEntries[0];
+  if (newestEntry.id === dismissedSituationId) return null;
 
-  const { eventEntry, propEntry } = situation;
-  const eventDef = eventEntry.event_id ? getEventById(eventEntry.event_id) : undefined;
+  const { eventEntries, propEntry } = situation;
   // Config events lose their definition once cleared; fall back to the stored
-  // history label (stripped of its "Apply event: " prefix).
-  const eventLabel =
-    eventDef?.label ?? eventEntry.label.replace(/^Apply event:\s*/, "");
+  // history label (stripped of its "Apply event: " prefix) per entry.
+  const eventDefs = eventEntries.map((e) => (e.event_id ? getEventById(e.event_id) : undefined));
+  const eventLabels = eventEntries.map(
+    (e, i) => eventDefs[i]?.label ?? e.label.replace(/^Apply event:\s*/, ""),
+  );
+  // Oldest-first for display order ("Earthquake + Blackout"): eventEntries is newest-first.
+  const combinedLabel = [...eventLabels].reverse().join(" + ");
+  // Icon reflects the newest Event; a stacked scenario still reads as "what just happened".
+  const eventDef = eventDefs[0];
   const eventType: EventType = eventDef?.type;
   const propagated = propEntry !== null;
 
@@ -72,7 +80,7 @@ export function SituationWindow() {
     return (
       <button
         onClick={() => setMinimized(false)}
-        title={`Situation — ${eventLabel}`}
+        title={`Situation — ${combinedLabel}`}
         className="pointer-events-auto absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 py-1 pl-1 pr-2.5 shadow-lg backdrop-blur-sm hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/95 dark:hover:bg-zinc-900"
       >
         <span className={cn("flex h-6 w-6 items-center justify-center rounded-full", iconTint(eventType))}>
@@ -100,7 +108,7 @@ export function SituationWindow() {
             <Minus size={13} />
           </button>
           <button
-            onClick={() => dismissSituation(eventEntry.id)}
+            onClick={() => dismissSituation(newestEntry.id)}
             title="Dismiss"
             className="rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
           >
@@ -118,10 +126,10 @@ export function SituationWindow() {
           </span>
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
-              {eventLabel}
+              {combinedLabel}
             </div>
             <div className="text-[10px] uppercase tracking-wide text-zinc-400">
-              Event applied
+              {eventEntries.length > 1 ? `${eventEntries.length} Events applied` : "Event applied"}
             </div>
           </div>
         </div>

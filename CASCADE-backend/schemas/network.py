@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
 if TYPE_CHECKING:
     from .results import PropagationResult
@@ -383,7 +383,25 @@ class PropagationScorecardEntry(BaseModel):
     id: str
     label: str
     created_at: str  # ISO 8601 UTC
-    event_id: Optional[str] = None  # EventDefinition.id; None for Manual What-If entries
+    # EventDefinition.id values for every Event applied since the last Propagation
+    # (a user may apply several Events before running one Propagation — see
+    # requirements.md §12.3a). Empty for Manual What-If entries. Newest-applied first.
+    event_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_event_id(cls, data: Any) -> Any:
+        """Pre-multi-event Scorecard entries (synced before this change) store a
+        singular `event_id` string instead of `event_ids`. Pydantic's default
+        `extra="ignore"` would otherwise silently drop that field before the
+        frontend's own Zod migration (lib/schemas/network.ts) ever sees it,
+        losing the Scorecard-to-Event association on every legacy synced
+        project. Mirrors the Zod-side migration exactly."""
+        if isinstance(data, dict) and "event_id" in data and "event_ids" not in data:
+            old_id = data.get("event_id")
+            data = {**data, "event_ids": [old_id] if isinstance(old_id, str) else []}
+        return data
+
     before_propagation: GraphSnapshot
     after_propagation: Optional[GraphSnapshot] = None
     after_temporal_jump: Optional[GraphSnapshot] = None

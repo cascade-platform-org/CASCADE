@@ -120,6 +120,7 @@ def run(request: PropagationRequest) -> PropagationResult:
                 node, incoming_index.get(nid, []), node_func, edge_func, nodes,
                 skip=requisite_skip[nid],
                 intra_op=lambda category, _nid=nid: rules.intra_operator(_nid, category),
+                category_types=category_types,
             )
             # 2. SourceToDemands flow pass: additive layer. Merge each flow candidate
             #    into the running dict via worst_of so neither pass silently overwrites.

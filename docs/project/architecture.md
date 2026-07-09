@@ -184,6 +184,12 @@ The server accepts a JSON payload (project + config + scope), runs the propagati
 
 **One exception to statelessness:** the per-user Entitlement meter (the engine-evaluation token bucket, ADR-0008) is mutable state. In v1 it lives in-process, which assumes a **single backend instance** — the default for the single-VM deployment. Horizontal scaling (multiple backend instances) would require externalising the meter to PostgreSQL; until then, the "run multiple instances" note under *Scaling* is deferred.
 
+### Global Unhandled-Exception Middleware
+
+`main.py` registers a `BaseHTTPMiddleware` that catches any exception a route doesn't handle itself and returns a plain `500 {"detail": "Internal server error."}`. This is **not** done via `@app.exception_handler(Exception)` — Starlette special-cases a handler keyed on `Exception`/`500` to run inside `ServerErrorMiddleware`, which is the outermost layer, added above every user middleware including CORS; its response bypasses `CORSMiddleware` entirely, so the client gets a 500 with no `Access-Control-Allow-Origin` header. A browser's `fetch()` then rejects with a network-level *"Failed to fetch"*, hiding the real status and body — this is exactly what happened for `.inp` imports before the fix (see ADR-0012's `FLOW_UNIT_SCALE` note for the underlying import bug; this middleware would have kept the error diagnosable for the client regardless).
+
+The fix: register the middleware via `app.add_middleware()` **before** `CORSMiddleware`. Since `add_middleware` prepends to the middleware list, adding it first places it *inside* (closer to the router than) `CORSMiddleware` once both are registered — so the 500 response it builds still passes through `CORSMiddleware`'s `send` wrapper on the way out and gets CORS headers like any other response. Order matters here; do not reorder these two `add_middleware` calls. Regression test: `test/test_error_handling.py`.
+
 ### Engine Capabilities Endpoint
 
 `GET /api/engine/algorithms` returns an `EngineAlgorithms` snapshot listing available graph types and heuristics with their parameter schemas. The frontend uses this to populate the graph-type selector and the algorithm pipeline editor in the Config modal. Requires at minimum `viewer` role. Returns `HeuristicMeta.param_schema` fragments so the frontend can render typed parameter forms instead of raw JSON textareas (Slice 1 uses raw JSON as a fallback when this endpoint is unreachable).

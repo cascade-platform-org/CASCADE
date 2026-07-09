@@ -22,6 +22,7 @@ import {
   type ProjectBundle,
 } from "@/lib/file-io";
 import { validateBundle, type ValidationIssue } from "@/lib/project-validation";
+import { ImportInpSection } from "./import-inp-section";
 import { loadRecoveryDir, saveRecoveryDir, clearRecoveryDir } from "@/lib/recovery-dir";
 import {
   syncSaveProject,
@@ -42,6 +43,11 @@ export function FileIoPanel() {
   const loadConfig = useConfigStore((s) => s.loadConfig);
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  // Guards the backdrop-click-to-close: a text-selection drag that starts
+  // inside a form field but ends past the panel edge fires a click whose
+  // target is the backdrop, closing the panel unintentionally. Only close
+  // when both mousedown and the click itself landed on the backdrop.
+  const mouseDownOnBackdrop = useRef(false);
 
   const canSync = useAuthStore((s) => s.hasPermission("can_sync"));
   const authMode = useAuthStore((s) => s.mode);
@@ -261,7 +267,10 @@ export function FileIoPanel() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-end bg-black/20 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) closeFileIoPanel(); }}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeFileIoPanel();
+      }}
     >
       <div className="flex h-full w-80 flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
         {/* Header */}
@@ -431,6 +440,9 @@ export function FileIoPanel() {
             <input ref={uploadInputRef} type="file" accept=".json" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); e.target.value = ""; }} />
           </section>
+
+          {/* EPANET .inp import */}
+          <ImportInpSection />
 
           {/* Recovery folder */}
           <section>

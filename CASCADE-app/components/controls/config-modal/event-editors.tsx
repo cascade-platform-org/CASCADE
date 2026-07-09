@@ -461,7 +461,10 @@ export function AttributeMutationsEditor({ mutations, onChange }: AttributeMutat
   const byElement = useMemo(() => {
     const groups: Record<string, Record<string, unknown>> = {};
     for (const [key, val] of Object.entries(mutations)) {
-      const dot = key.indexOf(".");
+      // Split on the LAST "." — field names never contain a dot, but a
+      // free-form element id (e.g. a raw .inp label) can (canvas-store.ts
+      // applies the same rule when reading these keys back).
+      const dot = key.lastIndexOf(".");
       if (dot === -1) continue;
       const elemId = key.slice(0, dot);
       const field = key.slice(dot + 1);

@@ -57,7 +57,7 @@ export function ScorecardPanel() {
     beforeSnapshot?: GraphSnapshot;
     afterSnapshot?: GraphSnapshot;
     defaultLabel?: string;
-    eventId?: string;
+    eventIds?: string[];
   }>({});
   const [exporting, setExporting] = useState(false);
 
@@ -185,7 +185,7 @@ export function ScorecardPanel() {
                 beforeSnapshot: run.beforeSnapshot,
                 afterSnapshot: run.afterSnapshot,
                 defaultLabel: run.eventLabel,
-                eventId: run.eventId,
+                eventIds: run.eventIds,
               })}
               onComputeEntry={async (entry: PropagationScorecardEntry) => {
                 if (!serverReachable) return;
@@ -212,7 +212,7 @@ export function ScorecardPanel() {
                 openSaveDialog({
                   beforeSnapshot: afterEvent,
                   defaultLabel: ev.eventLabel,
-                  eventId: ev.eventId,
+                  eventIds: [ev.eventId],
                 });
               }}
             />
@@ -546,9 +546,13 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
   // Shared Operativity weighting — keeps card scores in step with the selector.
   const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
 
-  // Resolve event name: look up in config, fall back to entry label
-  const eventLabel = entry.event_id
-    ? (config.events.find((e) => e.id === entry.event_id)?.label ?? entry.label)
+  // Resolve event name(s): look up in config, fall back to entry label. Several
+  // Events may have been stacked before the Propagation this entry captures.
+  const eventLabel = entry.event_ids.length > 0
+    ? [...entry.event_ids]
+        .reverse()
+        .map((id) => config.events.find((e) => e.id === id)?.label ?? id)
+        .join(" + ")
     : entry.label;
 
   const scoreBefore = computeOperativityScore(entry.before_propagation, n, oiWeightAttr);
@@ -570,9 +574,9 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
           <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{entry.label}</p>
           <p className="text-xs text-zinc-400">
             {new Date(entry.created_at).toLocaleString()}
-            {entry.event_id && (
+            {entry.event_ids.length > 0 && (
               <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                event
+                {entry.event_ids.length > 1 ? `${entry.event_ids.length} events` : "event"}
               </span>
             )}
           </p>

@@ -272,8 +272,12 @@ export const PropagationScorecardEntrySchema = z.object({
   id: z.string(),
   label: z.string(),
   created_at: z.string(),
-  /** EventDefinition.id that triggered this entry. Absent for Manual What-If entries. */
-  event_id: z.string().optional(),
+  /**
+   * EventDefinition.id values for every Event applied since the last Propagation
+   * (a user may stack several Events before running one Propagation — see
+   * requirements.md §12.3a). Empty for Manual What-If entries. Newest-applied first.
+   */
+  event_ids: z.array(z.string()).default([]),
   before_propagation: GraphSnapshotSchema,
   after_propagation: GraphSnapshotSchema.optional(),
   after_temporal_jump: GraphSnapshotSchema.optional(),
@@ -352,17 +356,25 @@ export const ProjectSchema = z.object({
    */
   /**
    * Backward compat: old project files have Propagation entries without a `type`
-   * field. The preprocessor injects `type: "propagation"` before the discriminated
-   * union parser runs, so they load correctly without schema migration.
+   * field, and with a singular `event_id` instead of `event_ids` (before Situation
+   * gained support for stacking several Events ahead of one Propagation, §12.3a).
+   * The preprocessor injects `type: "propagation"` and migrates `event_id` into
+   * `event_ids` before the discriminated union parser runs, so old files load
+   * correctly without schema migration.
    */
   scorecard: z.preprocess(
     (val) => {
       if (!Array.isArray(val)) return val;
       return val.map((entry: unknown) => {
-        if (typeof entry === "object" && entry !== null && !("type" in entry)) {
-          return { ...(entry as object), type: "propagation" };
+        if (typeof entry !== "object" || entry === null) return entry;
+        const migrated = { ...(entry as Record<string, unknown>) };
+        if (!("type" in migrated)) migrated.type = "propagation";
+        if ("event_id" in migrated && !("event_ids" in migrated)) {
+          const oldId = migrated.event_id;
+          migrated.event_ids = typeof oldId === "string" ? [oldId] : [];
+          delete migrated.event_id;
         }
-        return entry;
+        return migrated;
       });
     },
     z.array(ScorecardEntrySchema).default([]),

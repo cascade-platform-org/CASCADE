@@ -31,7 +31,7 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
-import { deriveSituation, situationSnapshots } from "@/lib/situation";
+import { deriveSituation, situationSnapshots, situationEventIds } from "@/lib/situation";
 import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -79,8 +79,8 @@ interface SaveScorecardDialogProps {
   afterSnapshot?: GraphSnapshot;
   /** Pre-fill label (e.g. from the event name). */
   defaultLabel?: string;
-  /** Associate with an event id. */
-  eventId?: string;
+  /** Associate with one or more event ids (a scenario may stack several Events). */
+  eventIds?: string[];
 }
 
 export function SaveScorecardDialog({
@@ -88,7 +88,7 @@ export function SaveScorecardDialog({
   beforeSnapshot,
   afterSnapshot,
   defaultLabel = "",
-  eventId,
+  eventIds,
 }: SaveScorecardDialogProps) {
   const updateHistory = useHistoryStore((s) => s.updateHistory);
   const scorecard = useScorecardStore((s) => s.scorecard);
@@ -106,31 +106,33 @@ export function SaveScorecardDialog({
   // without touching any store.
   // ---------------------------------------------------------------------------
 
-  const { initialBefore, initialAfter, initialEventId } = useMemo(() => {
+  const { initialBefore, initialAfter, initialEventIds } = useMemo(() => {
     if (beforeSnapshot) {
-      return { initialBefore: beforeSnapshot, initialAfter: afterSnapshot, initialEventId: eventId };
+      return { initialBefore: beforeSnapshot, initialAfter: afterSnapshot, initialEventIds: eventIds ?? [] };
     }
     // "Save current": reconstruct the Situation from history so the entry stores
-    // the real before→after of the current scenario. When a Propagation has been
-    // run for the latest Event, `before` is the post-Event / pre-engine state and
-    // `after` is the propagated state (requirements §12.1) — i.e. the already-run
-    // Propagation is captured, not discarded. When only the Event has been applied
-    // (no Propagation yet), `after` is left empty until the user clicks Run
-    // Propagation. With no Event at all it is a manual what-if: snapshot the live
-    // canvas as `before`.
+    // the real before→after of the current scenario. Several Events may have
+    // been stacked before a single Propagation (requirements §12.3a) — all of
+    // them are captured in `event_ids`, newest-applied first. When a Propagation
+    // has been run, `before` is the post-Event(s) / pre-engine state and `after`
+    // is the propagated state (requirements §12.1) — i.e. the already-run
+    // Propagation is captured, not discarded. When only Event(s) have been
+    // applied (no Propagation yet), `after` is left empty until the user clicks
+    // Run Propagation. With no Event at all it is a manual what-if: snapshot the
+    // live canvas as `before`.
     const situation = deriveSituation(updateHistory);
     if (situation) {
       const { before, after } = situationSnapshots(situation);
       return {
         initialBefore: before,
         initialAfter: after,
-        initialEventId: eventId ?? situation.eventEntry.event_id,
+        initialEventIds: eventIds ?? situationEventIds(situation),
       };
     }
     return {
       initialBefore: useCanvasStore.getState().toGraphSnapshot(),
       initialAfter: undefined as GraphSnapshot | undefined,
-      initialEventId: eventId,
+      initialEventIds: eventIds ?? [],
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally stable — snapshots are immutable once the dialog opens
@@ -140,14 +142,18 @@ export function SaveScorecardDialog({
   // ---------------------------------------------------------------------------
 
   const before = initialBefore;
-  const resolvedEventId = initialEventId;
+  const resolvedEventIds = initialEventIds;
   const [after, setAfter] = useState<GraphSnapshot | undefined>(initialAfter);
-  // Pre-fill the label from the Event that set up this scenario (§12.2), unless
-  // the caller supplied an explicit default.
+  // Pre-fill the label from the Event(s) that set up this scenario (§12.2),
+  // joined oldest-first when several were stacked, unless the caller supplied
+  // an explicit default.
   const resolvedDefaultLabel =
     defaultLabel ||
-    (resolvedEventId
-      ? config.events.find((e) => e.id === resolvedEventId)?.label ?? ""
+    (resolvedEventIds.length > 0
+      ? [...resolvedEventIds]
+          .reverse()
+          .map((id) => config.events.find((e) => e.id === id)?.label ?? id)
+          .join(" + ")
       : "");
   const [label, setLabel] = useState(resolvedDefaultLabel);
   const [temporalHours, setTemporalHours] = useState<string>("");
@@ -216,7 +222,7 @@ export function SaveScorecardDialog({
         id: `sc-${nanoid(10)}`,
         label: label.trim(),
         created_at: new Date().toISOString(),
-        event_id: resolvedEventId,
+        event_ids: resolvedEventIds,
         before_propagation: before,
         after_propagation: after,
         after_temporal_jump: temporalSnapshot,

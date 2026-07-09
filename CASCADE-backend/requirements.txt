@@ -10,6 +10,7 @@
 # ---------------------------------------------------------------------------
 
 fastapi==0.136.1
+starlette==1.2.0              # imported directly in main.py (BaseHTTPMiddleware) — not just a fastapi transitive dep
 uvicorn[standard]==0.46.0    # [standard] adds websockets + watchfiles for --reload
 python-multipart==0.0.32     # required for form/file uploads in FastAPI
 
@@ -39,6 +40,13 @@ httpx==0.28.1                      # async HTTP — fetches OIDC discovery docum
 # ---------------------------------------------------------------------------
 
 networkx==3.6.1              # centrality, clustering, and topological analysis
+
+# ---------------------------------------------------------------------------
+# Network importers (EPANET .inp → CASCADE, core/inp_*.py)
+# ---------------------------------------------------------------------------
+
+wntr==1.5.0                  # EPANET parse, skeletonization, PDD hydraulics (BSD-3)
+pyproj==3.7.2                # CRS transform for georeferenced imports (MIT)
 
 # ---------------------------------------------------------------------------
 # Utilities

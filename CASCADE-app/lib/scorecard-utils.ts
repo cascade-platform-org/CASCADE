@@ -107,7 +107,8 @@ function stableStringify(val: unknown): string {
 
 export interface UnsavedRun {
   eventEntryId: string;
-  eventId: string | undefined;
+  /** EventDefinition.id for every Event stacked in this session, newest-applied first. */
+  eventIds: string[];
   eventLabel: string;
   beforeSnapshot: GraphSnapshot;
   afterSnapshot: GraphSnapshot;
@@ -117,7 +118,9 @@ export interface UnsavedRun {
  * Type 1: event_applied + propagation pairs in history not yet in Scorecard.
  *
  * A "session" is the slice of history between two consecutive propagations
- * (or between the start of history and the first propagation).
+ * (or between the start of history and the first propagation). A session may
+ * contain several event_applied entries when the user stacks multiple Events
+ * before running one Propagation (requirements §12.3a).
  * History is newest-first (entries are unshifted), so entries after index i
  * are older.
  *
@@ -147,17 +150,18 @@ export async function findUnsavedRuns(
       ? olderEntries
       : olderEntries.slice(0, prevPropIdx);
 
-    // Only flag if an event was actually applied in this session.
-    const eventEntry = sessionEntries.find((e) => e.update_type === "event_applied");
-    if (!eventEntry) continue;
+    // Only flag if at least one event was applied in this session; collect all
+    // of them (a session may stack several Events before this Propagation).
+    const eventEntries = sessionEntries.filter((e) => e.update_type === "event_applied");
+    if (eventEntries.length === 0) continue;
 
     const hash = await hashSnapshot(entry.before);
     if (savedHashes.has(hash)) continue;
 
     runs.push({
       eventEntryId: entry.id,
-      eventId: eventEntry.event_id ?? undefined,
-      eventLabel: eventEntry.label,
+      eventIds: eventEntries.map((e) => e.event_id).filter((id): id is string => Boolean(id)),
+      eventLabel: eventEntries.map((e) => e.label.replace(/^Apply event:\s*/, "")).reverse().join(" + "),
       beforeSnapshot: entry.before,
       afterSnapshot: entry.after,
     });
@@ -179,7 +183,7 @@ export function findUncoveredEvents(
   config: ModelConfiguration,
   scorecard: ScorecardEntry[],
 ): UncoveredEvent[] {
-  const coveredIds = new Set(scorecard.filter(isPropagationEntry).map((e) => e.event_id).filter(Boolean));
+  const coveredIds = new Set(scorecard.filter(isPropagationEntry).flatMap((e) => e.event_ids));
   return (config.events ?? [])
     .filter((ev) => ev.type !== "temporal_jump" && !coveredIds.has(ev.id))
     .map((ev) => ({ eventId: ev.id, eventLabel: ev.label, eventType: ev.type }));

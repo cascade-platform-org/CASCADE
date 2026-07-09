@@ -14,3 +14,11 @@ deploy/backups/
 
 # Personal ops runbook (VM IP, SSH notes) — not for the repo
 deploy/READ.me
+
+raw-networks
+
+# WNTR/EPANET skeletonize(use_epanet=True) always writes these relative to cwd
+# (no file_prefix knob for that codepath) — see skeleton.py's _SKELETONIZE_LOCK note.
+CASCADE-backend/temp.inp
+CASCADE-backend/temp.rpt
+CASCADE-backend/temp.bin

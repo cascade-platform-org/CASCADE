@@ -51,6 +51,11 @@ ignore_imports = [
     # a deliberate, pre-existing exception for a dev-only ops script, not
     # part of the request path CLAUDE.md §7 protects.
     "scripts.benchmark_engine -> engine.*",
+    # Validates engine+importer output against real WNTR hydraulics — needs
+    # the engine's REAL propagation call and its REAL ratio->level rule
+    # (engine.flow._ratio_to_level), not a reimplementation of either; a dev-
+    # only validation harness, same category as benchmark_engine.py above.
+    "scripts.validate_faithfulness -> engine.*",
 ]
 
 [tool.pyright]

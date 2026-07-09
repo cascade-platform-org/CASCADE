@@ -12,16 +12,18 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from api import (
     admin_router,
     audit_router,
     auth_router,
     health_router,
+    import_router,
     propagation_router,
     sync_router,
 )
@@ -123,6 +125,36 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Global unhandled-exception catcher. Registered via `app.add_middleware`
+    # (not `@app.exception_handler(Exception)` — Starlette special-cases a
+    # handler keyed on `Exception`/500 to run inside ServerErrorMiddleware,
+    # which is the OUTERMOST layer, added above every user middleware
+    # including CORS: its response bypasses CORSMiddleware entirely, so a
+    # bare `@app.exception_handler(Exception)` here would still ship a 500
+    # with no CORS headers — the browser's fetch() treats that as a network
+    # failure ("Failed to fetch"), hiding the real status and body. This
+    # middleware is added BEFORE CORSMiddleware below, which — because
+    # `add_middleware` prepends — places it INSIDE (closer to the router
+    # than) CORSMiddleware, so the 500 response it builds still passes
+    # through CORSMiddleware's `send` wrapper on the way out and gets the
+    # Access-Control-Allow-Origin header like any other response. Sentry
+    # (below) still captures the exception for observability; this only
+    # controls what the client receives. Order matters: keep this add_middleware
+    # call above the CORSMiddleware one.
+    class UnhandledExceptionMiddleware(BaseHTTPMiddleware):
+        async def dispatch(
+            self, request: Request, call_next: RequestResponseEndpoint
+        ) -> Response:
+            try:
+                return await call_next(request)
+            except Exception:
+                logger.exception(
+                    "Unhandled exception on %s %s", request.method, request.url.path
+                )
+                return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
+    app.add_middleware(UnhandledExceptionMiddleware)
+
     # CORS — allow the Next.js frontend origin(s)
     app.add_middleware(
         CORSMiddleware,
@@ -139,6 +171,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(audit_router)
     app.include_router(sync_router)
+    app.include_router(import_router)
 
     # Root → API docs (eliminates the 404 when a browser hits /)
     @app.get("/", include_in_schema=False)

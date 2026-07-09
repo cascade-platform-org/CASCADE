@@ -140,7 +140,7 @@ Run before considering non-trivial backend or frontend work done, and always bef
 | Frontend | `npm run audit:circular` | madge (circular imports) |
 | Both | `git ls-files \| xargs detect-secrets scan --baseline .secrets.baseline` | secrets in tracked files |
 
-`import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` dev exception) imports `engine.*`.
+`import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` / `scripts/validate_faithfulness.py` dev exceptions) imports `engine.*`. Both are dev-only harnesses, not shipped product code, that need the engine's REAL logic (not a reimplementation of it) to measure the engine rather than their own drift — any new dev script with the same need is a candidate for the same carve-out, added to `[tool.importlinter]` and to this sentence in the same session.
 
 `.secrets.baseline` (repo root) is the reviewed set of known non-secret matches (local-dev credentials in docs/examples, content hashes in `skills-lock.json`). Re-run `detect-secrets scan --baseline .secrets.baseline $(git ls-files)` after adding new tracked files; a genuinely new finding needs `detect-secrets audit .secrets.baseline` to classify before it's safe to commit.
 

@@ -38,6 +38,15 @@ import { useNetworkStore } from "@/store/network-store";
 // State shape
 // ---------------------------------------------------------------------------
 
+/**
+ * Sentinel stored in `mutation_reversal` for a field that had no value before an
+ * Event was applied (as opposed to a field that was explicitly `null`/`false`).
+ * clearEvent() deletes the key when it sees this marker instead of writing back
+ * a literal `null`, which would violate the optional-but-not-nullable Zod/Pydantic
+ * field schemas and desync the Scorecard dedup hash from the true prior state.
+ */
+const ABSENT = "__CASCADE_ABSENT__";
+
 export interface CanvasState {
   /** Global node registry. Single authoritative state per node. */
   nodes: Record<string, Node>;
@@ -159,6 +168,34 @@ export interface CanvasActions {
   fromProject: (project: Project) => void;
   /** Alias for fromProject — used by File I/O panel. */
   loadProject: (project: Project) => void;
+  /**
+   * Merge a project bundle's single canvas + its nodes/edges INTO the current
+   * project as an extra canvas, instead of replacing everything (used by the
+   * .inp importer's "add as extra canvas" mode — requirements §13.5). Any
+   * node/edge id already present in the current project is remapped to a
+   * fresh id (node and edge ids are separate namespaces, matching the
+   * store's own separate registries) so two independently-authored networks
+   * can never silently overwrite each other's elements; the canvas id is
+   * remapped too if it collides, though the importer already guarantees a
+   * fresh one. Pushes ONE `graph_update` history entry (undoable), matching
+   * copyNodesToCanvas's pattern.
+   *
+   * Returns the node and edge id maps SEPARATELY (old → new) and the final
+   * canvas id, so the caller can rewrite the CONFIG's event
+   * `attribute_mutations` keys (which embed element ids) to match before
+   * merging it in via configStore.mergeConfig — otherwise a remapped
+   * element's scenario event would silently target the wrong (or no)
+   * element. Kept as two maps rather than one merged Record: node ids and
+   * edge ids are independent namespaces (an EPANET junction and pipe can
+   * legitimately share the same raw id, e.g. both called "10"), so merging
+   * them into one map keyed by original id would let one collide-and-drop
+   * the other's remap silently.
+   */
+  mergeImportedProject: (project: Project) => {
+    nodeIdMap: Record<string, string>;
+    edgeIdMap: Record<string, string>;
+    canvasId: string;
+  };
   reset: () => void;
 }
 
@@ -430,7 +467,7 @@ export const useCanvasStore = create<CanvasStore>()(
           const newFt = ft - hours;
           if (newFt <= 0) {
             capture(id, "functionality", el.functionality);
-            capture(id, "responsibility_share", el.responsibility_share ?? null);
+            capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
             expiredIds.add(id);
             temporalExpired.set(id, { functionality: 1, functionality_time: 0 });
           } else {
@@ -447,7 +484,7 @@ export const useCanvasStore = create<CanvasStore>()(
         const imposed = Math.max(1, n - level);
         if (imposed < (el.functionality ?? n)) {
           capture(id, "functionality", el.functionality);
-          capture(id, "responsibility_share", el.responsibility_share ?? null);
+          capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
           vuln.set(id, imposed);
         }
       }
@@ -464,24 +501,28 @@ export const useCanvasStore = create<CanvasStore>()(
         for (const { id, el } of allElements) {
           const level = el.vulnerability_levels?.[event.id] ?? 0;
           if (level === 0) continue;
-          capture(id, "direct_damage", el.direct_damage ?? false);
-          capture(id, "expected_repair_time", el.expected_repair_time ?? null);
+          capture(id, "direct_damage", el.direct_damage ?? ABSENT);
+          capture(id, "expected_repair_time", el.expected_repair_time ?? ABSENT);
           const repairTime = explicitEffects[id]?.expected_repair_time ?? defaultRepairTime;
           directDamageElements.push({ id, repairTime });
         }
       }
 
       // ── 3. attribute_mutations ──
+      // Split on the LAST "." — field names are fixed identifiers that never
+      // contain a dot, but a free-form element id (e.g. a raw .inp label)
+      // can; splitting on the first dot would truncate such an id.
       for (const [key, _newVal] of Object.entries(event.attribute_mutations ?? {})) {
-        const dotIdx = key.indexOf(".");
+        const dotIdx = key.lastIndexOf(".");
         if (dotIdx === -1) continue;
         const elementId = key.slice(0, dotIdx);
         const field = key.slice(dotIdx + 1);
         const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
         if (!el) continue;
-        capture(elementId, field, (el as Record<string, unknown>)[field] ?? null);
+        const existing = (el as Record<string, unknown>)[field];
+        capture(elementId, field, existing === undefined ? ABSENT : existing);
         if (field === "functionality") {
-          capture(elementId, "responsibility_share", el.responsibility_share ?? null);
+          capture(elementId, "responsibility_share", el.responsibility_share ?? ABSENT);
         }
       }
 
@@ -523,7 +564,7 @@ export const useCanvasStore = create<CanvasStore>()(
           }
         }
         for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {
-          const dotIdx = key.indexOf(".");
+          const dotIdx = key.lastIndexOf(".");
           if (dotIdx === -1) continue;
           const elementId = key.slice(0, dotIdx);
           const field = key.slice(dotIdx + 1);
@@ -559,14 +600,16 @@ export const useCanvasStore = create<CanvasStore>()(
       if (entry.mutation_reversal && Object.keys(entry.mutation_reversal).length > 0) {
         set((draft) => {
           for (const [key, oldVal] of Object.entries(entry.mutation_reversal!)) {
-            const dotIdx = key.indexOf(".");
+            const dotIdx = key.lastIndexOf(".");
             if (dotIdx === -1) continue;
             const elementId = key.slice(0, dotIdx);
             const field = key.slice(dotIdx + 1);
-            if (draft.nodes[elementId]) {
-              (draft.nodes[elementId] as Record<string, unknown>)[field] = oldVal;
-            } else if (draft.edges[elementId]) {
-              (draft.edges[elementId] as Record<string, unknown>)[field] = oldVal;
+            const target = draft.nodes[elementId] ?? draft.edges[elementId];
+            if (!target) continue;
+            if (oldVal === ABSENT) {
+              delete (target as Record<string, unknown>)[field];
+            } else {
+              (target as Record<string, unknown>)[field] = oldVal;
             }
           }
         });
@@ -756,6 +799,74 @@ export const useCanvasStore = create<CanvasStore>()(
 
     loadProject(project) {
       get().fromProject(project);
+    },
+
+    mergeImportedProject(project) {
+      const state = get();
+      const incomingCanvas = project.canvases[0];
+      if (!incomingCanvas) {
+        throw new Error("Imported project has no canvas to merge.");
+      }
+
+      // Node/edge ids are separate namespaces (separate registries), matched
+      // to how collisions actually manifest — a colliding node id gets a
+      // fresh id independent of whether any edge id also collides.
+      const nodeIdMap: Record<string, string> = {};
+      for (const id of Object.keys(project.nodes)) {
+        if (state.nodes[id]) nodeIdMap[id] = `imp-${nanoid(6)}-${id}`;
+      }
+      const edgeIdMap: Record<string, string> = {};
+      for (const id of Object.keys(project.edges)) {
+        if (state.edges[id]) edgeIdMap[id] = `imp-${nanoid(6)}-${id}`;
+      }
+      const remapNode = (id: string) => nodeIdMap[id] ?? id;
+      const remapEdge = (id: string) => edgeIdMap[id] ?? id;
+
+      // The importer already mints a fresh canvas id per call; remap only
+      // defends against a hand-crafted/duplicated bundle.
+      const canvasId = state.canvases[incomingCanvas.id]
+        ? `imp-${nanoid(6)}-${incomingCanvas.id}`
+        : incomingCanvas.id;
+
+      const before = state.toGraphSnapshot();
+
+      set((draft) => {
+        for (const [oldId, node] of Object.entries(project.nodes)) {
+          const newId = remapNode(oldId);
+          draft.nodes[newId] = { ...node, id: newId };
+        }
+        for (const [oldId, edge] of Object.entries(project.edges)) {
+          const newId = remapEdge(oldId);
+          draft.edges[newId] = {
+            ...edge,
+            id: newId,
+            source: remapNode(edge.source),
+            target: remapNode(edge.target),
+          };
+        }
+        draft.canvases[canvasId] = {
+          ...incomingCanvas,
+          id: canvasId,
+          graph: {
+            ...incomingCanvas.graph,
+            node_ids: incomingCanvas.graph.node_ids.map(remapNode),
+            edge_ids: incomingCanvas.graph.edge_ids.map(remapEdge),
+          },
+        };
+        draft.canvasOrder.push(canvasId);
+        if (draft.activeCanvasId === null) draft.activeCanvasId = canvasId;
+      });
+
+      useHistoryStore.getState().pushUpdateEntry({
+        id: nanoid(),
+        timestamp: new Date().toISOString(),
+        update_type: "graph_update",
+        label: `Import "${incomingCanvas.label ?? canvasId}" as a new canvas`,
+        before,
+        after: get().toGraphSnapshot(),
+      });
+
+      return { nodeIdMap, edgeIdMap, canvasId };
     },
 
     reset() {

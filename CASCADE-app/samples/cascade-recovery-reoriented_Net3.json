@@ -1,0 +1,4254 @@
+{
+  "saved_at": "2026-07-08T10:17:07.468Z",
+  "bundle": {
+    "project": {
+      "version": "2.0",
+      "meta": {
+        "name": "reoriented_Net3",
+        "description": "Imported from EPANET .inp (92 junctions, 117 pipes).",
+        "created_at": "2026-07-08T10:17:07.467Z",
+        "updated_at": "2026-07-08T10:17:07.467Z"
+      },
+      "nodes": {
+        "1": {
+          "id": "1",
+          "functionality": 3,
+          "label": "1",
+          "node_type": "Source",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 791.9153553988064,
+            "y": 863.537710255019
+          },
+          "supply_capacity": {
+            "water": 465876.01603307825
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 3
+            }
+          },
+          "properties": {
+            "inp_id": "1",
+            "kind": "tank",
+            "volume_m3": 5141.9,
+            "elevation_m": 40.2
+          }
+        },
+        "2": {
+          "id": "2",
+          "functionality": 3,
+          "label": "2",
+          "node_type": "Source",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1016.956049918611,
+            "y": 1123.5756918068366
+          },
+          "supply_capacity": {
+            "water": 268508.8879006981
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 8
+            }
+          },
+          "properties": {
+            "inp_id": "2",
+            "kind": "tank",
+            "volume_m3": 1879.3,
+            "elevation_m": 35.51
+          }
+        },
+        "3": {
+          "id": "3",
+          "functionality": 3,
+          "label": "3",
+          "node_type": "Source",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 871.2696690179056,
+            "y": 154.23223005968526
+          },
+          "supply_capacity": {
+            "water": 1236271.0986329992
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 31
+            }
+          },
+          "properties": {
+            "inp_id": "3",
+            "kind": "tank",
+            "volume_m3": 18842.3,
+            "elevation_m": 39.32
+          }
+        },
+        "10": {
+          "id": "10",
+          "functionality": 3,
+          "label": "10",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 40.69451980466631,
+            "y": 130.62940857297875
+          },
+          "properties": {
+            "inp_id": "10",
+            "elevation_m": 44.81
+          }
+        },
+        "15": {
+          "id": "15",
+          "functionality": 3,
+          "label": "15",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1248.5078676071623,
+            "y": 297.0699945740639
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 39115.921768,
+              "priority": 2
+            }
+          },
+          "properties": {
+            "inp_id": "15",
+            "elevation_m": 9.75
+          }
+        },
+        "20": {
+          "id": "20",
+          "functionality": 3,
+          "label": "20",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 872.4905046120457,
+            "y": 168.8822571893651
+          },
+          "properties": {
+            "inp_id": "20",
+            "elevation_m": 39.32
+          }
+        },
+        "35": {
+          "id": "35",
+          "functionality": 3,
+          "label": "35",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 710.5263157894738,
+            "y": 835.8654367878459
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 117095.4045184,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "35",
+            "elevation_m": 3.81
+          }
+        },
+        "40": {
+          "id": "40",
+          "functionality": 3,
+          "label": "40",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 774.0097666847531,
+            "y": 864.758545849159
+          },
+          "properties": {
+            "inp_id": "40",
+            "elevation_m": 40.2
+          }
+        },
+        "50": {
+          "id": "50",
+          "functionality": 3,
+          "label": "50",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1017.7699403147043,
+            "y": 1141.4812805208899
+          },
+          "properties": {
+            "inp_id": "50",
+            "elevation_m": 35.51
+          }
+        },
+        "60": {
+          "id": "60",
+          "functionality": 3,
+          "label": "60",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 647.0428648941942,
+            "y": 45.57786218122616
+          },
+          "properties": {
+            "inp_id": "60",
+            "elevation_m": 0
+          }
+        },
+        "61": {
+          "id": "61",
+          "functionality": 3,
+          "label": "61",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 639.3109061313077,
+            "y": 82.6098752034725
+          },
+          "properties": {
+            "inp_id": "61",
+            "elevation_m": 0
+          }
+        },
+        "101": {
+          "id": "101",
+          "functionality": 3,
+          "label": "101",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 236.43516006511126,
+            "y": 330.43950081389033
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 23248.926643989198,
+              "priority": 2
+            }
+          },
+          "properties": {
+            "inp_id": "101",
+            "elevation_m": 12.8
+          }
+        },
+        "103": {
+          "id": "103",
+          "functionality": 3,
+          "label": "103",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 201.84481823114493,
+            "y": 396.7715680954965
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 16303.0114713312,
+              "priority": 2
+            }
+          },
+          "properties": {
+            "inp_id": "103",
+            "elevation_m": 13.11
+          }
+        },
+        "105": {
+          "id": "105",
+          "functionality": 3,
+          "label": "105",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 365.0298426478567,
+            "y": 397.9924036896364
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 16568.608580135922,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "105",
+            "elevation_m": 8.69
+          }
+        },
+        "107": {
+          "id": "107",
+          "functionality": 3,
+          "label": "107",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 425.25773195876286,
+            "y": 431.36190992946274
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 6687.66176271424,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "107",
+            "elevation_m": 6.71
+          }
+        },
+        "109": {
+          "id": "109",
+          "functionality": 3,
+          "label": "109",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 392.29517091698324,
+            "y": 494.03147042864884
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 28322.198607102404,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "109",
+            "elevation_m": 6.19
+          }
+        },
+        "111": {
+          "id": "111",
+          "functionality": 3,
+          "label": "111",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 496.88008681497564,
+            "y": 550.5968529571351
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 17372.74360541104,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "111",
+            "elevation_m": 3.05
+          }
+        },
+        "113": {
+          "id": "113",
+          "functionality": 3,
+          "label": "113",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 571.3510580575149,
+            "y": 588.0358111774281
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2449.1235701301603,
+              "priority": 5
+            }
+          },
+          "properties": {
+            "inp_id": "113",
+            "elevation_m": 0.61
+          }
+        },
+        "115": {
+          "id": "115",
+          "functionality": 3,
+          "label": "115",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 528.2148670645687,
+            "y": 483.45089527943566
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 6376.7785109336,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "115",
+            "elevation_m": 4.27
+          }
+        },
+        "117": {
+          "id": "117",
+          "functionality": 3,
+          "label": "117",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 557.1079761258818,
+            "y": 397.9924036896364
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 14407.113215393358,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "117",
+            "elevation_m": 4.15
+          }
+        },
+        "119": {
+          "id": "119",
+          "functionality": 3,
+          "label": "119",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 638.903960933261,
+            "y": 337.7645143787302
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 21557.42800634808,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "119",
+            "elevation_m": 0.61
+          }
+        },
+        "120": {
+          "id": "120",
+          "functionality": 3,
+          "label": "120",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 572.9788388497016,
+            "y": 323.9283776451437
+          },
+          "properties": {
+            "inp_id": "120",
+            "elevation_m": 0
+          }
+        },
+        "121": {
+          "id": "121",
+          "functionality": 3,
+          "label": "121",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 632.3928377645144,
+            "y": 226.26153011394462
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5095.303059696081,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "121",
+            "elevation_m": -0.61
+          }
+        },
+        "123": {
+          "id": "123",
+          "functionality": 3,
+          "label": "123",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 625.4747693977212,
+            "y": 152.60444926749864
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 117726.30648240002,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "123",
+            "elevation_m": 3.35
+          }
+        },
+        "125": {
+          "id": "125",
+          "functionality": 3,
+          "label": "125",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 675.122083559414,
+            "y": 220.5642973412913
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5581.2111343296,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "125",
+            "elevation_m": 3.35
+          }
+        },
+        "127": {
+          "id": "127",
+          "functionality": 3,
+          "label": "127",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 866.3863266413456,
+            "y": 189.636462289745
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2161.49536474256,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "127",
+            "elevation_m": 17.07
+          }
+        },
+        "129": {
+          "id": "129",
+          "functionality": 3,
+          "label": "129",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 908.301682040152,
+            "y": 190.04340748779157
+          },
+          "properties": {
+            "inp_id": "129",
+            "elevation_m": 15.54
+          }
+        },
+        "131": {
+          "id": "131",
+          "functionality": 3,
+          "label": "131",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1216.3591969614758,
+            "y": 61.44872490504604
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5232.385438434,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "131",
+            "elevation_m": 1.83
+          }
+        },
+        "139": {
+          "id": "139",
+          "functionality": 3,
+          "label": "139",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1028.7574606619644,
+            "y": 265.3282691264243
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 720.90643818424,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "139",
+            "elevation_m": 9.45
+          }
+        },
+        "141": {
+          "id": "141",
+          "functionality": 3,
+          "label": "141",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1126.4243081931634,
+            "y": 324.74226804123714
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1205.5905630076,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "141",
+            "elevation_m": 1.22
+          }
+        },
+        "143": {
+          "id": "143",
+          "functionality": 3,
+          "label": "143",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1199.267498643516,
+            "y": 369.91318502441675
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 758.8488822992001,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "143",
+            "elevation_m": -1.37
+          }
+        },
+        "145": {
+          "id": "145",
+          "functionality": 3,
+          "label": "145",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1018.1768855127511,
+            "y": 478.9744981009224
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 3381.7733254720797,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "145",
+            "elevation_m": 0.3
+          }
+        },
+        "147": {
+          "id": "147",
+          "functionality": 3,
+          "label": "147",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 905.0461204557786,
+            "y": 434.61747151383616
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1046.4770876868001,
+              "priority": 6
+            }
+          },
+          "properties": {
+            "inp_id": "147",
+            "elevation_m": 5.64
+          }
+        },
+        "149": {
+          "id": "149",
+          "functionality": 3,
+          "label": "149",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 879.8155181768856,
+            "y": 419.9674443841563
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 3313.2321361031204,
+              "priority": 6
+            }
+          },
+          "properties": {
+            "inp_id": "149",
+            "elevation_m": 4.88
+          }
+        },
+        "151": {
+          "id": "151",
+          "functionality": 3,
+          "label": "151",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 825.6918068366793,
+            "y": 393.5160065111231
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 17683.62685719168,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "151",
+            "elevation_m": 10.21
+          }
+        },
+        "153": {
+          "id": "153",
+          "functionality": 3,
+          "label": "153",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 819.1806836679327,
+            "y": 343.05480195333695
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5406.18631147672,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "153",
+            "elevation_m": 20.18
+          }
+        },
+        "157": {
+          "id": "157",
+          "functionality": 3,
+          "label": "157",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 685.7026587086273,
+            "y": 443.57026587086267
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 6338.836066818641,
+              "priority": 7
+            }
+          },
+          "properties": {
+            "inp_id": "157",
+            "elevation_m": 3.99
+          }
+        },
+        "159": {
+          "id": "159",
+          "functionality": 3,
+          "label": "159",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 615.3011394465545,
+            "y": 551.8176885512751
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5057.36061558112,
+              "priority": 7
+            }
+          },
+          "properties": {
+            "inp_id": "159",
+            "elevation_m": 1.83
+          }
+        },
+        "161": {
+          "id": "161",
+          "functionality": 3,
+          "label": "161",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 695.8762886597939,
+            "y": 642.1595225176343
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1933.8407000528002,
+              "priority": 6
+            }
+          },
+          "properties": {
+            "inp_id": "161",
+            "elevation_m": 1.22
+          }
+        },
+        "163": {
+          "id": "163",
+          "functionality": 3,
+          "label": "163",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 707.6776994031471,
+            "y": 654.3678784590342
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1152.96072117072,
+              "priority": 6
+            }
+          },
+          "properties": {
+            "inp_id": "163",
+            "elevation_m": 1.52
+          }
+        },
+        "164": {
+          "id": "164",
+          "functionality": 3,
+          "label": "164",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 731.6874660879002,
+            "y": 647.8567552902875
+          },
+          "properties": {
+            "inp_id": "164",
+            "elevation_m": 1.52
+          }
+        },
+        "166": {
+          "id": "166",
+          "functionality": 3,
+          "label": "166",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 752.0347259902334,
+            "y": 648.2637004883342
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 318.2269506416,
+              "priority": 8
+            }
+          },
+          "properties": {
+            "inp_id": "166",
+            "elevation_m": -0.61
+          }
+        },
+        "167": {
+          "id": "167",
+          "functionality": 3,
+          "label": "167",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 727.6180141074335,
+            "y": 735.7569180683668
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1782.07092359296,
+              "priority": 7
+            }
+          },
+          "properties": {
+            "inp_id": "167",
+            "elevation_m": -1.52
+          }
+        },
+        "169": {
+          "id": "169",
+          "functionality": 3,
+          "label": "169",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 719.4791101465003,
+            "y": 745.5236028214867
+          },
+          "properties": {
+            "inp_id": "169",
+            "elevation_m": -1.52
+          }
+        },
+        "171": {
+          "id": "171",
+          "functionality": 3,
+          "label": "171",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 758.9527943570265,
+            "y": 783.776451437873
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 4815.01855316944,
+              "priority": 7
+            }
+          },
+          "properties": {
+            "inp_id": "171",
+            "elevation_m": -1.22
+          }
+        },
+        "173": {
+          "id": "173",
+          "functionality": 3,
+          "label": "173",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 767.9055887140532,
+            "y": 792.322300596853
+          },
+          "properties": {
+            "inp_id": "173",
+            "elevation_m": -1.22
+          }
+        },
+        "177": {
+          "id": "177",
+          "functionality": 3,
+          "label": "177",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 720.6999457406404,
+            "y": 833.8307107976126
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 7119.71604570072,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "177",
+            "elevation_m": 2.44
+          }
+        },
+        "179": {
+          "id": "179",
+          "functionality": 3,
+          "label": "179",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 720.6999457406404,
+            "y": 840.7487791644057
+          },
+          "properties": {
+            "inp_id": "179",
+            "elevation_m": 2.44
+          }
+        },
+        "181": {
+          "id": "181",
+          "functionality": 3,
+          "label": "181",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 721.1068909386869,
+            "y": 826.9126424308193
+          },
+          "properties": {
+            "inp_id": "181",
+            "elevation_m": 2.44
+          }
+        },
+        "183": {
+          "id": "183",
+          "functionality": 3,
+          "label": "183",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 710.119370591427,
+            "y": 849.7015735214325
+          },
+          "properties": {
+            "inp_id": "183",
+            "elevation_m": 3.35
+          }
+        },
+        "184": {
+          "id": "184",
+          "functionality": 3,
+          "label": "184",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 697.9110146500271,
+            "y": 876.5599565925122
+          },
+          "properties": {
+            "inp_id": "184",
+            "elevation_m": 4.88
+          }
+        },
+        "185": {
+          "id": "185",
+          "functionality": 3,
+          "label": "185",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 692.2137818773739,
+            "y": 870.4557786218123
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 3139.4312630604,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "185",
+            "elevation_m": 4.88
+          }
+        },
+        "187": {
+          "id": "187",
+          "functionality": 3,
+          "label": "187",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 636.462289744981,
+            "y": 814.7042864894195
+          },
+          "properties": {
+            "inp_id": "187",
+            "elevation_m": 3.81
+          }
+        },
+        "189": {
+          "id": "189",
+          "functionality": 3,
+          "label": "189",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 657.2164948453608,
+            "y": 801.2750949538795
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 13208.866351246721,
+              "priority": 5
+            }
+          },
+          "properties": {
+            "inp_id": "189",
+            "elevation_m": 1.22
+          }
+        },
+        "191": {
+          "id": "191",
+          "functionality": 3,
+          "label": "191",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 573.7927292457949,
+            "y": 691.3998914812805
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 10024.148945210402,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "191",
+            "elevation_m": 7.62
+          }
+        },
+        "193": {
+          "id": "193",
+          "functionality": 3,
+          "label": "193",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 605.5344546934346,
+            "y": 680.005425935974
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 8727.986096250961,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "193",
+            "elevation_m": 5.49
+          }
+        },
+        "195": {
+          "id": "195",
+          "functionality": 3,
+          "label": "195",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 617.7428106348345,
+            "y": 664.9484536082473
+          },
+          "properties": {
+            "inp_id": "195",
+            "elevation_m": 4.72
+          }
+        },
+        "197": {
+          "id": "197",
+          "functionality": 3,
+          "label": "197",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 527.807921866522,
+            "y": 646.2289744981009
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2085.6104765126397,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "197",
+            "elevation_m": 7.01
+          }
+        },
+        "199": {
+          "id": "199",
+          "functionality": 3,
+          "label": "199",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 871.6766142159523,
+            "y": 920.5100379815517
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 14604.16913482912,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "199",
+            "elevation_m": -0.61
+          }
+        },
+        "201": {
+          "id": "201",
+          "functionality": 3,
+          "label": "201",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 931.4975583288118,
+            "y": 915.2197504069452
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5460.040103123761,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "201",
+            "elevation_m": 0.03
+          }
+        },
+        "203": {
+          "id": "203",
+          "functionality": 3,
+          "label": "203",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 941.6711882799783,
+            "y": 902.197504069452
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 292927.7818852,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "203",
+            "elevation_m": 0.61
+          }
+        },
+        "204": {
+          "id": "204",
+          "functionality": 3,
+          "label": "204",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 642.9734129137277,
+            "y": 820.4015192620726
+          },
+          "properties": {
+            "inp_id": "204",
+            "elevation_m": 6.4
+          }
+        },
+        "205": {
+          "id": "205",
+          "functionality": 3,
+          "label": "205",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 862.7238198589257,
+            "y": 1001.085187194791
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 7999.735959205761,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "205",
+            "elevation_m": 6.4
+          }
+        },
+        "206": {
+          "id": "206",
+          "functionality": 3,
+          "label": "206",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 962.8323385784048,
+            "y": 993.7601736299512
+          },
+          "properties": {
+            "inp_id": "206",
+            "elevation_m": 0.3
+          }
+        },
+        "207": {
+          "id": "207",
+          "functionality": 3,
+          "label": "207",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 935.9739555073251,
+            "y": 994.9810092240912
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 8492.987732700241,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "207",
+            "elevation_m": 2.74
+          }
+        },
+        "208": {
+          "id": "208",
+          "functionality": 3,
+          "label": "208",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 998.6435160065112,
+            "y": 986.8421052631579
+          },
+          "properties": {
+            "inp_id": "208",
+            "elevation_m": 4.88
+          }
+        },
+        "209": {
+          "id": "209",
+          "functionality": 3,
+          "label": "209",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1048.290830168204,
+            "y": 995.7948996201844
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 106.48363348392,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "209",
+            "elevation_m": -0.61
+          }
+        },
+        "211": {
+          "id": "211",
+          "functionality": 3,
+          "label": "211",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1066.1964188822574,
+            "y": 1038.5241454150841
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1061.16448540872,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "211",
+            "elevation_m": 2.13
+          }
+        },
+        "213": {
+          "id": "213",
+          "functionality": 3,
+          "label": "213",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1109.3326098752034,
+            "y": 1013.2935431361909
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1706.1860353630402,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "213",
+            "elevation_m": 2.13
+          }
+        },
+        "215": {
+          "id": "215",
+          "functionality": 3,
+          "label": "215",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1300.1899077590886,
+            "y": 908.7086272381986
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 11283.59329986504,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "215",
+            "elevation_m": 2.13
+          }
+        },
+        "217": {
+          "id": "217",
+          "functionality": 3,
+          "label": "217",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1388.0900705371678,
+            "y": 911.1502984264786
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2964.40644020752,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "217",
+            "elevation_m": 1.83
+          }
+        },
+        "219": {
+          "id": "219",
+          "functionality": 3,
+          "label": "219",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1500,
+            "y": 884.6988605534455
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5057.36061558112,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "219",
+            "elevation_m": 1.22
+          }
+        },
+        "225": {
+          "id": "225",
+          "functionality": 3,
+          "label": "225",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1445.876288659794,
+            "y": 963.6462289744982
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2790.6055671648,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "225",
+            "elevation_m": 2.44
+          }
+        },
+        "229": {
+          "id": "229",
+          "functionality": 3,
+          "label": "229",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1145.9576776994031,
+            "y": 1121.9479110146501
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 7855.3098816068805,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "229",
+            "elevation_m": 3.2
+          }
+        },
+        "231": {
+          "id": "231",
+          "functionality": 3,
+          "label": "231",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1236.2995116657626,
+            "y": 1160.607704829083
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2017.0692871436802,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "231",
+            "elevation_m": 1.52
+          }
+        },
+        "237": {
+          "id": "237",
+          "functionality": 3,
+          "label": "237",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1113.8090070537166,
+            "y": 1138.6326641345631
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 1910.58565365976,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "237",
+            "elevation_m": 4.27
+          }
+        },
+        "239": {
+          "id": "239",
+          "functionality": 3,
+          "label": "239",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1129.6798697775366,
+            "y": 1169.9674443841564
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 5460.040103123761,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "239",
+            "elevation_m": 3.96
+          }
+        },
+        "241": {
+          "id": "241",
+          "functionality": 3,
+          "label": "241",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1134.1562669560499,
+            "y": 1178.1063483450896
+          },
+          "properties": {
+            "inp_id": "241",
+            "elevation_m": 3.96
+          }
+        },
+        "243": {
+          "id": "243",
+          "functionality": 3,
+          "label": "243",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1181.7688551275096,
+            "y": 1263.9717851329353
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 531.1942176094399,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "243",
+            "elevation_m": 4.27
+          }
+        },
+        "247": {
+          "id": "247",
+          "functionality": 3,
+          "label": "247",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1099.5659251220836,
+            "y": 1180.5480195333694
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 8614.15876390608,
+              "priority": 4
+            }
+          },
+          "properties": {
+            "inp_id": "247",
+            "elevation_m": 5.49
+          }
+        },
+        "249": {
+          "id": "249",
+          "functionality": 3,
+          "label": "249",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1099.5659251220836,
+            "y": 1190.3147042864894
+          },
+          "properties": {
+            "inp_id": "249",
+            "elevation_m": 5.49
+          }
+        },
+        "251": {
+          "id": "251",
+          "functionality": 3,
+          "label": "251",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1064.161692892024,
+            "y": 1219.2078133478024
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 2957.06274134656,
+              "priority": 3
+            }
+          },
+          "properties": {
+            "inp_id": "251",
+            "elevation_m": 9.14
+          }
+        },
+        "253": {
+          "id": "253",
+          "functionality": 3,
+          "label": "253",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 983.5051546391753,
+            "y": 1187.2626153011395
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 6672.97436499232,
+              "priority": 6
+            }
+          },
+          "properties": {
+            "inp_id": "253",
+            "elevation_m": 10.97
+          }
+        },
+        "255": {
+          "id": "255",
+          "functionality": 3,
+          "label": "255",
+          "node_type": "Service",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 1038.1172002170374,
+            "y": 1164.270211611503
+          },
+          "category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 4943.53328323624,
+              "priority": 10
+            }
+          },
+          "properties": {
+            "inp_id": "255",
+            "elevation_m": 8.23
+          }
+        },
+        "257": {
+          "id": "257",
+          "functionality": 3,
+          "label": "257",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 535.9468258274553,
+            "y": 314.97558328811715
+          },
+          "properties": {
+            "inp_id": "257",
+            "elevation_m": 5.18
+          }
+        },
+        "259": {
+          "id": "259",
+          "functionality": 3,
+          "label": "259",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 520.8898534997287,
+            "y": 311.7200217037439
+          },
+          "properties": {
+            "inp_id": "259",
+            "elevation_m": 7.62
+          }
+        },
+        "261": {
+          "id": "261",
+          "functionality": 3,
+          "label": "261",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 520.4829083016821,
+            "y": 391.0743353228432
+          },
+          "properties": {
+            "inp_id": "261",
+            "elevation_m": 0
+          }
+        },
+        "263": {
+          "id": "263",
+          "functionality": 3,
+          "label": "263",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 501.3564839934889,
+            "y": 386.1909929462832
+          },
+          "properties": {
+            "inp_id": "263",
+            "elevation_m": 0
+          }
+        },
+        "265": {
+          "id": "265",
+          "functionality": 3,
+          "label": "265",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 707.6776994031471,
+            "y": 710.5263157894738
+          },
+          "properties": {
+            "inp_id": "265",
+            "elevation_m": 0
+          }
+        },
+        "267": {
+          "id": "267",
+          "functionality": 3,
+          "label": "267",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 625.8817145957678,
+            "y": 736.9777536625068
+          },
+          "properties": {
+            "inp_id": "267",
+            "elevation_m": 6.4
+          }
+        },
+        "269": {
+          "id": "269",
+          "functionality": 3,
+          "label": "269",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 693.0276722734673,
+            "y": 769.9403147042865
+          },
+          "properties": {
+            "inp_id": "269",
+            "elevation_m": 0
+          }
+        },
+        "271": {
+          "id": "271",
+          "functionality": 3,
+          "label": "271",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 731.2805208898535,
+            "y": 816.3320672816061
+          },
+          "properties": {
+            "inp_id": "271",
+            "elevation_m": 1.83
+          }
+        },
+        "273": {
+          "id": "273",
+          "functionality": 3,
+          "label": "273",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 861.0960390667391,
+            "y": 963.6462289744982
+          },
+          "properties": {
+            "inp_id": "273",
+            "elevation_m": 2.44
+          }
+        },
+        "275": {
+          "id": "275",
+          "functionality": 3,
+          "label": "275",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 938.8225718936517,
+            "y": 926.6142159522518
+          },
+          "properties": {
+            "inp_id": "275",
+            "elevation_m": 3.05
+          }
+        },
+        "601": {
+          "id": "601",
+          "functionality": 3,
+          "label": "601",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 610.4177970699945,
+            "y": 63.89039609332611
+          },
+          "properties": {
+            "inp_id": "601",
+            "elevation_m": 0
+          }
+        },
+        "River": {
+          "id": "River",
+          "functionality": 3,
+          "label": "River",
+          "node_type": "Source",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 657.2164948453608,
+            "y": 0
+          },
+          "supply_capacity": {
+            "water": 1060253.4601830812
+          },
+          "properties": {
+            "inp_id": "River",
+            "kind": "reservoir",
+            "head_m": 67.06
+          }
+        },
+        "Lake": {
+          "id": "Lake",
+          "functionality": 3,
+          "label": "Lake",
+          "node_type": "Source",
+          "node_categories": [
+            "water"
+          ],
+          "position": {
+            "x": 0,
+            "y": 143.65165491047196
+          },
+          "supply_capacity": {
+            "water": 252360.78560000003
+          },
+          "properties": {
+            "inp_id": "Lake",
+            "kind": "reservoir",
+            "head_m": 50.9
+          }
+        },
+        "pump_10": {
+          "id": "pump_10",
+          "functionality": 1,
+          "label": "Pump 10",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water",
+            "pumping"
+          ],
+          "position": {
+            "x": 20.347259902333153,
+            "y": 137.14053174172534
+          },
+          "properties": {
+            "inp_id": "10",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        },
+        "pump_335": {
+          "id": "pump_335",
+          "functionality": 3,
+          "label": "Pump 335",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water",
+            "pumping"
+          ],
+          "position": {
+            "x": 643.1768855127509,
+            "y": 64.0938686923494
+          },
+          "properties": {
+            "inp_id": "335",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        }
+      },
+      "edges": {
+        "e_20": {
+          "id": "e_20",
+          "source": "3",
+          "target": "20",
+          "functionality": 3,
+          "capacity": 1236271.0986329992,
+          "properties": {
+            "inp_id": "20",
+            "kind": "pipe",
+            "length_m": 30.18,
+            "diameter_m": 2.5146,
+            "roughness": 199,
+            "velocity_ms": 0.2489
+          }
+        },
+        "e_40": {
+          "id": "e_40",
+          "source": "1",
+          "target": "40",
+          "functionality": 3,
+          "capacity": 465876.01603307825,
+          "properties": {
+            "inp_id": "40",
+            "kind": "pipe",
+            "length_m": 30.18,
+            "diameter_m": 2.5146,
+            "roughness": 199,
+            "velocity_ms": 0.0938
+          }
+        },
+        "e_50": {
+          "id": "e_50",
+          "source": "2",
+          "target": "50",
+          "functionality": 3,
+          "capacity": 268508.8879006981,
+          "properties": {
+            "inp_id": "50",
+            "kind": "pipe",
+            "length_m": 30.18,
+            "diameter_m": 2.5146,
+            "roughness": 199,
+            "velocity_ms": 0.0541
+          }
+        },
+        "e_60": {
+          "id": "e_60",
+          "source": "River",
+          "target": "60",
+          "functionality": 3,
+          "capacity": 1060253.4601830812,
+          "properties": {
+            "inp_id": "60",
+            "kind": "pipe",
+            "length_m": 375.21,
+            "diameter_m": 0.6096,
+            "roughness": 140,
+            "velocity_ms": 3.6327
+          }
+        },
+        "e_101": {
+          "id": "e_101",
+          "source": "10",
+          "target": "101",
+          "functionality": 3,
+          "capacity": 164173.22322758925,
+          "properties": {
+            "inp_id": "101",
+            "kind": "pipe",
+            "length_m": 4328.16,
+            "diameter_m": 0.4572,
+            "roughness": 110,
+            "velocity_ms": 1
+          }
+        },
+        "e_103": {
+          "id": "e_103",
+          "source": "101",
+          "target": "103",
+          "functionality": 3,
+          "capacity": 33375.37720401086,
+          "properties": {
+            "inp_id": "103",
+            "kind": "pipe",
+            "length_m": 411.48,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.2573
+          }
+        },
+        "e_105": {
+          "id": "e_105",
+          "source": "101",
+          "target": "105",
+          "functionality": 3,
+          "capacity": 49526.59208460784,
+          "properties": {
+            "inp_id": "105",
+            "kind": "pipe",
+            "length_m": 774.19,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.6788
+          }
+        },
+        "e_107": {
+          "id": "e_107",
+          "source": "105",
+          "target": "107",
+          "functionality": 3,
+          "capacity": 19654.030340373265,
+          "properties": {
+            "inp_id": "107",
+            "kind": "pipe",
+            "length_m": 448.06,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.2694
+          }
+        },
+        "e_109": {
+          "id": "e_109",
+          "source": "103",
+          "target": "109",
+          "functionality": 3,
+          "capacity": 33375.38106988213,
+          "properties": {
+            "inp_id": "109",
+            "kind": "pipe",
+            "length_m": 1200.91,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.2573
+          }
+        },
+        "e_111": {
+          "id": "e_111",
+          "source": "109",
+          "target": "111",
+          "functionality": 3,
+          "capacity": 65099.66784971645,
+          "properties": {
+            "inp_id": "111",
+            "kind": "pipe",
+            "length_m": 609.6,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.8922
+          }
+        },
+        "e_112": {
+          "id": "e_112",
+          "source": "115",
+          "target": "111",
+          "functionality": 3,
+          "capacity": 45616.468186210564,
+          "properties": {
+            "inp_id": "112",
+            "kind": "pipe",
+            "length_m": 353.57,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.6252
+          }
+        },
+        "e_113": {
+          "id": "e_113",
+          "source": "111",
+          "target": "113",
+          "functionality": 3,
+          "capacity": 34429.92599898615,
+          "properties": {
+            "inp_id": "113",
+            "kind": "pipe",
+            "length_m": 512.06,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4719
+          }
+        },
+        "e_114": {
+          "id": "e_114",
+          "source": "115",
+          "target": "113",
+          "functionality": 3,
+          "capacity": 9209.715382775856,
+          "properties": {
+            "inp_id": "114",
+            "kind": "pipe",
+            "length_m": 609.6,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.284
+          }
+        },
+        "e_115": {
+          "id": "e_115",
+          "source": "107",
+          "target": "115",
+          "functionality": 3,
+          "capacity": 16063.237315170642,
+          "properties": {
+            "inp_id": "115",
+            "kind": "pipe",
+            "length_m": 594.36,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.4953
+          }
+        },
+        "e_116": {
+          "id": "e_116",
+          "source": "193",
+          "target": "113",
+          "functionality": 3,
+          "capacity": 36917.69679421019,
+          "properties": {
+            "inp_id": "116",
+            "kind": "pipe",
+            "length_m": 505.97,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.506
+          }
+        },
+        "e_117": {
+          "id": "e_117",
+          "source": "105",
+          "target": "263",
+          "functionality": 3,
+          "capacity": 80749.65319080549,
+          "properties": {
+            "inp_id": "117",
+            "kind": "pipe",
+            "length_m": 830.58,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.1067
+          }
+        },
+        "e_119": {
+          "id": "e_119",
+          "source": "117",
+          "target": "115",
+          "functionality": 3,
+          "capacity": 81128.32108050594,
+          "properties": {
+            "inp_id": "119",
+            "kind": "pipe",
+            "length_m": 664.46,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.1119
+          }
+        },
+        "e_120": {
+          "id": "e_120",
+          "source": "119",
+          "target": "120",
+          "functionality": 3,
+          "capacity": 153824.47526557196,
+          "properties": {
+            "inp_id": "120",
+            "kind": "pipe",
+            "length_m": 222.5,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 2.1082
+          }
+        },
+        "e_121": {
+          "id": "e_121",
+          "source": "120",
+          "target": "117",
+          "functionality": 3,
+          "capacity": 135850.3977026599,
+          "properties": {
+            "inp_id": "121",
+            "kind": "pipe",
+            "length_m": 569.98,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.8618
+          }
+        },
+        "e_122": {
+          "id": "e_122",
+          "source": "121",
+          "target": "120",
+          "functionality": 3,
+          "capacity": 46102.014852444074,
+          "properties": {
+            "inp_id": "122",
+            "kind": "pipe",
+            "length_m": 624.84,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.4216
+          }
+        },
+        "e_123": {
+          "id": "e_123",
+          "source": "121",
+          "target": "119",
+          "functionality": 3,
+          "capacity": 1201978.5073862064,
+          "properties": {
+            "inp_id": "123",
+            "kind": "pipe",
+            "length_m": 609.6,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 2.6357
+          }
+        },
+        "e_125": {
+          "id": "e_125",
+          "source": "123",
+          "target": "121",
+          "functionality": 3,
+          "capacity": 688381.3147943352,
+          "properties": {
+            "inp_id": "125",
+            "kind": "pipe",
+            "length_m": 457.2,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.5095
+          }
+        },
+        "e_129": {
+          "id": "e_129",
+          "source": "125",
+          "target": "121",
+          "functionality": 3,
+          "capacity": 1010228.4519467823,
+          "properties": {
+            "inp_id": "129",
+            "kind": "pipe",
+            "length_m": 283.46,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 3.4613
+          }
+        },
+        "e_131": {
+          "id": "e_131",
+          "source": "127",
+          "target": "125",
+          "functionality": 3,
+          "capacity": 1095156.03823468,
+          "properties": {
+            "inp_id": "131",
+            "kind": "pipe",
+            "length_m": 987.55,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 3.7523
+          }
+        },
+        "e_133": {
+          "id": "e_133",
+          "source": "20",
+          "target": "127",
+          "functionality": 3,
+          "capacity": 1236271.129235297,
+          "properties": {
+            "inp_id": "133",
+            "kind": "pipe",
+            "length_m": 239.27,
+            "diameter_m": 0.508,
+            "roughness": 130,
+            "velocity_ms": 6.0995
+          }
+        },
+        "e_135": {
+          "id": "e_135",
+          "source": "127",
+          "target": "129",
+          "functionality": 3,
+          "capacity": 118746.20206296355,
+          "properties": {
+            "inp_id": "135",
+            "kind": "pipe",
+            "length_m": 274.32,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 0.4069
+          }
+        },
+        "e_137": {
+          "id": "e_137",
+          "source": "129",
+          "target": "131",
+          "functionality": 3,
+          "capacity": 56091.20585938397,
+          "properties": {
+            "inp_id": "137",
+            "kind": "pipe",
+            "length_m": 1975.1,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.4324
+          }
+        },
+        "e_145": {
+          "id": "e_145",
+          "source": "129",
+          "target": "139",
+          "functionality": 3,
+          "capacity": 62654.99523711177,
+          "properties": {
+            "inp_id": "145",
+            "kind": "pipe",
+            "length_m": 838.2,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.9321
+          }
+        },
+        "e_147": {
+          "id": "e_147",
+          "source": "139",
+          "target": "141",
+          "functionality": 3,
+          "capacity": 57012.918485184004,
+          "properties": {
+            "inp_id": "147",
+            "kind": "pipe",
+            "length_m": 624.84,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.7581
+          }
+        },
+        "e_149": {
+          "id": "e_149",
+          "source": "141",
+          "target": "143",
+          "functionality": 3,
+          "capacity": 55213.22396938982,
+          "properties": {
+            "inp_id": "149",
+            "kind": "pipe",
+            "length_m": 426.72,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.7026
+          }
+        },
+        "e_151": {
+          "id": "e_151",
+          "source": "143",
+          "target": "15",
+          "functionality": 3,
+          "capacity": 53179.50507039675,
+          "properties": {
+            "inp_id": "151",
+            "kind": "pipe",
+            "length_m": 502.92,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.6399
+          }
+        },
+        "e_153": {
+          "id": "e_153",
+          "source": "141",
+          "target": "145",
+          "functionality": 3,
+          "capacity": 28892.164709322486,
+          "properties": {
+            "inp_id": "153",
+            "kind": "pipe",
+            "length_m": 1069.85,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.396
+          }
+        },
+        "e_155": {
+          "id": "e_155",
+          "source": "145",
+          "target": "147",
+          "functionality": 3,
+          "capacity": 29485.032552732482,
+          "properties": {
+            "inp_id": "155",
+            "kind": "pipe",
+            "length_m": 670.56,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4041
+          }
+        },
+        "e_159": {
+          "id": "e_159",
+          "source": "149",
+          "target": "147",
+          "functionality": 3,
+          "capacity": 30887.327582821472,
+          "properties": {
+            "inp_id": "159",
+            "kind": "pipe",
+            "length_m": 268.22,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4233
+          }
+        },
+        "e_161": {
+          "id": "e_161",
+          "source": "151",
+          "target": "149",
+          "functionality": 3,
+          "capacity": 35327.07777814026,
+          "properties": {
+            "inp_id": "161",
+            "kind": "pipe",
+            "length_m": 310.9,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.0894
+          }
+        },
+        "e_163": {
+          "id": "e_163",
+          "source": "153",
+          "target": "151",
+          "functionality": 3,
+          "capacity": 34264.51430717145,
+          "properties": {
+            "inp_id": "163",
+            "kind": "pipe",
+            "length_m": 356.62,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4696
+          }
+        },
+        "e_169": {
+          "id": "e_169",
+          "source": "125",
+          "target": "153",
+          "functionality": 3,
+          "capacity": 34469.87881209348,
+          "properties": {
+            "inp_id": "169",
+            "kind": "pipe",
+            "length_m": 1389.89,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.0629
+          }
+        },
+        "e_171": {
+          "id": "e_171",
+          "source": "119",
+          "target": "151",
+          "functionality": 3,
+          "capacity": 58878.92525733979,
+          "properties": {
+            "inp_id": "171",
+            "kind": "pipe",
+            "length_m": 1054.61,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.8069
+          }
+        },
+        "e_173": {
+          "id": "e_173",
+          "source": "119",
+          "target": "157",
+          "functionality": 3,
+          "capacity": 906880.6851559237,
+          "properties": {
+            "inp_id": "173",
+            "kind": "pipe",
+            "length_m": 633.98,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.9886
+          }
+        },
+        "e_175": {
+          "id": "e_175",
+          "source": "157",
+          "target": "159",
+          "functionality": 3,
+          "capacity": 882235.0672015455,
+          "properties": {
+            "inp_id": "175",
+            "kind": "pipe",
+            "length_m": 886.97,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.9346
+          }
+        },
+        "e_177": {
+          "id": "e_177",
+          "source": "159",
+          "target": "161",
+          "functionality": 3,
+          "capacity": 862989.2438732465,
+          "properties": {
+            "inp_id": "177",
+            "kind": "pipe",
+            "length_m": 609.6,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.8924
+          }
+        },
+        "e_179": {
+          "id": "e_179",
+          "source": "163",
+          "target": "161",
+          "functionality": 3,
+          "capacity": 823106.2641061625,
+          "properties": {
+            "inp_id": "179",
+            "kind": "pipe",
+            "length_m": 131.06,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.8049
+          }
+        },
+        "e_180": {
+          "id": "e_180",
+          "source": "163",
+          "target": "164",
+          "functionality": 3,
+          "capacity": 2130.2244669582888,
+          "properties": {
+            "inp_id": "180",
+            "kind": "pipe",
+            "length_m": 45.72,
+            "diameter_m": 0.3556,
+            "roughness": 130,
+            "velocity_ms": 0.0214
+          }
+        },
+        "e_181": {
+          "id": "e_181",
+          "source": "164",
+          "target": "166",
+          "functionality": 3,
+          "capacity": 2130.2244669582888,
+          "properties": {
+            "inp_id": "181",
+            "kind": "pipe",
+            "length_m": 149.35,
+            "diameter_m": 0.3556,
+            "roughness": 130,
+            "velocity_ms": 0.0214
+          }
+        },
+        "e_183": {
+          "id": "e_183",
+          "source": "265",
+          "target": "169",
+          "functionality": 3,
+          "capacity": 791194.4874020737,
+          "properties": {
+            "inp_id": "183",
+            "kind": "pipe",
+            "length_m": 179.83,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.7349
+          }
+        },
+        "e_185": {
+          "id": "e_185",
+          "source": "169",
+          "target": "167",
+          "functionality": 3,
+          "capacity": 11918.638659571523,
+          "properties": {
+            "inp_id": "185",
+            "kind": "pipe",
+            "length_m": 18.29,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.3675
+          }
+        },
+        "e_186": {
+          "id": "e_186",
+          "source": "187",
+          "target": "204",
+          "functionality": 3,
+          "capacity": 26640.896079164442,
+          "properties": {
+            "inp_id": "186",
+            "kind": "pipe",
+            "length_m": 30.45,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.8215
+          }
+        },
+        "e_187": {
+          "id": "e_187",
+          "source": "169",
+          "target": "171",
+          "functionality": 3,
+          "capacity": 713622.9232496417,
+          "properties": {
+            "inp_id": "187",
+            "kind": "pipe",
+            "length_m": 387.1,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.5648
+          }
+        },
+        "e_189": {
+          "id": "e_189",
+          "source": "171",
+          "target": "173",
+          "functionality": 3,
+          "capacity": 636574.7739054683,
+          "properties": {
+            "inp_id": "189",
+            "kind": "pipe",
+            "length_m": 15.24,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.3959
+          }
+        },
+        "e_191": {
+          "id": "e_191",
+          "source": "271",
+          "target": "171",
+          "functionality": 3,
+          "capacity": 79506.73111999054,
+          "properties": {
+            "inp_id": "191",
+            "kind": "pipe",
+            "length_m": 231.65,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 0.2724
+          }
+        },
+        "e_193": {
+          "id": "e_193",
+          "source": "181",
+          "target": "35",
+          "functionality": 3,
+          "capacity": 395190.175067243,
+          "properties": {
+            "inp_id": "193",
+            "kind": "pipe",
+            "length_m": 9.14,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 1.354
+          }
+        },
+        "e_195": {
+          "id": "e_195",
+          "source": "177",
+          "target": "181",
+          "functionality": 3,
+          "capacity": 342961.075119212,
+          "properties": {
+            "inp_id": "195",
+            "kind": "pipe",
+            "length_m": 9.14,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 4.7003
+          }
+        },
+        "e_197": {
+          "id": "e_197",
+          "source": "179",
+          "target": "177",
+          "functionality": 3,
+          "capacity": 376387.2885304229,
+          "properties": {
+            "inp_id": "197",
+            "kind": "pipe",
+            "length_m": 9.14,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 5.1584
+          }
+        },
+        "e_199": {
+          "id": "e_199",
+          "source": "179",
+          "target": "183",
+          "functionality": 3,
+          "capacity": 99041.88519396137,
+          "properties": {
+            "inp_id": "199",
+            "kind": "pipe",
+            "length_m": 64.01,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.3574
+          }
+        },
+        "e_201": {
+          "id": "e_201",
+          "source": "40",
+          "target": "179",
+          "functionality": 3,
+          "capacity": 465876.04236555105,
+          "properties": {
+            "inp_id": "201",
+            "kind": "pipe",
+            "length_m": 362.71,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 6.3848
+          }
+        },
+        "e_202": {
+          "id": "e_202",
+          "source": "185",
+          "target": "184",
+          "functionality": 3,
+          "capacity": 69313.47913159749,
+          "properties": {
+            "inp_id": "202",
+            "kind": "pipe",
+            "length_m": 30.45,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 2.1374
+          }
+        },
+        "e_203": {
+          "id": "e_203",
+          "source": "183",
+          "target": "185",
+          "functionality": 3,
+          "capacity": 51337.41741025608,
+          "properties": {
+            "inp_id": "203",
+            "kind": "pipe",
+            "length_m": 155.45,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.5831
+          }
+        },
+        "e_204": {
+          "id": "e_204",
+          "source": "184",
+          "target": "205",
+          "functionality": 3,
+          "capacity": 69313.47671542794,
+          "properties": {
+            "inp_id": "204",
+            "kind": "pipe",
+            "length_m": 1380.74,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.9499
+          }
+        },
+        "e_205": {
+          "id": "e_205",
+          "source": "185",
+          "target": "204",
+          "functionality": 3,
+          "capacity": 26640.89390461185,
+          "properties": {
+            "inp_id": "205",
+            "kind": "pipe",
+            "length_m": 403.86,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.3651
+          }
+        },
+        "e_207": {
+          "id": "e_207",
+          "source": "183",
+          "target": "189",
+          "functionality": 3,
+          "capacity": 51402.02191798418,
+          "properties": {
+            "inp_id": "207",
+            "kind": "pipe",
+            "length_m": 411.48,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.7045
+          }
+        },
+        "e_209": {
+          "id": "e_209",
+          "source": "189",
+          "target": "187",
+          "functionality": 3,
+          "capacity": 39386.95779779362,
+          "properties": {
+            "inp_id": "209",
+            "kind": "pipe",
+            "length_m": 152.4,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.2145
+          }
+        },
+        "e_211": {
+          "id": "e_211",
+          "source": "269",
+          "target": "169",
+          "functionality": 3,
+          "capacity": 74034.48692529164,
+          "properties": {
+            "inp_id": "211",
+            "kind": "pipe",
+            "length_m": 196.9,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.0146
+          }
+        },
+        "e_213": {
+          "id": "e_213",
+          "source": "187",
+          "target": "191",
+          "functionality": 3,
+          "capacity": 15820.957363874719,
+          "properties": {
+            "inp_id": "213",
+            "kind": "pipe",
+            "length_m": 780.29,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.2168
+          }
+        },
+        "e_215": {
+          "id": "e_215",
+          "source": "189",
+          "target": "267",
+          "functionality": 3,
+          "capacity": 33389.71354599859,
+          "properties": {
+            "inp_id": "215",
+            "kind": "pipe",
+            "length_m": 374.9,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4576
+          }
+        },
+        "e_217": {
+          "id": "e_217",
+          "source": "193",
+          "target": "191",
+          "functionality": 3,
+          "capacity": 38479.09513905216,
+          "properties": {
+            "inp_id": "217",
+            "kind": "pipe",
+            "length_m": 158.5,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.5274
+          }
+        },
+        "e_219": {
+          "id": "e_219",
+          "source": "193",
+          "target": "195",
+          "functionality": 3,
+          "capacity": 34420.07962486154,
+          "properties": {
+            "inp_id": "219",
+            "kind": "pipe",
+            "length_m": 109.73,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4717
+          }
+        },
+        "e_221": {
+          "id": "e_221",
+          "source": "195",
+          "target": "161",
+          "functionality": 3,
+          "capacity": 34420.07865839372,
+          "properties": {
+            "inp_id": "221",
+            "kind": "pipe",
+            "length_m": 701.04,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.0614
+          }
+        },
+        "e_223": {
+          "id": "e_223",
+          "source": "191",
+          "target": "197",
+          "functionality": 3,
+          "capacity": 32529.280053783612,
+          "properties": {
+            "inp_id": "223",
+            "kind": "pipe",
+            "length_m": 350.52,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4458
+          }
+        },
+        "e_225": {
+          "id": "e_225",
+          "source": "111",
+          "target": "197",
+          "functionality": 3,
+          "capacity": 27939.878115733027,
+          "properties": {
+            "inp_id": "225",
+            "kind": "pipe",
+            "length_m": 850.39,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.3829
+          }
+        },
+        "e_229": {
+          "id": "e_229",
+          "source": "173",
+          "target": "199",
+          "functionality": 3,
+          "capacity": 636574.8369674932,
+          "properties": {
+            "inp_id": "229",
+            "kind": "pipe",
+            "length_m": 1219.2,
+            "diameter_m": 0.6096,
+            "roughness": 141,
+            "velocity_ms": 2.1811
+          }
+        },
+        "e_231": {
+          "id": "e_231",
+          "source": "199",
+          "target": "201",
+          "functionality": 3,
+          "capacity": 619203.954198238,
+          "properties": {
+            "inp_id": "231",
+            "kind": "pipe",
+            "length_m": 192.02,
+            "diameter_m": 0.6096,
+            "roughness": 141,
+            "velocity_ms": 2.1216
+          }
+        },
+        "e_233": {
+          "id": "e_233",
+          "source": "201",
+          "target": "203",
+          "functionality": 3,
+          "capacity": 674478.2975924059,
+          "properties": {
+            "inp_id": "233",
+            "kind": "pipe",
+            "length_m": 36.58,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 2.3109
+          }
+        },
+        "e_235": {
+          "id": "e_235",
+          "source": "273",
+          "target": "199",
+          "functionality": 3,
+          "capacity": 36284.99984557351,
+          "properties": {
+            "inp_id": "235",
+            "kind": "pipe",
+            "length_m": 220.98,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4973
+          }
+        },
+        "e_237": {
+          "id": "e_237",
+          "source": "205",
+          "target": "207",
+          "functionality": 3,
+          "capacity": 30843.749548930733,
+          "properties": {
+            "inp_id": "237",
+            "kind": "pipe",
+            "length_m": 365.76,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4227
+          }
+        },
+        "e_238": {
+          "id": "e_238",
+          "source": "207",
+          "target": "206",
+          "functionality": 3,
+          "capacity": 51589.63361718364,
+          "properties": {
+            "inp_id": "238",
+            "kind": "pipe",
+            "length_m": 137.16,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.707
+          }
+        },
+        "e_239": {
+          "id": "e_239",
+          "source": "207",
+          "target": "275",
+          "functionality": 3,
+          "capacity": 55982.61691804787,
+          "properties": {
+            "inp_id": "239",
+            "kind": "pipe",
+            "length_m": 435.86,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.7672
+          }
+        },
+        "e_240": {
+          "id": "e_240",
+          "source": "206",
+          "target": "208",
+          "functionality": 3,
+          "capacity": 51589.63361718364,
+          "properties": {
+            "inp_id": "240",
+            "kind": "pipe",
+            "length_m": 155.45,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.707
+          }
+        },
+        "e_241": {
+          "id": "e_241",
+          "source": "209",
+          "target": "208",
+          "functionality": 3,
+          "capacity": 51589.63361718364,
+          "properties": {
+            "inp_id": "241",
+            "kind": "pipe",
+            "length_m": 269.75,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.707
+          }
+        },
+        "e_243": {
+          "id": "e_243",
+          "source": "211",
+          "target": "209",
+          "functionality": 3,
+          "capacity": 51926.10455550456,
+          "properties": {
+            "inp_id": "243",
+            "kind": "pipe",
+            "length_m": 368.81,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.4003
+          }
+        },
+        "e_245": {
+          "id": "e_245",
+          "source": "211",
+          "target": "213",
+          "functionality": 3,
+          "capacity": 38866.132156818196,
+          "properties": {
+            "inp_id": "245",
+            "kind": "pipe",
+            "length_m": 301.75,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.2996
+          }
+        },
+        "e_247": {
+          "id": "e_247",
+          "source": "213",
+          "target": "215",
+          "functionality": 3,
+          "capacity": 52582.08878782068,
+          "properties": {
+            "inp_id": "247",
+            "kind": "pipe",
+            "length_m": 1306.07,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.4054
+          }
+        },
+        "e_249": {
+          "id": "e_249",
+          "source": "215",
+          "target": "217",
+          "functionality": 3,
+          "capacity": 26085.005052834753,
+          "properties": {
+            "inp_id": "249",
+            "kind": "pipe",
+            "length_m": 505.97,
+            "diameter_m": 0.4064,
+            "roughness": 130,
+            "velocity_ms": 0.2011
+          }
+        },
+        "e_251": {
+          "id": "e_251",
+          "source": "217",
+          "target": "219",
+          "functionality": 3,
+          "capacity": 14469.5748617413,
+          "properties": {
+            "inp_id": "251",
+            "kind": "pipe",
+            "length_m": 624.84,
+            "diameter_m": 0.3556,
+            "roughness": 130,
+            "velocity_ms": 0.1457
+          }
+        },
+        "e_257": {
+          "id": "e_257",
+          "source": "217",
+          "target": "225",
+          "functionality": 3,
+          "capacity": 6375.403296189578,
+          "properties": {
+            "inp_id": "257",
+            "kind": "pipe",
+            "length_m": 475.49,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.0874
+          }
+        },
+        "e_261": {
+          "id": "e_261",
+          "source": "229",
+          "target": "213",
+          "functionality": 3,
+          "capacity": 17895.007931359578,
+          "properties": {
+            "inp_id": "261",
+            "kind": "pipe",
+            "length_m": 670.56,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.5518
+          }
+        },
+        "e_263": {
+          "id": "e_263",
+          "source": "229",
+          "target": "231",
+          "functionality": 3,
+          "capacity": 7655.959805030386,
+          "properties": {
+            "inp_id": "263",
+            "kind": "pipe",
+            "length_m": 597.41,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.1049
+          }
+        },
+        "e_269": {
+          "id": "e_269",
+          "source": "237",
+          "target": "211",
+          "functionality": 3,
+          "capacity": 93185.91944934435,
+          "properties": {
+            "inp_id": "269",
+            "kind": "pipe",
+            "length_m": 633.98,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.2771
+          }
+        },
+        "e_271": {
+          "id": "e_271",
+          "source": "237",
+          "target": "229",
+          "functionality": 3,
+          "capacity": 43499.31315406556,
+          "properties": {
+            "inp_id": "271",
+            "kind": "pipe",
+            "length_m": 240.79,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.3414
+          }
+        },
+        "e_273": {
+          "id": "e_273",
+          "source": "239",
+          "target": "237",
+          "functionality": 3,
+          "capacity": 142076.55058187887,
+          "properties": {
+            "inp_id": "273",
+            "kind": "pipe",
+            "length_m": 155.45,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.9472
+          }
+        },
+        "e_275": {
+          "id": "e_275",
+          "source": "241",
+          "target": "239",
+          "functionality": 3,
+          "capacity": 58911.67401933552,
+          "properties": {
+            "inp_id": "275",
+            "kind": "pipe",
+            "length_m": 10.67,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.8074
+          }
+        },
+        "e_277": {
+          "id": "e_277",
+          "source": "241",
+          "target": "243",
+          "functionality": 3,
+          "capacity": 2287.8103555077655,
+          "properties": {
+            "inp_id": "277",
+            "kind": "pipe",
+            "length_m": 670.56,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.0314
+          }
+        },
+        "e_281": {
+          "id": "e_281",
+          "source": "247",
+          "target": "241",
+          "functionality": 3,
+          "capacity": 60636.14254608737,
+          "properties": {
+            "inp_id": "281",
+            "kind": "pipe",
+            "length_m": 135.64,
+            "diameter_m": 0.254,
+            "roughness": 130,
+            "velocity_ms": 1.1967
+          }
+        },
+        "e_283": {
+          "id": "e_283",
+          "source": "249",
+          "target": "239",
+          "functionality": 3,
+          "capacity": 101229.22415254489,
+          "properties": {
+            "inp_id": "283",
+            "kind": "pipe",
+            "length_m": 131.06,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 1.3874
+          }
+        },
+        "e_285": {
+          "id": "e_285",
+          "source": "247",
+          "target": "249",
+          "functionality": 3,
+          "capacity": 36161.04382432233,
+          "properties": {
+            "inp_id": "285",
+            "kind": "pipe",
+            "length_m": 3.05,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.4956
+          }
+        },
+        "e_287": {
+          "id": "e_287",
+          "source": "255",
+          "target": "247",
+          "functionality": 3,
+          "capacity": 125212.45357561439,
+          "properties": {
+            "inp_id": "287",
+            "kind": "pipe",
+            "length_m": 423.67,
+            "diameter_m": 0.254,
+            "roughness": 130,
+            "velocity_ms": 2.4711
+          }
+        },
+        "e_289": {
+          "id": "e_289",
+          "source": "50",
+          "target": "255",
+          "functionality": 3,
+          "capacity": 268508.8730714576,
+          "properties": {
+            "inp_id": "289",
+            "kind": "pipe",
+            "length_m": 281.94,
+            "diameter_m": 0.254,
+            "roughness": 130,
+            "velocity_ms": 5.2991
+          }
+        },
+        "e_291": {
+          "id": "e_291",
+          "source": "255",
+          "target": "253",
+          "functionality": 3,
+          "capacity": 37577.135544931465,
+          "properties": {
+            "inp_id": "291",
+            "kind": "pipe",
+            "length_m": 335.28,
+            "diameter_m": 0.254,
+            "roughness": 130,
+            "velocity_ms": 0.7416
+          }
+        },
+        "e_293": {
+          "id": "e_293",
+          "source": "255",
+          "target": "251",
+          "functionality": 3,
+          "capacity": 73251.41797378218,
+          "properties": {
+            "inp_id": "293",
+            "kind": "pipe",
+            "length_m": 335.28,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 2.2588
+          }
+        },
+        "e_295": {
+          "id": "e_295",
+          "source": "251",
+          "target": "249",
+          "functionality": 3,
+          "capacity": 67565.49740931386,
+          "properties": {
+            "inp_id": "295",
+            "kind": "pipe",
+            "length_m": 441.96,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.926
+          }
+        },
+        "e_297": {
+          "id": "e_297",
+          "source": "120",
+          "target": "257",
+          "functionality": 3,
+          "capacity": 63707.37044596553,
+          "properties": {
+            "inp_id": "297",
+            "kind": "pipe",
+            "length_m": 196.6,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.9645
+          }
+        },
+        "e_299": {
+          "id": "e_299",
+          "source": "257",
+          "target": "259",
+          "functionality": 3,
+          "capacity": 30555.65709015004,
+          "properties": {
+            "inp_id": "299",
+            "kind": "pipe",
+            "length_m": 106.68,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.9422
+          }
+        },
+        "e_301": {
+          "id": "e_301",
+          "source": "263",
+          "target": "259",
+          "functionality": 3,
+          "capacity": 30555.65709015004,
+          "properties": {
+            "inp_id": "301",
+            "kind": "pipe",
+            "length_m": 426.72,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.9422
+          }
+        },
+        "e_303": {
+          "id": "e_303",
+          "source": "257",
+          "target": "261",
+          "functionality": 3,
+          "capacity": 33151.71335581548,
+          "properties": {
+            "inp_id": "303",
+            "kind": "pipe",
+            "length_m": 426.72,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 1.0223
+          }
+        },
+        "e_305": {
+          "id": "e_305",
+          "source": "117",
+          "target": "261",
+          "functionality": 3,
+          "capacity": 17042.285040201034,
+          "properties": {
+            "inp_id": "305",
+            "kind": "pipe",
+            "length_m": 196.6,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.2336
+          }
+        },
+        "e_307": {
+          "id": "e_307",
+          "source": "263",
+          "target": "261",
+          "functionality": 3,
+          "capacity": 50193.997067123266,
+          "properties": {
+            "inp_id": "307",
+            "kind": "pipe",
+            "length_m": 106.68,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.6879
+          }
+        },
+        "e_309": {
+          "id": "e_309",
+          "source": "267",
+          "target": "265",
+          "functionality": 3,
+          "capacity": 28131.8389201112,
+          "properties": {
+            "inp_id": "309",
+            "kind": "pipe",
+            "length_m": 481.58,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.8675
+          }
+        },
+        "e_311": {
+          "id": "e_311",
+          "source": "267",
+          "target": "193",
+          "functionality": 3,
+          "capacity": 61521.554640662376,
+          "properties": {
+            "inp_id": "311",
+            "kind": "pipe",
+            "length_m": 356.62,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.8432
+          }
+        },
+        "e_313": {
+          "id": "e_313",
+          "source": "189",
+          "target": "269",
+          "functionality": 3,
+          "capacity": 64848.011227655225,
+          "properties": {
+            "inp_id": "313",
+            "kind": "pipe",
+            "length_m": 196.9,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.8887
+          }
+        },
+        "e_315": {
+          "id": "e_315",
+          "source": "181",
+          "target": "271",
+          "functionality": 3,
+          "capacity": 86320.41331601267,
+          "properties": {
+            "inp_id": "315",
+            "kind": "pipe",
+            "length_m": 79.25,
+            "diameter_m": 0.6096,
+            "roughness": 130,
+            "velocity_ms": 0.2958
+          }
+        },
+        "e_317": {
+          "id": "e_317",
+          "source": "273",
+          "target": "275",
+          "functionality": 3,
+          "capacity": 14276.94190919818,
+          "properties": {
+            "inp_id": "317",
+            "kind": "pipe",
+            "length_m": 679.7,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.4402
+          }
+        },
+        "e_319": {
+          "id": "e_319",
+          "source": "205",
+          "target": "273",
+          "functionality": 3,
+          "capacity": 48273.20171762774,
+          "properties": {
+            "inp_id": "319",
+            "kind": "pipe",
+            "length_m": 196.6,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.6616
+          }
+        },
+        "e_321": {
+          "id": "e_321",
+          "source": "265",
+          "target": "163",
+          "functionality": 3,
+          "capacity": 817759.3654718194,
+          "properties": {
+            "inp_id": "321",
+            "kind": "pipe",
+            "length_m": 365.76,
+            "diameter_m": 0.762,
+            "roughness": 141,
+            "velocity_ms": 1.7932
+          }
+        },
+        "e_323": {
+          "id": "e_323",
+          "source": "275",
+          "target": "201",
+          "functionality": 3,
+          "capacity": 69844.91562274116,
+          "properties": {
+            "inp_id": "323",
+            "kind": "pipe",
+            "length_m": 91.44,
+            "diameter_m": 0.3048,
+            "roughness": 130,
+            "velocity_ms": 0.9572
+          }
+        },
+        "e_325": {
+          "id": "e_325",
+          "source": "269",
+          "target": "271",
+          "functionality": 3,
+          "capacity": 11158.141563939587,
+          "properties": {
+            "inp_id": "325",
+            "kind": "pipe",
+            "length_m": 393.19,
+            "diameter_m": 0.2032,
+            "roughness": 130,
+            "velocity_ms": 0.3441
+          }
+        },
+        "e_329": {
+          "id": "e_329",
+          "source": "61",
+          "target": "123",
+          "functionality": 3,
+          "capacity": 1060253.4558339764,
+          "properties": {
+            "inp_id": "329",
+            "kind": "pipe",
+            "length_m": 13868.4,
+            "diameter_m": 0.762,
+            "roughness": 140,
+            "velocity_ms": 2.3249
+          }
+        },
+        "e_330": {
+          "id": "e_330",
+          "source": "60",
+          "target": "601",
+          "functionality": 1,
+          "capacity": 456036.731187748,
+          "properties": {
+            "inp_id": "330",
+            "kind": "pipe",
+            "length_m": 0.3,
+            "diameter_m": 0.762,
+            "roughness": 140,
+            "velocity_ms": 1
+          }
+        },
+        "e_333": {
+          "id": "e_333",
+          "source": "601",
+          "target": "61",
+          "functionality": 3,
+          "capacity": 456036.731187748,
+          "properties": {
+            "inp_id": "333",
+            "kind": "pipe",
+            "length_m": 0.3,
+            "diameter_m": 0.762,
+            "roughness": 140,
+            "velocity_ms": 1
+          }
+        },
+        "e_10__in": {
+          "id": "e_10__in",
+          "source": "Lake",
+          "target": "pump_10",
+          "functionality": 1,
+          "capacity": 252360.78560000003,
+          "properties": {
+            "inp_id": "10",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        },
+        "e_10__out": {
+          "id": "e_10__out",
+          "source": "pump_10",
+          "target": "10",
+          "functionality": 1,
+          "capacity": 252360.78560000003,
+          "properties": {
+            "inp_id": "10",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        },
+        "e_335__in": {
+          "id": "e_335__in",
+          "source": "60",
+          "target": "pump_335",
+          "functionality": 3,
+          "capacity": 883262.7496000001,
+          "properties": {
+            "inp_id": "335",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        },
+        "e_335__out": {
+          "id": "e_335__out",
+          "source": "pump_335",
+          "target": "61",
+          "functionality": 3,
+          "capacity": 883262.7496000001,
+          "properties": {
+            "inp_id": "335",
+            "kind": "pump",
+            "pump_type": "HEAD"
+          }
+        }
+      },
+      "canvases": [
+        {
+          "id": "canvas-inp-import",
+          "label": "reoriented_Net3",
+          "color": "#0ea5e9",
+          "graph": {
+            "graph_type": "water_network",
+            "node_ids": [
+              "1",
+              "10",
+              "101",
+              "103",
+              "105",
+              "107",
+              "109",
+              "111",
+              "113",
+              "115",
+              "117",
+              "119",
+              "120",
+              "121",
+              "123",
+              "125",
+              "127",
+              "129",
+              "131",
+              "139",
+              "141",
+              "143",
+              "145",
+              "147",
+              "149",
+              "15",
+              "151",
+              "153",
+              "157",
+              "159",
+              "161",
+              "163",
+              "164",
+              "166",
+              "167",
+              "169",
+              "171",
+              "173",
+              "177",
+              "179",
+              "181",
+              "183",
+              "184",
+              "185",
+              "187",
+              "189",
+              "191",
+              "193",
+              "195",
+              "197",
+              "199",
+              "2",
+              "20",
+              "201",
+              "203",
+              "204",
+              "205",
+              "206",
+              "207",
+              "208",
+              "209",
+              "211",
+              "213",
+              "215",
+              "217",
+              "219",
+              "225",
+              "229",
+              "231",
+              "237",
+              "239",
+              "241",
+              "243",
+              "247",
+              "249",
+              "251",
+              "253",
+              "255",
+              "257",
+              "259",
+              "261",
+              "263",
+              "265",
+              "267",
+              "269",
+              "271",
+              "273",
+              "275",
+              "3",
+              "35",
+              "40",
+              "50",
+              "60",
+              "601",
+              "61",
+              "Lake",
+              "River",
+              "pump_10",
+              "pump_335"
+            ],
+            "edge_ids": [
+              "e_101",
+              "e_103",
+              "e_105",
+              "e_107",
+              "e_109",
+              "e_10__in",
+              "e_10__out",
+              "e_111",
+              "e_112",
+              "e_113",
+              "e_114",
+              "e_115",
+              "e_116",
+              "e_117",
+              "e_119",
+              "e_120",
+              "e_121",
+              "e_122",
+              "e_123",
+              "e_125",
+              "e_129",
+              "e_131",
+              "e_133",
+              "e_135",
+              "e_137",
+              "e_145",
+              "e_147",
+              "e_149",
+              "e_151",
+              "e_153",
+              "e_155",
+              "e_159",
+              "e_161",
+              "e_163",
+              "e_169",
+              "e_171",
+              "e_173",
+              "e_175",
+              "e_177",
+              "e_179",
+              "e_180",
+              "e_181",
+              "e_183",
+              "e_185",
+              "e_186",
+              "e_187",
+              "e_189",
+              "e_191",
+              "e_193",
+              "e_195",
+              "e_197",
+              "e_199",
+              "e_20",
+              "e_201",
+              "e_202",
+              "e_203",
+              "e_204",
+              "e_205",
+              "e_207",
+              "e_209",
+              "e_211",
+              "e_213",
+              "e_215",
+              "e_217",
+              "e_219",
+              "e_221",
+              "e_223",
+              "e_225",
+              "e_229",
+              "e_231",
+              "e_233",
+              "e_235",
+              "e_237",
+              "e_238",
+              "e_239",
+              "e_240",
+              "e_241",
+              "e_243",
+              "e_245",
+              "e_247",
+              "e_249",
+              "e_251",
+              "e_257",
+              "e_261",
+              "e_263",
+              "e_269",
+              "e_271",
+              "e_273",
+              "e_275",
+              "e_277",
+              "e_281",
+              "e_283",
+              "e_285",
+              "e_287",
+              "e_289",
+              "e_291",
+              "e_293",
+              "e_295",
+              "e_297",
+              "e_299",
+              "e_301",
+              "e_303",
+              "e_305",
+              "e_307",
+              "e_309",
+              "e_311",
+              "e_313",
+              "e_315",
+              "e_317",
+              "e_319",
+              "e_321",
+              "e_323",
+              "e_325",
+              "e_329",
+              "e_330",
+              "e_333",
+              "e_335__in",
+              "e_335__out",
+              "e_40",
+              "e_50",
+              "e_60"
+            ]
+          }
+        }
+      ],
+      "update_history": [],
+      "scorecard": []
+    },
+    "config": {
+      "version": "1.0",
+      "meta": {
+        "name": "reoriented_Net3 — imported configuration"
+      },
+      "functionality_scale": [
+        {
+          "level": 1,
+          "label": "critical",
+          "color": "#ef4444"
+        },
+        {
+          "level": 2,
+          "label": "operational_warning",
+          "color": "#f97316"
+        },
+        {
+          "level": 3,
+          "label": "operational",
+          "color": "#22c55e"
+        }
+      ],
+      "categories": [
+        {
+          "name": "water",
+          "category_type": "SourceToDemands",
+          "color": "#0ea5e9",
+          "icon": "Droplet"
+        },
+        {
+          "name": "pumping",
+          "category_type": "Requisite",
+          "color": "#f59e0b",
+          "icon": "Fan"
+        },
+        {
+          "name": "valve",
+          "category_type": "Requisite",
+          "color": "#8b5cf6",
+          "icon": "CircleDot"
+        }
+      ],
+      "events": [],
+      "graph_types": [
+        {
+          "name": "water_network",
+          "heuristics": []
+        }
+      ],
+      "node_defaults": {}
+    }
+  },
+  "folder_name": "samples",
+  "recovery_filename": "cascade-recovery-reoriented_Net3.json"
+}

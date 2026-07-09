@@ -370,6 +370,7 @@ export function SectionModelBased() {
           id: nanoid(),
           label: `${label}: ${elementNames.join(", ")}`,
           created_at: new Date().toISOString(),
+          event_ids: [],
           before_propagation: beforeSnap,
           after_propagation: afterSnap,
         });

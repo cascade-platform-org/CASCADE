@@ -147,6 +147,18 @@ Deletes one version. `404` if it doesn't belong to the caller.
 
 ---
 
+## Network import — any authenticated user (requirements.md §13.5, ADR-0012)
+
+### `POST /api/import/inp`
+
+Converts an EPANET `.inp` water network into a CASCADE `ProjectBundle`. Pure transformation — nothing persisted, engine never invoked. CPU-bound work (WNTR parse, pressure-driven priority sweep, skeletonization) runs in a worker thread; expect a few seconds on real aqueducts.
+
+Body `{ filename, content, target_nodes?, source_crs?, demand_mode?, derive_priorities?, n_levels? }` — `content` is the raw `.inp` text; `target_nodes` defaults to the caller's Entitlement `max_nodes` (300 for unbounded roles); `source_crs` defaults to `EPSG:3004`; `n_levels` defaults to 3 (functionality scale size — pass the current project's own `functionality_scale.length` when merging the result into an existing project, so imported values land on that scale). Source `supply_capacity` is always the sum of a Reservoir/Tank's outgoing pipe capacities — not a request parameter.
+
+Returns `{ bundle: { project, config }, warnings, original_nodes, imported_nodes, skeleton_threshold_m? }`, serialised null-free (§13.4 contract). `422` with a human-readable detail on unparseable files, unknown CRS, or an unreachable node budget.
+
+---
+
 ## Not implemented (by design, yet)
 
 Batch propagation (`POST /api/propagate/batch`) appears in older planning documents but has **no endpoint and no schema** — the speculative schema definition was removed. Re-derive it from Pydantic when the feature is actually built (requirements §16).

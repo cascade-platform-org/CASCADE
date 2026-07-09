@@ -434,7 +434,8 @@ Each Scorecard entry stores up to three snapshots, all optional except `before_p
 
 | Field | Type | Description |
 |---|---|---|
-| `before_propagation` | GraphSnapshot | State just before the most recent Propagation (post-Event, pre-engine). Pulled automatically from `update_history` — the `before` of the most recent `propagation` entry. If no Propagation has been run, this is the current state (Manual What-If). |
+| `event_ids` | string[] | EventDefinition.id for every Event applied since the last Propagation, newest-applied first. Empty for a Manual What-If entry. A user may stack several Events before running one Propagation (§12.3a) — all of them are recorded here, not just the latest. |
+| `before_propagation` | GraphSnapshot | State just before the most recent Propagation (post-Event(s), pre-engine). Pulled automatically from `update_history` — the `before` of the most recent `propagation` entry. If no Propagation has been run, this is the current state (Manual What-If). |
 | `after_propagation` | GraphSnapshot? | State after the Propagation. Absent if no Propagation has been run in the current session. |
 | `after_temporal_jump` | GraphSnapshot? | State after one or more Temporal Jumps + Propagations. Populated in two ways: (a) **already computed** — the Save dialog detects a `temporal_jump` entry in history that follows the most recent `propagation` entry and loads it automatically; (b) **computed at save time** — the user enters a duration in the Save dialog and the system fires a Temporal Jump internally, runs Propagation, captures the result, then discards the side-effects (the graph state is not permanently changed). |
 | `temporal_jump_hours` | integer? | The total hours elapsed across all Temporal Jumps that produced `after_temporal_jump`. |
@@ -446,7 +447,8 @@ Auto-populated from context, editable before saving:
 
 | Context | Default label |
 |---|---|
-| Most recent Event is a named Hazard/Disservice | Event label (e.g. "Earthquake M6.5") |
+| One Event applied since the last Propagation | Event label (e.g. "Earthquake M6.5") |
+| Several Events stacked since the last Propagation | Their labels joined with " + ", oldest-applied first (e.g. "Earthquake M6.5 + Blackout") |
 | Most recent Event is a Temporal Jump | "Temporal Jump — Nh" |
 | No Event in history (manual edits only) | "Manual What-If Scenario" |
 
@@ -456,9 +458,9 @@ A Scorecard entry is a **duplicate** if its `before_propagation` snapshot is ide
 
 ### 12.3a Situation Window
 
-After an Event is applied, a small floating **Situation window** appears over the top-right of the canvas. It is a live read-out of the current Situation, derived entirely from `update_history` via `deriveSituation()` (`CASCADE-app/lib/situation.ts`): the most recent `event_applied` entry, plus the `propagation` entry that ran *after* it (a Propagation older than the latest Event is ignored as stale). It shows the Event's own icon and label, a "Propagation run / not run yet" status, and a **Save to Scorecard** button that opens the Save Dialog. The window can be **minimised** to an icon pill or **dismissed** (it reappears when a newer Event is applied). It is purely informational — dismissing it changes no graph state.
+After an Event is applied, a small floating **Situation window** appears over the top-right of the canvas. It is a live read-out of the current Situation, derived entirely from `update_history` via `deriveSituation()` (`CASCADE-app/lib/situation.ts`): **every** `event_applied` entry applied since the last Propagation (a user may apply several Events in a row before running one Propagation — nothing in the UI forces a Propagation between them), plus the `propagation` entry that ran *after* all of them (a Propagation older than the newest Event is ignored as stale). It shows the newest Event's icon, a combined label when more than one Event is stacked (§12.2), a "Propagation run / not run yet" status, and a **Save to Scorecard** button that opens the Save Dialog. The window can be **minimised** to an icon pill or **dismissed** (it reappears when a newer Event is applied). It is purely informational — dismissing it changes no graph state.
 
-Because the Save Dialog resolves its snapshots from the same Situation (§12.4), the entry saved from the Situation window captures the real before→after of the current scenario (post-Event `before_propagation`, propagated `after_propagation`) rather than storing the live canvas as an un-propagated "initial" state.
+Because the Save Dialog resolves its snapshots from the same Situation (§12.4), the entry saved from the Situation window captures the real before→after of the current scenario (post-Event(s) `before_propagation`, propagated `after_propagation`) rather than storing the live canvas as an un-propagated "initial" state. `event_ids` on the saved entry lists every stacked Event, so Type 3 gap detection (§12.8) treats each of them as covered.
 
 ### 12.4 Save Dialog
 
@@ -466,7 +468,7 @@ When the user clicks "Save to Scorecard" the dialog opens and shows:
 
 1. **Label** — editable text, pre-filled per §12.2.
 2. **Snapshot previews** — one card per snapshot already available in history:
-   - `before_propagation` — always shown. Resolved from the current Situation (§12.3a): the `before` of the Propagation that ran for the latest Event when one exists, otherwise the post-Event state (the latest `event_applied` entry's `after`). Falls back to the live canvas only when no Event is in history (a pure Manual What-If).
+   - `before_propagation` — always shown. Resolved from the current Situation (§12.3a): the `before` of the Propagation that ran for the current session's Event(s) when one exists, otherwise the post-Event state (the newest `event_applied` entry's `after`, which already includes every earlier stacked Event). Falls back to the live canvas only when no Event is in history (a pure Manual What-If).
    - `after_propagation` — shown if a Propagation has been run; absent card otherwise.
    - `after_temporal_jump` — shown if a Temporal Jump event followed the most recent Propagation in history; absent card otherwise.
 3. **Temporal Jump option** — shown only when `after_propagation` is present but `after_temporal_jump` is absent. Contains:
@@ -529,9 +531,9 @@ The Scorecard panel surfaces three categories of gaps:
 
 | Type | Description | Detection |
 |---|---|---|
-| **Type 1 — Unsaved runs** | An `event_applied` + `propagation` pair exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` against `scorecard[].event_id`. |
+| **Type 1 — Unsaved runs** | An `event_applied` (one or more, stacked) + `propagation` session exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` sessions against `scorecard[].event_ids`. |
 | **Type 2 — Incomplete entries** | A saved entry is missing `after_propagation` or `after_temporal_jump`. | Check optional fields on each `ScorecardEntry`. |
-| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching `event_id`. | Cross-reference `config.events` against `scorecard[].event_id`. |
+| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching id in `event_ids`. | Cross-reference `config.events` against the flattened `scorecard[].event_ids`. |
 
 **UI treatment:**
 - Type 1: "Unrecorded runs" section at the top of the Scorecard panel — each unsaved pair shown with a "Save" button.
@@ -568,6 +570,88 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.
 
 **Null-free bundle contract (Load):** the Load response (`GET /api/projects/{id}`) must serialise the bundle **without `null` keys**, via `response_model_exclude_none=True` (`api/sync_routes.py`). This makes the payload byte-shape-identical to a local file save (frontend `JSON.stringify` drops `undefined` keys), which the Zod schema requires: its `.optional()` fields accept an *absent* key but **reject `null`**. Without this flag Pydantic emits every unset `Optional` as explicit `null` and Load fails client-side Zod validation (`expected string, received null`). Do not remove the flag; if the frontend must instead accept `null`, its optional fields need `.nullish()` — but the null-free contract is the canonical one.
+
+### 13.5 Network importers — EPANET .inp (implemented)
+
+`POST /api/import/inp` converts an EPANET water-network `.inp` file into a
+CASCADE `ProjectBundle` (same envelope as local save / Server Sync — §13.4
+null-free contract applies). Pure transformation: nothing persisted, engine
+never invoked; any authenticated caller may import. UI entry point: "Import
+EPANET .inp" in the File I/O panel.
+
+Pipeline (`CASCADE-backend/core/importers/inp/`, full rationale in
+ADR-0012) — the first of what will be several format importers, each its
+own sibling subpackage under `core/importers/`:
+**parse** (WNTR, SI-normalised) → **hydraulic priority sweep** (pressure-driven
+steady states at rising demand multipliers on the original network; junctions
+that lose service earliest get the lowest flow-allocation `priority`, so the
+engine's scarcity shedding order emulates real hydraulics) → **skeletonize**
+(`wntr.morph.skeletonize`, binary-searched pipe-diameter threshold, until the
+network fits `target_nodes` — default the caller's Entitlement `max_nodes`;
+demand mass conserved; absorbed ids traced in `properties.merged_elements`) →
+**velocity sweep** (same demand-multiplier sweep mechanism, run on the
+post-skeleton network this time, PLUS a bounded sample of single-link
+contingency solves so a backup/redundant pipe — one that carries little flow
+normally but exists to reroute traffic if something else fails — isn't
+undersized just because demand escalation alone never stresses it: each
+pipe/valve's capacity uses the *highest* velocity it reaches across either
+mechanism, not a preset constant or its velocity at rest) → **orient** (a
+pipe's direction is read off the SIGN of the sweep's `flowrate` — not
+`velocity`, which WNTR reports as an unsigned magnitude, and not guessed from
+graph topology; a pipe with meaningful simulated flow both ways, e.g. a loop
+pipe reversing under stress, becomes two independently-capacitated edges
+sharing the pipe's one physical capacity between them; multi-source BFS,
+supply source → demand, is now only a fallback for a link the sweep reports
+no signal for at all) → **map**
+(reservoirs/tanks → Source with `supply_capacity["water"]`
+always the sum of their outgoing pipe capacities — not a user choice; falls
+back to a large constant only when a source has no capacitated outgoing edge
+at all; tank volume → backup duration; demanding junctions → Service with
+water demand; pumps/valves → inline Requisite-category nodes `pumping`/`valve`
+gating downstream flow — a pump always imports as operational regardless of
+its `.inp` status (a working-condition baseline: not-currently-scheduled is
+not the same as broken; genuine pump failure is a Hazard, applied like any
+other); pipes → edges with `capacity = π/4·d²·v`) → **place**
+(projected coordinates → WGS84 via pyproj, default CRS `EPSG:3004`,
+georeferenced Canvas with exact GeoAnchor; abstract coordinates → scaled
+non-geo layout).
+
+Knobs: `target_nodes`, `source_crs`, `demand_mode` (peak / base / avg pattern
+multiplier), `derive_priorities`, `n_levels` (functionality scale size, default
+3 — every node/edge value and the emitted scale itself are generated for this
+size; `generate_scale(3)` reproduces the app's own hardcoded default exactly).
+A specific node's `supply_capacity` can be edited in the Inspector after
+import; there is no separate fixed-value import knob for that.
+
+**Ready-made scenario Events** are emitted into `config.events` alongside the
+network — no code/UI needed to reach for a common water-utility scenario:
+- Every Tank with a valid backup profile contributes to ONE shared Disservice
+  ("All Tanks — Running on Reserve") that sets `functionality_time =
+  backup_duration` for each of them at once — starting every tank's reserve
+  countdown together as a repeatable, appliable scenario instead of only ever
+  emerging as a side effect of a full upstream-failure Propagation.
+- A network with any pumps gets one shared Hazard ("Blackout — Pump
+  Failures") carrying full `vulnerability_levels` on every pump node (a power
+  outage takes them all out together, not one at a time) and a
+  `default_repair_time` of 6 hours.
+- A Disservice ("Demand Surge — Top 10% Consumers") doubles demand for the
+  top 10% of demand-bearing junctions by their imported `demand_mode` value.
+
+**Import modes** (`components/controls/import-inp-section.tsx`):
+- **Replace project** — the returned bundle replaces the current project and
+  config wholesale, exactly like loading a local file.
+- **Add as extra canvas** — merges the imported canvas + nodes/edges into the
+  current project (`canvasStore.mergeImportedProject`, remapping any node/edge
+  id that collides with the current project's own) and merges new
+  categories/graph_types/events into the current config
+  (`configStore.mergeConfig`) rather than replacing it — an existing
+  category/graph_type of the same name is kept as-is; an existing event of
+  the same id has the incoming `attribute_mutations` unioned in, so importing
+  several networks grows one shared Blackout/Tank-Reserve/Demand-Surge
+  scenario covering all of them rather than duplicating events. `n_levels` is
+  forced to the current project's own `functionality_scale.length` in this
+  mode so imported values land on the right scale; the target's scale is
+  never replaced.
 
 ---
 

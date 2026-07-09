@@ -10,9 +10,11 @@ import { z } from "zod";
 import { PropagationResultSchema, type PropagationResult } from "@/lib/schemas/propagation";
 import {
   EngineAlgorithmsSchema,
+  ImportInpResponseSchema,
   ProjectVersionSummarySchema,
   ProjectVersionDetailSchema,
   type EngineAlgorithms,
+  type ImportInpResponse,
   type PropagationRequest,
   type ProjectVersionSummary,
   type ProjectVersionDetail,
@@ -347,6 +349,56 @@ export async function syncLoadProject(versionId: string): Promise<ProjectVersion
   const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`);
   if (!res.ok) throw new Error(`Server returned ${res.status}`);
   return ProjectVersionDetailSchema.parse(await res.json());
+}
+
+// ---------------------------------------------------------------------------
+// EPANET .inp import (requirements §13.5)
+// ---------------------------------------------------------------------------
+
+export interface ImportInpKnobs {
+  targetNodes?: number;
+  sourceCrs?: string;
+  demandMode?: "peak" | "base" | "avg";
+  derivePriorities?: boolean;
+  /** Size of the functionality scale (1..nLevels) node/edge values are
+   *  expressed on. Backend default 3. When merging into an existing
+   *  project, pass that project's own functionality_scale.length so the
+   *  imported values line up with its (untouched) scale. */
+  nLevels?: number;
+}
+
+/** POST /api/import/inp — convert an EPANET water network to a CASCADE
+ *  ProjectBundle. Pure transformation server-side: nothing persisted. The
+ *  skeletonization + hydraulic sweep can take ~10 s on large networks. */
+export async function importInp(
+  filename: string,
+  content: string,
+  knobs: ImportInpKnobs = {},
+): Promise<ImportInpResponse> {
+  const res = await authedFetch(`${API_BASE}/api/import/inp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename,
+      content,
+      target_nodes: knobs.targetNodes,
+      source_crs: knobs.sourceCrs,
+      demand_mode: knobs.demandMode,
+      derive_priorities: knobs.derivePriorities,
+      n_levels: knobs.nLevels,
+    }),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const parsed = (await res.json()) as { detail?: string };
+      detail = parsed.detail ?? "";
+    } catch {
+      detail = await res.text().catch(() => res.statusText);
+    }
+    throw new Error(`Import failed (${res.status}): ${detail}`);
+  }
+  return ImportInpResponseSchema.parse(await res.json());
 }
 
 /** DELETE /api/projects/{id}. Returns an error message, or null on success. */

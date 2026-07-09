@@ -83,6 +83,22 @@ export interface ConfigActions {
   // --- Bulk load ---
   /** Replace the committed config wholesale (file upload / wizard). */
   loadConfig: (config: ModelConfiguration) => void;
+  /**
+   * Merge an incoming config INTO the committed one, rather than replacing it
+   * (used when importing a network as an extra canvas into the current
+   * project — requirements §13.5). Categories and graph_types are added only
+   * when no entry of that name already exists (existing wins on a name
+   * collision — surfaced in the returned summary so the caller can warn).
+   * Events are added by id; if an event with that id already exists, its
+   * `attribute_mutations` are unioned into the existing one instead of adding
+   * a duplicate — this is what makes a shared scenario event (e.g. a
+   * "Blackout" or "Running on Reserve" event spanning every merged network)
+   * correctly cover every merged network's own elements. `functionality_scale`
+   * is deliberately never touched — the existing project's own scale stays
+   * authoritative; the caller is responsible for requesting the import build
+   * its node/edge functionality values on that same scale size.
+   */
+  mergeConfig: (incoming: ModelConfiguration) => MergeConfigSummary;
 
   // --- Functionality scale (operate on draft) ---
   addScaleLevel: () => void;
@@ -135,6 +151,17 @@ export interface ConfigActions {
 }
 
 export type ConfigStore = ConfigState & ConfigActions;
+
+/** Summary of a mergeConfig() call — enough for the caller to build a toast. */
+export interface MergeConfigSummary {
+  addedCategories: string[];
+  skippedCategories: string[];
+  addedGraphTypes: string[];
+  skippedGraphTypes: string[];
+  addedEvents: string[];
+  /** Existing event ids whose attribute_mutations absorbed the incoming ones. */
+  mergedEvents: string[];
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -199,6 +226,49 @@ export const useConfigStore = create<ConfigStore>()(
         state.draft = deepClone(config);
         state.isDirty = false;
       });
+    },
+
+    mergeConfig(incoming) {
+      const summary: MergeConfigSummary = {
+        addedCategories: [], skippedCategories: [],
+        addedGraphTypes: [], skippedGraphTypes: [],
+        addedEvents: [], mergedEvents: [],
+      };
+      set((state) => {
+        for (const category of incoming.categories) {
+          if (state.config.categories.some((c) => c.name === category.name)) {
+            summary.skippedCategories.push(category.name);
+          } else {
+            state.config.categories.push(category);
+            summary.addedCategories.push(category.name);
+          }
+        }
+        for (const graphType of incoming.graph_types) {
+          if (state.config.graph_types.some((g) => g.name === graphType.name)) {
+            summary.skippedGraphTypes.push(graphType.name);
+          } else {
+            state.config.graph_types.push(graphType);
+            summary.addedGraphTypes.push(graphType.name);
+          }
+        }
+        for (const event of incoming.events) {
+          const existing = state.config.events.find((e) => e.id === event.id);
+          if (existing) {
+            existing.attribute_mutations = {
+              ...existing.attribute_mutations,
+              ...event.attribute_mutations,
+            };
+            summary.mergedEvents.push(event.id);
+          } else {
+            state.config.events.push(event);
+            summary.addedEvents.push(event.id);
+          }
+        }
+        // functionality_scale intentionally untouched — see mergeConfig's doc.
+        state.draft = deepClone(state.config);
+        state.isDirty = false;
+      });
+      return summary;
     },
 
     // -------------------------------------------------------------------------
