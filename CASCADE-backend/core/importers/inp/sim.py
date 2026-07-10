@@ -179,14 +179,49 @@ def _fixed_demand_model(
     return model
 
 
+class _UnbalancedSolveError(RuntimeError):
+    """Raised when EPANET completes a solve without converging."""
+
+
+def _check_converged(file_prefix: str) -> None:
+    """EpanetSimulator does NOT raise a Python exception when the underlying
+    EPANET solve fails to converge — it writes "WARNING: System unbalanced"
+    to the .rpt report and returns SimulationResults built from whatever the
+    last, non-converged iteration happened to compute. Observed directly on
+    Tarcento_totale.inp at demand_multiplier >= 2.5 (11 of 15 sweep steps) and
+    Zampis.inp at >= 3.0 (11 of 15): pressures in the hundreds of thousands of
+    metres, nowhere near physical. Every caller that accumulates evidence
+    across sweep steps (scarcity_priorities, link_flow_profiles) MUST treat
+    this the same as a raised exception — folding one non-converged step's
+    garbage into a priority/capacity accumulation silently corrupts every
+    junction's derived value, not just the one step. `file_prefix` is the
+    same prefix passed to `run_sim`; the .rpt report lives at
+    f"{file_prefix}.rpt"."""
+    try:
+        report = Path(f"{file_prefix}.rpt").read_text()
+    except OSError:
+        return  # no report to check — nothing to flag, let the caller proceed
+    if "system unbalanced" in report.lower():
+        raise _UnbalancedSolveError(f"EPANET did not converge (see {file_prefix}.rpt)")
+
+
 def _run_sweep_step(
     model: wntr.network.WaterNetworkModel, multiplier: float, file_prefix: str
 ) -> Any:
     """One steady-state PDD solve at `multiplier`. `model` is the sweep's
     private, pre-configured copy; only the multiplier is (re)assigned here.
-    Returns the raw WNTR SimulationResults (node + link tables)."""
+    Returns the raw WNTR SimulationResults (node + link tables).
+
+    Raises `_UnbalancedSolveError` if EPANET didn't converge — see
+    `_check_converged`. Every caller already has to handle a solve failure
+    (a missing curve, a hard EPANET error raises its own exception), so
+    raising here routes non-convergence through the exact same handling
+    rather than needing a second, parallel "did it actually converge" check
+    at every call site."""
     model.options.hydraulic.demand_multiplier = multiplier
-    return wntr.sim.EpanetSimulator(model).run_sim(file_prefix=file_prefix)
+    results = wntr.sim.EpanetSimulator(model).run_sim(file_prefix=file_prefix)
+    _check_converged(file_prefix)
+    return results
 
 
 def _sweep_multipliers(steps: int, max_multiplier: float) -> list[float]:

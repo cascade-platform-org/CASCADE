@@ -47,6 +47,26 @@ generalization beyond independent random component loss (`_KINDS`):
                  hits the components a random sample rarely reaches but that
                  carry disproportionate flow?
 
+A fifth, separate family runs alongside the five above, exhaustively rather
+than sampled — every tank in the network, one at a time (`_tank_situations`):
+  - "tank"     — one situation per Tank, ALL of its connecting links closed —
+                 the closest a t=0 steady solve can get to "this tank
+                 contributes zero water" (contamination, structural failure,
+                 anything that takes the tank fully out of service NOW, not a
+                 slow-draining reserve — see the Tank Reserve note below).
+                 Reuses the exact same `broken_link_ids` mechanism as
+                 break/cluster/targeted, deliberately: the CASCADE side then
+                 closes the identical edges the WNTR side closes, rather than
+                 mutating the Source node's own functionality and depending on
+                 the engine's internal (protected, not this harness's
+                 business) source-capacity scaling rule to happen to reach
+                 zero. Exhaustive, not random-sampled, because a network
+                 typically has few tanks (0-3 on the networks this harness
+                 uses, except Net6's 32) and each one going fully out of
+                 service is a materially different, individually-interesting
+                 failure mode worth checking on every one of them, not a
+                 population to subsample.
+
 This is a dev-only validation harness, not shipped product code — the same
 category as scripts/benchmark_engine.py, which is why it shares that
 script's import-linter carve-out (pyproject.toml) to import engine.* directly:
@@ -54,10 +74,12 @@ we need the engine's REAL propagation call and its REAL ratio→level rule, not
 a reimplementation of either (a second, slightly-different quantization rule
 would make this script measure its own drift, not the engine's).
 
-Out of scope on purpose: Tank Reserve. It is a time-warning
-(`functionality_time` countdown), not a hydraulic state change at the moment
-it is applied — the tank is still fully supplying right after the event, so
-there is nothing for a t=0 WNTR solve to disagree with CASCADE about.
+Out of scope on purpose: Tank Reserve (the *other* tank scenario — distinct
+from the "tank" family above). It is a time-warning (`functionality_time`
+countdown), not a hydraulic state change at the moment it is applied — the
+tank is still fully supplying right after the event, so there is nothing for
+a t=0 WNTR solve to disagree with CASCADE about. The "tank" family above is
+not that event — it is a full, immediate outage of the tank itself.
 
 The `--required-pressure`/`--minimum-pressure` flags exist to check how much
 the aggregate FMS depends on the specific PDD service-pressure assumption the
@@ -95,6 +117,7 @@ from core.importers.inp import (  # noqa: E402
     compute_junction_demands,
     link_flow_profiles,
 )
+from core.importers.inp.sim import _check_converged  # noqa: E402 — see module docstring
 from engine.flow import _ratio_to_level  # noqa: E402 — see module docstring
 from engine.propagation import run as propagate  # noqa: E402
 from schemas.config import ModelConfiguration  # noqa: E402
@@ -102,6 +125,11 @@ from schemas.network import Project  # noqa: E402
 from schemas.results import PropagationRequest  # noqa: E402
 
 _KINDS = ["break", "hot", "both", "cluster", "targeted"]
+# "tank" is deliberately not in _KINDS: that list drives `_random_situation`'s
+# rng.choice, and the tank family is exhaustive (`_tank_situations`), not
+# sampled — it's added separately in main()/reported alongside _KINDS in
+# _ALL_KINDS instead.
+_ALL_KINDS = [*_KINDS, "tank"]
 
 # Cluster attack: how many topological hops from a random epicenter link
 # count as "in the blast radius," and how many of the breakable links found
@@ -196,6 +224,22 @@ def _targeted_break(wn: wntr.network.WaterNetworkModel, rng: random.Random) -> l
     return rng.sample(pool, k)
 
 
+def _tank_situations(wn: wntr.network.WaterNetworkModel) -> list[Situation]:
+    """One Situation per Tank — ALL of its connecting links closed. Tanks
+    aren't links themselves (WNTR has no "close this Tank" flag), so the
+    closest a t=0 steady solve can get to "this tank contributes zero water"
+    is closing every link touching it (`wn.get_links_for_node`), covering
+    whatever mix of pipes/pumps/valves connects it in this particular file.
+    `_cascade_levels`/`_solve_served_ratios` already know how to apply
+    `broken_link_ids` to both sides identically — no new mechanism needed.
+    Exhaustive over every tank, not sampled: see the module docstring."""
+    situations: list[Situation] = []
+    for i, tid in enumerate(sorted(wn.tank_name_list)):
+        links = sorted(wn.get_links_for_node(tid))
+        situations.append(Situation(label=f"tank#{i}", broken_link_ids=links))
+    return situations
+
+
 def _random_situation(
     wn: wntr.network.WaterNetworkModel, graph: nx.MultiGraph, rng: random.Random, index: int
 ) -> Situation:
@@ -275,8 +319,20 @@ def _solve_served_ratios(
         prefix = str(Path(tmpdir) / "validate")
         try:
             results = wntr.sim.EpanetSimulator(model).run_sim(file_prefix=prefix)
+            # EpanetSimulator does not raise when EPANET fails to converge
+            # ("System unbalanced") — it returns SimulationResults built from
+            # whatever the last, non-converged iteration computed. Observed
+            # directly on a real tank-disservice situation (Tarcento,
+            # Segnacco): pressures around -470,000 m, and a "ground truth"
+            # that called 288/424 junctions critical when the actual network
+            # topology still had two other sources reaching them — the FMS
+            # penalty in that case was measuring the solver's non-convergence,
+            # not CASCADE's fidelity. Same fix as core.importers.inp.sim's
+            # sweeps (`_check_converged`) — this is the one ground-truth call
+            # site in this file, so it isn't threaded through `_run_sweep_step`.
+            _check_converged(prefix)
         except Exception:
-            return {}  # a pathological situation (e.g. isolates every source) — no ground truth this round
+            return {}  # a pathological or non-converging situation — no ground truth this round
     delivered = results.node["demand"].iloc[0]
 
     ratios: dict[str, float] = {}
@@ -464,7 +520,7 @@ def main() -> None:
     rng = random.Random(args.seed)  # nosec B311 — deterministic test-scenario generation, not security
     all_scores: list[float] = []
     all_confusion = ConfusionCounts()
-    scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _KINDS}
+    scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
 
     for name in (n.strip() for n in args.networks.split(",")):
         # A bare name (Net1, Net3, ...) resolves against wntr's bundled
@@ -487,8 +543,12 @@ def main() -> None:
         print(f"\n=== {name} ({len(demands)} junctions, n_levels={args.n_levels}) ===")
         network_scores: list[float] = []
         network_confusion = ConfusionCounts()
-        for i in range(args.situations):
-            situation = _random_situation(wn, graph, rng, i)
+        # The `args.situations` random draws (break/hot/both/cluster/targeted)
+        # plus every tank's complete-disservice situation, exhaustively — see
+        # `_tank_situations` / the module docstring's "tank" family.
+        situations = [_random_situation(wn, graph, rng, i) for i in range(args.situations)]
+        situations += _tank_situations(wn)
+        for situation in situations:
             ratios = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
             if not ratios:
                 continue
@@ -515,7 +575,7 @@ def main() -> None:
     if all_scores:
         print(f"\nAGGREGATE FMS across {len(all_scores)} situations: {statistics.mean(all_scores):.3f}")
         print("AGGREGATE FMS by scenario kind (does fidelity hold outside independent random failure?):")
-        for kind in _KINDS:
+        for kind in _ALL_KINDS:
             scores = scores_by_kind[kind]
             if scores:
                 print(f"  {kind:10s} mean FMS = {statistics.mean(scores):.3f}  (n={len(scores)} situations)")

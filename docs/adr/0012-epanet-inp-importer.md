@@ -618,19 +618,80 @@ service-pressure convention or one particular (coarse) quantization — this
 strengthens the paper's fidelity claim in exactly the place a reviewer would
 otherwise question it.
 
-**Open item, not yet root-caused: Tarcento's binary recall is an outlier.**
-Pooled across the full scenario mix, Tarcento's recall was 0.086-0.5
-depending on the situation draw, far below Cassacco (0.872) and Zampis
-(0.818) on the same run. `Tarcento_totale.inp` imports with 393/499 pipes
-(79%) classified bidirectional by `DECISIVE_VELOCITY_MS`/`MIN_HEDGE_SHARE`
-(vs. Zampis 589/674 = 87%, Cassacco 225/437 = 51%) — the bidirectional-split
-fraction alone does not explain the gap (Zampis splits an even larger share
-of its pipes yet keeps decent recall), so the leading unverified hypothesis
-is Tarcento's single-pump/three-tank topology rather than orientation
-splitting per se, but this has not been isolated with a controlled ablation.
-**Do not report Tarcento-specific recall numbers in the paper without
-resolving this**; the network-pooled aggregate (and Cassacco/Zampis
-individually) are unaffected and safe to use.
+**Resolved: Tarcento's binary-recall outlier — root cause was a silent
+EPANET non-convergence, not a CASCADE fidelity gap.** Investigating (see
+"Tank complete-disservice scenario" below) traced it to a real bug, not the
+importer's orientation/redundancy modelling as first suspected.
+`EpanetSimulator.run_sim` does **not** raise a Python exception when the
+underlying EPANET solve fails to converge — it writes `WARNING: System
+unbalanced` to the `.rpt` report and returns `SimulationResults` built from
+whatever the last, non-converged iteration happened to compute. Confirmed by
+re-running the priority sweep's 15 demand-multiplier steps standalone on
+Tarcento: 11 of 15 (multiplier ≥ 2.5×) hit "System unbalanced," returning
+pressures around -470,000 m — obvious solver garbage that both
+`core/importers/inp/sim.py`'s sweeps (which fold every step's result into a
+priority/capacity accumulation) and `scripts/validate_faithfulness.py`'s own
+ground-truth solve (which only caught raised exceptions, not this) silently
+accepted as real data. The same check on Zampis found 11 of 15 steps
+unbalanced too (multiplier ≥ 3.0×); Net1, Net3, and Cassacco never hit it
+across the same multiplier range — this is specific to Tarcento/Zampis's
+topology (long, less-looped branches under 8× nominal demand), not a
+universal EPANET quirk.
+
+**Fix**: `core/importers/inp/sim.py::_check_converged` reads the `.rpt`
+report after every solve and raises `_UnbalancedSolveError` if `"system
+unbalanced"` appears; `_run_sweep_step` calls it right after `run_sim`, so
+`scarcity_priorities`, `link_flow_profiles`'s main sweep, and its contingency
+samples all get the check for free through their *existing* exception
+handling (no call-site changes needed — a non-converged step is now treated
+exactly like a hard solver error: `scarcity_priorities`/the main sweep stop
+at the first one, a contingency sample is skipped and the loop continues).
+`scripts/validate_faithfulness.py::_solve_served_ratios` — the one
+ground-truth call site that doesn't go through `_run_sweep_step` — got the
+same `_check_converged` call added directly.
+
+**Measured impact**: Tarcento's pooled binary recall went from **0.086 to
+0.962** (seed 5, 15 situations, full scenario mix) — Tarcento is now the
+*best*-scoring real network (FMS 0.993), not the worst. The specific
+pathological case that surfaced this (a tank-disservice situation isolating
+Segnacco, ADR entry below) went from FMS 0.391 to correctly discarded (no
+ground truth available for that draw, same handling as any other
+non-convergent situation). Bidirectional-pipe-split fraction, corrupted by
+the same garbage high-multiplier velocity readings, also dropped:  Tarcento
+393/499 (79%) → 351/499 (70%); Zampis 589/674 (87%) → 445/674 (66%) — both
+still substantial (real, not solver-error-driven) but measurably smaller.
+**This was a real product-code bug** (`core/importers/inp/sim.py`), not only
+a validation-harness one — every past import of a network whose demand-sweep
+crosses EPANET's convergence limit was silently building priorities/
+capacities/orientations from partially garbage data. Cassacco/Zampis's
+*aggregate* FMS numbers reported earlier in this addendum are not
+materially affected (Zampis recall improved slightly, 0.818→0.978; Cassacco
+never hit non-convergence) — only Tarcento's numbers throughout this ADR and
+the paper sketch should be treated as superseded by this fix.
+
+### Tank complete-disservice scenario (added alongside the fix above)
+
+`scripts/validate_faithfulness.py::_tank_situations` adds a sixth, exhaustive
+(not sampled) scenario family: one situation per Tank, closing every link
+that connects it to the network (`wn.get_links_for_node`) — the closest a t=0
+steady solve can get to "this tank is completely out of service" (structural
+failure, contamination — an immediate outage, distinct from the existing
+Tank Reserve event's slow-draining countdown, which stays out of scope for
+the reason stated above). It reuses the same `broken_link_ids` mechanism
+`_cascade_levels`/`_solve_served_ratios` already handle for break/cluster/
+targeted, rather than mutating the Source node's own `functionality` and
+depending on the engine's internal (protected) source-capacity scaling rule
+to happen to reach zero. Exhaustive because a network typically has few tanks
+(0-3 here, except Net6's 32) and each one going fully out of service is an
+individually-interesting failure mode worth checking on every one, not a
+population to subsample. This scenario is what surfaced the EPANET
+non-convergence bug above: Tarcento's `Segnacco` tank (4 connecting pipes,
+the most of its 3 tanks) scored FMS 0.391 before the fix — traced to the
+ground-truth solve for that specific situation hitting "System unbalanced"
+and reporting 288/424 junctions critical from a solve that a graph-topology
+check showed was NOT actually disconnected (the affected zone still had a
+connected path to Tarcento's other two tanks). Post-fix, that situation is
+correctly discarded rather than scored.
 
 ## Alternatives rejected
 

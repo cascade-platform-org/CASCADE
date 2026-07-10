@@ -115,3 +115,45 @@ The committed Functionality is the binding (worst) category candidate, possibly 
 If a node's Functionality was set directly by an Event (via `attribute_mutations` or `vulnerability_levels`), the responsibility dictionary contains the EventId as the single key with value `1.0`.
 
 If set by a Specific Rule, the responsibility dictionary contains all Elements referenced in the rule's condition, split evenly.
+
+## Addendum (2026-07-10) — flow solve: min-cost circulation instead of `nx.max_flow_min_cost`
+
+`engine/flow.py::flow_category_candidates` solved the min-cost max-flow with a
+single call to `networkx.max_flow_min_cost(graph, src, sink)`. Profiling a
+Propagation on a 3,300-junction imported network (CompleNet paper §5.8) found
+that call responsible for 97% of total wall-clock time, and — within it —
+83% was spent in `preflow_push`, a full max-flow computation `max_flow_min_cost`
+runs **first**, purely to learn the max-flow *value*, before re-solving the
+whole problem a second time as a min-cost flow constrained to that value
+(`network_simplex`, the remaining ~12%). For this graph specifically, that
+first phase is unnecessary work: every demand-sink edge already carries a
+reward (`reward = -priority * big`, `big` sized to exceed any possible
+accumulated path friction) large enough that cost-minimization and
+flow-maximization are not competing objectives — a min-cost solution that
+leaves deliverable flow unrouted is always strictly improvable by routing it,
+so the two-phase "find max flow, then find its cheapest realization" split is
+solving a harder problem than the one actually posed.
+
+Replaced with `engine/flow.py::_min_cost_max_flow`: adds a zero-cost,
+effectively-unbounded sink→source return edge (turning the src→sink flow
+problem into a min-cost **circulation**) and solves it in one
+`nx.min_cost_flow` call — the reward dominance argument above guarantees this
+reaches the same optimum `max_flow_min_cost` does, it just doesn't pay for a
+max-flow value this construction has no use for. Verified, not assumed:
+byte-identical per-consumer delivered amounts to the old call on every
+`test/test_engine_samples.py` situation and on the full
+`scripts/validate_faithfulness.py` real-network validation suite (Net1/Net3/
+Net6, three imported aqueducts) before and after the change — zero diffs.
+Measured impact (`scripts/benchmark_engine.py --networks <name>`, same
+machine, before → after): Net3 (92 junctions) 20.5ms → 8.0ms; Cassacco (417 j)
+80.5ms → 48.9ms; Tarcento (439 j) 101.2ms → 47.7ms; Zampis (607 j) 540.5ms →
+302.5ms; Net6 (3,323 j) 3,812ms → 1,000ms. Still slower than a comparable WNTR
+PDD solve past a few hundred junctions (Net6: 136ms WNTR vs. 1,000ms engine,
+7.4× — down from 28× before this fix), which the remaining gap is now
+attributable to `network_simplex` itself (pure-Python, O(nodes×edges)-ish
+practical behaviour) rather than to the two-phase construction — closing it
+further would mean a different solver backend (e.g. OR-Tools'
+`SimpleMinCostFlow`, a compiled C++ implementation with the same open-source/
+no-paid-tier requirement per CLAUDE.md §1), which is a larger integration
+question (different graph API, int-id remapping, a new dependency) and is not
+addressed here.

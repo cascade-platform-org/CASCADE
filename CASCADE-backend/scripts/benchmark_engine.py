@@ -1,12 +1,12 @@
 """
-scripts/benchmark_engine.py — measure engine cost to ground the ADR-0008 caps.
-
-The entitlement caps (max_nodes, evals_per_minute) were initially guessed. This
-script measures what one propagation actually costs as a function of network
-size, so the caps can be derived from real numbers instead of intuition.
+scripts/benchmark_engine.py — measure engine cost to ground the ADR-0008 caps,
+and (via `--networks`) the CompleNet paper's cost claim: one engine
+Propagation vs. one WNTR PDD solve, plus the EPANET importer's one-time cost,
+on the same real networks `scripts/validate_faithfulness.py` validates.
 
     python scripts/benchmark_engine.py
     python scripts/benchmark_engine.py --sizes 10,45,100,300,600 --repeats 5
+    python scripts/benchmark_engine.py --networks Net1,Net3,Net6
 
 IMPORTANT: run it ON THE TARGET VM. A single Propagation is CPU-bound Python;
 latency scales with the box. The numbers below are the *shape*; the final caps
@@ -18,6 +18,7 @@ import argparse
 import random
 import statistics
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -25,6 +26,15 @@ from pathlib import Path
 # backend package root on sys.path (same pattern as scripts/export_json_schema.py).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import wntr  # noqa: E402
+
+from core.importers.inp import (  # noqa: E402
+    ImportOptions,
+    build_bundle,
+    compute_junction_demands,
+    link_flow_profiles,
+    scarcity_priorities,
+)
 from engine.propagation import run  # noqa: E402
 from schemas.config import (
     CategoryDefinition,
@@ -98,6 +108,99 @@ def _time_once(request: PropagationRequest) -> float:
     return (time.perf_counter() - t0) * 1000.0  # ms
 
 
+def _resolve_network_path(name: str) -> str:
+    """Same resolution rule as scripts/validate_faithfulness.py: a bare name
+    (Net1, Net3, ...) resolves against wntr's bundled example networks;
+    anything that looks like a path (has a slash or a .inp suffix) is loaded
+    directly."""
+    if "/" in name or name.lower().endswith(".inp"):
+        return name
+    return wntr.library.model_library.get_filepath(name)
+
+
+def _benchmark_one_network(name: str, repeats: int) -> None:
+    """Times the three costs the CompleNet paper's §5.8 needs: (1) the
+    EPANET importer's one-time cost — parse, the scarcity-priority sweep on
+    the original network, and the velocity/capacity sweep on it (no
+    skeletonization: matches scripts/validate_faithfulness.py's own import
+    shape, so these numbers are comparable to that script's FMS results on
+    the same networks); (2) one WNTR PDD solve, the ground-truth cost per
+    situation; (3) one engine Propagation, the CASCADE cost per situation.
+    (2) and (3) are what the paper's "many-scenario workload" cost argument
+    is actually about — the importer's cost is paid once, the solve/
+    propagation cost is paid once per situation evaluated."""
+    path = _resolve_network_path(name)
+
+    t0 = time.perf_counter()
+    wn = wntr.network.WaterNetworkModel(path)
+    parse_ms = (time.perf_counter() - t0) * 1000.0
+
+    demands = compute_junction_demands(wn, "peak")
+
+    t0 = time.perf_counter()
+    priorities = scarcity_priorities(wn, demands)
+    priority_sweep_ms = (time.perf_counter() - t0) * 1000.0
+
+    t0 = time.perf_counter()
+    flow_profiles = link_flow_profiles(wn, demands)
+    velocity_sweep_ms = (time.perf_counter() - t0) * 1000.0
+
+    t0 = time.perf_counter()
+    bundle = build_bundle(
+        wn, name=name,
+        options=ImportOptions(demand_mode="peak", n_levels=3),
+        priorities=priorities,
+        flow_profiles=flow_profiles,
+    )
+    build_ms = (time.perf_counter() - t0) * 1000.0
+
+    import_total_ms = parse_ms + priority_sweep_ms + velocity_sweep_ms + build_ms
+
+    # One WNTR PDD solve at baseline (no interventions) — the ground-truth
+    # cost validate_faithfulness.py pays once per situation. Same fixed-
+    # demand setup as that script's _solve_served_ratios (a Demand's
+    # pattern_name=None falls back to the model's own global default pattern,
+    # not "constant" — see ADR-0012's Net6 finding), so this measures the
+    # same kind of solve, not an artificially cheaper/costlier one.
+    model = wn
+    model.options.hydraulic.pattern = None
+    for jid, demand in demands.items():
+        junction = model.get_node(jid)
+        junction.demand_timeseries_list.clear()
+        junction.demand_timeseries_list.append((demand, None, "bench_fixed"))
+    model.options.time.duration = 0
+    model.options.hydraulic.demand_model = "PDD"
+    model.options.hydraulic.required_pressure = 20.0
+    model.options.hydraulic.minimum_pressure = 0.0
+    solve_samples: list[float] = []
+    for _ in range(repeats):
+        with tempfile.TemporaryDirectory(prefix="cascade-bench-") as tmpdir:
+            prefix = str(Path(tmpdir) / "bench")
+            t0 = time.perf_counter()
+            wntr.sim.EpanetSimulator(model).run_sim(file_prefix=prefix)
+            solve_samples.append((time.perf_counter() - t0) * 1000.0)
+
+    # One engine Propagation on the imported project, same baseline (no
+    # intervention) — the CASCADE cost validate_faithfulness.py pays once
+    # per situation, for direct comparison against the WNTR solve above.
+    prop_request = PropagationRequest(project=bundle.project, config=bundle.config, scope="global")
+    prop_samples = [_time_once(prop_request) for _ in range(repeats)]
+
+    n_junctions = len(demands)
+    print(f"\n=== {name} ({n_junctions} junctions, {wn.num_links} links) ===")
+    print(
+        f"  import (one-time): parse={parse_ms:.0f}ms  priority_sweep={priority_sweep_ms:.0f}ms  "
+        f"velocity_sweep={velocity_sweep_ms:.0f}ms  build={build_ms:.0f}ms  TOTAL={import_total_ms:.0f}ms"
+    )
+    print(
+        f"  per-situation: WNTR PDD solve median={statistics.median(solve_samples):.1f}ms "
+        f"(min={min(solve_samples):.1f} max={max(solve_samples):.1f})  |  "
+        f"engine Propagation median={statistics.median(prop_samples):.1f}ms "
+        f"(min={min(prop_samples):.1f} max={max(prop_samples):.1f})  |  "
+        f"speedup={statistics.median(solve_samples) / max(statistics.median(prop_samples), 1e-6):.0f}x"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark the propagation engine.")
     parser.add_argument("--sizes", default="10,45,100,300,600,1000")
@@ -108,7 +211,22 @@ def main() -> None:
         default=1500.0,
         help="Target max wall-clock for a single propagation (drives max_nodes).",
     )
+    parser.add_argument(
+        "--networks",
+        default=None,
+        help="Comma-separated wntr.library.model_library names or .inp paths "
+             "(same resolution as scripts/validate_faithfulness.py --networks). "
+             "When given, runs the real-network import/solve/propagation "
+             "benchmark (CompleNet paper §5.8) instead of the synthetic-size "
+             "sweep below.",
+    )
     args = parser.parse_args()
+
+    if args.networks:
+        for name in (n.strip() for n in args.networks.split(",")):
+            _benchmark_one_network(name, args.repeats)
+        return
+
     sizes = [int(s) for s in args.sizes.split(",")]
 
     print(f"{'nodes':>7} {'edges':>7} {'median_ms':>10} {'min_ms':>8} {'max_ms':>8}")
