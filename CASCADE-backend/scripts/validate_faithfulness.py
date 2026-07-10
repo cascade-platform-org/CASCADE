@@ -96,6 +96,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import csv
 import random
 import statistics
 import sys
@@ -116,6 +117,7 @@ from core.importers.inp import (  # noqa: E402
     build_bundle,
     compute_junction_demands,
     link_flow_profiles,
+    scarcity_priorities,
 )
 from core.importers.inp.sim import _check_converged  # noqa: E402 — see module docstring
 from engine.flow import _ratio_to_level  # noqa: E402 — see module docstring
@@ -515,12 +517,36 @@ def main() -> None:
         help="WNTR PDD minimum_pressure (m) for the ground-truth solve — the pressure at/below which a "
              "junction is considered to receive zero service.",
     )
+    parser.add_argument(
+        "--csv", type=Path, default=None,
+        help="Append one row per situation (network, seed, kind, fms, n_compared, tp, fp, fn, tn) to this "
+             "path — header written once, on first creation. Appending (not overwriting) lets a multi-seed "
+             "E1 sweep be several invocations of this script sharing one CSV (E1/T1).",
+    )
+    parser.add_argument(
+        "--no-priority-sweep", action="store_true",
+        help="Skip scarcity_priorities (E0/E3'): import every junction with the engine's default priority "
+             "instead of the failure-order sweep's derived 1..10 value. The ablated arm of the priority "
+             "ablation (Appendix A) — the default (sweep ON) is what Sec. 4/Table 2 describe.",
+    )
     args = parser.parse_args()
 
     rng = random.Random(args.seed)  # nosec B311 — deterministic test-scenario generation, not security
     all_scores: list[float] = []
     all_confusion = ConfusionCounts()
     scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
+
+    csv_writer = None
+    csv_file = None
+    if args.csv is not None:
+        is_new = not args.csv.exists()
+        csv_file = args.csv.open("a", newline="")
+        csv_writer = csv.writer(csv_file)
+        if is_new:
+            csv_writer.writerow(
+                ["network", "seed", "priority_sweep", "required_pressure", "minimum_pressure", "n_levels",
+                 "kind", "situation", "fms", "n_compared", "tp", "fp", "fn", "tn"]
+            )
 
     for name in (n.strip() for n in args.networks.split(",")):
         # A bare name (Net1, Net3, ...) resolves against wntr's bundled
@@ -533,10 +559,12 @@ def main() -> None:
         graph = _build_link_graph(wn)  # for _clustered_break's hop search
         demands = compute_junction_demands(wn, args.demand_mode)
         flow_profiles = link_flow_profiles(wn, demands)
+        priorities = {} if args.no_priority_sweep else scarcity_priorities(wn, demands)
         bundle = build_bundle(
             wn, name=name,
             options=ImportOptions(demand_mode=args.demand_mode, n_levels=args.n_levels),
             flow_profiles=flow_profiles,
+            priorities=priorities,
         )
         link_to_edges, link_to_node = _build_link_maps(bundle.project)
 
@@ -556,10 +584,19 @@ def main() -> None:
             levels_cascade = _cascade_levels(bundle.project, bundle.config, situation, link_to_edges, link_to_node, demands)
             score, n_compared = _fms(levels_true, levels_cascade, demands, args.n_levels)
             network_scores.append(score)
-            scores_by_kind[situation.label.split("#")[0]].append(score)
-            network_confusion += _binary_confusion(levels_true, levels_cascade, demands)
+            kind = situation.label.split("#")[0]
+            scores_by_kind[kind].append(score)
+            confusion = _binary_confusion(levels_true, levels_cascade, demands)
+            network_confusion += confusion
             detail = f"breaks={situation.broken_link_ids or '-'} hot={situation.hot_junction_ids or '-'}"
             print(f"  {situation.label:10s} FMS={score:.3f}  (n={n_compared:3d})  {detail}")
+            if csv_writer is not None:
+                csv_writer.writerow([
+                    name, args.seed, not args.no_priority_sweep,
+                    args.required_pressure, args.minimum_pressure, args.n_levels,
+                    kind, situation.label,
+                    f"{score:.6f}", n_compared, confusion.tp, confusion.fp, confusion.fn, confusion.tn,
+                ])
 
         if network_scores:
             print(f"  -> {name} mean FMS = {statistics.mean(network_scores):.3f} over {len(network_scores)} situations")
@@ -589,6 +626,9 @@ def main() -> None:
         )
     else:
         print("\nNo comparable situations produced a result.")
+
+    if csv_file is not None:
+        csv_file.close()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,231 @@
+{
+  "project": {
+    "version": "2.0",
+    "meta": {
+      "name": "Office with Heat"
+    },
+    "global_graph_type": "global",
+    "nodes": {
+      "node_1762946753934": {
+        "id": "node_1762946753934",
+        "label": "Office",
+        "functionality": 3,
+        "node_type": "Service",
+        "node_categories": [],
+        "importance": 2,
+        "cost_of_disservice_per_day": 100,
+        "category_dependency_profiles": {
+          "electric": { "dependency_level": 2 },
+          "heat": { "dependency_level": 3, "backup": true, "backup_duration": 11 },
+          "water": { "dependency_level": 2 }
+        },
+        "position": { "x": 168, "y": 217 },
+        "properties": {
+          "legacy_node_category": "work",
+          "legacy_priority": 10,
+          "season": "winter"
+        }
+      },
+      "node_1777025959545": {
+        "id": "node_1777025959545",
+        "label": "Electrical Infrastructure",
+        "functionality": 3,
+        "node_type": "Infrastructure",
+        "node_categories": ["electric"],
+        "importance": 1,
+        "category_dependency_profiles": {
+          "electric": { "dependency_level": 3, "demand": 10 }
+        },
+        "position": { "x": 88, "y": 105 }
+      },
+      "node_1777025985927": {
+        "id": "node_1777025985927",
+        "label": "Electrical Source",
+        "functionality": 3,
+        "node_type": "Source",
+        "node_categories": ["electric"],
+        "importance": 1,
+        "supply_capacity": { "electric": 15 },
+        "vulnerability_levels": { "evt-electric-blackout": 2 },
+        "position": { "x": 90, "y": -5 }
+      },
+      "node_1777028040487": {
+        "id": "node_1777028040487",
+        "label": "Laptop",
+        "functionality": 3,
+        "node_type": "Infrastructure",
+        "node_categories": ["digital"],
+        "importance": 1,
+        "vulnerability_levels": { "evt-windows-bluescreen": 2 },
+        "position": { "x": 243, "y": 312 }
+      },
+      "node_1777028103615": {
+        "id": "node_1777028103615",
+        "label": "Office Pc",
+        "functionality": 3,
+        "node_type": "Infrastructure",
+        "node_categories": ["digital"],
+        "importance": 1,
+        "vulnerability_levels": { "evt-windows-bluescreen": 2 },
+        "position": { "x": 85, "y": 315 }
+      },
+      "node_1777278151154": {
+        "id": "node_1777278151154",
+        "label": "Heater Generator",
+        "functionality": 3,
+        "node_type": "Infrastructure",
+        "node_categories": ["heat"],
+        "importance": 1,
+        "category_dependency_profiles": {
+          "heat": { "dependency_level": 3 }
+        },
+        "rules": [
+          "if office.season is summer then heater_generator is operational"
+        ],
+        "position": { "x": 250, "y": 106 }
+      },
+      "node_1777278212626": {
+        "id": "node_1777278212626",
+        "label": "Gas Source",
+        "functionality": 3,
+        "node_type": "Source",
+        "node_categories": ["heat"],
+        "importance": 1,
+        "vulnerability_levels": { "evt-gas-shortage": 2 },
+        "position": { "x": 253, "y": -2 }
+      }
+    },
+    "edges": {
+      "edge_node_1777025959545_node_1777028103615_2": {
+        "id": "edge_node_1777025959545_node_1777028103615_2",
+        "source": "node_1777025959545",
+        "target": "node_1777028103615",
+        "functionality": 3
+      },
+      "edge_node_1777025959545_node_1777278151154_2": {
+        "id": "edge_node_1777025959545_node_1777278151154_2",
+        "source": "node_1777025959545",
+        "target": "node_1777278151154",
+        "functionality": 3
+      },
+      "edge_node_1777025985927_node_1777025959545_0": {
+        "id": "edge_node_1777025985927_node_1777025959545_0",
+        "source": "node_1777025985927",
+        "target": "node_1777025959545",
+        "functionality": 3
+      },
+      "edge_node_1777028040487_node_1762946753934_0": {
+        "id": "edge_node_1777028040487_node_1762946753934_0",
+        "source": "node_1777028040487",
+        "target": "node_1762946753934",
+        "functionality": 3
+      },
+      "edge_node_1777028103615_node_1762946753934_0": {
+        "id": "edge_node_1777028103615_node_1762946753934_0",
+        "source": "node_1777028103615",
+        "target": "node_1762946753934",
+        "functionality": 3
+      },
+      "edge_node_1777278151154_node_1762946753934_0": {
+        "id": "edge_node_1777278151154_node_1762946753934_0",
+        "source": "node_1777278151154",
+        "target": "node_1762946753934",
+        "functionality": 3
+      },
+      "edge_node_1777278212626_node_1777278151154_0": {
+        "id": "edge_node_1777278212626_node_1777278151154_0",
+        "source": "node_1777278212626",
+        "target": "node_1777278151154",
+        "functionality": 3
+      }
+    },
+    "canvases": [
+      {
+        "id": "main",
+        "label": "Office with Heat",
+        "color": "#3b82f6",
+        "graph": {
+          "graph_type": "global",
+          "node_ids": [
+            "node_1762946753934",
+            "node_1777025959545",
+            "node_1777025985927",
+            "node_1777028040487",
+            "node_1777028103615",
+            "node_1777278151154",
+            "node_1777278212626"
+          ],
+          "edge_ids": [
+            "edge_node_1777025959545_node_1777028103615_2",
+            "edge_node_1777025959545_node_1777278151154_2",
+            "edge_node_1777025985927_node_1777025959545_0",
+            "edge_node_1777028040487_node_1762946753934_0",
+            "edge_node_1777028103615_node_1762946753934_0",
+            "edge_node_1777278151154_node_1762946753934_0",
+            "edge_node_1777278212626_node_1777278151154_0"
+          ]
+        }
+      }
+    ],
+    "update_history": [],
+    "scorecard": []
+  },
+  "config": {
+    "version": "1",
+    "meta": {
+      "name": "Office with Heat Config"
+    },
+    "functionality_scale": [
+      { "level": 1, "label": "critical", "color": "#ef4444" },
+      { "level": 2, "label": "operational_warning", "color": "#f97316" },
+      { "level": 3, "label": "operational", "color": "#22c55e" }
+    ],
+    "categories": [
+      { "name": "electric", "category_type": "SourceToDemands", "color": "#f97316" },
+      { "name": "heat", "category_type": "SourceToDemands", "color": "#ef4444" },
+      { "name": "digital", "category_type": "Requisite", "color": "#8b5cf6" },
+      { "name": "water", "category_type": "Requisite", "color": "#0ea5e9" }
+    ],
+    "events": [
+      {
+        "id": "evt-electric-blackout",
+        "label": "Electric Blackout",
+        "type": "hazard",
+        "icon": "ZapOff",
+        "frequency_per_10y": 2,
+        "default_repair_time": 6,
+        "attribute_mutations": {}
+      },
+      {
+        "id": "evt-gas-shortage",
+        "label": "Gas Shortage",
+        "type": "disservice",
+        "icon": "Flame",
+        "frequency_per_10y": 1,
+        "expected_recovery_time": 24,
+        "attribute_mutations": {}
+      },
+      {
+        "id": "evt-windows-bluescreen",
+        "label": "Windows Bluescreen",
+        "type": "disservice",
+        "icon": "MonitorX",
+        "frequency_per_10y": 5,
+        "expected_recovery_time": 1,
+        "attribute_mutations": {}
+      }
+    ],
+    "graph_types": [
+      { "name": "electric", "heuristics": [] },
+      { "name": "heat", "heuristics": [] },
+      { "name": "digital", "heuristics": [] },
+      { "name": "water", "heuristics": [] },
+      {
+        "name": "global",
+        "heuristics": [],
+        "local_graph_types": ["electric", "heat", "digital", "water"]
+      }
+    ],
+    "node_defaults": {}
+  }
+}
