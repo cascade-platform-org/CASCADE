@@ -396,7 +396,14 @@ def link_flow_profiles(
             _accumulate_profiles(profiles, link_ids, results.link["velocity"].iloc[0], results.link["flowrate"].iloc[0])
 
         if contingency_samples > 0:
-            all_links = list(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))
+            # sorted(), not a bare set→list: Python's set iteration order for
+            # strings depends on the per-process hash seed (PYTHONHASHSEED),
+            # not just insertion order — an unsorted list here silently
+            # breaks the `seed` parameter's determinism, so the same `seed`
+            # could sample different contingency links (and so derive
+            # different pipe capacities) on different runs/processes despite
+            # looking fully reproducible.
+            all_links = sorted(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))
             picks = random.Random(seed).sample(all_links, min(contingency_samples, len(all_links)))  # nosec B311 — deterministic capacity-sizing sample, not security
             model.options.hydraulic.demand_multiplier = 1.0
             for i, closed_id in enumerate(picks):

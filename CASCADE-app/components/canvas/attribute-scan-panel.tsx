@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X, ScanSearch } from "lucide-react";
+import { X, ScanSearch, Minus, ArrowUp, ArrowDown } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
@@ -112,6 +112,19 @@ interface ScanResult {
   value: string;
 }
 
+/** Numeric-aware compare for the formatted display value: "10" sorts after
+ * "2" (not before, as a plain string compare would), "6 h" sorts by 6. Falls
+ * back to locale string compare once either side isn't numeric (e.g. "true",
+ * a category list, a node_type name). */
+function compareScanValues(a: string, b: string): number {
+  const na = parseFloat(a);
+  const nb = parseFloat(b);
+  const aNumeric = !Number.isNaN(na) && /^-?\d/.test(a);
+  const bNumeric = !Number.isNaN(nb) && /^-?\d/.test(b);
+  if (aNumeric && bNumeric) return na - nb;
+  return a.localeCompare(b);
+}
+
 // ---------------------------------------------------------------------------
 // Panel
 // ---------------------------------------------------------------------------
@@ -138,6 +151,8 @@ export function AttributeScanPanel() {
 
   const [selectedAttr, setSelectedAttr] = useState("functionality");
   const [customAttr, setCustomAttr] = useState("");
+  const [minimized, setMinimized] = useState(false);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // Build full attribute list including per-event vulnerabilities
   // Identity keys: memos depend on the *set* of ids/names, not array identity.
@@ -251,8 +266,9 @@ export function AttributeScanPanel() {
       }
     }
 
+    out.sort((a, b) => (sortDir === "asc" ? 1 : -1) * compareScanValues(a.value, b.value));
     return out;
-  }, [selectedAttr, customAttr, allAttrs, canvasNodes, canvasEdges, N, allNodes]);
+  }, [selectedAttr, customAttr, allAttrs, canvasNodes, canvasEdges, N, allNodes, sortDir]);
 
   function handleSelect(result: ScanResult) {
     if (result.kind === "node") {
@@ -266,12 +282,33 @@ export function AttributeScanPanel() {
     ? (customAttr.trim() || "custom")
     : allAttrs.find((a) => a.key === selectedAttr)?.label ?? selectedAttr;
 
+  // Minimised: a compact pill (same idiom as SituationWindow) — click to expand.
+  // No backdrop even when expanded: this panel is meant to stay open *while*
+  // looking at the canvas (clicking a result focuses/highlights the node
+  // behind it), not as a blocking dialog like Config/Scorecard/Intervention.
+  if (minimized) {
+    return (
+      <button
+        onClick={() => setMinimized(false)}
+        title="Attribute Scan"
+        className="pointer-events-auto fixed left-16 top-16 z-40 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 py-1 pl-1 pr-2.5 shadow-lg backdrop-blur-sm hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/95 dark:hover:bg-zinc-900"
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
+          <ScanSearch size={13} />
+        </span>
+        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Attribute Scan</span>
+        {results.length > 0 && (
+          <span className="rounded-full bg-zinc-100 px-1.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            {results.length}
+          </span>
+        )}
+      </button>
+    );
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
-    >
-      <div className="flex h-[80dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="pointer-events-none fixed left-16 top-16 z-40 flex max-h-[75dvh] w-full max-w-lg">
+      <div className="pointer-events-auto flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
 
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
@@ -279,12 +316,22 @@ export function AttributeScanPanel() {
             <ScanSearch size={18} className="text-blue-600" />
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Attribute Scan</h2>
           </div>
-          <button
-            onClick={close}
-            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setMinimized(true)}
+              title="Minimise"
+              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+            >
+              <Minus size={16} />
+            </button>
+            <button
+              onClick={close}
+              title="Close"
+              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Controls */}
@@ -337,13 +384,24 @@ export function AttributeScanPanel() {
         {/* Results */}
         <div className="flex-1 overflow-y-auto">
           {/* Count bar */}
-          <div className="sticky top-0 border-b border-zinc-100 bg-zinc-50 px-6 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
-            {results.length === 0
-              ? `No elements with non-default "${attrLabel}"`
-              : `${results.length} element${results.length > 1 ? "s" : ""} with non-default "${attrLabel}"`
-            }
-            {scanLabel && (
-              <span className="ml-1 text-zinc-400 dark:text-zinc-500">— {scanLabel}</span>
+          <div className="sticky top-0 flex items-center justify-between gap-2 border-b border-zinc-100 bg-zinc-50 px-6 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
+            <span className="min-w-0 truncate">
+              {results.length === 0
+                ? `No elements with non-default "${attrLabel}"`
+                : `${results.length} element${results.length > 1 ? "s" : ""} with non-default "${attrLabel}"`
+              }
+              {scanLabel && (
+                <span className="ml-1 text-zinc-400 dark:text-zinc-500">— {scanLabel}</span>
+              )}
+            </span>
+            {results.length > 1 && (
+              <button
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                title={`Sort by value, ${sortDir === "asc" ? "ascending" : "descending"}`}
+                className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-medium text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+              >
+                Value {sortDir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+              </button>
             )}
           </div>
 

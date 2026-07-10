@@ -43,23 +43,43 @@ export interface Situation {
  * `updateHistory` is newest-first, so the first match is always the most recent.
  */
 export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | null {
-  const eventIdx = updateHistory.findIndex((e) => e.update_type === "event_applied");
-  if (eventIdx === -1) return null;
+  // Walk from the top past anything that isn't an Event. The first Propagation
+  // encountered before any Event is the one that was run for this session (if
+  // any) — entries above it, like a manual graph edit, don't change that.
+  //
+  // This has to be ONE walk, not "find the newest Event anywhere, then find the
+  // newest Propagation and compare indices": two Propagation entries can sit
+  // back-to-back (e.g. the user re-runs Propagation with no new Event in
+  // between) while an older, already-superseded Event still exists further
+  // back in history. Scanning for "the newest Event anywhere" would find that
+  // stale one and report a non-null Situation, while the boundary-respecting
+  // collection loop below would (correctly) stop at the nearer Propagation and
+  // collect nothing — a non-null Situation with an empty `eventEntries`, which
+  // crashed situation-window.tsx's `situation.eventEntries[0].id` read.
+  let i = 0;
+  let propEntry: AnyUpdateEntry | null = null;
+  for (; i < updateHistory.length; i++) {
+    const entry = updateHistory[i];
+    if (entry.update_type === "event_applied") break;
+    if (entry.update_type === "propagation") {
+      propEntry = entry;
+      i++;
+      break;
+    }
+  }
 
-  // A Propagation counts only if it is newer (nearer the top) than the newest Event.
-  const propIdx = updateHistory.findIndex((e) => e.update_type === "propagation");
-  const propEntry = propIdx !== -1 && propIdx < eventIdx ? updateHistory[propIdx] : null;
-
-  // Collect every event_applied entry in the current session: start right after
-  // propEntry (or at the top of history if there is none), and walk older until
-  // hitting a propagation entry — that boundary belongs to a previous session.
-  const startIdx = propEntry ? propIdx + 1 : 0;
+  // From here, collect every Event applied in this session — walk older until
+  // hitting another Propagation, which marks the boundary of a prior session.
   const eventEntries: AnyUpdateEntry[] = [];
-  for (let i = startIdx; i < updateHistory.length; i++) {
+  for (; i < updateHistory.length; i++) {
     const entry = updateHistory[i];
     if (entry.update_type === "propagation") break;
     if (entry.update_type === "event_applied") eventEntries.push(entry);
   }
+
+  // No Event in the current session (e.g. two Propagations back-to-back) —
+  // nothing to summarise, regardless of what an older session left behind.
+  if (eventEntries.length === 0) return null;
 
   return { eventEntries, propEntry };
 }

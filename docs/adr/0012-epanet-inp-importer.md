@@ -529,6 +529,109 @@ balance-point investigation above (found and resolved on Zampis specifically)
 is the only place real data diverged meaningfully from Net1/Net3/Net6's
 behaviour.
 
+### Addendum (2026-07-10) — determinism fix, robustness scenario families, threshold sensitivity
+
+Reviewing the harness for the CompleNet paper's validation section surfaced
+one real bug and three methodology gaps; all four are fixed/closed here.
+
+**Determinism bug.** `link_flow_profiles`' contingency-sample link selection
+(`core/importers/inp/sim.py`) built its candidate pool as
+`list(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))`
+before sampling from it with a seeded `random.Random`. Python randomizes a
+process's string hash seed by default (`PYTHONHASHSEED`), which randomizes
+`set` iteration order — so the *seeded* sample was drawn from a
+*per-process-random* ordering, silently defeating the seed. Two back-to-back
+runs of `validate_faithfulness.py` with an identical `--seed` produced
+different imported pipe capacities (via which links the contingency sample
+happened to pick) and therefore different FMS — observed directly: the same
+command line returned 0.907, then 0.947, then 0.980 aggregate FMS on
+successive runs before the fix, all with `--seed 7` on Net1+Net3. Fixed by
+sorting the union before sampling (`sorted(set(...) | set(...) | set(...))`);
+the same fix was applied to a newly-introduced instance of the identical
+pattern in `scripts/validate_faithfulness.py::_clustered_break` (below)
+before it shipped. Confirmed deterministic post-fix: three repeated runs of
+the same command differ only in the 3rd decimal place (0.942/0.942/0.943),
+consistent with ordinary floating-point/solver tie-breaking rather than
+seed-dependent sampling. **This means every FMS number reported anywhere in
+this ADR before this addendum was measured against a harness that was not
+actually reproducible from its own `--seed`** — the qualitative conclusions
+(sign-fix accounts for most of the gain, contingency sampling helps, the
+hedge helps on real data) all replicate under the fixed harness, but the
+specific numbers should be treated as "one draw from a small noise band," not
+exact values, until reproduced with the fix in place.
+
+**Scenario families beyond independent random failure.** The original
+harness only ever closed 1-3 *uniformly randomly chosen* pipes/pumps
+network-wide, or spiked demand on the *top 10%* of consumers by volume. Two
+gaps this leaves, both closed by adding new `kind`s to
+`_random_situation` (`_KINDS = ["break", "hot", "both", "cluster",
+"targeted"]`):
+- **"hot"** replaces "surge": a network-wide, moderate demand increase drawn
+  from a broad random subset of junctions (15-40%, ×1.2-1.8), not just the
+  heaviest consumers at a firefighting-scale multiplier — framed as an
+  ordinary hot/dry spell (more lawn watering, more cooling draw) rather than
+  a hydrant-flow event no cited standard backed. Same mechanism as before,
+  clearer framing and broader junction coverage.
+- **"cluster"** (`_clustered_break`) closes a bounded sample of breakable
+  links within `_CLUSTER_RADIUS_HOPS` (2) topological hops of a random
+  epicenter link — a stand-in for a localized physical hazard (trench
+  collapse, small earthquake) that independent uniform sampling essentially
+  never produces on a network of hundreds of links, and which is harder to
+  route around because nearby alternate paths are damaged together.
+- **"targeted"** (`_targeted_break`) closes links sampled from the top 10% of
+  pipes by diameter plus every pump — the standard contrast to random failure
+  in the network-robustness literature (Albert-Jeong-Barabási, Motter-Lai):
+  does fidelity hold when the failure hits the components a random sample of
+  size 1-3 essentially never reaches, but which carry disproportionate flow?
+
+**Finding: fidelity is not uniform across these families.** Pooled over 3
+seeds × 30 situations on Net1+Net3 (aggregate FMS 0.960, seed-to-seed sd
+~0.013): `hot` 1.000, `break` 0.978, `cluster` 0.965, `both` 0.946,
+`targeted` **0.918** — the lowest of the five, consistently across all 3
+seeds (0.838 / 0.970 / 0.946). On the three real aqueducts (seed 5, 15
+situations each, pooled): `cluster` 0.946, `hot` 0.938, `both` 0.944, `break`
+0.927, `targeted` **0.854** — again the weakest family, and by a wider margin
+than on the textbook networks. Targeted attack on trunk mains/pumps is a
+real, reproducible fidelity gap, not a rounding artifact — small (aggregate
+FMS still ≥0.85 even in the worst case observed) but the paper's headline
+0.97-0.99 numbers should not be read as "uniformly this good under any
+failure distribution." The binary recall claim is affected more than FMS:
+pooled across the *full* scenario mix (not just break/hot), synthetic recall
+drops to 0.964-1.000 depending on seed (previously reported as a flat 1.000
+under the break/surge-only mix) and real-aqueduct recall drops to **0.611**
+pooled (previously 1.000 on Net1/Net3 only) — the "the engine never misses a
+truly critical junction" claim in the FMS §5.2 write-up does not survive the
+fuller scenario mix and needs a caveat, not removal (it still holds for
+`break`/`hot`/`both`; it does not hold once `cluster`/`targeted` are
+included).
+
+**Threshold sensitivity — the encouraging half of this addendum.** Two
+hardcoded assumptions the ground-truth solve depends on
+(`_REQUIRED_PRESSURE_M`, `_MINIMUM_PRESSURE_M`) and the quantization
+granularity (`n_levels`) were suspected of being load-bearing for the
+headline numbers without ever being varied. They are not: on Net1+Net3 (seed
+7, 20 situations, post-determinism-fix), required_pressure ∈ {15, 20, 25} m
+→ FMS ∈ {0.942, 0.944, 0.942}; minimum_pressure 0→5 m → 0.942; n_levels 3→5 →
+0.944→0.948. All within the same noise band as re-running the identical
+config. The aggregate FMS claim is not an artifact of one arbitrarily chosen
+service-pressure convention or one particular (coarse) quantization — this
+strengthens the paper's fidelity claim in exactly the place a reviewer would
+otherwise question it.
+
+**Open item, not yet root-caused: Tarcento's binary recall is an outlier.**
+Pooled across the full scenario mix, Tarcento's recall was 0.086-0.5
+depending on the situation draw, far below Cassacco (0.872) and Zampis
+(0.818) on the same run. `Tarcento_totale.inp` imports with 393/499 pipes
+(79%) classified bidirectional by `DECISIVE_VELOCITY_MS`/`MIN_HEDGE_SHARE`
+(vs. Zampis 589/674 = 87%, Cassacco 225/437 = 51%) — the bidirectional-split
+fraction alone does not explain the gap (Zampis splits an even larger share
+of its pipes yet keeps decent recall), so the leading unverified hypothesis
+is Tarcento's single-pump/three-tank topology rather than orientation
+splitting per se, but this has not been isolated with a controlled ablation.
+**Do not report Tarcento-specific recall numbers in the paper without
+resolving this**; the network-pooled aggregate (and Cassacco/Zampis
+individually) are unaffected and safe to use.
+
 ## Alternatives rejected
 
 - **Custom graph contraction** — re-derives what WNTR's skeletonization

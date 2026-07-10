@@ -2,8 +2,8 @@
 scripts/validate_faithfulness.py — how closely does CASCADE's engine output
 match real WNTR hydraulics, for randomly generated stress situations?
 
-For each situation (a random set of pipe/pump breaks and/or demand spikes),
-this script:
+For each situation (a random combination of structural failures and/or a
+hot-period demand increase — see `_KINDS` below), this script:
   1. Runs the SAME intervention on the real WNTR model (closes the same
      links, scales the same junctions' demand) and solves a real PDD steady
      state — the "ground truth" delivered/expected ratio per junction.
@@ -11,8 +11,8 @@ this script:
      engine's OWN quantization rule (`engine.flow._ratio_to_level`), so the
      comparison isn't confounded by two different rounding schemes.
   3. Applies the identical intervention to the imported CASCADE Project
-     (edge/node functionality = 1 for a break, doubled-or-more demand for a
-     surge) and runs the real engine (`engine.propagation.run`) to get
+     (edge/node functionality = 1 for a break, scaled demand for a hot
+     period) and runs the real engine (`engine.propagation.run`) to get
      CASCADE's own resulting level per junction.
   4. Compares the two per junction and reduces it to ONE number per
      situation: a demand-weighted "Functionality Match Score" (FMS) —
@@ -20,6 +20,32 @@ this script:
 
 The aggregate across every situation/network is the single "how faithful is
 the importer + engine's flow heuristic to real hydraulics" number.
+
+Four failure/stress families, each isolating a different question about
+generalization beyond independent random component loss (`_KINDS`):
+  - "break"    — 1-3 uniformly random pipe/pump closures. The baseline case:
+                 does the model track hydraulics under ordinary, spatially
+                 unrelated component loss?
+  - "hot"      — a network-wide, moderate demand increase (a hot/dry spell:
+                 more lawn watering, more cooling-system draw, general
+                 elevated consumption across many households at once, not a
+                 single hydrant draw) — a broad random subset of junctions,
+                 not just the heaviest consumers, so the scenario isn't
+                 tailored to any one demand-shedding assumption.
+  - "both"     — a random break plus a hot period together.
+  - "cluster"  — several breaks concentrated in one topological
+                 neighbourhood (`_clustered_break`) — a stand-in for a
+                 localized physical hazard (trench collapse, small
+                 earthquake, contractor dig-in) that a uniformly random
+                 sample of components across the whole network essentially
+                 never produces, and which is harder to route around because
+                 nearby alternate paths are damaged too.
+  - "targeted" — breaks concentrated on the highest-diameter trunk mains and
+                 pumps (`_targeted_break`) — the standard contrast to random
+                 failure in the network-robustness literature (Albert-Jeong-
+                 Barabási, Motter-Lai): does fidelity hold when the failure
+                 hits the components a random sample rarely reaches but that
+                 carry disproportionate flow?
 
 This is a dev-only validation harness, not shipped product code — the same
 category as scripts/benchmark_engine.py, which is why it shares that
@@ -33,8 +59,16 @@ Out of scope on purpose: Tank Reserve. It is a time-warning
 it is applied — the tank is still fully supplying right after the event, so
 there is nothing for a t=0 WNTR solve to disagree with CASCADE about.
 
+The `--required-pressure`/`--minimum-pressure` flags exist to check how much
+the aggregate FMS depends on the specific PDD service-pressure assumption the
+ground-truth solve uses (20m/0m by default) — that threshold alone decides
+which junctions WNTR calls "critical," so a fidelity claim that only holds at
+one arbitrary pressure choice would be a weaker claim than it looks.
+
     python scripts/validate_faithfulness.py
     python scripts/validate_faithfulness.py --networks Net1,Net3 --situations 30 --seed 1
+    python scripts/validate_faithfulness.py --n-levels 5
+    python scripts/validate_faithfulness.py --required-pressure 15 --minimum-pressure 5
 """
 from __future__ import annotations
 
@@ -52,6 +86,7 @@ from pathlib import Path
 # scripts/export_json_schema.py / scripts/benchmark_engine.py).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import networkx as nx  # noqa: E402
 import wntr  # noqa: E402
 
 from core.importers.inp import (  # noqa: E402
@@ -66,49 +101,146 @@ from schemas.config import ModelConfiguration  # noqa: E402
 from schemas.network import Project  # noqa: E402
 from schemas.results import PropagationRequest  # noqa: E402
 
-_REQUIRED_PRESSURE_M = 20.0
-_MINIMUM_PRESSURE_M = 0.0
+_KINDS = ["break", "hot", "both", "cluster", "targeted"]
+
+# Cluster attack: how many topological hops from a random epicenter link
+# count as "in the blast radius," and how many of the breakable links found
+# there actually get closed (never more than exist).
+_CLUSTER_RADIUS_HOPS = 2
+_CLUSTER_MAX_BREAKS = 6
+
+# Targeted attack: the pool is the top `_TARGET_TOP_FRACTION` of pipes by
+# diameter (the model's own proxy for trunk-main capacity) plus every pump
+# (a pump is a structural bottleneck regardless of diameter) — `k` of that
+# pool are closed per situation.
+_TARGET_TOP_FRACTION = 0.10
+_TARGET_BREAKS = 3
+
+# Hot period: a broad (not just top-consumer) random subset of junctions see
+# a moderate, sustained demand increase together.
+_HOT_JUNCTION_FRACTION_RANGE = (0.15, 0.4)
+_HOT_FACTOR_RANGE = (1.2, 1.8)
 
 
 @dataclass
 class Situation:
     label: str
     broken_link_ids: list[str] = field(default_factory=list)   # WNTR pipe/pump ids
-    surged_junction_ids: list[str] = field(default_factory=list)
-    surge_factor: float = 1.0
+    hot_junction_ids: list[str] = field(default_factory=list)
+    hot_factor: float = 1.0
 
 
-def _random_situation(wn: wntr.network.WaterNetworkModel, rng: random.Random, index: int) -> Situation:
-    """A random 'break', 'surge', or 'both' — the two scenario families
-    requested: pipe/pump breaks and demand spikes."""
-    kind = rng.choice(["break", "surge", "both"])
+def _build_link_graph(wn: wntr.network.WaterNetworkModel) -> nx.MultiGraph:
+    """An undirected multigraph over node ids, one edge per pipe/pump keyed by
+    its link id — used only for `_clustered_break`'s hop search. Built
+    directly (not via `wn.to_graph()` + a directed→undirected conversion)
+    because that conversion collapses parallel edges and drops the WNTR link
+    id as the edge key, which `_clustered_break` needs to map "nodes within N
+    hops" back to "breakable link ids"."""
+    graph: nx.MultiGraph = nx.MultiGraph()
+    for link_id in list(wn.pipe_name_list) + list(wn.pump_name_list):
+        link = wn.get_link(link_id)
+        graph.add_edge(link.start_node_name, link.end_node_name, key=link_id)
+    return graph
+
+
+def _clustered_break(
+    wn: wntr.network.WaterNetworkModel, graph: nx.MultiGraph, rng: random.Random
+) -> list[str]:
+    """A localized-hazard failure: pick a random breakable link as the
+    epicenter, then close a bounded sample of the breakable links whose BOTH
+    endpoints lie within `_CLUSTER_RADIUS_HOPS` topological hops of it — a
+    stand-in for damage that hits a neighbourhood together (trench collapse,
+    small earthquake) rather than components scattered independently across
+    the whole network, the one failure mode uniformly random sampling
+    (`kind="break"`) essentially never produces on a network of any size."""
+    # Sorted, not a bare set→list: Python's set iteration order for strings
+    # depends on the per-process hash seed, not just insertion order — an
+    # unsorted list here would make rng.choice pick a different epicenter on
+    # every run even with an identical --seed, silently breaking the
+    # reproducibility --seed promises.
+    breakable = sorted(set(wn.pipe_name_list) | set(wn.pump_name_list))
+    if not breakable:
+        return []
+    epicenter = rng.choice(breakable)
+    epicenter_node = wn.get_link(epicenter).start_node_name
+    if epicenter_node not in graph:
+        return [epicenter]
+    nearby_nodes = set(nx.single_source_shortest_path_length(graph, epicenter_node, cutoff=_CLUSTER_RADIUS_HOPS))
+    nearby_links = {
+        link_id
+        for u, v, link_id in graph.edges(keys=True)
+        if u in nearby_nodes and v in nearby_nodes and link_id in breakable
+    }
+    if not nearby_links:
+        return [epicenter]
+    pool = sorted(nearby_links)
+    k = min(_CLUSTER_MAX_BREAKS, len(pool))
+    return rng.sample(pool, k)
+
+
+def _targeted_break(wn: wntr.network.WaterNetworkModel, rng: random.Random) -> list[str]:
+    """A capacity-biased failure: sample from the highest-diameter pipes plus
+    every pump — the components a uniformly random sample of size 1-3 rarely
+    reaches on a network of hundreds of links, but that carry disproportionate
+    flow. The standard contrast to random failure in network-robustness
+    studies (Albert-Jeong-Barabási, Motter-Lai): a model whose fidelity holds
+    only under random loss and degrades under targeted loss would be a
+    materially weaker result than the aggregate FMS alone suggests."""
+    pipes_by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
+    pool_size = max(1, round(len(pipes_by_diameter) * _TARGET_TOP_FRACTION))
+    pool = pipes_by_diameter[:pool_size] + list(wn.pump_name_list)
+    if not pool:
+        return []
+    k = min(_TARGET_BREAKS, len(pool))
+    return rng.sample(pool, k)
+
+
+def _random_situation(
+    wn: wntr.network.WaterNetworkModel, graph: nx.MultiGraph, rng: random.Random, index: int
+) -> Situation:
+    """One of `_KINDS`, uniformly chosen — see the module docstring for what
+    each family tests."""
+    kind = rng.choice(_KINDS)
     breakable = list(wn.pipe_name_list) + list(wn.pump_name_list)
     demanding = [j for j in wn.junction_name_list if wn.get_node(j).demand_timeseries_list]
 
     broken: list[str] = []
-    surged: list[str] = []
+    hot: list[str] = []
     factor = 1.0
     if kind in ("break", "both") and breakable:
         k = rng.randint(1, min(3, len(breakable)))
         broken = rng.sample(breakable, k)
-    if kind in ("surge", "both") and demanding:
-        k = max(1, round(len(demanding) * 0.1))
-        surged = rng.sample(demanding, min(k, len(demanding)))
-        factor = rng.uniform(1.5, 3.0)
-    return Situation(label=f"{kind}#{index}", broken_link_ids=broken, surged_junction_ids=surged, surge_factor=factor)
+    elif kind == "cluster":
+        broken = _clustered_break(wn, graph, rng)
+    elif kind == "targeted":
+        broken = _targeted_break(wn, rng)
+    if kind in ("hot", "both") and demanding:
+        frac = rng.uniform(*_HOT_JUNCTION_FRACTION_RANGE)
+        k = max(1, round(len(demanding) * frac))
+        hot = rng.sample(demanding, min(k, len(demanding)))
+        factor = rng.uniform(*_HOT_FACTOR_RANGE)
+    return Situation(label=f"{kind}#{index}", broken_link_ids=broken, hot_junction_ids=hot, hot_factor=factor)
 
 
 def _solve_served_ratios(
     wn: wntr.network.WaterNetworkModel,
     demands: dict[str, float],
     situation: Situation,
+    required_pressure_m: float,
+    minimum_pressure_m: float,
 ) -> dict[str, float]:
     """Ground truth: a steady-state PDD solve of `wn` under `situation`'s
     interventions, every junction fixed to its `demands` value (the same
-    demand_mode value CASCADE was imported with) except the surged ones,
-    scaled by `situation.surge_factor`. Returns junction id → delivered/
-    expected ratio (clamped at 0, since WNTR can report a tiny negative
-    residual under PDD at zero pressure)."""
+    demand_mode value CASCADE was imported with) except the ones in a hot
+    period, scaled by `situation.hot_factor`. Returns junction id →
+    delivered/expected ratio (clamped at 0, since WNTR can report a tiny
+    negative residual under PDD at zero pressure).
+
+    `required_pressure_m`/`minimum_pressure_m` are exposed to the caller (not
+    hardcoded) so a sensitivity sweep can check how much the aggregate FMS
+    depends on this one service-pressure assumption — it alone decides which
+    junctions WNTR calls "critical" for every situation."""
     model = copy.deepcopy(wn)
     # A Demand entry's pattern_name=None does NOT mean "constant" to WNTR — it
     # falls back to the model's GLOBAL default pattern (wn.options.hydraulic.
@@ -118,7 +250,7 @@ def _solve_served_ratios(
     # same fix, for the same reason).
     model.options.hydraulic.pattern = None
     for jid, demand in demands.items():
-        factor = situation.surge_factor if jid in situation.surged_junction_ids else 1.0
+        factor = situation.hot_factor if jid in situation.hot_junction_ids else 1.0
         junction = model.get_node(jid)
         junction.demand_timeseries_list.clear()
         junction.demand_timeseries_list.append((demand * factor, None, "validation_fixed"))
@@ -136,8 +268,8 @@ def _solve_served_ratios(
 
     model.options.time.duration = 0
     model.options.hydraulic.demand_model = "PDD"
-    model.options.hydraulic.required_pressure = _REQUIRED_PRESSURE_M
-    model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
+    model.options.hydraulic.required_pressure = required_pressure_m
+    model.options.hydraulic.minimum_pressure = minimum_pressure_m
 
     with tempfile.TemporaryDirectory(prefix="cascade-validate-") as tmpdir:
         prefix = str(Path(tmpdir) / "validate")
@@ -185,7 +317,7 @@ def _cascade_levels(
 ) -> dict[str, int]:
     """Apply `situation` to a fresh copy of the imported Project exactly the
     way an Event would (edge/node functionality → 1 for a break, demand
-    scaled for a surge), run the real engine, and return junction id →
+    scaled for a hot period), run the real engine, and return junction id →
     resulting functionality level for every demand-bearing junction."""
     project = bundle_project.model_copy(deep=True)
 
@@ -196,11 +328,11 @@ def _cascade_levels(
         if node_id is not None:
             project.nodes[node_id].functionality = 1
 
-    for jid in situation.surged_junction_ids:
+    for jid in situation.hot_junction_ids:
         node = project.nodes.get(jid)
         profile = (node.category_dependency_profiles or {}).get("water") if node else None
         if profile is not None and profile.demand:
-            profile.demand = profile.demand * situation.surge_factor
+            profile.demand = profile.demand * situation.hot_factor
 
     result = propagate(PropagationRequest(project=project, config=config, scope="global"))
     updated = {u.id: u.functionality for u in result.updates}
@@ -240,6 +372,75 @@ def _fms(
     return 1.0 - weighted_error / max(1, n_levels - 1), len(common)
 
 
+@dataclass
+class ConfusionCounts:
+    """Binary confusion matrix over 'critical' (level == 1, i.e. no service)
+    vs 'operational' (level > 1) — the coarsest functionality read an
+    operator actually acts on (dispatch a crew now vs not), independent of
+    the N-level quantization FMS scores against. Ground truth (WNTR) is the
+    positive class definition: TP/FN are "true is critical", FP/TN are "true
+    is operational". One junction (from the FMS junction set: demand-bearing,
+    present in both sides) = one sample, unweighted — a confusion matrix is a
+    count of classification instances, not a demand-weighted residual."""
+
+    tp: int = 0  # true critical, predicted critical
+    fp: int = 0  # true operational, predicted critical
+    fn: int = 0  # true critical, predicted operational
+    tn: int = 0  # true operational, predicted operational
+
+    def __iadd__(self, other: "ConfusionCounts") -> "ConfusionCounts":
+        self.tp += other.tp
+        self.fp += other.fp
+        self.fn += other.fn
+        self.tn += other.tn
+        return self
+
+    @property
+    def total(self) -> int:
+        return self.tp + self.fp + self.fn + self.tn
+
+    @property
+    def accuracy(self) -> float:
+        return (self.tp + self.tn) / self.total if self.total else 1.0
+
+    @property
+    def precision(self) -> float:
+        return self.tp / (self.tp + self.fp) if (self.tp + self.fp) else 1.0
+
+    @property
+    def recall(self) -> float:
+        return self.tp / (self.tp + self.fn) if (self.tp + self.fn) else 1.0
+
+    @property
+    def f1(self) -> float:
+        p, r = self.precision, self.recall
+        return 2 * p * r / (p + r) if (p + r) else 0.0
+
+
+def _binary_confusion(
+    levels_true: dict[str, int],
+    levels_cascade: dict[str, int],
+    demands: dict[str, float],
+) -> ConfusionCounts:
+    """Same junction set as `_fms` (demand-bearing, present on both sides),
+    thresholded to critical (level 1) vs operational (level > 1)."""
+    counts = ConfusionCounts()
+    for jid in levels_true:
+        if jid not in levels_cascade or demands.get(jid, 0.0) <= 0:
+            continue
+        true_critical = levels_true[jid] == 1
+        pred_critical = levels_cascade[jid] == 1
+        if true_critical and pred_critical:
+            counts.tp += 1
+        elif not true_critical and pred_critical:
+            counts.fp += 1
+        elif true_critical and not pred_critical:
+            counts.fn += 1
+        else:
+            counts.tn += 1
+    return counts
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--networks", default="Net1,Net3", help="Comma-separated wntr.library.model_library names.")
@@ -247,10 +448,23 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-levels", type=int, default=3)
     parser.add_argument("--demand-mode", default="peak", choices=["peak", "base", "avg"])
+    parser.add_argument(
+        "--required-pressure", type=float, default=20.0,
+        help="WNTR PDD required_pressure (m) for the ground-truth solve — the pressure at/above which a "
+             "junction is considered fully served. Vary this to check how much aggregate FMS depends on "
+             "this one service-level assumption.",
+    )
+    parser.add_argument(
+        "--minimum-pressure", type=float, default=0.0,
+        help="WNTR PDD minimum_pressure (m) for the ground-truth solve — the pressure at/below which a "
+             "junction is considered to receive zero service.",
+    )
     args = parser.parse_args()
 
     rng = random.Random(args.seed)  # nosec B311 — deterministic test-scenario generation, not security
     all_scores: list[float] = []
+    all_confusion = ConfusionCounts()
+    scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _KINDS}
 
     for name in (n.strip() for n in args.networks.split(",")):
         # A bare name (Net1, Net3, ...) resolves against wntr's bundled
@@ -260,6 +474,7 @@ def main() -> None:
         # this repo's own fixtures.
         path = name if ("/" in name or name.lower().endswith(".inp")) else wntr.library.model_library.get_filepath(name)
         wn = wntr.network.WaterNetworkModel(path)
+        graph = _build_link_graph(wn)  # for _clustered_break's hop search
         demands = compute_junction_demands(wn, args.demand_mode)
         flow_profiles = link_flow_profiles(wn, demands)
         bundle = build_bundle(
@@ -271,24 +486,47 @@ def main() -> None:
 
         print(f"\n=== {name} ({len(demands)} junctions, n_levels={args.n_levels}) ===")
         network_scores: list[float] = []
+        network_confusion = ConfusionCounts()
         for i in range(args.situations):
-            situation = _random_situation(wn, rng, i)
-            ratios = _solve_served_ratios(wn, demands, situation)
+            situation = _random_situation(wn, graph, rng, i)
+            ratios = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
             if not ratios:
                 continue
             levels_true = {jid: _ratio_to_level(ratio, args.n_levels) for jid, ratio in ratios.items()}
             levels_cascade = _cascade_levels(bundle.project, bundle.config, situation, link_to_edges, link_to_node, demands)
             score, n_compared = _fms(levels_true, levels_cascade, demands, args.n_levels)
             network_scores.append(score)
-            detail = f"breaks={situation.broken_link_ids or '-'} surge={situation.surged_junction_ids or '-'}"
+            scores_by_kind[situation.label.split("#")[0]].append(score)
+            network_confusion += _binary_confusion(levels_true, levels_cascade, demands)
+            detail = f"breaks={situation.broken_link_ids or '-'} hot={situation.hot_junction_ids or '-'}"
             print(f"  {situation.label:10s} FMS={score:.3f}  (n={n_compared:3d})  {detail}")
 
         if network_scores:
             print(f"  -> {name} mean FMS = {statistics.mean(network_scores):.3f} over {len(network_scores)} situations")
+            c = network_confusion
+            print(
+                f"  -> {name} binary (critical=level 1 vs operational): "
+                f"TP={c.tp} FP={c.fp} FN={c.fn} TN={c.tn}  "
+                f"accuracy={c.accuracy:.3f} precision={c.precision:.3f} recall={c.recall:.3f} f1={c.f1:.3f}"
+            )
             all_scores.extend(network_scores)
+            all_confusion += network_confusion
 
     if all_scores:
         print(f"\nAGGREGATE FMS across {len(all_scores)} situations: {statistics.mean(all_scores):.3f}")
+        print("AGGREGATE FMS by scenario kind (does fidelity hold outside independent random failure?):")
+        for kind in _KINDS:
+            scores = scores_by_kind[kind]
+            if scores:
+                print(f"  {kind:10s} mean FMS = {statistics.mean(scores):.3f}  (n={len(scores)} situations)")
+        c = all_confusion
+        print(
+            f"AGGREGATE binary confusion (critical=level 1 vs operational), n={c.total}:\n"
+            f"                  pred critical   pred operational\n"
+            f"  true critical   {c.tp:>13d}   {c.fn:>17d}\n"
+            f"  true operational{c.fp:>13d}   {c.tn:>17d}\n"
+            f"  accuracy={c.accuracy:.3f}  precision={c.precision:.3f}  recall={c.recall:.3f}  f1={c.f1:.3f}"
+        )
     else:
         print("\nNo comparable situations produced a result.")
 
