@@ -302,6 +302,98 @@ def scarcity_priorities(
     return priorities
 
 
+def contingency_priorities(
+    wn: wntr.network.WaterNetworkModel,
+    demands: dict[str, float],
+    *,
+    contingency_samples: int = 20,
+    fail_threshold: float = 0.9,
+    seed: int = 0,
+    warnings: list[str] | None = None,
+) -> dict[str, int]:
+    """Junction id → priority 1..10 from single-link contingency solves —
+    an alternative to `scarcity_priorities`' demand-multiplier sweep.
+
+    Rationale (CompleNet E3‴, 2026-07-11): the demand sweep asks "who fails
+    first as demand scales up everywhere?" — a global, demand-side question.
+    But the engine's priority decides who gets shed when a STRUCTURAL failure
+    (break/targeted/cluster) creates a shortfall, and who really loses service
+    then is a local, topology/pressure question the demand sweep never poses
+    (its priority ablation measured ≈0.000 FMS delta). This function poses it
+    directly: close every top-10%-diameter pipe and pump once (plus
+    `contingency_samples` uniform picks), at nominal demand, and count how
+    often each junction's delivered ratio drops below `fail_threshold`.
+    Junctions that real hydraulics abandons under many closures are fragile →
+    LOW priority (the engine sheds them first, matching WNTR); junctions no
+    closure ever touches → priority 10.
+
+    Frequencies are normalized by the worst junction's frequency (not the
+    solve count): most junctions never fail under any single closure, so a
+    raw-fraction mapping would compress the entire fragile tail into one or
+    two priority levels.
+
+    Returns {} (engine default priority everywhere) when no solve succeeds or
+    no junction ever fails — same contract as `scarcity_priorities`.
+    """
+    warnings = warnings if warnings is not None else []
+
+    junctions = [jid for jid, d in demands.items() if d > 0]
+    if not junctions:
+        return {}
+
+    model = _fixed_demand_model(wn, demands)
+    model.options.time.duration = 0
+    model.options.hydraulic.demand_model = "PDD"
+    model.options.hydraulic.required_pressure = _REQUIRED_PRESSURE_M
+    model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
+
+    # Same trunk pool as link_flow_profiles' exhaustive mode / the harness's
+    # "targeted" family: every consequential link exercised once.
+    all_links = sorted(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))
+    by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
+    pool_size = max(1, round(len(by_diameter) * 0.10))
+    trunk_pool = sorted(set(by_diameter[:pool_size]) | set(wn.pump_name_list))
+    rng = random.Random(seed)  # nosec B311 — deterministic sample, not security
+    remaining_pool = sorted(set(all_links) - set(trunk_pool))
+    picks = trunk_pool + rng.sample(remaining_pool, min(contingency_samples, len(remaining_pool)))
+
+    fail_counts: dict[str, int] = dict.fromkeys(junctions, 0)
+    solved = 0
+    with tempfile.TemporaryDirectory(prefix="cascade-epanet-") as tmpdir:
+        file_prefix = str(Path(tmpdir) / "contingency-priority")
+        for i, closed_id in enumerate(picks):
+            closed_link: Any = model.get_link(closed_id)  # WNTR ships no usable stubs
+            original_status = closed_link.initial_status
+            closed_link.initial_status = "Closed"
+            try:
+                results = _run_sweep_step(model, 1.0, f"{file_prefix}-{i}")
+            except Exception:  # nosec B112 — one failed contingency solve is skipped, not fatal (same rule as link_flow_profiles)
+                continue
+            finally:
+                closed_link.initial_status = original_status
+            solved += 1
+            delivered = results.node["demand"].iloc[0]
+            for jid in junctions:
+                exp = demands[jid]
+                got = float(delivered.get(jid, 0.0))
+                ratio = got / exp if exp > 0 else 1.0
+                if math.isfinite(ratio) and ratio < fail_threshold:
+                    fail_counts[jid] += 1
+
+    if not solved:
+        warnings.append("No contingency solve succeeded — uniform priorities.")
+        return {}
+    max_count = max(fail_counts.values())
+    if max_count == 0:
+        warnings.append("No junction lost service under any single-link closure — uniform priorities.")
+        return {}
+
+    return {
+        jid: max(1, min(10, 10 - round(9 * count / max_count)))
+        for jid, count in fail_counts.items()
+    }
+
+
 def transfer_priorities(
     priorities: dict[str, int],
     merged_map: dict[str, list[str]],
@@ -340,13 +432,13 @@ def _accumulate_profiles(
     link_ids: set[str],
     velocity: Any,
     flowrate: Any,
-    exclude: str | None = None,
+    exclude: frozenset[str] | None = None,
 ) -> None:
     """Fold one solved step's per-link velocity/flowrate into `profiles`,
     shared by both the demand-escalation sweep and the contingency pass
     below — same accumulation rule either way."""
     for link_id in link_ids:
-        if link_id == exclude:
+        if exclude and link_id in exclude:
             continue
         # WNTR's own "velocity" column is an UNSIGNED magnitude (never
         # negative) — direction has to come from "flowrate", which IS
@@ -374,6 +466,9 @@ def link_flow_profiles(
     steps: int = 8,
     max_multiplier: float = 8.0,
     contingency_samples: int = 20,
+    contingency_bias_fraction: float = 0.0,
+    contingency_exhaustive_trunk: bool = False,
+    contingency_trunk_pairs: int = 0,
     seed: int = 0,
     warnings: list[str] | None = None,
 ) -> dict[str, LinkFlowProfile]:
@@ -396,6 +491,38 @@ def link_flow_profiles(
     `demands` — junction id → m³/s for the chosen demand_mode; every
     junction's demand is fixed to this before every solve (both mechanisms),
     so multiplier=1.0 IS the modelled scenario.
+
+    `contingency_bias_fraction` (default 0.0, i.e. today's behaviour
+    unchanged): the plain uniform sample over ALL links has weak odds of ever
+    testing the rare, high-diameter trunk mains and pumps that matter most —
+    on Cassacco (437 links), 20 uniform-random picks cover ~4.6% of links,
+    while a targeted attack on the top-10%-by-diameter pool (the same
+    definition `scripts/validate_faithfulness.py`'s "targeted" family uses)
+    is exactly the failure mode a uniform sample is least likely to have
+    exercised. Diagnosed 2026-07-10 (CompleNet paper E3'': under targeted/
+    clustered attacks, CASCADE over-predicted "critical" 2-3x more junctions
+    than WNTR ground truth, specifically because no contingency sample had
+    ever discovered the backup capacity those attacks force the network to
+    rely on). Setting this > 0 draws that fraction of `contingency_samples`
+    from the top-10%-diameter-pipes-plus-every-pump pool instead of uniformly
+    over all links (the remainder still draws uniformly, so general coverage
+    isn't lost) — biasing capacity discovery toward the links whose loss is
+    disproportionately consequential, not just any link.
+
+    `contingency_exhaustive_trunk` (default False): instead of *sampling*
+    from the trunk pool, close EVERY link in it (top-10%-diameter pipes +
+    every pump) exactly once, then add `contingency_samples` uniform picks
+    from the remaining links on top. Removes sampling luck entirely for the
+    links whose loss matters most; costs one PDD solve per pool link (pool ≈
+    10% of pipes + pumps, so ~45-70 extra solves on the real aqueducts).
+    When set, `contingency_bias_fraction` is ignored (the pool is fully
+    covered, biasing a sample toward it would be redundant).
+
+    `contingency_trunk_pairs` (default 0): additionally close that many
+    random PAIRS of trunk links simultaneously (CompleNet E3‴). Single-link
+    closures never stress the backup path that only a double trunk failure
+    forces into service — exactly the capacity a 3-break `targeted` event
+    relies on. Each pair costs one more PDD solve.
 
     A link absent from the returned dict never reached the noise floor in
     either direction across any solve (no signal at all — isolated/idle
@@ -430,7 +557,7 @@ def link_flow_profiles(
             solved_any = True
             _accumulate_profiles(profiles, link_ids, results.link["velocity"].iloc[0], results.link["flowrate"].iloc[0])
 
-        if contingency_samples > 0:
+        if contingency_samples > 0 or contingency_exhaustive_trunk:
             # sorted(), not a bare set→list: Python's set iteration order for
             # strings depends on the per-process hash seed (PYTHONHASHSEED),
             # not just insertion order — an unsorted list here silently
@@ -439,26 +566,54 @@ def link_flow_profiles(
             # different pipe capacities) on different runs/processes despite
             # looking fully reproducible.
             all_links = sorted(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))
-            picks = random.Random(seed).sample(all_links, min(contingency_samples, len(all_links)))  # nosec B311 — deterministic capacity-sizing sample, not security
+            rng = random.Random(seed)  # nosec B311 — deterministic capacity-sizing sample, not security
+            # Same pool definition as validate_faithfulness.py's "targeted"
+            # family: top-10%-by-diameter pipes plus every pump — the
+            # links whose loss is disproportionately consequential.
+            by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
+            pool_size = max(1, round(len(by_diameter) * 0.10))
+            trunk_pool = sorted(set(by_diameter[:pool_size]) | set(wn.pump_name_list))
+            if contingency_exhaustive_trunk:
+                # Every trunk link once (no sampling luck), plus the uniform
+                # sample for general coverage.
+                remaining_pool = sorted(set(all_links) - set(trunk_pool))
+                n_random = min(contingency_samples, len(remaining_pool))
+                picks = trunk_pool + rng.sample(remaining_pool, n_random)
+            elif contingency_bias_fraction > 0:
+                n_biased = min(round(contingency_samples * contingency_bias_fraction), len(trunk_pool))
+                biased_picks = rng.sample(trunk_pool, n_biased)
+                remaining_pool = sorted(set(all_links) - set(biased_picks))
+                n_random = min(contingency_samples - n_biased, len(remaining_pool))
+                picks = biased_picks + rng.sample(remaining_pool, n_random)
+            else:
+                picks = rng.sample(all_links, min(contingency_samples, len(all_links)))
+            # Each entry is a GROUP of links closed together: singles from the
+            # selection above, plus optional random trunk pairs (see docstring).
+            groups: list[tuple[str, ...]] = [(link_id,) for link_id in picks]
+            if contingency_trunk_pairs > 0 and len(trunk_pool) >= 2:
+                for _ in range(contingency_trunk_pairs):
+                    groups.append(tuple(rng.sample(trunk_pool, 2)))
             model.options.hydraulic.demand_multiplier = 1.0
-            for i, closed_id in enumerate(picks):
+            for i, closed_ids in enumerate(groups):
                 # Mutate the one shared model in place rather than
                 # deepcopy-ing the whole network (full node/link graph +
-                # pattern/timeseries structures) per sample just to flip one
-                # link's status — restore in `finally` so each iteration sees
+                # pattern/timeseries structures) per sample just to flip a few
+                # links' status — restore in `finally` so each iteration sees
                 # the same baseline the next one expects.
-                closed_link: Any = model.get_link(closed_id)  # WNTR ships no usable stubs
-                original_status = closed_link.initial_status
-                closed_link.initial_status = "Closed"
+                closed_links: list[Any] = [model.get_link(cid) for cid in closed_ids]  # WNTR ships no usable stubs
+                original_statuses = [link.initial_status for link in closed_links]
+                for link in closed_links:
+                    link.initial_status = "Closed"
                 try:
                     results = _run_sweep_step(model, 1.0, f"{file_prefix}-c{i}")
                 except Exception:  # nosec B112: one failed contingency solve is skipped, not fatal — an import must never fail because the hydraulics are imperfect (same rule as scarcity_priorities/the main sweep above)
                     continue
                 finally:
-                    closed_link.initial_status = original_status
+                    for link, original_status in zip(closed_links, original_statuses):
+                        link.initial_status = original_status
                 _accumulate_profiles(
                     profiles, link_ids, results.link["velocity"].iloc[0], results.link["flowrate"].iloc[0],
-                    exclude=closed_id,
+                    exclude=frozenset(closed_ids),
                 )
 
     if not solved_any:

@@ -5,12 +5,11 @@
 The engine operates purely on integer Functionality `1..N` (1 = worst, N = best); the four-state vocabulary of earlier versions is retired (see CONTEXT.md). During a Propagation the engine iterates in rounds until the Functionality of every Element stabilises (convergence). Within a round, each node carries a single **running proposed Functionality `P`**, initialised to its current Functionality, and passes through three phases in a **fixed canonical order**:
 
 1. **Propose.** Proposal mechanisms compute candidate Functionality values and merge them into `P` via `worst_of` (a downgrade-only contribution). Two built-in proposal mechanisms exist: **logical aggregation** (category-aware best-of/worst-of) and **flow allocation** (priority min-cost max-flow). A firing "if-then" specific or intra/inter rule may also act as a proposal, injecting its prescribed value as a candidate.
-
 2. **Guard.** Guard mechanisms read `P` and transform it, in **either direction**. A guard never originates a degradation — it modulates the severity of an existing proposal. Built-in guards: `dependency_level` (attenuates the drop, raising `P`), `backup` (defers the drop into `functionality_time` rather than lowering `functionality`), and a firing specific rule registered as an override (replaces `P`).
-
 3. **Commit.** `functionality = worst_of(current, P)`. This single step is the **sole guarantor of monotonicity** — a guard that tries to raise `P` above the node's current Functionality is harmlessly clamped here. There is no "guards only raise" restriction; guards move `P` freely and the commit enforces that Functionality can only worsen. This applies to **every** mechanism including specific-rule overrides: a rule that would improve a node is a no-op (the v1 "rules may improve" behaviour is retired). Improvement is recovery/repair, handled by the timeline, never by propagation. The bounded-below integer scale plus monotone-decreasing commit guarantees the round iteration terminates.
 
 **Mechanism roles are typed**, not universal:
+
 - **Proposal-only:** logical aggregation, flow allocation.
 - **Guard-only:** `dependency_level`, `backup` — they modulate severity, never originate a proposal.
 - **Both:** specific, intracategorical, and intercategorical rules — a rule injected as a candidate is a proposal; a rule that overrides or re-parameterises an existing proposal is a guard.
@@ -33,13 +32,13 @@ The mapping is **never per-node**: per-node tolerance is expressed downstream by
 
 The logical heuristic aggregates the **deliverable** values `L(u→v) = worst_of(node_functionality, edge_functionality)` — never raw node functionality. The default intracategorical operator is `best_of` (redundancy: one healthy supplier suffices) and the default intercategorical operator is `worst_of` (conjunctive: all categories needed). Intra/inter rules may override these with any operator below. All operate on the integer scale `1..N` and resolve every ambiguous case **pessimistically (toward the worse level)**, consistent with the engine's pessimistic-monotone philosophy:
 
-| Operator | Semantics on `1..N` |
-|---|---|
-| `best_of` | `max` |
-| `worst_of` | `min` |
-| `majority_of` | mode (most frequent level); ties broken toward the **worse** level |
-| `average_of` | arithmetic mean, rounded **down** (`floor`) |
-| `median_of` | middle value; even count → **lower** median |
+| Operator        | Semantics on`1..N`                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| `best_of`     | `max`                                                                 |
+| `worst_of`    | `min`                                                                 |
+| `majority_of` | mode (most frequent level); ties broken toward the**worse** level |
+| `average_of`  | arithmetic mean, rounded**down** (`floor`)                      |
+| `median_of`   | middle value; even count →**lower** median                       |
 
 (In the retired four-state code only `best_of`/`worst_of`/`majority_of` existed, with `majority_of` = `Counter.most_common`. `average_of` and `median_of` are new in v2 and only well-defined because Functionality is now an integer scale.)
 
@@ -57,9 +56,7 @@ Guards read the running proposal `P` (and the node's `current` Functionality and
    `dependency_level = N` passes the full drop; `= 1` neutralises any drop entirely
    (shift of `N−1` ≥ the maximum possible drop); intermediate values reduce the
    drop linearly by `N − dependency_level` levels.
-
 2. **`backup` deferral.** Engages on **any** proposed drop (not only a drop to critical) when a binding category has backup: a reserve keeps the node **fully operational**, so the node **holds its current Functionality** and sets `functionality_time = backup_duration` instead of committing the drop. The deferred drop is realised by a future Temporal Jump (see CONTEXT.md → *Functionality Time*). Consequently a backed-up node's `functionality` does not change during the Propagation run — only `functionality_time` is written. If the node **already has `functionality_time > 0`** from a prior run, the existing countdown is **left untouched** (a draining backup is never refreshed). Backup is consulted on the binding (worst) categories; backup on a non-binding category does not protect against a different category's failure.
-
 3. **Specific-rule override (highest priority).** A firing specific rule registered as a guard *replaces* `P` with its prescribed value, **overriding both the dependency attenuation and the backup deferral**. A rule-forced critical goes critical immediately and **supersedes any `functionality_time`** the backup guard set this run (the deferral is cleared). The override is still subject to the monotone commit, but since rules typically force a worse value the clamp rarely applies.
 
 ## Multi-category composition
@@ -95,6 +92,7 @@ Responsibility share comes **only from the heuristic/rule that produced the fina
 ### Weighting rules per Category Type
 
 - **Requisite** (logical heuristic): responsibility falls on the inputs that *pulled the level down* — an input is responsible iff raising it would raise the aggregate. This is *not* "all failed upstreams": under the default `best_of` redundancy the node rides its **best** surviving supplier, so worse (already-degraded) suppliers are not to blame. Shares are **weighted where there is spread, uniform otherwise**:
+
   - `worst_of` → the argmin; `best_of` → the argmax; `majority_of`/`median_of` → the holders of the winning/median level. In all of these the contributors sit at a single level, so the share is **uniform** (ties split evenly).
   - `average_of` → the inputs **below the mean**, each weighted by its **gap `(mean − value)`** (a node far below pulled harder); inputs at or above the mean are blameless. If all inputs are equal, uniform. This is the one logical operator with an informative, non-uniform share.
 
@@ -116,44 +114,17 @@ If a node's Functionality was set directly by an Event (via `attribute_mutations
 
 If set by a Specific Rule, the responsibility dictionary contains all Elements referenced in the rule's condition, split evenly.
 
-## Addendum (2026-07-10) — flow solve: min-cost circulation instead of `nx.max_flow_min_cost`
+## Addendum (2026-07-14) — allocation-shape alternatives evaluated and rejected
 
-`engine/flow.py::flow_category_candidates` solved the min-cost max-flow with a
-single call to `networkx.max_flow_min_cost(graph, src, sink)`. Profiling a
-Propagation on a 3,300-junction imported network (CompleNet paper §5.8) found
-that call responsible for 97% of total wall-clock time, and — within it —
-83% was spent in `preflow_push`, a full max-flow computation `max_flow_min_cost`
-runs **first**, purely to learn the max-flow *value*, before re-solving the
-whole problem a second time as a min-cost flow constrained to that value
-(`network_simplex`, the remaining ~12%). For this graph specifically, that
-first phase is unnecessary work: every demand-sink edge already carries a
-reward (`reward = -priority * big`, `big` sized to exceed any possible
-accumulated path friction) large enough that cost-minimization and
-flow-maximization are not competing objectives — a min-cost solution that
-leaves deliverable flow unrouted is always strictly improvable by routing it,
-so the two-phase "find max flow, then find its cheapest realization" split is
-solving a harder problem than the one actually posed.
-
-Replaced with `engine/flow.py::_min_cost_max_flow`: adds a zero-cost,
-effectively-unbounded sink→source return edge (turning the src→sink flow
-problem into a min-cost **circulation**) and solves it in one
-`nx.min_cost_flow` call — the reward dominance argument above guarantees this
-reaches the same optimum `max_flow_min_cost` does, it just doesn't pay for a
-max-flow value this construction has no use for. Verified, not assumed:
-byte-identical per-consumer delivered amounts to the old call on every
-`test/test_engine_samples.py` situation and on the full
-`scripts/validate_faithfulness.py` real-network validation suite (Net1/Net3/
-Net6, three imported aqueducts) before and after the change — zero diffs.
-Measured impact (`scripts/benchmark_engine.py --networks <name>`, same
-machine, before → after): Net3 (92 junctions) 20.5ms → 8.0ms; Cassacco (417 j)
-80.5ms → 48.9ms; Tarcento (439 j) 101.2ms → 47.7ms; Zampis (607 j) 540.5ms →
-302.5ms; Net6 (3,323 j) 3,812ms → 1,000ms. Still slower than a comparable WNTR
-PDD solve past a few hundred junctions (Net6: 136ms WNTR vs. 1,000ms engine,
-7.4× — down from 28× before this fix), which the remaining gap is now
-attributable to `network_simplex` itself (pure-Python, O(nodes×edges)-ish
-practical behaviour) rather than to the two-phase construction — closing it
-further would mean a different solver backend (e.g. OR-Tools'
-`SimpleMinCostFlow`, a compiled C++ implementation with the same open-source/
-no-paid-tier requirement per CLAUDE.md §1), which is a larger integration
-question (different graph API, int-id remapping, a new dependency) and is not
-addressed here.
+The flow proposal's winner-take-all character (an LP optimum under a shared
+bottleneck can serve some consumers 100% and others exactly 0%) was tested
+against two fairness-shaped alternatives on the 10 worst CASCADE-vs-EPANET
+divergence situations (`CASCADE-backend/experiments/algorithm_variants.py`,
+summary in `experiments/ATTEMPTS.md`): global proportional water-filling
+(much worse — mean FMS 0.373 vs 0.724) and max-min fair-share via
+ascending-demand sequential max-flow (better on as-imported networks, 0.774).
+The fair-share advantage disappeared once the importer's capacity level was
+corrected (ADR-0012 addendum): on margin-fixed networks fair-share is
+slightly *worse* (0.918 vs 0.927) at ~100× the solve cost. **The min-cost
+max-flow proposal above stands unchanged**; the pessimism it was suspected of
+was an importer-attribute problem, not an allocation-shape one.

@@ -426,11 +426,32 @@ export function coerceValue(raw: string, fieldName: string): unknown {
     const n = Number(raw);
     return isNaN(n) ? raw : n;
   }
+  // Object/array-valued mutations are legal (schema: "values are any
+  // JSON-serialisable type") and some fields require them — e.g. the
+  // importer's demand-surge event overrides a whole
+  // category_dependency_profiles dict, since the applier (canvas-store)
+  // only supports top-level "<elementId>.<field>" keys, not deep paths.
+  // Accept JSON text for those; fall through to the scalar rules if it
+  // doesn't parse.
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // not valid JSON — treat as a plain string below
+    }
+  }
   const n = Number(raw);
   if (!isNaN(n) && raw.trim() !== "") return n;
   if (raw === "true") return true;
   if (raw === "false") return false;
   return raw;
+}
+
+/** Human-readable rendering for a mutation value: primitives as-is, objects/
+ * arrays as compact JSON (String() would render them "[object Object]"). */
+function formatMutationValue(val: unknown): string {
+  return typeof val === "object" && val !== null ? JSON.stringify(val) : String(val);
 }
 
 interface AttributeMutationsEditorProps {
@@ -563,7 +584,12 @@ export function AttributeMutationsEditor({ mutations, onChange }: AttributeMutat
                 {Object.entries(fields).map(([field, val]) => (
                   <div key={field} className="mb-1.5 flex items-center gap-2 text-xs">
                     <span className="w-40 shrink-0 font-mono text-zinc-500">{field}</span>
-                    <span className="flex-1 text-zinc-700 dark:text-zinc-200">{String(val)}</span>
+                    <span
+                      className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-200"
+                      title={formatMutationValue(val)}
+                    >
+                      {formatMutationValue(val)}
+                    </span>
                     <button onClick={() => removeField(elemId, field)} className="text-zinc-300 hover:text-red-500">
                       <Trash2 size={10} />
                     </button>

@@ -204,6 +204,19 @@ export const CanvasSchema = z.object({
   map_zoom: z.number().nullish(),
   /** Bijective anchor tying one flow-space point to one geographic coordinate. */
   geo_anchor: GeoAnchorSchema.nullish(),
+  /**
+   * Full text of the original .inp file this canvas was imported from,
+   * embedded automatically at import time. Required for graph_type="epanet"
+   * propagation — the backend rebuilds the WNTR model from this string per
+   * request (fully local-first, works on hosted deployments; see ADR-0013).
+   */
+  source_inp_content: z.string().nullish(),
+  /**
+   * demand_mode this canvas was imported with — reused by graph_type="epanet"
+   * propagation for a consistent demand baseline. Mirrors the backend's
+   * Literal["peak","base","avg"] (schemas/network.py Canvas).
+   */
+  source_inp_demand_mode: z.enum(["peak", "base", "avg"]).nullish(),
   graph: GraphSchema,
 });
 

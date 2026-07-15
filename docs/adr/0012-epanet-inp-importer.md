@@ -30,6 +30,7 @@ sibling producing the same `ProjectBundle`, per Consequences below). WNTR
 | Tank | `Source` node + water profile `{backup, backup_duration = volume ÷ downstream demand}`, + a ready-made "Running on Reserve" Disservice event (see below) |
 | Junction, demand > 0 | `Service` node, water profile `{demand, priority}` |
 | Junction, demand = 0 | `Infrastructure` node |
+| Junction, demand < 0 | `Source` node (`kind: "injection_well"`), `supply_capacity["water"]` = the injection rate itself — the EPANET well/inflow idiom. Added 2026-07-14 after Net2 (whose ONLY source is a −43.8 L/s junction; it has no reservoirs) imported with its supply silently deleted, leaving 27/32 consumers permanently critical on an intact network |
 | Pump link | inline `Infrastructure` node, categories `["water", "pumping"]`, + two half-edges; pump-curve max flow caps them; always Functionality N regardless of .inp status (see below) |
 | Valve link | inline `Infrastructure` node, categories `["water", "valve"]`; `Closed` → Functionality 1 |
 | Pipe | edge, `capacity = π/4·d²·v`, `v` = peak-of-sweep simulated velocity (see below) |
@@ -732,3 +733,49 @@ correctly discarded rather than scored.
   the config (config-store); see "Merging into an existing project" above.
 - Functionality scale size (`n_levels`) is a real knob, not a hardcoded `N=3`
   — needed for merge mode to target an existing project's own scale.
+
+## Addendum (2026-07-14) — capacity margin and full-duplex splits
+
+A systematic A/B study of importer-derived attributes against the 10 worst
+CASCADE-vs-EPANET divergence situations (`CASCADE-backend/experiments/
+importer_variants.py`; full log of every attempt in `experiments/ATTEMPTS.md`,
+results in `experiments/importer_variants_report.md`) reached two conclusions
+that refine — without contradicting — the decisions above:
+
+1. **The peak-of-sweep velocity is the right *relative* profile but a
+   systematically tight *absolute* level.** EPANET pipes have no hard
+   capacity — more flow just costs more head — so the sweep's observed peak
+   is a lower bound on deliverable flow, conditional on the scenarios the
+   sweep happened to exercise. Multiplying every pipe/valve capacity by **×2**
+   (source supply re-derived as usual) raised worst-10 mean FMS 0.770 → 0.878
+   with zero losses; ×2 is the knee (×3/×5 buy little and grow
+   too-optimistic errors). Replacing the sweep with any constant design
+   velocity remains much worse — the sweep earns its keep; only its level
+   needs the margin.
+2. **Bidirectional splits should be full-duplex, not proportional.** The
+   proportional share answers "how is this pipe used normally?" when the
+   question is "what can it do when the network reroutes around a failure?"
+   (a tank feeder dominated by recharge flow gets ~0 discharge share —
+   exactly the direction that matters when its upstream feed breaks). Giving
+   BOTH split edges the pipe's full physical capacity (a pipe carries all of
+   it either way, just not both at once) adds +0.05 mean on top of the
+   margin — combined **0.927**, 8 wins/2 ties/0 losses vs as-imported. This
+   also retires `MIN_HEDGE_SHARE`'s share arithmetic (a strict
+   simplification: the hedge direction simply gets full capacity too).
+
+Negative results worth remembering (all zero-or-negative effect on the same
+benchmark): synthetic reverse edges on confidently one-way pipes, lifting
+pump-curve/valve caps, unbounded source supply, velocity floors (dominated by
+the plain margin), and switching the engine's allocation algorithm (max-min
+fair-share only won while capacities were under-imported; with the margin
+applied it is slightly worse and far slower — the shipped LP stays).
+
+Also surfaced: WNTR's PDD solve on a component fully severed from every
+source is **singular** and silently reads "fully served" — the benchmark
+(`scripts/validate_faithfulness.py`), not the engine, was wrong on such
+situations; its ground truth needs a source-reachability correction (demand
+junctions with no undirected functional path to a source → level 1).
+
+Status: **recommendation, not yet implemented** — the ×2 margin and
+full-duplex split belong in `map.py` (`_pipe_capacity`, `_emit_split`), the
+correction in `validate_faithfulness.py`, in a follow-up change.

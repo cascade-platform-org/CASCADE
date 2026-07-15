@@ -73,8 +73,34 @@ export function CanvasMeta() {
               {gt.name}
             </option>
           ))}
+          {/* Reserved value, not a configured GraphTypeConfig entry — the
+              backend special-cases it to run a live EPANET solve instead of
+              the normal engine (services/propagation_service.py). Requires
+              this canvas's source_inp_content (embedded at import time). */}
+          <option value="epanet">epanet (live WNTR comparison)</option>
         </select>
       </Field>
+      {activeCanvas.graph.graph_type === "epanet" && (
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest">
+            EPANET mode
+          </p>
+          <p>
+            Propagation on this canvas runs a live WNTR/EPANET solve against
+            the original .inp file instead of the CASCADE engine. Canvas
+            edits (added/removed elements, edited capacities) are not
+            reflected in that solve — only breaking an imported
+            pipe/pump/valve/junction below full functionality is.
+          </p>
+          {!activeCanvas.source_inp_content && (
+            <p className="mt-1 font-medium">
+              No embedded .inp source on this canvas (it predates this
+              feature) — propagation will fail until you re-import it from
+              its .inp file.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mb-2">
         <Toggle

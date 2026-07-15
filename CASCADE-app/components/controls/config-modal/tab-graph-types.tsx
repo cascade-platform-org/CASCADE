@@ -142,6 +142,11 @@ export function TabGraphTypes() {
                   {graphTypes.map((gt) => (
                     <option key={gt.name} value={gt.name}>{gt.name}</option>
                   ))}
+                  {/* Reserved value — live EPANET solve instead of the engine.
+                      Not offered on the global-view selector below: global
+                      Propagation composes multiple graph types' heuristics,
+                      which has no live-EPANET equivalent. */}
+                  <option value="epanet">epanet (live WNTR comparison)</option>
                 </select>
               </div>
             ))}

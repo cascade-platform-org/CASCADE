@@ -28,7 +28,13 @@ export const FunctionalityScaleLevelSchema = z.object({
 export const CategoryDefinitionSchema = z.object({
   name: z.string(),
   /** "SourceToDemands" | "Requisite" | any future type added in config. */
-  category_type: z.string(),
+  /**
+   * Closed set of engine heuristics (mirrors CategoryType in
+   * CASCADE-backend/schemas/config.py): "Requisite" = logical aggregation,
+   * "SourceToDemands" = capacitated flow pass. The engine dispatches on
+   * exact string equality, so free text would silently disable a category.
+   */
+  category_type: z.enum(["Requisite", "SourceToDemands"]),
   color: z.string().optional(),
   /** Lucide icon name, e.g. "Droplet", "Zap". Overrides keyword-based auto-detection. */
   icon: z.string().optional(),

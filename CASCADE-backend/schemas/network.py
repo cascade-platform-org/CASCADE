@@ -284,6 +284,30 @@ class Canvas(BaseModel):
             "Absent until the user sets the geo reference in the canvas editor."
         ),
     )
+    source_inp_content: Optional[str] = Field(
+        default=None,
+        description=(
+            "Full text of the original .inp file this canvas was imported from, embedded "
+            "automatically at import time (the browser already holds the picked file's content; "
+            "a filesystem path was rejected as the reference because a browser file picker never "
+            "exposes one, and a server-side copy would break the importer's nothing-persisted "
+            "property — see ADR-0013). Required for graph_type='epanet' propagation: the backend "
+            "rebuilds the WNTR model from this string per request, so the feature is fully "
+            "local-first and works on hosted deployments. Costs the .inp's size (tens of KB for "
+            "real aqueduct exports) in the project file and in each epanet-mode request."
+        ),
+    )
+    # Same values as core.importers.inp.map.DemandMode — declared as its own
+    # Literal because schemas/ cannot import from core/ (map.py already
+    # imports schemas.network; reusing its alias would be a circular import).
+    source_inp_demand_mode: Optional[Literal["peak", "base", "avg"]] = Field(
+        default=None,
+        description=(
+            "demand_mode ('peak'|'base'|'avg') this canvas was imported with — reused by "
+            "graph_type='epanet' propagation so the live EPANET solve's demand baseline matches "
+            "the original import rather than the .inp file's raw time-varying pattern."
+        ),
+    )
     graph: Graph
 
 

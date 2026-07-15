@@ -203,6 +203,8 @@ The propagation algorithm lives in `CASCADE-backend/engine/`, a dedicated Python
 
 The `CASCADE-backend/core/` package contains open, auditable graph logic (rules, analysis, utilities); `CASCADE-backend/engine/` is the algorithm proper.
 
+A Canvas with `graph_type = "epanet"` (ADR-0013) is a deliberate second, non-engine solve path — `services/epanet_solve_service.py` runs a live WNTR/EPANET solve instead of `engine.propagation.run` for that canvas, is engine-import-free by construction, and `propagation_service.py` still does the one engine-touching step (ratio→level quantization, reusing `engine.flow._ratio_to_level`) — so the single-seam property above holds unchanged.
+
 ### Authentication & Authorization
 
 Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `viewer` role. The server validates JWT access tokens on every request. RBAC role assignments and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL; the role→permission mapping is code-owned (`auth/rbac.py`). Both are enforced through FastAPI dependency injection.

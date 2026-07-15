@@ -106,8 +106,22 @@ export function ImportInpSection() {
           ? ` (skeletonized ${result.original_nodes} → ${result.imported_nodes} nodes)`
           : "";
 
+      // Embed the original .inp content + demand_mode onto every canvas the
+      // import produced — enables switching that canvas's graph_type to
+      // "epanet" later for a live WNTR-vs-CASCADE comparison (ADR-0013). The
+      // content travels inside the project JSON (local-first) and is read
+      // back only if/when a propagation request targets an "epanet" canvas.
+      const projectWithSource = {
+        ...result.bundle.project,
+        canvases: result.bundle.project.canvases.map((c) => ({
+          ...c,
+          source_inp_content: file.content,
+          source_inp_demand_mode: demandMode,
+        })),
+      };
+
       if (mode === "replace") {
-        loadProject(result.bundle.project);
+        loadProject(projectWithSource);
         loadConfig(result.bundle.config);
         pushToast({
           message: `Imported "${file.name}"${reduced}.`,
@@ -115,7 +129,7 @@ export function ImportInpSection() {
           durationMs: 6000,
         });
       } else {
-        const { nodeIdMap, edgeIdMap } = mergeImportedProject(result.bundle.project);
+        const { nodeIdMap, edgeIdMap } = mergeImportedProject(projectWithSource);
         const remappedConfig = remapConfigEventIds(
           result.bundle.config,
           result.bundle.project,

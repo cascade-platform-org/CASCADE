@@ -653,6 +653,30 @@ network — no code/UI needed to reach for a common water-utility scenario:
   mode so imported values land on the right scale; the target's scale is
   never replaced.
 
+### 13.6 EPANET-mode canvas — live hydraulic comparison (implemented, ADR-0013)
+
+A Canvas's `graph.graph_type` can be set to the reserved value `"epanet"`.
+Propagation on that canvas then runs a live WNTR/EPANET solve against the
+canvas's `source_inp_content` (the original `.inp` file's full text, embedded
+on the canvas automatically at import time and travelling inside the project
+JSON — fully local-first, works on hosted deployments) instead of the CASCADE
+engine, returning the same `PropagationResult` shape the UI already renders. Canvas edits are not
+reflected in that solve except by full binarization: an imported
+pipe/pump/valve below full functionality closes that link; an imported
+junction/reservoir/tank below full functionality closes every link touching
+it; anything with no round-trip to the original `.inp` file (a CASCADE-only
+addition) is skipped and named in the response's `warnings` rather than
+silently ignored. Switching `graph_type` away from `"epanet"` resumes normal
+engine propagation immediately. Only meaningful for local (single-canvas)
+scope — a global Propagation composing multiple graph types has no
+live-EPANET equivalent, so an `"epanet"`-typed canvas mixed into a global run
+falls through to the normal engine.
+
+Motivation: lets a user directly compare "what CASCADE's engine says" against
+"what real hydraulics says" for the same intervention, inside the app,
+without a separate validation script — the same comparison
+`scripts/validate_faithfulness.py` performs offline, made interactive.
+
 ---
 
 ## 14. Authentication and Access Control

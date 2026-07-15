@@ -189,6 +189,21 @@ Present only on georeferenced Canvases (all optional / nullable):
 | `map_zoom` | `number` | Last MapLibre zoom level, restored on reopen. |
 | `geo_anchor` | `GeoAnchor` | The one flow↔geo correspondence (`flow`, `geo`, `rf_zoom`, `ml_zoom`). Defines the exact Web Mercator **GeoAnchor projection** that converts node `position` ↔ `geo`. Absent until the user sets the anchor in the geo editor. See CONTEXT.md → *GeoAnchor*. |
 
+#### EPANET-mode fields
+
+Present only on a Canvas imported from a `.inp` file where the user chose to
+enable EPANET-mode comparison (both optional):
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `source_inp_content` | `string` | Full text of the original `.inp` file this canvas was imported from, embedded automatically at import time (the browser already holds the picked file's content — a filesystem path can't be auto-captured, and a server-side copy would break the importer's nothing-persisted property). Required for `graph_type: "epanet"` to solve; travels inside the project JSON, so the feature is fully local-first and works on hosted deployments. |
+| `source_inp_demand_mode` | `"peak"` \| `"base"` \| `"avg"` | `demand_mode` this canvas was imported with, reused so the live EPANET solve's demand baseline matches the original import rather than the `.inp` file's raw time-varying pattern. |
+
+Setting a Canvas's `graph.graph_type` to the reserved value `"epanet"` makes
+Propagation on that canvas run a live WNTR/EPANET solve against
+`source_inp_content` instead of the normal CASCADE engine — see
+`docs/adr/0013-epanet-mode-canvas.md` and `api-reference.md`.
+
 #### Node fields reference
 
 | Field | Type | Description |
@@ -318,6 +333,11 @@ and power flow params coexist without conflict. A local graph type omits
 `local_graph_types` and its `heuristics` array is its literal pipeline.
 
 #### Category types
+
+`category_type` is a **closed enum** — exactly these two values are valid
+(enforced by both the Pydantic and Zod schemas; the UI offers them as a
+select). The engine dispatches on exact string equality, so any other string
+would silently bind the category to no heuristic.
 
 | `category_type` | Algorithm | Description |
 | --- | --- | --- |

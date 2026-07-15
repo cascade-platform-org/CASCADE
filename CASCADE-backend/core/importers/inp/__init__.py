@@ -32,6 +32,7 @@ from core.importers.inp.sim import (
     NEGLIGIBLE_VELOCITY_MS,
     LinkFlowProfile,
     link_flow_profiles,
+    contingency_priorities,
     scarcity_priorities,
     transfer_priorities,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "NEGLIGIBLE_VELOCITY_MS",
     "LinkFlowProfile",
     "link_flow_profiles",
+    "contingency_priorities",
     "scarcity_priorities",
     "transfer_priorities",
     "SkeletonError",

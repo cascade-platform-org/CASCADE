@@ -11,6 +11,8 @@ Mapping rules (docs/adr — INP import):
                          fails — the engine's backup guard defers the drop)
   Junction demand > 0  → Service node, water profile {demand, priority}
   Junction demand = 0  → Infrastructure node
+  Junction demand < 0  → Source node (EPANET well/inflow idiom), supply =
+                         the injection rate itself (|demand|)
   Pump link            → inline Infrastructure node (category "pumping") +
                          two half-edges — its Functionality gates downstream
                          flow via the universal Requisite pass
@@ -474,6 +476,25 @@ def build_bundle(
 
     demands = compute_junction_demands(wn, options.demand_mode)
 
+    # A junction with net NEGATIVE demand is the standard EPANET idiom for a
+    # well/inflow injecting water INTO the network (e.g. Net2's junction "1",
+    # -43.8 L/s, the network's ONLY real source — it has no reservoirs). A
+    # plain `demand > 0` mapping imports it as inert Infrastructure, silently
+    # deleting the network's supply: on Net2 that left 27 of 32 demand
+    # junctions permanently critical on an intact network. Treat these as
+    # Sources instead, with supply = the injection rate itself (a real,
+    # file-declared quantity — better than the incident-pipe-capacity rule,
+    # which is a fallback for sources whose .inp declares no flow number).
+    injection_junctions = {jid: -d for jid, d in demands.items() if d < 0}
+    source_names |= injection_junctions.keys()
+    if injection_junctions:
+        listed = ", ".join(sorted(injection_junctions)[:5])
+        warnings.append(
+            f"{len(injection_junctions)} junction(s) with negative demand "
+            f"(EPANET well/inflow idiom) imported as Source nodes: {listed}"
+            + ("…" if len(injection_junctions) > 5 else "")
+        )
+
     # --- inline pump/valve nodes + edge pair endpoints ----------------------
     taken_ids = set(wn.node_name_list)
 
@@ -704,6 +725,18 @@ def build_bundle(
     for jid in junction_names:
         junction = _wn_node(wn, jid)
         demand = demands[jid]
+        if jid in injection_junctions:
+            # Well/inflow junction (see the negative-demand comment above):
+            # a Source whose supply is its own declared injection rate.
+            nodes[jid] = Node(
+                id=jid, label=jid, functionality=n, node_type="Source",
+                node_categories=["water"],
+                supply_capacity={"water": _flow_units(injection_junctions[jid])},
+                position=placement.positions.get(jid), geo=placement.geo.get(jid),
+                properties={**_base_props(jid), "kind": "injection_well",
+                            "elevation_m": round(junction.elevation, 2)},
+            )
+            continue
         profile = {}
         if demand > 0:
             profile["water"] = CategoryDependencyProfile(

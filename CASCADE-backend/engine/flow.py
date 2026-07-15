@@ -89,7 +89,7 @@ def flow_category_candidates(
     if _SINK not in graph or _SRC not in graph:
         return {}  # no demand or no supply — nothing to allocate
 
-    flow = _min_cost_max_flow(graph, _SRC, _SINK)
+    flow = nx.max_flow_min_cost(graph, _SRC, _SINK)
 
     candidates: dict[str, tuple[int, dict[str, float]]] = {}
     for nid in members:
@@ -103,47 +103,6 @@ def flow_category_candidates(
             continue  # fully (or near-fully) served — no degradation proposed
         candidates[nid] = (level, _blame(nid, category, nodes, edges, node_func, edge_func, n))
     return candidates
-
-
-def _min_cost_max_flow(graph: nx.DiGraph, src: str, sink: str) -> dict:
-    """Solve the same problem `nx.max_flow_min_cost(graph, src, sink)` solves,
-    without its expensive two-phase implementation.
-
-    `nx.max_flow_min_cost` first runs a full max-flow computation
-    (`preflow_push`) just to learn the max-flow *value*, then re-solves the
-    whole problem as a min-cost flow constrained to exactly that value
-    (`network_simplex`). Profiled on a 3,300-junction imported network:
-    preflow_push alone was 83% of one Propagation's total wall-clock time,
-    dwarfing the ~12% actually spent on the min-cost step that produces the
-    answer this function needs.
-
-    This graph doesn't need that two-phase approach. Every demand-sink edge
-    already carries a reward (`reward = -priority * big` at the call site
-    above) sized so `big` dominates any possible accumulated path friction
-    (`weight=1` per edge, at most `len(nodes)+len(edges)` edges on any
-    simple path — `big` is set to exceed that bound). So *any* min-cost
-    solution that leaves deliverable flow unrouted is strictly improvable by
-    routing it — cost minimization and flow maximization are not competing
-    objectives here, they're the same objective, by construction. Turning
-    the src→sink flow problem into a min-cost *circulation* (add a
-    zero-cost, effectively-unbounded sink→src return edge, so flow can
-    "complete the loop" instead of needing an explicit demand target) lets
-    one `network_simplex` call find the jointly-optimal answer directly —
-    same optimum, one phase instead of two.
-
-    Verified byte-identical to `nx.max_flow_min_cost`'s per-consumer
-    delivered amounts on every situation in `test/test_engine_samples.py`
-    plus the real-network validation suite (Net1/Net3/Net6 and three
-    imported aqueducts, `scripts/validate_faithfulness.py`) before this
-    replaced the direct call — not an approximation, the same LP optimum
-    reached without paying for a max-flow value this construction doesn't
-    need. ~5x faster per solve, ~4x faster end-to-end on a 3,300-junction
-    network (`scripts/benchmark_engine.py --networks Net6`)."""
-    circulation = graph.copy()
-    circulation.add_edge(sink, src, capacity=INF_CAP, weight=0)
-    for node in circulation.nodes:
-        circulation.nodes[node]["demand"] = 0
-    return nx.min_cost_flow(circulation)
 
 
 # --- network quantities -----------------------------------------------------

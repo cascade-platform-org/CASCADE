@@ -14,9 +14,18 @@ class FunctionalityScaleLevel(BaseModel):
     color: str
 
 
+# The closed set of engine heuristics a category can bind to (ADR-0005):
+# "Requisite" = logical aggregation over incoming edges; "SourceToDemands" =
+# the capacitated flow pass. A new heuristic means a new literal HERE first
+# (schema-first, CLAUDE.md §6), then a matching engine branch — an open
+# string would let a typo ("Requsite") silently fall through to no heuristic
+# at all, since the engine dispatches on exact string equality.
+CategoryType = Literal["Requisite", "SourceToDemands"]
+
+
 class CategoryDefinition(BaseModel):
     name: str
-    category_type: str  # "SourceToDemands" | "Requisite" | open string
+    category_type: CategoryType
     color: Optional[str] = None  # kept for backward compat; icon takes precedence in the UI
     icon: Optional[str] = None  # Lucide icon name, e.g. "Droplet", "Zap"
 

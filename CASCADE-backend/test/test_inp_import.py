@@ -121,6 +121,25 @@ def test_demand_modes():
     assert base_d == pytest.approx(10_000.0)
 
 
+def test_negative_demand_junction_becomes_source():
+    """Regression (found on Net2, whose ONLY real source is a -43.8 L/s
+    junction — the EPANET well/inflow idiom): a junction with net negative
+    demand must import as a Source supplying its injection rate, not as inert
+    Infrastructure — the old `demand > 0` mapping silently deleted the
+    network's supply and left most consumers permanently critical."""
+    well_inp = SYNTHETIC_INP.replace(" J3   90     5", " J3   90     -8")
+    wn = load_inp(well_inp)
+    warnings: list[str] = []
+    bundle = build_bundle(wn, name="well", warnings=warnings)
+    j3 = bundle.project.nodes["J3"]
+    assert j3.node_type == "Source"
+    assert j3.category_dependency_profiles is None  # no demand profile
+    # supply = |injection| in flow units: 8 L/s → 0.008 m³/s × 1e6
+    assert j3.supply_capacity["water"] == pytest.approx(8_000.0)
+    assert j3.properties["kind"] == "injection_well"
+    assert any("negative demand" in w for w in warnings)
+
+
 def test_functionality_scale_is_settable():
     """n_levels is a real knob, not the old hardcoded constant: every node's
     functionality and every profile's dependency_level must be expressed on

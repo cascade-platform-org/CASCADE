@@ -32,6 +32,10 @@
           "type": "string"
         },
         "category_type": {
+          "enum": [
+            "Requisite",
+            "SourceToDemands"
+          ],
           "title": "Category Type",
           "type": "string"
         },

@@ -116,6 +116,7 @@ from core.importers.inp import (  # noqa: E402
     ImportOptions,
     build_bundle,
     compute_junction_demands,
+    contingency_priorities,
     link_flow_profiles,
     scarcity_priorities,
 )
@@ -525,9 +526,36 @@ def main() -> None:
     )
     parser.add_argument(
         "--no-priority-sweep", action="store_true",
-        help="Skip scarcity_priorities (E0/E3'): import every junction with the engine's default priority "
-             "instead of the failure-order sweep's derived 1..10 value. The ablated arm of the priority "
-             "ablation (Appendix A) — the default (sweep ON) is what Sec. 4/Table 2 describe.",
+        help="Alias for --priority-mode none (kept for earlier E3' runs' command-line compatibility).",
+    )
+    parser.add_argument(
+        "--priority-mode", choices=["sweep", "contingency", "none"], default="sweep",
+        help="How junction priorities are derived (E3'/E3‴): 'sweep' = scarcity_priorities' "
+             "demand-multiplier failure order (the original method); 'contingency' = "
+             "contingency_priorities' who-fails-under-single-link-closures frequency (poses the "
+             "structural-failure question the engine's shedding order actually answers); 'none' = "
+             "engine default priority everywhere (the ablated arm).",
+    )
+    parser.add_argument(
+        "--contingency-bias", type=float, default=0.0,
+        help="Fraction of contingency_samples drawn from the top-10%%-diameter-pipes-plus-pumps pool "
+             "instead of uniformly over all links (E3''). Diagnoses/fixes the targeted/clustered-attack "
+             "precision gap: see link_flow_profiles' contingency_bias_fraction docstring.",
+    )
+    parser.add_argument(
+        "--contingency-samples", type=int, default=20,
+        help="Number of single-link contingency solves for capacity discovery (default 20, the importer's "
+             "own default). More samples = more backup-capacity coverage at one extra PDD solve each.",
+    )
+    parser.add_argument(
+        "--contingency-exhaustive-trunk", action="store_true",
+        help="Close EVERY top-10%%-diameter pipe and pump once (no sampling luck for the consequential "
+             "links), plus --contingency-samples uniform picks on top. Overrides --contingency-bias.",
+    )
+    parser.add_argument(
+        "--contingency-trunk-pairs", type=int, default=0,
+        help="Additionally close this many random PAIRS of trunk links simultaneously (E3‴): single-link "
+             "closures never stress the backup path only a double trunk failure forces into service.",
     )
     args = parser.parse_args()
 
@@ -539,14 +567,25 @@ def main() -> None:
     csv_writer = None
     csv_file = None
     if args.csv is not None:
+        # priority_mode (a string, was boolean priority_sweep) + the new
+        # contingency_bias column changed the row layout — appending
+        # new-format rows to an old-format file would silently shift every
+        # column after `seed`, so refuse rather than corrupt.
+        header = ["network", "seed", "priority_mode", "contingency_bias", "required_pressure", "minimum_pressure",
+                  "n_levels", "kind", "situation", "fms", "n_compared", "tp", "fp", "fn", "tn"]
         is_new = not args.csv.exists()
+        if not is_new:
+            with args.csv.open(newline="") as existing:
+                existing_header = next(csv.reader(existing), None)
+            if existing_header != header:
+                raise SystemExit(
+                    f"{args.csv} has a different column layout ({existing_header}); "
+                    f"appending would misalign rows — pass a fresh --csv path."
+                )
         csv_file = args.csv.open("a", newline="")
         csv_writer = csv.writer(csv_file)
         if is_new:
-            csv_writer.writerow(
-                ["network", "seed", "priority_sweep", "required_pressure", "minimum_pressure", "n_levels",
-                 "kind", "situation", "fms", "n_compared", "tp", "fp", "fn", "tn"]
-            )
+            csv_writer.writerow(header)
 
     for name in (n.strip() for n in args.networks.split(",")):
         # A bare name (Net1, Net3, ...) resolves against wntr's bundled
@@ -558,8 +597,20 @@ def main() -> None:
         wn = wntr.network.WaterNetworkModel(path)
         graph = _build_link_graph(wn)  # for _clustered_break's hop search
         demands = compute_junction_demands(wn, args.demand_mode)
-        flow_profiles = link_flow_profiles(wn, demands)
-        priorities = {} if args.no_priority_sweep else scarcity_priorities(wn, demands)
+        flow_profiles = link_flow_profiles(
+            wn, demands,
+            contingency_samples=args.contingency_samples,
+            contingency_bias_fraction=args.contingency_bias,
+            contingency_exhaustive_trunk=args.contingency_exhaustive_trunk,
+            contingency_trunk_pairs=args.contingency_trunk_pairs,
+        )
+        priority_mode = "none" if args.no_priority_sweep else args.priority_mode
+        if priority_mode == "sweep":
+            priorities = scarcity_priorities(wn, demands)
+        elif priority_mode == "contingency":
+            priorities = contingency_priorities(wn, demands)
+        else:
+            priorities = {}
         bundle = build_bundle(
             wn, name=name,
             options=ImportOptions(demand_mode=args.demand_mode, n_levels=args.n_levels),
@@ -592,7 +643,7 @@ def main() -> None:
             print(f"  {situation.label:10s} FMS={score:.3f}  (n={n_compared:3d})  {detail}")
             if csv_writer is not None:
                 csv_writer.writerow([
-                    name, args.seed, not args.no_priority_sweep,
+                    name, args.seed, priority_mode, args.contingency_bias,
                     args.required_pressure, args.minimum_pressure, args.n_levels,
                     kind, situation.label,
                     f"{score:.6f}", n_compared, confusion.tp, confusion.fp, confusion.fn, confusion.tn,

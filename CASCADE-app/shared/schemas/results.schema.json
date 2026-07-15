@@ -297,6 +297,37 @@
           "default": null,
           "description": "Bijective anchor between one React Flow coordinate and one geographic coordinate. When present, all node positions can be converted to/from geographic coordinates via the exact Web Mercator projection defined by GeoAnchor. Absent until the user sets the geo reference in the canvas editor."
         },
+        "source_inp_content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Full text of the original .inp file this canvas was imported from, embedded automatically at import time (the browser already holds the picked file's content; a filesystem path was rejected as the reference because a browser file picker never exposes one, and a server-side copy would break the importer's nothing-persisted property \u2014 see ADR-0013). Required for graph_type='epanet' propagation: the backend rebuilds the WNTR model from this string per request, so the feature is fully local-first and works on hosted deployments. Costs the .inp's size (tens of KB for real aqueduct exports) in the project file and in each epanet-mode request.",
+          "title": "Source Inp Content"
+        },
+        "source_inp_demand_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "peak",
+                "base",
+                "avg"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "demand_mode ('peak'|'base'|'avg') this canvas was imported with \u2014 reused by graph_type='epanet' propagation so the live EPANET solve's demand baseline matches the original import rather than the .inp file's raw time-varying pattern.",
+          "title": "Source Inp Demand Mode"
+        },
         "graph": {
           "$ref": "#/$defs/Graph"
         }
@@ -315,6 +346,10 @@
           "type": "string"
         },
         "category_type": {
+          "enum": [
+            "Requisite",
+            "SourceToDemands"
+          ],
           "title": "Category Type",
           "type": "string"
         },

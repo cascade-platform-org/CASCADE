@@ -5,6 +5,16 @@ import { useConfigStore } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, ColBtn } from "./primitives";
 import { IconPickerButton } from "./icon-picker";
+import type { CategoryDefinition } from "@/lib/schemas/config";
+
+// The closed set of engine heuristics (CategoryTypeSchema in
+// lib/schemas/config.ts, mirroring the backend Literal). A select, not free
+// text: the engine dispatches on exact string equality, so a typo would
+// silently bind the category to no heuristic at all.
+const CATEGORY_TYPES: { value: CategoryDefinition["category_type"]; label: string }[] = [
+  { value: "SourceToDemands", label: "SourceToDemands — flow from sources to consumers" },
+  { value: "Requisite", label: "Requisite — logical dependency on inputs" },
+];
 
 // ---------------------------------------------------------------------------
 // CategoryRow
@@ -17,21 +27,24 @@ function CategoryRow({
   onChangeIcon,
   onRemove,
 }: {
-  cat: { name: string; category_type: string; icon?: string };
+  cat: { name: string; category_type: CategoryDefinition["category_type"]; icon?: string };
   onChangeName: (v: string) => void;
-  onChangeType: (v: string) => void;
+  onChangeType: (v: CategoryDefinition["category_type"]) => void;
   onChangeIcon: (v: string) => void;
   onRemove: () => void;
 }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
       <TextInput value={cat.name} onChange={onChangeName} className="w-28" placeholder="name" />
-      <TextInput
+      <select
         value={cat.category_type}
-        onChange={onChangeType}
-        className="flex-1"
-        placeholder="category type (e.g. SourceToDemands)"
-      />
+        onChange={(e) => onChangeType(e.target.value as CategoryDefinition["category_type"])}
+        className="flex-1 rounded border border-zinc-200 bg-white px-1.5 py-1 text-xs focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+      >
+        {CATEGORY_TYPES.map((t) => (
+          <option key={t.value} value={t.value}>{t.label}</option>
+        ))}
+      </select>
       <IconPickerButton value={cat.icon} onChange={onChangeIcon} />
       <ColBtn variant="danger" onClick={onRemove}>
         <Trash2 size={12} />

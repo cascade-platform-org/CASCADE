@@ -62,6 +62,25 @@ Errors:
 | `504` | Engine exceeded the 30 s wall-clock cap (`ENGINE_TIMEOUT_SECONDS`). |
 | `500` | Engine failure (details only in server logs, never in the response). |
 
+#### EPANET-mode canvas (`graph.graph_type == "epanet"`, ADR-0013)
+
+When the active (local-scope) canvas's `graph_type` is the reserved value
+`"epanet"`, this same endpoint runs a live WNTR/EPANET solve against
+`Canvas.source_inp_content` (the original `.inp` file's text, embedded on the
+canvas at import time and shipped inside the request's own project payload)
+instead of the engine, returning the identical `PropagationResult` shape.
+`ElementUpdate.responsibility_share` is always absent for these updates (no
+causal chain — the engine's pipeline is bypassed entirely). `warnings` may
+additionally list elements that could not be represented in the EPANET solve
+(any element without a `properties.inp_id` round-trip to the original `.inp`
+file, prefixed `"Not reflected in this EPANET solve: ..."`).
+
+Additional error case for this path: `422` if `source_inp_content` is unset
+(a canvas imported before this feature existed) or fails to parse — see
+ADR-0013. Global-scope propagation ignores this graph_type and always uses
+the normal engine (no live-EPANET equivalent for composing multiple graph
+types).
+
 ### `GET /api/engine/algorithms` — any authenticated user
 
 Read-only metadata about the engine's graph types and heuristics (`EngineAlgorithms`). Used by the Config modal to render the algorithm pipeline editor. Static snapshot — does not inspect the running engine.
