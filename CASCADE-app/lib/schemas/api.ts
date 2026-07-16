@@ -20,9 +20,9 @@ import { ModelConfigurationSchema } from "./config";
  * The four built-in RBAC roles. Must stay in sync with backend/auth/rbac.py
  * and the role definitions in backend/db/seed.sql.
  *
- * viewer   → can_view_analysis only
- * analyst  → can_propagate, can_view_analysis, can_sync
- * manager  → can_propagate, can_view_analysis, can_sync, can_manage_users
+ * viewer   → no server-side permissions (guest-preview/demotion role)
+ * analyst  → can_propagate, can_sync
+ * manager  → can_propagate, can_sync, can_manage_users
  * admin    → wildcard (all permissions)
  */
 export const UserRoleSchema = z.enum(["viewer", "analyst", "manager", "admin"]);

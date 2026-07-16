@@ -30,23 +30,6 @@ import {
 } from "@/lib/api-client";
 import type { MeResponse } from "@/lib/schemas/auth";
 
-// Frontend mirror of the backend role→permission map (auth/rbac.py). Kept in
-// sync manually; used only to gate UI affordances — the backend is the real
-// enforcer.
-const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
-  viewer: ["can_view_analysis"],
-  analyst: ["can_propagate", "can_view_analysis", "can_sync"],
-  manager: ["can_propagate", "can_view_analysis", "can_sync", "can_manage_users"],
-  admin: ["can_admin"], // wildcard
-};
-
-function roleGrants(roles: readonly string[], permission: string): boolean {
-  return roles.some((r) => {
-    const granted = ROLE_PERMISSIONS[r] ?? [];
-    return granted.includes("can_admin") || granted.includes(permission);
-  });
-}
-
 export type AuthMode = "unknown" | "guest" | "local" | "oidc";
 
 export interface SessionUser {
@@ -54,6 +37,11 @@ export interface SessionUser {
   email: string;
   displayName: string;
   roles: string[];
+  /** Effective permissions as sent by GET /api/auth/me (wildcard already
+   *  expanded server-side). The single source is auth/rbac.py — this store
+   *  never maps roles to permissions itself. Used only to gate UI
+   *  affordances; the backend is the real enforcer. */
+  permissions: string[];
 }
 
 // localStorage is a boundary like any other (a user, extension, or attacker can
@@ -68,6 +56,9 @@ const PersistedSchema = z.object({
       email: z.string(),
       displayName: z.string(),
       roles: z.array(z.string()),
+      // default([]) keeps sessions persisted by older app versions loadable;
+      // an OIDC session re-fetches /me on init and refreshes this anyway.
+      permissions: z.array(z.string()).default([]),
     })
     .nullable(),
 });
@@ -135,6 +126,7 @@ function userFromMe(me: MeResponse): SessionUser {
     email: me.email,
     displayName: me.display_name || me.email || me.sub,
     roles: me.roles,
+    permissions: me.permissions,
   };
 }
 
@@ -143,6 +135,7 @@ const GUEST_USER: SessionUser = {
   email: "",
   displayName: "Guest",
   roles: ["viewer"],
+  permissions: [], // viewer holds no server-side permission
 };
 
 interface AuthState {
@@ -267,6 +260,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       email,
       displayName: displayName || email || "User",
       roles: ["viewer"], // meaningful only when authEnabled; ignored in local dev
+      permissions: [],
     };
     savePersisted({ mode: "local", user });
     set({ mode: "local", user, sessionExpired: false });
@@ -339,12 +333,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hasPermission: (permission) => {
     const { mode, authEnabled, user } = get();
-    if (mode === "oidc") return roleGrants(user?.roles ?? ["viewer"], permission);
-    // Guests preview the viewer experience even in local dev, so the mode is
-    // meaningful before deployment.
-    if (mode === "guest") return roleGrants(["viewer"], permission);
+    if (mode === "oidc") return (user?.permissions ?? []).includes(permission);
+    // Guests preview the viewer experience (no server-side permissions) even
+    // in local dev, so the mode is meaningful before deployment.
+    if (mode === "guest") return false;
     if (!authEnabled) return true; // local dev backend treats everyone as admin
-    return roleGrants(["viewer"], permission); // labelled local profile in prod
+    return false; // labelled local profile in prod = viewer experience
   },
 }));
 

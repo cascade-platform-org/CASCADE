@@ -228,6 +228,7 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 | Field | Required for | Description |
 | --- | --- | --- |
 | `dependency_level` | All categories | 1–N. N = fully dependent (strict thresholds). 1 = barely dependent (high tolerance). |
+| `capacity` | Optional, all categories | Max throughput for this category on this node. Degrades proportionally with Functionality. |
 | `backup` | All categories | Whether a backup mechanism exists. |
 | `backup_duration` | All (if `backup: true`) | Hours (integer) the backup can sustain the element. |
 | `demand` | `SourceToDemands` only | Resource amount requested. |

@@ -31,7 +31,7 @@ A point-in-time serialisation of a multi-canvas (or one Canvas) — the code-lev
 _Avoid_: Scenario (in code); GraphSnapshot (in domain conversation — say Scenario)
 
 **Event**:
-Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. Carries `vulnerability_levels` (per-EventId Functionality drop), `direct_damage_effects` (typed physical-damage signal, Hazards only), and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). The typed damage signal and the free-form mutations are complementary, not redundant.
+Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). The typed repair signal and the free-form mutations are complementary, not redundant.
 _Avoid_: Incident, perturbation (in domain conversation)
 
 **Hazard**:
@@ -99,7 +99,7 @@ A logical condition on an Element determining when its Functionality degrades fr
 _Avoid_: Dependency rule, condition, constraint
 
 **Category Dependency Profile**:
-A node's per-Category guard parameters: `dependency_level` (1..N; attenuates a proposed drop by `P + (N − dependency_level)`; missing profile = N, full dependency), `backup`/`backup_duration`, and for SourceToDemands `demand` and `priority`. Keyed by Category name; edges carry none. See ADR-0005.
+A node's per-Category guard parameters: `dependency_level` (1..N; attenuates a proposed drop by `P + (N − dependency_level)`; missing profile = N, full dependency), `backup`/`backup_duration`, optional per-Category `capacity` (max throughput, degrades with Functionality), and for SourceToDemands `demand` and `priority`. Keyed by Category name; edges carry none. See ADR-0005.
 _Avoid_: Category block, dependency block, category attributes
 
 **Edge Capacity**:

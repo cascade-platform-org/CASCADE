@@ -1,4 +1,28 @@
 {
     "chat.experimental.useSkillAdherencePrompt": true,
-    "jsts-chat-features.skills.enabled": true
+    "jsts-chat-features.skills.enabled": true,
+    // ChkTeX (via LaTeX Workshop): the extension's own default adds -wall,
+    // which turns on EVERY check — on this repo's papers that's ~90% noise
+    // (warning 46 "$...$ vs \(...\)" alone, a pure style opinion, plus
+    // spacing/punctuation nits). Dropped -wall to fall back to ChkTeX's own
+    // curated default warning set, then suppressed the handful of those
+    // that still misfire on normal academic prose:
+    // 1  = trailing space after a control word (\mainmatter etc.) — harmless
+    // 2  = wants ~ before every \cite — style opinion, not an error
+    // 12 = "interword spacing" before \textbf/\emph — false positive
+    // 13 = "intersentence spacing" — misfires on tokens like "PC."
+    // 23 = smart-quote nit inside \TODO{...} draft comments
+    // 36 = wants a space before "(" — style opinion
+    "latex-workshop.linting.chktex.exec.args": [
+        "-n22",
+        "-n30",
+        "-e16",
+        "-n1",
+        "-n2",
+        "-n12",
+        "-n13",
+        "-n23",
+        "-n36",
+        "-q"
+    ]
 }

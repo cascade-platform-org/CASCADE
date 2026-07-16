@@ -5,7 +5,7 @@
 # (tiered fair-share), NO derived priorities (--priority-mode none).
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
 EXP=../experiments
-NETWORKS="Net1 Net3 ../raw-networks/aqueducts/Cassacco_totale.inp ../raw-networks/aqueducts/Tarcento_totale.inp ../raw-networks/aqueducts/Zampis.inp"
+NETWORKS="Net1 Net2 Net3 ../raw-networks/aqueducts/Cassacco_totale.inp ../raw-networks/aqueducts/Tarcento_totale.inp ../raw-networks/aqueducts/Zampis.inp"
 for seed in 1 2 3; do
   for net in $NETWORKS; do
     python3 scripts/validate_faithfulness.py --networks "$net" --situations 30 --seed $seed \

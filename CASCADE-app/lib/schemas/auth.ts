@@ -10,6 +10,9 @@ export const MeResponseSchema = z.object({
   email: z.string(),
   display_name: z.string(),
   roles: z.array(z.string()),
+  /** Effective (wildcard-expanded) permissions, computed server-side by
+   *  auth/rbac.py — the client tests membership, it never maps roles itself. */
+  permissions: z.array(z.string()),
   auth_enabled: z.boolean(),
 });
 

@@ -6,7 +6,7 @@
 | ---------------- | ------- | --------------------------------- |
 | Node.js          | 18+     | Frontend build                    |
 | Python           | 3.11+   | Backend runtime                   |
-| PostgreSQL       | 15+     | User/RBAC storage only            |
+| PostgreSQL       | 15+     | Users/RBAC, logs, opt-in Sync     |
 | Docker + Compose | Latest  | Optional containerized deployment |
 
 You also need an **OAuth2/OIDC provider** configured as described in [RBAC Setup](rbac-setup.md).
@@ -69,7 +69,7 @@ PORT=8000
 ENV=production
 CORS_ORIGINS=https://your-frontend-domain.com
 
-# Database (users & RBAC only — no project data)
+# Database (users/RBAC, logs; project data only for opt-in Sync users)
 
 DATABASE_URL=postgresql://user:pass@db-host:5432/propagation_rbac
 
@@ -416,13 +416,14 @@ in-process. This constrains scaling:
 
 The Postgres instance holds two databases that **must both** be backed up:
 
-- the **CASCADE app DB** — accounts, roles, entitlements;
+- the **CASCADE app DB** — accounts, roles, entitlements, audit/analysis logs,
+  and any **Server Sync** project versions users have opted in to push;
 - the **`zitadel` DB** — all identity data (users, password hashes, verification
   state). If this is lost, every user is locked out permanently.
 
-Project graph data is **not** stored server-side in v1 (local-first; Sync
-deferred) — it lives as JSON on each user's machine (see
-[Local-First Guide](local-first-guide.md)).
+By default project graph data is local-first — JSON on each user's machine (see
+[Local-First Guide](local-first-guide.md)); only users who opted in to Server
+Sync have project versions in the app DB.
 
 ### Nightly backups
 

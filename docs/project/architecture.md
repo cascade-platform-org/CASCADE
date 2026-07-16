@@ -72,13 +72,16 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 
 ### State Management — Zustand
 
-All application state is managed through six Zustand stores:
+All application state is managed through nine Zustand stores:
 
-- **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, `update_history` (undo stack), serialisation to/from `Project`.
+- **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
+- **`history-store`** — the Any Graph Update ring buffer (`update_history`, cap 20) plus the session-only redo stack. Pure append/pop/restore data structure; zero dependency on other stores.
 - **`network-store`** — UI-only selection and hover state for the active Canvas. Intentionally thin — no graph data. High-frequency updates (every pointer event) stay isolated from the registry.
 - **`config-store`** — `ModelConfiguration`: functionality scale, category definitions, Event definitions, graph-type algorithm pipelines. Owns a draft/commit lifecycle for the Config modal.
+- **`scorecard-store`** — the Scorecard entry list, serialised into `Project.scorecard` via canvas-store.
+- **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
-- **`auth-store`** — OAuth2 tokens, user profile, current role.
+- **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.
 - **`ui-store`** — panel visibility, active tool, propagation scope, category filter, toast queue.
 
 The stores are the single source of truth. Components subscribe to slices they need.
@@ -124,7 +127,7 @@ Every user action that changes graph state pushes an `AnyUpdateEntry` to `update
 
 ### Server Sync (opt-in)
 
-When enabled, explicit saves are also pushed to `POST /api/sync/save`. The version list is accessible across devices via `GET /api/sync/versions`. Requires the `can_sync` RBAC permission.
+When enabled, explicit saves are also pushed to `POST /api/projects` (each save is a new version, never an overwrite). The version list is accessible across devices via `GET /api/projects`; load/delete one version via `GET`/`DELETE /api/projects/{id}`. Requires the `can_sync` RBAC permission. See api-reference.md.
 
 ### Schema Layer
 
@@ -137,7 +140,7 @@ CASCADE-backend/schemas/*.py
         │
         │  python CASCADE-backend/scripts/export_json_schema.py
         ▼
-CASCADE-app/shared/schemas/*.schema.json   ← diff these to detect drift
+CASCADE-app/shared/schemas/*.schema.json   ← drift is CI-enforced (backend job)
         │
         │  manual update
         ▼
@@ -207,7 +210,7 @@ A Canvas with `graph_type = "epanet"` (ADR-0013) is a deliberate second, non-eng
 
 ### Authentication & Authorization
 
-Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `viewer` role. The server validates JWT access tokens on every request. RBAC role assignments and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL; the role→permission mapping is code-owned (`auth/rbac.py`). Both are enforced through FastAPI dependency injection.
+Identity is handled via OAuth2/OIDC, using the self-hosted open-source **Zitadel** provider (provider-agnostic in principle — any OIDC IdP works). Signup is self-service; a new user is provisioned in PostgreSQL on first authenticated request with the default `analyst` role (ADR-0010 amendment — `viewer` is the guest/demotion role). The server validates JWT access tokens on every request. RBAC role assignments and per-role **Entitlements** (quotas — see ADR-0008) are stored in PostgreSQL; the role→permission mapping is code-owned (`auth/rbac.py`). Both are enforced through FastAPI dependency injection.
 
 Relevant permissions:
 
@@ -216,7 +219,7 @@ Relevant permissions:
 | `can_propagate` | Call the propagation engine (`POST /api/propagate`) |
 | `can_sync` | Store and retrieve project files server-side |
 | `can_manage_users` | List users, assign/change roles via admin API |
-| `can_define_roles` | Create or modify role definitions (admin-only by default) |
+| `can_admin` | Wildcard — implies all others; guards admin-role escalation/deletion |
 
 ### Database — PostgreSQL
 

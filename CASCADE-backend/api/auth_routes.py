@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from auth.dependencies import get_current_user
 from auth.idp import IdPDeletionError, delete_idp_user
+from auth.rbac import effective_permissions
 from auth.oauth2 import fetch_oidc_config, verify_id_token
 from config import get_settings
 from db import audit as db_audit
@@ -74,6 +75,9 @@ class MeResponse(BaseModel):
     email: str
     display_name: str
     roles: list[str]
+    # Effective (wildcard-expanded) permissions — the client gates UI on this
+    # list instead of mirroring auth/rbac.py's role→permission map.
+    permissions: list[str]
     auth_enabled: bool
 
 
@@ -97,6 +101,7 @@ async def me(user: AuthUser = Depends(get_current_user)) -> MeResponse:
         email=user.email,
         display_name=user.display_name,
         roles=user.roles,
+        permissions=sorted(effective_permissions(user.roles)),
         auth_enabled=settings.auth_enabled,
     )
 

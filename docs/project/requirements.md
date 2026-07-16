@@ -422,10 +422,14 @@ Losses are distributed backwards along **transitive blame chains**: the fraction
 
 ---
 
-## 11. Topological Analysis Module
+## 11. Analysis Module (implemented)
 
-- **Centrality metrics**: degree, betweenness, closeness.
-- Visualisation overlays (node size / colour).
+Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
+
+- **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
+- **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (exact 2^N or approximate).
+
+Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality; cleared by Reset). Each metric shows a recommended graph-type badge on the Analysis page.
 
 ---
 
@@ -664,9 +668,9 @@ without a separate validation script — the same comparison
 
 - **OAuth2/OIDC** via self-hosted open-source **Zitadel** (any OIDC IdP works in principle; paid SaaS excluded by §1). **Self-service signup** — anyone may register.
 - **RBAC** server-side; stored in PostgreSQL.
-- Roles: `viewer`, `analyst`, `manager`, `admin`. New self-service users default to `viewer`, provisioned on first authenticated request; higher roles are granted by an admin.
-- Permissions: `can_propagate`, `can_view_analysis`, `can_sync`, `can_manage_users`, `can_define_roles`.
-- **Entitlements** (per-role quotas, not just permissions — ADR-0008): `max_nodes` and an engine-evaluation budget per minute, enforced server-side before the engine runs. Defaults: `viewer` = 45 nodes / ~10k evals-min; `analyst` = 300 nodes / ~100k evals-min. This is how self-service signup coexists with a protected engine — anyone can explore the full toolset on small graphs, bounded by quota.
+- Roles: `viewer`, `analyst`, `manager`, `admin`. New self-service users default to `analyst`, provisioned on first authenticated request (ADR-0010 amendment; `viewer` is the guest-preview/demotion role); higher roles are granted by an admin.
+- Permissions: `can_propagate`, `can_sync`, `can_manage_users`, `can_admin` (wildcard). Code-owned mapping in `auth/rbac.py`; every permission is enforced by at least one endpoint.
+- **Entitlements** (per-role quotas, not just permissions — ADR-0008): `max_nodes` and an engine-evaluation budget per minute, enforced server-side before the engine runs. Current defaults (migrations 002/003): `viewer` = 45 nodes / 10k evals-min; `analyst`/`manager` = 300 nodes / 5k evals-min (recalibrated from benchmarks — model-based analysis, not single propagations, is the binding cost). This is how self-service signup coexists with a protected engine — anyone can explore the full toolset on small graphs, bounded by quota.
 - Single-user local mode requires no auth.
 
 ---

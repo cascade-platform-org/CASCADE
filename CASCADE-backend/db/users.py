@@ -73,7 +73,8 @@ async def upsert_user(
     Identity is the OIDC `sub` (external_id); email is secondary and may be
     None (the OIDC email claim is optional — NULLs don't collide on the UNIQUE
     constraint, unlike empty strings). Behaviour:
-    - First login: INSERT with the default role (`viewer`, migration 002).
+    - First login: INSERT with the default role (`analyst`, migration 005 /
+      ADR-0010 amendment; `viewer` is the guest/demotion role).
     - Returning login, profile unchanged: NO write — return the stored row.
       (Avoids a user-row UPDATE on every request, which would otherwise hammer
       one row during a client-driven model-based analysis.)

@@ -15,10 +15,12 @@ Permissions per role are defined **in code** — `CASCADE-backend/auth/rbac.py` 
 
 | Role | Permissions |
 | --- | --- |
-| `viewer` | `can_view_analysis` |
-| `analyst` | `can_propagate`, `can_view_analysis`, `can_sync` |
+| `viewer` | none — guest-preview/demotion role; plain-authenticated endpoints only |
+| `analyst` | `can_propagate`, `can_sync` |
 | `manager` | analyst + `can_manage_users` |
 | `admin` | `can_admin` (wildcard — implies all) |
+
+Every permission is enforced by at least one endpoint; a permission with no endpoint to guard is not declared (client-side analysis needs none).
 
 Each role also carries an **Entitlement** (ADR-0008): `max_nodes` and `evals_per_minute`, stored on the `roles` table and enforced before the engine runs.
 
@@ -101,7 +103,7 @@ model configuration; Propagation resolves it from the request's canvases.
 
 ### `GET /api/auth/me`
 
-Returns the current user (`sub`, `email`, `display_name`, `roles`) plus `auth_enabled`, so the frontend can tell local-only mode from a real session.
+Returns the current user (`sub`, `email`, `display_name`, `roles`, `permissions`) plus `auth_enabled`, so the frontend can tell local-only mode from a real session. `permissions` is the effective (wildcard-expanded) set computed by `auth/rbac.py` — the client gates UI by membership in this list and never maps roles to permissions itself.
 
 ### `DELETE /api/auth/me`
 

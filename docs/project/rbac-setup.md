@@ -7,7 +7,7 @@ The platform uses **Role-Based Access Control (RBAC)** layered on top of **OAuth
 - **Authentication** (who you are) is delegated to a self-hosted, open-source OIDC provider — **Zitadel** (chosen; see ADR-0009 context) — or any OIDC-compliant service. Proprietary paid providers (Auth0, Okta, Azure AD) are excluded by the 100%-open-source rule (CLAUDE.md §1).
 - **Authorization** (what you can do) is enforced by the backend using roles and permissions stored in PostgreSQL.
 
-No project data touches the database. Only identity records and role assignments are stored server-side; permission definitions are code-owned (`auth/rbac.py`).
+The database stores identity records, role assignments, and run/audit logs; permission definitions are code-owned (`auth/rbac.py`). Project data reaches the database only for users who opt in to Server Sync (requirements.md §13.4).
 
 ---
 
@@ -17,24 +17,23 @@ No project data touches the database. Only identity records and role assignments
 
 The platform ships with four built-in roles. Role definitions are code-owned (`auth/rbac.py`); adding a custom role means adding it there plus a `roles` row (with its Entitlement) via a migration.
 
-| Role        | Description                                            | Permissions                                                   |
-| ----------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `viewer`  | Can view shared results but cannot run Propagation     | `can_view_analysis`                                                      |
-| `analyst` | Standard user — can propagate and analyze              | `can_propagate`, `can_view_analysis`, `can_sync`                        |
-| `manager` | Can propagate and manage team members' roles            | `can_propagate`, `can_view_analysis`, `can_sync`, `can_manage_users`  |
-| `admin`   | Full access including role/permission definitions      | `*` (wildcard)                                                           |
+| Role        | Description                                             | Permissions                                      |
+| ----------- | -------------------------------------------------------- | ------------------------------------------------ |
+| `viewer`  | Guest-preview / demotion role; cannot run Propagation     | none — plain-authenticated endpoints only        |
+| `analyst` | Standard user (signup default) — can propagate and sync   | `can_propagate`, `can_sync`                      |
+| `manager` | Analyst + manage team members' roles                      | `can_propagate`, `can_sync`, `can_manage_users`  |
+| `admin`   | Full access                                               | `can_admin` (wildcard)                           |
 
 ### Permission Definitions
 
-| Permission            | Grants                                                    |
-| --------------------- | --------------------------------------------------------- |
-| `can_propagate`     | Call `POST /api/propagate`                            |
-| `can_view_analysis` | Access analysis endpoints (future expansion)              |
-| `can_sync`          | Store and retrieve project files server-side              |
-| `can_manage_users`  | List users, assign/change roles via admin API             |
-| `can_define_roles`  | Create or modify role definitions (admin-only by default) |
+| Permission           | Grants                                                            |
+| -------------------- | ----------------------------------------------------------------- |
+| `can_propagate`    | Call `POST /api/propagate`                                      |
+| `can_sync`         | Store and retrieve project files server-side                      |
+| `can_manage_users` | List users, assign/change roles via admin API                     |
+| `can_admin`        | Wildcard; also guards admin-role escalation/deletion              |
 
-Permissions are additive. A user's effective permissions are the union of all permissions granted by their role.
+Permissions are additive (union across the user's roles). Every declared permission is enforced by at least one endpoint — a permission with nothing to guard is removed rather than kept as dead surface (client-side analysis needs none; role definitions are code-owned, so no "define roles" permission can exist).
 
 ---
 
@@ -70,10 +69,12 @@ The **role→permission mapping lives in code** (`auth/rbac.py`), not in a table
 
 ## Identity Provider Setup
 
-### General Requirements
+Any OAuth2/OIDC provider works; the shipped stack self-hosts **Zitadel**. The
+server needs a client ID (client secret optional — PKCE is the default), the
+provider's discovery URL, and a registered redirect URI pointing at the
+frontend's `/auth/callback` page.
 
-Any OAuth2/OIDC provider works. The server needs:
-
-1. **Client ID** and **Client Secret** from the provider.
-2. The provider's **discovery URL** (e.g., `https://your-provider/.well-known/openid-configuration`).
-3. A registered **redirect URI** pointing to `https://,[object Object]
+The full step-by-step Zitadel setup (first admin login, app creation, redirect
+URIs, SMTP + email verification, lockout, `.env` values) lives in
+[deployment.md → Identity Provider (Zitadel) Setup](deployment.md); the
+endpoint-level auth flow is documented in [api-reference.md](api-reference.md).

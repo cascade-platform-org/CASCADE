@@ -32,7 +32,7 @@ See [docs/project/deployment.md](docs/project/deployment.md) for the production
 ## Test
 
 ```bash
-# Backend (199 tests). DB-integration tests need a Postgres; without one they skip.
+# Backend. DB-integration tests need a Postgres; without one they skip.
 cd CASCADE-backend
 docker run -d --name pg -e POSTGRES_PASSWORD=pw -p 5433:5432 postgres:16
 TEST_DATABASE_URL=postgresql://postgres:pw@localhost:5433/postgres python -m pytest -q
@@ -46,10 +46,11 @@ cd CASCADE-app && npm ci && npx tsc --noEmit && npm run build
 
 Every push to `main` and every pull request runs
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml): backend lint + tests
-(against a real Postgres), frontend type-check + build, and Docker image/compose
-validation.
+(against a real Postgres) + Pydantic→JSON-Schema drift check, frontend
+type-check + build, docs integrity + internal-link check, and Docker
+image/compose validation.
 
 **Recommended:** protect `main` so changes must pass CI before merging —
 GitHub → *Settings → Branches → Add branch protection rule* for `main`, enable
 *Require status checks to pass before merging*, and select the **Backend**,
-**Frontend**, and **Docker** checks.
+**Frontend**, **Docs**, and **Docker** checks.

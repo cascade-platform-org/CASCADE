@@ -55,6 +55,14 @@ jobs:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: python -m pytest -q
 
+      # Schema-first guard (CLAUDE.md §6): the JSON Schema bridge files must be
+      # regenerated whenever a Pydantic model changes. A diff here means someone
+      # changed schemas/*.py without running the export script.
+      - name: Schema drift (Pydantic → JSON Schema bridge)
+        run: |
+          python scripts/export_json_schema.py
+          git diff --exit-code -- ../CASCADE-app/shared/schemas/
+
   frontend:
     name: Frontend — type-check + build
     runs-on: ubuntu-latest
@@ -78,6 +86,29 @@ jobs:
 
       - name: Build (static export)
         run: npm run build
+
+  docs:
+    name: Docs — integrity + links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A stringified object in a doc means some tool/template interpolation
+      # wrote garbage into it (this actually happened to rbac-setup.md).
+      - name: No corrupted interpolations
+        run: |
+          if grep -rn --include="*.md" -F "[object Object]" .; then
+            echo "::error::Corrupted interpolation found in docs (see matches above)."
+            exit 1
+          fi
+
+      # Offline mode: checks only file-to-file links (deterministic — external
+      # URLs are skipped so a flaky website can never fail CI).
+      - name: Internal links resolve (lychee, offline)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress --root-dir "$PWD" "**/*.md"
+          fail: true
 
   docker:
     name: Docker images + compose

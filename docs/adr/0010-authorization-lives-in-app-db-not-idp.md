@@ -26,8 +26,9 @@ adding safety. New posture (migration 005):
 
 ## Why
 
-Signup is public and self-service, so strangers must land at least privilege by
-default and be promotable without touching an external system. Keeping
+Signup is public and self-service, so strangers must land at a safe, bounded
+default (safety comes from the Entitlement caps — see the amendment) and be
+promotable without touching an external system. Keeping
 authorization in one place we already control (the same DB that stores the seeded
 RBAC roles) gives a single mental model, avoids configuring Zitadel roles /
 custom claim mappers / management-API calls, and keeps the Entitlement numbers
@@ -42,11 +43,10 @@ and makes every role change an external console/API operation.
 
 ## Consequences
 
-- The current code path reads roles from the JWT
-  (`auth/dependencies.py` — `claims.get("roles", ...)`); it must change to a DB
-  lookup keyed by the OIDC `sub`.
-- `db/schema.sql` currently defaults new `users.role_name` to `analyst`; it must
-  default to `viewer` to preserve least privilege for public signups.
-- The backend now requires a live database to authorize any request (previously
+- Request-time RBAC is a DB lookup keyed by the OIDC `sub`
+  (`auth/dependencies.py` → `db/users.py`), never a JWT claim.
+- `users.role_name` defaults to `analyst` (migration 005, per the amendment
+  above).
+- The backend requires a live database to authorize any request (previously
   it could authorize from the token alone). This is acceptable — the DB is
   already a hard dependency of the public deployment.

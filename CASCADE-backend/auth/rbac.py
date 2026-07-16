@@ -9,21 +9,23 @@ seed/store role *names* and their Entitlement quotas (ADR-0008); role
 """
 from __future__ import annotations
 
-# Canonical permission names — keep in sync with docs/project/rbac-setup.md
+# Canonical permission names — keep in sync with docs/project/rbac-setup.md.
+# Every name here is enforced by at least one endpoint; a permission with no
+# endpoint to guard does not belong in this set (add it when the endpoint ships).
 PERMISSIONS = {
     "can_propagate",
-    "can_view_analysis",
     "can_sync",
     "can_manage_users",
-    "can_define_roles",
     "can_admin",        # wildcard — implies all others
 }
 
-# Default role definitions (mirrored from db/seed.sql)
+# Default role definitions (mirrored from db/seed.sql). `viewer` holds no
+# server-side permission: it is the guest-preview/demotion role, limited to
+# plain-authenticated endpoints (client-side analysis needs no permission).
 ROLE_PERMISSIONS: dict[str, set[str]] = {
-    "viewer":  {"can_view_analysis"},
-    "analyst": {"can_propagate", "can_view_analysis", "can_sync"},
-    "manager": {"can_propagate", "can_view_analysis", "can_sync", "can_manage_users"},
+    "viewer":  set(),
+    "analyst": {"can_propagate", "can_sync"},
+    "manager": {"can_propagate", "can_sync", "can_manage_users"},
     "admin":   {"can_admin"},
 }
 
@@ -35,3 +37,17 @@ def has_permission(roles: list[str], permission: str) -> bool:
         if "can_admin" in granted or permission in granted:
             return True
     return False
+
+
+def effective_permissions(roles: list[str]) -> set[str]:
+    """The caller's full permission set, with the can_admin wildcard expanded.
+
+    Returned by GET /api/auth/me so clients can test membership directly
+    instead of mirroring the role→permission map (which drifts).
+    """
+    granted: set[str] = set()
+    for role in roles:
+        granted |= ROLE_PERMISSIONS.get(role, set())
+    if "can_admin" in granted:
+        granted |= PERMISSIONS
+    return granted

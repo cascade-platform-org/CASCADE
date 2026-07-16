@@ -135,26 +135,44 @@ retelling the journey. Tracked alongside it: the harness scripts only.
 - `archive/` (gitignored, local-only) — full detail: per-experiment reports, result CSVs, logs, CompleNet sweep outputs
 - `worst-situations/` (gitignored, **never commit** — real aqueduct data): per-kit `scenario.bundle.json`, engine/EPANET results, `combined5.png` visual comparisons
 
-## 8. Headline benchmark (2026-07-16) — the paper's numbers
+## 8. Headline benchmark (2026-07-16, +Net2 2026-07-16) — the paper's numbers
 
-Full re-run after shipping the capacity fix: 5 networks (Net1, Net3,
+Full re-run after shipping the capacity fix: 6 networks (Net1, Net2, Net3,
 Cassacco, Tarcento, Zampis) × 3 seeds × 30 situations + exhaustive tanks,
 exhaustive-trunk + 30 N-2 pairs + 20 uniform contingencies, **engine default
 tiered fair-share, NO derived priorities (`--priority-mode none`)**,
-corrected ground truth (severed-component + convergence checks). Raw data:
-`archive/results/headline_fairshare_none.csv` (444 rows).
+corrected ground truth (severed-component + convergence checks). Net2 added
+after the original 5-network run to restore parity with the paper's
+originally-drafted "six networks, three textbook" framing; its known
+negative-demand well junction is handled correctly by the shipped
+injection-well fix (§4), no separate treatment needed. Raw data:
+`archive/results/headline_fairshare_none.csv` (537 rows; the original
+444-row 5-network file plus 93 Net2 rows, `net2_addon.csv`, merged in).
 
 | | mean FMS | min | n |
 |---|---:|---:|---:|
-| **AGGREGATE** | **0.962** | | 444 |
+| **AGGREGATE** | **0.958** | | 537 |
 | Net1 | 0.988 | 0.818 | 93 |
+| Net2 | 0.937 | 0.232 | 93 |
 | Net3 | 0.990 | 0.857 | 99 |
 | Cassacco | 0.992 | 0.823 | 90 |
 | Tarcento | 0.990 | 0.370 | 70 |
 | Zampis | 0.857 | 0.002 | 92 |
 
-By family: break 0.992, tank 0.986, cluster 0.964, hot 0.956, targeted
-0.952, both 0.939. Zampis remains the outlier (known `PFRC_*` import
-anomaly, ATTEMPTS §7) with a heavy tail — disclosed in the paper's
-limitations. Every other network sits ≈0.99 with **zero fitted parameters**
-(no priorities, no per-network tuning).
+By family: break 0.983, tank 0.976, cluster 0.968, hot 0.962, targeted
+0.939, both 0.934 — **"both" (demand-surge stacked on breaks) is the
+actual weakest family, not targeted alone**; the paper's Discussion
+originally claimed targeted attack was "consistently the weakest," which
+was already imprecise before Net2 was added (both was 0.939 in the
+5-network run too) — corrected in the paper text. Zampis remains the
+outlier (known `PFRC_*` import anomaly, ATTEMPTS §7) with a heavy tail —
+disclosed in the paper's limitations. Every other network sits ≈0.94–0.99
+with **zero fitted parameters** (no priorities, no per-network tuning).
+
+Binary-confusion recheck (Appendix~app:extended in the paper): the
+original plan expected recall on the critical class to degrade under
+harder families. It doesn't (0.81 under break → 0.97 under both,
+pooled n=537) — **precision** collapses instead (0.92 → 0.35). The
+module gets more false-positive-critical, not more false-negative-critical,
+as families get harder — consistent with the disclosed pessimism bias, but
+the opposite of what was originally predicted.
