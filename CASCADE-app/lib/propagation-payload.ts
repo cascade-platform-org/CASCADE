@@ -16,6 +16,19 @@ import type { Project, Canvas } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { PropagationRequest } from "@/lib/schemas/api";
 
+/**
+ * Drop `source_inp_content` (the embedded original .inp text) from canvases
+ * whose graph_type is not "epanet" — only the live-EPANET solve path reads it
+ * (ADR-0013); for a normal engine run it is dead weight in the request body.
+ */
+function stripUnusedInpContent(canvas: Canvas): Canvas {
+  if (canvas.graph.graph_type === "epanet" || canvas.source_inp_content === undefined) {
+    return canvas;
+  }
+  const { source_inp_content: _unused, ...rest } = canvas;
+  return rest;
+}
+
 export function buildPropagationPayload({
   project,
   config,
@@ -28,7 +41,21 @@ export function buildPropagationPayload({
   activeCanvasId: string | null;
 }): PropagationRequest {
   if (scope === "global") {
-    return { project, config, scope, active_canvas_id: activeCanvasId ?? undefined };
+    // Full registry, but NOT the bookkeeping: update_history entries each
+    // carry two whole GraphSnapshots and scorecard entries embed base64 PNGs
+    // — sending them can push the body past the edge's 10MB cap (Caddy 413)
+    // while the engine reads neither.
+    return {
+      project: {
+        ...project,
+        canvases: project.canvases.map(stripUnusedInpContent),
+        update_history: [],
+        scorecard: [],
+      },
+      config,
+      scope,
+      active_canvas_id: activeCanvasId ?? undefined,
+    };
   }
 
   if (!activeCanvasId) {
@@ -58,14 +85,14 @@ export function buildPropagationPayload({
     trimmedEdges[id] = project.edges[id];
   }
 
-  const trimmedCanvas: Canvas = {
+  const trimmedCanvas: Canvas = stripUnusedInpContent({
     ...activeCanvas,
     graph: {
       ...activeCanvas.graph,
       node_ids: [...activeNodeIds],
       edge_ids: activeEdgeIds,
     },
-  };
+  });
 
   const trimmedProject: Project = {
     ...project,

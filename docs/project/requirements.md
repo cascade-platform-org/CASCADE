@@ -59,6 +59,8 @@ When running Propagation the user selects:
 | **Local** | Active Canvas nodes + intra-canvas edges only. Inter-canvas edges physically absent. | Engine sees one isolated subgraph. |
 | **Global** | Full Project — all nodes, all edges, all Canvases. | Engine sees the complete multi-canvas network. |
 
+In both scopes the payload excludes engine-irrelevant bookkeeping: `update_history` (each entry carries two full GraphSnapshots), `scorecard` (entries embed base64 PNGs), and `source_inp_content` on non-EPANET canvases — without this trimming a modest project exceeds the edge's 10MB request-body cap (Caddy 413). See `lib/propagation-payload.ts`.
+
 Event application (client-side) is always applied to the full registry regardless of scope; scope only governs what is sent to the engine.
 
 ### 3.3 Global Display Mode (deferred — Slice 2)

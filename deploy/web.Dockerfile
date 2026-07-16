@@ -26,11 +26,16 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # --- Stage 2: build Caddy with the rate-limit plugin -----------------------
-FROM caddy:2-builder AS caddybuild
-RUN xcaddy build --with github.com/mholt/caddy-ratelimit --output /usr/bin/caddy
+# This stage compiles Caddy from source (several minutes on a small VM) and is
+# fully layer-cached afterwards. Both the builder tag and the plugin are PINNED:
+# a floating `caddy:2-builder` tag would silently bust the cache on every new
+# Caddy release and re-trigger the whole compile. Bump both pins together,
+# deliberately (same rule as ZITADEL_VERSION in deployment.md).
+FROM caddy:2.11.4-builder AS caddybuild
+RUN xcaddy build --with github.com/mholt/caddy-ratelimit@v0.1.0 --output /usr/bin/caddy
 
 # --- Stage 3: Caddy serves the built site ----------------------------------
-FROM caddy:2-alpine
+FROM caddy:2.11.4-alpine
 # Use the custom Caddy (with rate_limit) instead of the stock binary.
 COPY --from=caddybuild /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /app/out /srv
