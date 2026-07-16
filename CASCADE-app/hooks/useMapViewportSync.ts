@@ -176,6 +176,22 @@ export function useMapViewportSync({
 
   useOnViewportChange({ onEnd: doQualityRefresh });
 
+  // ── Settle refresh — the catch-all for every "first render looks wrong until
+  // you pan" case. doQualityRefresh otherwise only fires on gesture end, so a
+  // viewport that changes WITHOUT a gesture (initial mount, fitView / viewport
+  // restore, programmatic setViewport) or a container that had zero size when
+  // the initial refresh ran (the W===0 bail-out above) leaves the map on stale
+  // or CSS-scaled tiles indefinitely. Trailing timer: reset on every viewport
+  // change, fires once the viewport has been still for a beat. During a drag
+  // the timer keeps resetting, so it never fights an active gesture; after a
+  // gesture it merely re-lands on the target onEnd already reached (a same-spot
+  // jumpTo is harmless).
+  useEffect(() => {
+    if (!mapReady || !anchor) return;
+    const t = window.setTimeout(() => doQualityRefresh(rfVpRef.current), 250);
+    return () => window.clearTimeout(t);
+  }, [vpX, vpY, rfZoom, mapReady, anchor, doQualityRefresh]);
+
   // ── Cached dims via ResizeObserver — seeds immediately, re-applies on resize.
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -191,12 +207,19 @@ export function useMapViewportSync({
       if (!a) return;
       const v = rfVpRef.current;
       applyCssTransform(el, baseFor(a), v.x, v.y, v.zoom, dimsRef.current.W, dimsRef.current.H);
+      // A size change moves the container centre, which changes the map centre
+      // computeMapTarget derives from it — re-land the map on the new target.
+      // This is also the retry for the zero-size mount race: the initial
+      // refresh bails on W===0, and this fires when real dims arrive.
+      if (dimsRef.current.W > 0 && dimsRef.current.H > 0 && mapReadyRef.current) {
+        doQualityRefresh(v);
+      }
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [containerRef, baseFor, mapRef]);
+  }, [containerRef, baseFor, mapRef, doQualityRefresh]);
 
   // Clear cached base whenever the anchor is cleared (including resets that
   // bypass this hook), so a stale base can't leak into the next anchor.
