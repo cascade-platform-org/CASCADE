@@ -53,7 +53,10 @@ export function resetFunctionality({
   useHistoryStore.getState().pushUpdateEntry({
     id: nanoid(),
     timestamp: new Date().toISOString(),
-    update_type: "manual_functionality_update",
+    // Not a plain manual edit: scenario_reset is a session boundary — it ends
+    // the current Situation (the Situation window and the Save-to-Scorecard
+    // dialog stop treating pre-reset Events as the live scenario).
+    update_type: "scenario_reset",
     label: isGlobal ? "Reset all to Functionality N" : "Reset canvas to Functionality N",
     scope: isGlobal ? "global" : "local",
     canvas_id: isGlobal ? undefined : activeCanvasId ?? undefined,

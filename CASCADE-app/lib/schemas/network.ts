@@ -248,6 +248,9 @@ export const AnyUpdateTypeSchema = z.enum([
   "propagation",
   "manual_functionality_update",
   "graph_update",
+  // Reset button — Functionality restored to N. A session boundary: it ends
+  // the current Situation (deriveSituation stops walking at it).
+  "scenario_reset",
 ]);
 
 export const AnyUpdateEntrySchema = z.object({

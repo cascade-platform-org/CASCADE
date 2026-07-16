@@ -98,7 +98,8 @@
             "event_cleared",
             "propagation",
             "manual_functionality_update",
-            "graph_update"
+            "graph_update",
+            "scenario_reset"
           ],
           "title": "Update Type",
           "type": "string"

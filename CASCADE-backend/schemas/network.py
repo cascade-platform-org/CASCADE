@@ -347,6 +347,7 @@ AnyUpdateType = Literal[
     "propagation",                 # Propagation result merged into the Scenario
     "manual_functionality_update", # User manually edited Element functionality
     "graph_update",                # Structural change (topology / non-functionality attributes)
+    "scenario_reset",              # Reset button — Functionality restored to N; ends the current Situation
 ]
 
 

@@ -143,9 +143,13 @@ export async function findUnsavedRuns(
     if (entry.update_type !== "propagation") continue;
 
     // "Session" = entries older than this propagation, up to (not including)
-    // the next older propagation.
+    // the next older propagation or Reset (both end a scenario session — an
+    // Event applied before a Reset must not be attributed to a Propagation
+    // that ran on the reset graph).
     const olderEntries = history.slice(i + 1);
-    const prevPropIdx = olderEntries.findIndex((e) => e.update_type === "propagation");
+    const prevPropIdx = olderEntries.findIndex(
+      (e) => e.update_type === "propagation" || e.update_type === "scenario_reset",
+    );
     const sessionEntries = prevPropIdx === -1
       ? olderEntries
       : olderEntries.slice(0, prevPropIdx);

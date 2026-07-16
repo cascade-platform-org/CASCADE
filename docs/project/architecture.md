@@ -118,6 +118,7 @@ Every user action that changes graph state pushes an `AnyUpdateEntry` to `update
 | `event_cleared` | Clearing a previously applied Event |
 | `propagation` | Receiving a PropagationResult from the server |
 | `manual_functionality_update` | User manually editing Functionality or Functionality Time |
+| `scenario_reset` | Reset button (Functionality restored to N). A session boundary: it ends the current Situation, so the Situation window closes and Save-to-Scorecard falls back to the live canvas |
 
 ### Data Persistence — File I/O and Version History
 

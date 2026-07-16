@@ -61,6 +61,9 @@ export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | nu
   for (; i < updateHistory.length; i++) {
     const entry = updateHistory[i];
     if (entry.update_type === "event_applied") break;
+    // A Reset ends the scenario: everything older belongs to a dead session,
+    // and nothing newer was an Event (we would have broken at it above).
+    if (entry.update_type === "scenario_reset") return null;
     if (entry.update_type === "propagation") {
       propEntry = entry;
       i++;
@@ -69,11 +72,12 @@ export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | nu
   }
 
   // From here, collect every Event applied in this session — walk older until
-  // hitting another Propagation, which marks the boundary of a prior session.
+  // hitting another Propagation or a Reset, both of which mark the boundary of
+  // a prior session.
   const eventEntries: AnyUpdateEntry[] = [];
   for (; i < updateHistory.length; i++) {
     const entry = updateHistory[i];
-    if (entry.update_type === "propagation") break;
+    if (entry.update_type === "propagation" || entry.update_type === "scenario_reset") break;
     if (entry.update_type === "event_applied") eventEntries.push(entry);
   }
 
