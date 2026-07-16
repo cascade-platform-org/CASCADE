@@ -80,23 +80,24 @@ _ENGINE_ALGORITHMS = EngineAlgorithms(
             default_enabled=True,
             params=[
                 HeuristicParamMeta(
-                    name="convergence_tolerance",
-                    label="Convergence tolerance",
-                    description="Stop iterating when no Functionality changes by more than this value.",
-                    type="number",
-                    default=1e-6,
-                    minimum=0.0,
-                    maximum=1.0,
+                    name="allocation",
+                    label="Scarcity allocation",
+                    description=(
+                        "How scarce supply is shared among consumers. "
+                        "'tiered_fair_share' (default): higher-priority tiers are served "
+                        "fully first; equal-priority consumers spread the shortage as "
+                        "evenly as the network allows. 'priority_greedy': one min-cost "
+                        "max-flow with priority rewards — strict triage, winner-take-all "
+                        "among equals, cheapest to compute."
+                    ),
+                    type="string",
+                    default="tiered_fair_share",
+                    enum=["tiered_fair_share", "priority_greedy"],
                 ),
-                HeuristicParamMeta(
-                    name="max_iterations",
-                    label="Max iterations",
-                    description="Hard cap on the number of alternating capacity/rule steps.",
-                    type="integer",
-                    default=100,
-                    minimum=1,
-                    maximum=10000,
-                ),
+                # Only params the engine actually consumes are advertised —
+                # an aspirational catalog invites configs that silently do
+                # nothing. New engine params get added here in the same
+                # change that makes the engine read them.
             ],
         ),
         HeuristicMeta(
@@ -109,16 +110,7 @@ _ENGINE_ALGORITHMS = EngineAlgorithms(
             ),
             applicable_graph_types=[],
             default_enabled=True,
-            params=[
-                HeuristicParamMeta(
-                    name="threshold_level",
-                    label="Threshold level",
-                    description="Upstream Functionality must be >= this level to satisfy the dependency.",
-                    type="integer",
-                    default=2,
-                    minimum=1,
-                ),
-            ],
+            params=[],
         ),
         HeuristicMeta(
             id="rule-evaluator",

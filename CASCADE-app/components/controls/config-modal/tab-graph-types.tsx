@@ -78,6 +78,47 @@ export function TabGraphTypes() {
               ))}
             </div>
 
+            {/* Scarcity-allocation strategy of the flow pass (ADR-0014) — the
+                one engine-consumed heuristic param so far. Rendered for EVERY
+                graph type, not just those that already carry a
+                source-to-demands-flow heuristic entry: imported bundles ship
+                graph types with an empty heuristics list, so gating the
+                select on an existing row would leave no way to change the
+                algorithm at all. Changing it creates the entry on demand;
+                while absent, the engine's default (tiered fair-share) applies
+                and the select simply surfaces that. */}
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <span className="text-zinc-500">
+                Flow allocation <span className="text-zinc-400">(SourceToDemands categories)</span>
+              </span>
+              <select
+                value={
+                  (gt.heuristics.find((h) => h.id === "source-to-demands-flow")?.params
+                    ?.allocation as string) ?? "tiered_fair_share"
+                }
+                onChange={(e) => {
+                  const existing = gt.heuristics.find((h) => h.id === "source-to-demands-flow");
+                  if (existing) {
+                    updateAlgorithm(gt.name, existing.id, {
+                      enabled: true,
+                      params: { ...existing.params, allocation: e.target.value },
+                    });
+                  } else {
+                    addAlgorithm(gt.name, {
+                      id: "source-to-demands-flow",
+                      enabled: true,
+                      params: { allocation: e.target.value },
+                    });
+                  }
+                }}
+                title="How scarce supply is shared among consumers under scarcity"
+                className="flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                <option value="tiered_fair_share">tiered fair-share (default)</option>
+                <option value="priority_greedy">priority greedy (winner-take-all)</option>
+              </select>
+            </div>
+
             <div className="mt-2 flex items-center gap-2">
               {availableHeuristics.length > 0 ? (
                 <select

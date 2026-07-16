@@ -274,12 +274,13 @@ def test_flow_profiles_missing_returns_default_capacity():
     sweep) — every pipe falls back to FALLBACK_VELOCITY_MS, never crashes or
     zeroes capacity out."""
     from core.importers.inp import FALLBACK_VELOCITY_MS
+    from core.importers.inp.map import CAPACITY_MARGIN
 
     wn = load_inp(SYNTHETIC_INP)
     bundle = build_bundle(wn, name="t")  # flow_profiles omitted
     edge_a = bundle.project.edges["e_A"]
     # diameter 300mm (J1->J2 pipe "A" in SYNTHETIC_INP), fallback velocity
-    expected = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * 1_000_000.0
+    expected = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * CAPACITY_MARGIN * 1_000_000.0
     assert edge_a.capacity == pytest.approx(expected, rel=1e-3)
 
 
@@ -326,11 +327,14 @@ def test_bidirectional_pipe_becomes_two_edges():
     assert (rev.source, rev.target) == ("J2", "J1")
     assert fwd.properties["direction"] == "forward"
     assert rev.properties["direction"] == "reverse"
-    # Capacity is ONE pipe's capacity split between directions (2:1 ratio,
-    # matching the 2.0/1.0 velocity split), not each getting the full amount.
-    assert fwd.capacity == pytest.approx(2 * rev.capacity, rel=1e-6)
-    total_cap = math.pi / 4.0 * 0.300**2 * 2.0 * 1_000_000.0  # peak = velocity_fwd
-    assert fwd.capacity + rev.capacity == pytest.approx(total_cap, rel=1e-6)
+    # FULL-DUPLEX (CONTEXT.md, ADR-0012 addendum): each direction carries
+    # the pipe's WHOLE physical capacity — not a proportional share. A pipe
+    # can carry all of it either way, just not both at once, and the flow
+    # solver never gains from a cancelling two-way cycle.
+    from core.importers.inp.map import CAPACITY_MARGIN
+    full_cap = math.pi / 4.0 * 0.300**2 * 2.0 * CAPACITY_MARGIN * 1_000_000.0  # peak = velocity_fwd
+    assert fwd.capacity == pytest.approx(full_cap, rel=1e-6)
+    assert rev.capacity == pytest.approx(full_cap, rel=1e-6)
     assert any("both directions" in w for w in warnings)
 
 

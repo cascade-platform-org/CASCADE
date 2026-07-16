@@ -85,6 +85,12 @@ types).
 
 Read-only metadata about the engine's graph types and heuristics (`EngineAlgorithms`). Used by the Config modal to render the algorithm pipeline editor. Static snapshot — does not inspect the running engine.
 
+The `source-to-demands-flow` heuristic advertises the one engine-consumed
+param so far: `allocation` (enum `tiered_fair_share` — the default — or
+`priority_greedy`), the flow pass's scarcity-sharing strategy per graph type
+(ADR-0014). Set it on the matching `GraphTypeConfig.heuristics` entry in the
+model configuration; Propagation resolves it from the request's canvases.
+
 ---
 
 ## Auth

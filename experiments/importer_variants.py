@@ -41,7 +41,7 @@ So each kit's ground truth is corrected here: any demand junction with no
 UNDIRECTED path to a source through non-broken elements → true level 1.
 Both raw and corrected FMS are reported.
 
-Run from CASCADE-backend/:
+Run from the repo root:
   python experiments/importer_variants.py stage1          # baseline algo x all variants
   python experiments/importer_variants.py stage2 v1,v2    # fairshare on chosen variants
 """
@@ -54,7 +54,7 @@ import sys
 from collections import deque
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "CASCADE-backend"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import schemas.results  # noqa: E402,F401 -- rebuilds Project's forward refs

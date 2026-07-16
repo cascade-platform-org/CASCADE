@@ -25,10 +25,37 @@ from datetime import datetime, timezone
 
 from core.topology import build_incoming_index
 from engine import guards
-from engine.flow import flow_category_candidates
+from engine.flow import ALLOCATIONS, DEFAULT_ALLOCATION, flow_category_candidates
 from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
 from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
+
+# The heuristic id (api/propagation_routes.py's capability catalog) whose
+# `allocation` param selects the flow pass's scarcity strategy.
+_FLOW_HEURISTIC_ID = "source-to-demands-flow"
+
+
+def _resolve_flow_allocation(request: PropagationRequest) -> str:
+    """Scarcity-allocation strategy for this run's flow pass, from the graph
+    types of the (already scope-filtered) project's canvases: the first canvas
+    whose GraphTypeConfig carries an enabled "source-to-demands-flow"
+    heuristic with a valid `allocation` param wins; anything else (no config,
+    no heuristic entry, unknown value) falls back to DEFAULT_ALLOCATION.
+    Resolved once per run, not per category — the flow pass is project-wide,
+    and one canvas's graph type declaring a strategy is the modeller's intent
+    for the scenario, not for a single resource."""
+    by_name = {gt.name: gt for gt in request.config.graph_types or []}
+    for canvas in request.project.canvases:
+        graph_type = by_name.get(canvas.graph.graph_type)
+        if graph_type is None:
+            continue
+        for heuristic in graph_type.heuristics:
+            if heuristic.id != _FLOW_HEURISTIC_ID or not heuristic.enabled:
+                continue
+            allocation = (heuristic.params or {}).get("allocation")
+            if allocation in ALLOCATIONS:
+                return allocation
+    return DEFAULT_ALLOCATION
 
 
 def run(request: PropagationRequest) -> PropagationResult:
@@ -53,6 +80,7 @@ def run(request: PropagationRequest) -> PropagationResult:
     flow_categories = [
         name for name, ctype in category_types.items() if ctype == "SourceToDemands"
     ]
+    flow_allocation = _resolve_flow_allocation(request)
 
     # N = the best (highest) Functionality level. Derive it from the maximum
     # configured level, NOT from len(functionality_scale): the scale need not be a
@@ -99,7 +127,8 @@ def run(request: PropagationRequest) -> PropagationResult:
         flow_candidates: dict[str, dict[str, tuple[int, dict[str, float]]]] = {}
         for category in flow_categories:
             for nid, candidate in flow_category_candidates(
-                category, nodes, edges, node_func, edge_func, scale_size
+                category, nodes, edges, node_func, edge_func, scale_size,
+                allocation=flow_allocation,
             ).items():
                 flow_candidates.setdefault(nid, {})[category] = candidate
 

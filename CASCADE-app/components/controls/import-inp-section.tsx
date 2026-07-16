@@ -59,6 +59,7 @@ export function ImportInpSection() {
   const [mode, setMode] = useState<ImportMode>("replace");
   const [targetNodes, setTargetNodes] = useState("100");
   const [sourceCrs, setSourceCrs] = useState("EPSG:3004");
+  const [customCrs, setCustomCrs] = useState(false);
   const [demandMode, setDemandMode] = useState<"peak" | "base" | "avg">("peak");
   const [derivePriorities, setDerivePriorities] = useState(true);
   const [nLevels, setNLevels] = useState("3");
@@ -245,13 +246,45 @@ export function ImportInpSection() {
               <span className="mb-0.5 block text-[10px] font-medium text-zinc-400">
                 Coordinate CRS
               </span>
-              <input
-                type="text"
-                value={sourceCrs}
-                onChange={(e) => setSourceCrs(e.target.value)}
-                placeholder="EPSG:3004"
-                className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-sky-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
+              {/* Curated list of CRS we know real .inp exports use; guidance
+                  only — the backend (pyproj) accepts any valid EPSG code, so
+                  "Custom…" keeps the escape hatch. Only consulted when the
+                  file's coordinates look projected (metre magnitudes); an
+                  invalid or wrong code fails the import loudly with a clear
+                  message (GeoTransformError + world-bounds check), it never
+                  imports garbage silently. */}
+              {customCrs ? (
+                <input
+                  type="text"
+                  value={sourceCrs}
+                  onChange={(e) => setSourceCrs(e.target.value)}
+                  placeholder="EPSG:xxxx"
+                  autoFocus
+                  className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-sky-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                />
+              ) : (
+                <select
+                  value={sourceCrs}
+                  onChange={(e) => {
+                    if (e.target.value === "__custom__") {
+                      setCustomCrs(true);
+                    } else {
+                      setSourceCrs(e.target.value);
+                    }
+                  }}
+                  className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-sky-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <option value="EPSG:3004">EPSG:3004 — Gauss-Boaga Est (NE Italy)</option>
+                  <option value="EPSG:3003">EPSG:3003 — Gauss-Boaga Ovest (W Italy)</option>
+                  <option value="EPSG:32632">EPSG:32632 — UTM 32N (WGS84)</option>
+                  <option value="EPSG:32633">EPSG:32633 — UTM 33N (WGS84)</option>
+                  <option value="EPSG:25832">EPSG:25832 — ETRS89 / UTM 32N</option>
+                  <option value="EPSG:25833">EPSG:25833 — ETRS89 / UTM 33N</option>
+                  <option value="EPSG:3857">EPSG:3857 — Web Mercator</option>
+                  <option value="EPSG:4326">EPSG:4326 — WGS84 lon/lat</option>
+                  <option value="__custom__">Custom EPSG code…</option>
+                </select>
+              )}
             </label>
           </div>
 

@@ -277,7 +277,12 @@ When the target node has no `category_dependency_profiles` entry for a source ca
 
 For nodes with `demand > 0` in at least one `SourceToDemands`-typed category, the flow heuristic also runs:
 
-- Max-flow with costs guided by node `priority` (1–10).
+- Capacitated flow allocation guided by node `priority` (1–10). How **scarce**
+  supply is shared is a per-graph-type strategy (ADR-0014, implemented):
+  `tiered_fair_share` (default — higher tiers served first, equals share the
+  shortage max-min-fairly) or `priority_greedy` (single min-cost max-flow,
+  strict triage, winner-take-all among equals). Selected via the
+  `source-to-demands-flow` heuristic's `allocation` param on the graph type.
 - Sources combined jointly; `capacity` on infrastructure and edges constrains throughput.
 - Service node functionality set from delivered/demand ratio via a configurable threshold table (`dependency_level` guard applies afterwards).
 - The flow candidate `P_flow` is merged into `P` via `worst_of` alongside the Requisite candidate.
@@ -407,7 +412,7 @@ Given a post-Propagation Scenario (Elements carrying `responsibility_share`), co
 where the weight `W` uses precedence `cost_of_disservice_per_day ?? importance ?? 1`. Edges carry intrinsic loss 0 (a broken pipe costs nothing by itself; the hospital it starves carries the cost) but participate fully as blame intermediaries and as repair targets.
 Losses are distributed backwards along **transitive blame chains**: the fraction of `D`'s `responsibility_share` keyed to upstream ElementIds forwards `D`'s loss upstream multiplicatively; the fraction keyed to EventIds — or an absent share map — terminates at `D` itself. An Element's **Recovery Value** is the total loss that terminates on it: everything its repair would unblock, including its own weighted degradation.
 
-*Rationale for the changes from the earlier sketch:* the previous formula multiplied `importance × cost_of_disservice_per_day` (double-counts when both set, zero/undefined when either absent — replaced by precedence), ignored degradation depth (an Element at 1/N and one at (N−1)/N counted the same), and used one-hop `responsibility_share` directly (which ranks symptoms — the pump — instead of causes — the substation; transitive distribution fixes this).
+*Design notes:* precedence (not multiplication) avoids double-counting when both weights are set; degradation depth matters (`(N − functionality)/(N − 1)`); losses distribute along *transitive* responsibility chains so causes outrank symptoms.
 
 **Effort.** `expected_repair_time` is the repair effort. Two ranking modes: by Recovery Value, and by **value per repair hour** (`recovery_value / expected_repair_time`). Elements with no repair estimate sort last in the per-hour mode and are flagged.
 
@@ -579,42 +584,18 @@ null-free contract applies). Pure transformation: nothing persisted, engine
 never invoked; any authenticated caller may import. UI entry point: "Import
 EPANET .inp" in the File I/O panel.
 
-Pipeline (`CASCADE-backend/core/importers/inp/`, full rationale in
-ADR-0012) — the first of what will be several format importers, each its
-own sibling subpackage under `core/importers/`:
-**parse** (WNTR, SI-normalised) → **hydraulic priority sweep** (pressure-driven
-steady states at rising demand multipliers on the original network; junctions
-that lose service earliest get the lowest flow-allocation `priority`, so the
-engine's scarcity shedding order emulates real hydraulics) → **skeletonize**
-(`wntr.morph.skeletonize`, binary-searched pipe-diameter threshold, until the
-network fits `target_nodes` — default the caller's Entitlement `max_nodes`;
-demand mass conserved; absorbed ids traced in `properties.merged_elements`) →
-**velocity sweep** (same demand-multiplier sweep mechanism, run on the
-post-skeleton network this time, PLUS a bounded sample of single-link
-contingency solves so a backup/redundant pipe — one that carries little flow
-normally but exists to reroute traffic if something else fails — isn't
-undersized just because demand escalation alone never stresses it: each
-pipe/valve's capacity uses the *highest* velocity it reaches across either
-mechanism, not a preset constant or its velocity at rest) → **orient** (a
-pipe's direction is read off the SIGN of the sweep's `flowrate` — not
-`velocity`, which WNTR reports as an unsigned magnitude, and not guessed from
-graph topology; a pipe with meaningful simulated flow both ways, e.g. a loop
-pipe reversing under stress, becomes two independently-capacitated edges
-sharing the pipe's one physical capacity between them; multi-source BFS,
-supply source → demand, is now only a fallback for a link the sweep reports
-no signal for at all) → **map**
-(reservoirs/tanks → Source with `supply_capacity["water"]`
-always the sum of their outgoing pipe capacities — not a user choice; falls
-back to a large constant only when a source has no capacitated outgoing edge
-at all; tank volume → backup duration; demanding junctions → Service with
-water demand; pumps/valves → inline Requisite-category nodes `pumping`/`valve`
-gating downstream flow — a pump always imports as operational regardless of
-its `.inp` status (a working-condition baseline: not-currently-scheduled is
-not the same as broken; genuine pump failure is a Hazard, applied like any
-other); pipes → edges with `capacity = π/4·d²·v`) → **place**
-(projected coordinates → WGS84 via pyproj, default CRS `EPSG:3004`,
-georeferenced Canvas with exact GeoAnchor; abstract coordinates → scaled
-non-geo layout).
+Pipeline (`CASCADE-backend/core/importers/inp/`; every rule, threshold and
+its validation lives in ADR-0012): **parse** (WNTR, SI) → **hydraulic
+sweeps** (demand-multiplier Sweep + Contingency solves derive per-pipe
+capacity `π/4·d²·v_peak × 2` and simulated flow direction; optional priority
+derivation) → **skeletonize** (WNTR, binary-searched diameter threshold to
+`target_nodes`, demand mass conserved) → **orient** (simulated sign;
+bidirectional pipes become two full-duplex edges at full capacity each; BFS
+only as no-signal fallback) → **map** (reservoirs/tanks/negative-demand
+injection wells → Sources; demanding junctions → Service; pumps/valves →
+inline Requisite nodes, pumps always imported operational; supply = sum of
+incident pipe capacities) → **place** (pyproj → WGS84 + GeoAnchor, or
+abstract layout).
 
 Knobs: `target_nodes`, `source_crs`, `demand_mode` (peak / base / avg pattern
 multiplier), `derive_priorities`, `n_levels` (functionality scale size, default

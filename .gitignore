@@ -24,3 +24,12 @@ CASCADE-backend/temp.rpt
 CASCADE-backend/temp.bin
 
 docs/paper/*
+
+# ── Experiments (repo-root, not deployed) ────────────────────────────────────
+# Harness scripts and ATTEMPTS.md ARE tracked. Ignored: investigation kits
+# (REAL aqueduct data — never commit), archived outputs, logs, caches.
+experiments/worst-situations/
+experiments/archive/
+experiments/*log*.txt
+experiments/*.csv
+experiments/__pycache__/

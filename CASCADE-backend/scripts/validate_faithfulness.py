@@ -338,13 +338,62 @@ def _solve_served_ratios(
             return {}  # a pathological or non-converging situation — no ground truth this round
     delivered = results.node["demand"].iloc[0]
 
+    # SINGULAR-PDD CORRECTION (found 2026-07-14 debugging the worst-divergence
+    # kits, see experiments/ATTEMPTS.md §6 and ADR-0013's addendum): when the
+    # broken links sever a whole component from EVERY source, the PDD system
+    # for that component is singular and EPANET converges — without any
+    # "unbalanced" warning — to an arbitrary internal circulation whose
+    # per-junction delivered demands read as fully served while summing to
+    # ~0. Physically every junction there receives nothing. Verified on
+    # Cassacco: a 160-node severed component reported ~124 junctions "fully
+    # served" with zero net inflow, charging CASCADE's (correct) all-critical
+    # answer a 124-junction FMS penalty. Any demand junction with no
+    # UNDIRECTED path to a source through in-service links is therefore
+    # forced to ratio 0 before quantization.
+    severed = _severed_junctions(wn, situation)
+
     ratios: dict[str, float] = {}
     for jid, expected in demands.items():
         if expected <= 0:
             continue
+        if jid in severed:
+            ratios[jid] = 0.0
+            continue
         got = float(delivered.get(jid, 0.0))
         ratios[jid] = max(0.0, got / expected)
     return ratios
+
+
+def _severed_junctions(
+    wn: wntr.network.WaterNetworkModel, situation: Situation
+) -> set[str]:
+    """Junctions with no undirected path to any source (reservoir, tank, or
+    negative-demand injection-well junction) through links that are neither
+    broken by `situation` nor closed at t=0 in the .inp itself. See the
+    singular-PDD comment at the call site."""
+    graph = nx.Graph()
+    graph.add_nodes_from(wn.node_name_list)
+    for lid, link in wn.links():
+        if lid in situation.broken_link_ids:
+            continue
+        if lid not in wn.pump_name_list and str(link.initial_status) in ("Closed", "CLOSED", "0"):
+            continue  # pumps are force-opened by the ground-truth solve above
+        graph.add_edge(link.start_node_name, link.end_node_name)
+
+    sources = set(wn.reservoir_name_list) | set(wn.tank_name_list)
+    for jid in wn.junction_name_list:
+        base = sum(
+            ts.base_value or 0.0
+            for ts in wn.get_node(jid).demand_timeseries_list
+        )
+        if base < 0:
+            sources.add(jid)  # EPANET well/inflow idiom (ADR-0012)
+
+    reachable: set[str] = set()
+    for source in sources:
+        if source in graph.nodes and source not in reachable:
+            reachable |= nx.node_connected_component(graph, source)
+    return {jid for jid in wn.junction_name_list if jid not in reachable}
 
 
 def _build_link_maps(project: Project) -> tuple[dict[str, list[str]], dict[str, str]]:

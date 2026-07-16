@@ -45,7 +45,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "CASCADE-backend"))
 
 import networkx as nx  # noqa: E402
 
@@ -118,7 +118,7 @@ def _candidates_from_delivered(delivered, nodes, category, n):
 
 # --- variant 1: baseline (real algorithm, control) --------------------------
 
-def _solve_baseline(category, nodes, edges, node_func, edge_func, n):
+def _solve_baseline(category, nodes, edges, node_func, edge_func, n, allocation=None):  # allocation: engine-call compat; this solver IS a fixed algorithm
     built = _build_base_graph(category, nodes, edges, node_func, edge_func, n)
     if built is None:
         return {}
@@ -136,7 +136,7 @@ def _solve_baseline(category, nodes, edges, node_func, edge_func, n):
 
 # --- variant 2: single-shot proportional water-filling -----------------------
 
-def _solve_proportional(category, nodes, edges, node_func, edge_func, n):
+def _solve_proportional(category, nodes, edges, node_func, edge_func, n, allocation=None):  # allocation: engine-call compat
     built = _build_base_graph(category, nodes, edges, node_func, edge_func, n)
     if built is None:
         return {}
@@ -184,7 +184,7 @@ def _solve_proportional(category, nodes, edges, node_func, edge_func, n):
 # (every consumer capped at the same global ratio instead of finding real
 # per-consumer bottlenecks).
 
-def _solve_fairshare(category, nodes, edges, node_func, edge_func, n):
+def _solve_fairshare(category, nodes, edges, node_func, edge_func, n, allocation=None):  # allocation: engine-call compat
     built = _build_base_graph(category, nodes, edges, node_func, edge_func, n)
     if built is None:
         return {}

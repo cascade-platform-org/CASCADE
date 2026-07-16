@@ -114,17 +114,11 @@ If a node's Functionality was set directly by an Event (via `attribute_mutations
 
 If set by a Specific Rule, the responsibility dictionary contains all Elements referenced in the rule's condition, split evenly.
 
-## Addendum (2026-07-14) — allocation-shape alternatives evaluated and rejected
+## Allocation-shape note (2026-07-14, superseded by ADR-0014)
 
-The flow proposal's winner-take-all character (an LP optimum under a shared
-bottleneck can serve some consumers 100% and others exactly 0%) was tested
-against two fairness-shaped alternatives on the 10 worst CASCADE-vs-EPANET
-divergence situations (`CASCADE-backend/experiments/algorithm_variants.py`,
-summary in `experiments/ATTEMPTS.md`): global proportional water-filling
-(much worse — mean FMS 0.373 vs 0.724) and max-min fair-share via
-ascending-demand sequential max-flow (better on as-imported networks, 0.774).
-The fair-share advantage disappeared once the importer's capacity level was
-corrected (ADR-0012 addendum): on margin-fixed networks fair-share is
-slightly *worse* (0.918 vs 0.927) at ~100× the solve cost. **The min-cost
-max-flow proposal above stands unchanged**; the pessimism it was suspected of
-was an importer-attribute problem, not an allocation-shape one.
+Fairness-shaped alternatives to the flow proposal were measured
+(`experiments/ATTEMPTS.md` §5): global proportional rationing is sharply
+worse; max-min fair-share only beat the LP while importer capacities were
+under-estimated. ADR-0014 later adopted tiered fair-share as the DEFAULT
+allocation for its modelling semantics (priority as an expert knob), with the
+LP retained as `priority_greedy` — a policy choice, not a fidelity one.

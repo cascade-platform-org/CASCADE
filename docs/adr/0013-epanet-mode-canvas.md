@@ -129,19 +129,13 @@ verified by `lint-imports` passing unchanged.
   unrecognized `graph_type` would — this is a deliberate scope limit
   (sub-decision 2), not an oversight.
 
-## Addendum (2026-07-14) — singular PDD on severed components
+## Known limitation — singular PDD on severed components
 
-Found while benchmarking the engine against this same WNTR solve
-(`experiments/importer_variants.py`, ADR-0012 addendum): when interventions
-sever a whole component from every reservoir/tank, WNTR/EPANET's PDD system
-for that component is **singular** — it converges without any warning to an
-arbitrary internal circulation whose per-junction delivered demands read as
-"fully served" while summing to ~0. An epanet-mode Propagation on such a
-scenario therefore shows healthy junctions that physically receive nothing
-(the normal engine path correctly marks them critical — verified on the
-Cassacco worst-situation kits, where the "ground truth" was the wrong side of
-a 124-junction disagreement). Known display caveat for now; the fix (mark
-demand junctions with no undirected path to a functional source as level 1
-before quantizing, mirroring what `validate_faithfulness.py` needs) belongs
-in `services/epanet_solve_service.py` in the same follow-up that corrects the
-benchmark.
+WNTR's PDD solve on a component severed from every source converges, without
+warning, to an arbitrary internal circulation that reads "fully served"
+(discovered benchmarking the engine — `experiments/ATTEMPTS.md` §6). An
+epanet-mode Propagation on such a scenario therefore shows healthy junctions
+that physically receive nothing; the normal engine path marks them critical
+correctly. `scripts/validate_faithfulness.py` already applies the
+source-reachability correction (`_severed_junctions`); porting the same
+correction into `services/epanet_solve_service.py` is the pending fix.

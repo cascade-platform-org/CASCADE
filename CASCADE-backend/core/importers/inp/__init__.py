@@ -28,7 +28,6 @@ from core.importers.inp.parse import InpParseError, load_inp
 from core.importers.inp.sim import (
     DECISIVE_VELOCITY_MS,
     FALLBACK_VELOCITY_MS,
-    MIN_HEDGE_SHARE,
     NEGLIGIBLE_VELOCITY_MS,
     LinkFlowProfile,
     link_flow_profiles,
@@ -57,7 +56,6 @@ __all__ = [
     "load_inp",
     "DECISIVE_VELOCITY_MS",
     "FALLBACK_VELOCITY_MS",
-    "MIN_HEDGE_SHARE",
     "NEGLIGIBLE_VELOCITY_MS",
     "LinkFlowProfile",
     "link_flow_profiles",

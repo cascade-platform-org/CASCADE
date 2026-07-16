@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "CASCADE-backend"))
 
 import schemas.results  # noqa: E402,F401 -- rebuilds Project's forward refs
 from schemas.config import ModelConfiguration  # noqa: E402

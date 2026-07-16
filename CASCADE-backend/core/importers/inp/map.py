@@ -17,9 +17,9 @@ Mapping rules (docs/adr — INP import):
                          two half-edges — its Functionality gates downstream
                          flow via the universal Requisite pass
   Valve link           → inline Infrastructure node (category "valve"), same
-  Pipe                 → edge, capacity = π/4·d²·v (m³/s), v from a baseline
-                         hydraulic simulation per pipe (core/importers/inp/sim.py),
-                         not a single assumed constant
+  Pipe                 → edge, capacity = π/4·d²·v × CAPACITY_MARGIN (m³/s),
+                         v from a baseline hydraulic simulation per pipe
+                         (core/importers/inp/sim.py), not a single assumed constant
 
 Every node on the water path declares the "water" category — the engine's flow
 pass only routes through category members. A pipe's direction is read off the
@@ -27,9 +27,8 @@ SIGN of its simulated flow (core.importers.inp.sim.link_flow_profiles) — not
 guessed from graph topology — so plain and "reoriented" .inp variants import
 identically. A pipe the sweep shows carrying meaningful flow in BOTH
 directions (a loop pipe reversing as demand is pushed toward stress) becomes
-TWO independently-capacitated edges, one each direction, splitting the pipe's
-one physical capacity between them in proportion to how much each direction is
-actually used. A pipe the sweep reports no signal for at all (isolated/idle
+TWO full-duplex edges, one each direction, EACH carrying the pipe's whole
+physical capacity (CONTEXT.md "Full-Duplex Split"). A pipe the sweep reports no signal for at all (isolated/idle
 branch) falls back to a multi-source BFS from the Source set, exactly as
 before this simulation-based orientation existed.
 
@@ -58,7 +57,6 @@ from core.importers.inp.geo import PlacementResult, place_nodes
 from core.importers.inp.sim import (
     DECISIVE_VELOCITY_MS,
     FALLBACK_VELOCITY_MS,
-    MIN_HEDGE_SHARE,
     NEGLIGIBLE_VELOCITY_MS,
     LinkFlowProfile,
 )
@@ -244,8 +242,20 @@ class _Link(BaseModel):
     velocity_rev: Optional[float] = None
 
 
+# Uniform margin on every simulated-velocity-derived pipe/valve capacity
+# (CONTEXT.md "Capacity Margin", ADR-0012 addendum). The sweep/contingency
+# peak velocity is a LOWER bound on deliverable flow, conditional on the
+# probe scenarios exercised — real hydraulics has no hard cap, head loss
+# absorbs roughly this much overshoot before pressure actually collapses.
+# x2 is the measured knee on the worst-divergence benchmark (FMS 0.770 →
+# 0.878 alone, 0.927 with full-duplex splits; higher margins buy little and
+# grow over-optimism). Source supply needs no separate treatment: it is the
+# sum of incident pipe capacities, so it widens with them automatically.
+CAPACITY_MARGIN = 2.0
+
+
 def _pipe_capacity(diameter_m: float, velocity: float) -> float:
-    return math.pi / 4.0 * diameter_m**2 * velocity
+    return math.pi / 4.0 * diameter_m**2 * velocity * CAPACITY_MARGIN
 
 
 def _demand_value(junction: Any, mode: DemandMode, wn: Any) -> float:
@@ -516,22 +526,28 @@ def build_bundle(
     bidirectional_pipes: list[str] = []
     fallback_pipes: list[str] = []
 
-    def _emit_split(link: _Link, share_fwd: float) -> None:
+    def _emit_split(link: _Link) -> None:
         """Two independently-capacitated edges for a pipe carrying meaningful
-        flow both ways, splitting its ONE physical capacity in proportion to
-        `share_fwd` (a single cross-section can't carry its full rated
-        capacity in both directions at once)."""
+        flow both ways — FULL-DUPLEX (CONTEXT.md, ADR-0012 addendum): each
+        direction gets the pipe's whole physical capacity. A pipe can carry
+        all of it either way, just not both at once; the earlier
+        proportional-to-observed-usage split answered "how is this pipe used
+        normally?" when the operative question is "what can it do when the
+        network reroutes around a failure?" — a tank feeder dominated by
+        recharge flow got ~0 capacity in exactly the discharge direction that
+        matters once its upstream feed breaks. The flow solver never benefits
+        from routing both directions of one pipe simultaneously (that would
+        be a cancelling cycle), so full capacity per direction over-grants
+        nothing in practice."""
         bidirectional_pipes.append(link.id)
-        total_cap = link.capacity
-        eid_fwd, eid_rev = f"e_{link.id}__fwd", f"e_{link.id}__rev"
-        oriented_known[eid_fwd] = (link.start, link.end)
-        edge_capacity[eid_fwd] = total_cap * share_fwd if total_cap is not None else None
-        edge_meta[eid_fwd] = link
-        edge_direction[eid_fwd] = "forward"
-        oriented_known[eid_rev] = (link.end, link.start)
-        edge_capacity[eid_rev] = total_cap * (1 - share_fwd) if total_cap is not None else None
-        edge_meta[eid_rev] = link
-        edge_direction[eid_rev] = "reverse"
+        for eid, pair, direction in (
+            (f"e_{link.id}__fwd", (link.start, link.end), "forward"),
+            (f"e_{link.id}__rev", (link.end, link.start), "reverse"),
+        ):
+            oriented_known[eid] = pair
+            edge_capacity[eid] = link.capacity
+            edge_meta[eid] = link
+            edge_direction[eid] = direction
 
     def _emit_fallback(link: _Link) -> None:
         """No usable simulated signal (no reading at all, or neither side
@@ -558,23 +574,19 @@ def build_bundle(
                 # multi-source mesh can silently disconnect everything
                 # downstream of it, a far worse failure than an occasionally
                 # too-generous split.
-                _emit_split(link, fwd_v / (fwd_v + rev_v))
+                _emit_split(link)
             elif max(fwd_v, rev_v) <= DECISIVE_VELOCITY_MS:
                 # Only ONE side ever cleared the noise floor, and even that
                 # side's velocity is too low to call the direction question
                 # confidently closed (see DECISIVE_VELOCITY_MS's docstring —
                 # the Zampis.inp regression this guards against, ADR-0012
-                # "Pipe capacity / orientation"). Still hedge with a
-                # double-oriented edge rather than trusting a single
-                # low-confidence reading outright — but a PURE proportional
-                # split would hand the unobserved side exactly 0% capacity
-                # (nothing to hedge with at all, since it never registered
-                # any signal), so this reserves it a guaranteed minimum share
-                # instead: real, usable capacity for a later hazard that
-                # needs that direction, at the cost of a little capacity the
-                # dominant direction rarely needs anyway.
-                share_fwd = min(1.0 - MIN_HEDGE_SHARE, max(MIN_HEDGE_SHARE, fwd_v / (fwd_v + rev_v)))
-                _emit_split(link, share_fwd)
+                # "Pipe capacity / orientation"). Hedge with a double-oriented
+                # full-duplex split rather than trusting a single
+                # low-confidence reading outright. (An earlier version
+                # reserved the unobserved side a MIN_HEDGE_SHARE fraction of a
+                # proportionally-split capacity; full-duplex supersedes that —
+                # both directions simply get the whole capacity.)
+                _emit_split(link)
             else:
                 # One side clears NEGLIGIBLE_VELOCITY_MS, the other never
                 # registered anything at all, AND the observed side's
@@ -598,8 +610,9 @@ def build_bundle(
     if bidirectional_pipes:
         warnings.append(
             f"{len(bidirectional_pipes)} pipe(s) carry meaningful simulated "
-            f"flow in both directions and are modelled as two independently-"
-            f"capacitated edges: {', '.join(sorted(bidirectional_pipes)[:5])}"
+            f"flow in both directions and are modelled as two full-duplex "
+            f"edges (full physical capacity each direction): "
+            f"{', '.join(sorted(bidirectional_pipes)[:5])}"
             + ("…" if len(bidirectional_pipes) > 5 else "")
         )
     if fallback_pipes:

@@ -37,11 +37,3 @@ htmlcov/
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
-# ── Experiments ──────────────────────────────────────────────────────────────
-# Harness scripts and .md/.csv reports ARE tracked (they reproduce the paper's
-# and the importer-fix's numbers). Ignored: the investigation kits (contain
-# REAL aqueduct network data — never commit), archived raw sweep outputs, logs.
-experiments/worst-situations/
-experiments/archive/
-experiments/*log*.txt
-experiments/__pycache__/

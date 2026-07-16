@@ -22,7 +22,7 @@ writes a folder containing:
 Output: experiments/worst-situations/<rank>_<network>_<situation>/
 (gitignored — the aqueduct scenarios contain real network data; never commit).
 
-Run from CASCADE-backend/:  python experiments/collect_worst_situations.py
+Run from the repo root:  python experiments/collect_worst_situations.py
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "CASCADE-backend"))
 
 import wntr  # noqa: E402
 

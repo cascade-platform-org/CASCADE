@@ -107,7 +107,7 @@ NEGLIGIBLE_VELOCITY_MS = 1e-4
 # low-velocity single-sided reading is exactly where solver noise, near a
 # near-zero equilibrium, is most likely to have picked an arbitrary winner
 # (the Zampis.inp regression, ADR-0012 "Pipe capacity / orientation") —
-# hedging (see MIN_HEDGE_SHARE) costs little when the pipe really is one-way,
+# hedging (a full-duplex split, see map.py) costs little when the pipe really is one-way,
 # but keeps a real, usable reverse capacity open for a later hazard that
 # needs the other direction, instead of hard-zeroing it. 0.3 m/s is a common
 # minimum "self-cleansing" design velocity for water mains — real, confidently
@@ -115,12 +115,6 @@ NEGLIGIBLE_VELOCITY_MS = 1e-4
 # aqueduct data); the noisy leaf-pipe case that motivated this sits at 0.03-
 # 0.09 m/s, comfortably below.
 DECISIVE_VELOCITY_MS = 0.3
-# The minimum share of a low-confidence pipe's capacity (DECISIVE_VELOCITY_MS)
-# reserved for the direction that never registered any signal at all. A pure
-# proportional split would hand it exactly 0% (there is nothing to be
-# proportional TO), which hedges nothing; this guarantees real, usable
-# capacity in that direction instead, at the dominant direction's expense.
-MIN_HEDGE_SHARE = 0.1
 
 
 class LinkFlowProfile(BaseModel):

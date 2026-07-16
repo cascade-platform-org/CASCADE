@@ -20,15 +20,55 @@ Legend: ✅ adopted / recommended · ❌ tried, worse or no effect · ⚠️ ope
 | ❌ Single-link-closure failure frequency (`contingency_priorities`) | Priority from *structural* fragility (who fails under closures), the question shedding actually answers | Also ≈ 0 FMS delta (`archive/complenet-sweeps/prio_contingency.csv`) |
 | ❌ No priorities at all | Ablated arm | Indistinguishable (`prio_none.csv`; re-confirmed on worst-10, ≤0.01 everywhere) |
 
-**Conclusion**: priority is irrelevant to *hydraulic-fidelity emulation* under
-every allocation algorithm tested. Kept in schema/UI regardless — it's the
-right lever for hand-built networks with no .inp ground truth.
+**Conclusion (superseded 2026-07-16, see below)**: priority is irrelevant to
+*hydraulic-fidelity emulation* under the priority-greedy LP. Kept in
+schema/UI regardless — it's the right lever for hand-built networks with no
+.inp ground truth.
+
+### 1a. Priority derivation UNDER TIERED FAIR-SHARE (2026-07-16)
+
+The null result above was measured under the LP (where priority is only a
+tie-break reward) and under a harness fair-share that ignored priority. The
+shipped `tiered_fair_share` (ADR-0014) uses priority as **strict preemption
+tiers**, and there the derivation matters a lot — in both directions
+(`priority_modes_fairshare.py`, real engine, worst-10 kits, as-imported
+capacities, raw FMS):
+
+| priority mode | mean FMS | notes |
+|---|---|---|
+| pressure-margin (NEW: deciles of baseline PDD pressure surplus) | **0.665** | Zampis kits transformed (0.27→0.78, 0.40→0.62); one bad loss (Net3 kit 01: 0.62→0.34) |
+| sweep (shipped importer derivation) | 0.620 | |
+| none (single tier = pure max-min) | 0.514 | catastrophic on kits 04/10 (0.14, 0.02) — uniform pain is NOT what PDD does |
+| (reference: priority-greedy LP + sweep) | 0.724 | |
+
+Takeaways: (1) under fair-share, wrong tiers actively hurt — strict
+preemption zeroes low tiers under scarcity, so 10 fine-grained tiers amplify
+derivation errors; (2) **pressure-margin beats the demand sweep on average**
+and is the physically-grounded derivation (PDD sheds where pressure margin
+is thinnest), but with high variance — not a safe default switch yet;
+(3) all of this is second-order next to the capacity fix (§2): these kits'
+scarcity is largely an artifact of under-imported capacities, and with
+margin ×2 + full-duplex the allocation/priority axis collapses to ≈0.92
+regardless. (4) For *emulation* use, the LP still beats fair-share on
+as-imported networks — worth considering having the .inp importer emit an
+explicit `allocation: priority_greedy` on its graph type while fair-share
+stays the hand-modelling default.
+
+**Verification for the paper's simple story (2026-07-16, capfix +
+fair-share, sweep vs none priorities, raw FMS)**: with margin ×2 +
+full-duplex capacities, priorities have **zero effect on 9 of 10 kits**
+(identical FMS to 3 decimals); the single exception is Zampis kit 06
+(0.616 sweep vs 0.270 none — the network with the known `PFRC_*` import
+anomaly). Means 0.858 vs 0.824. This supports presenting fair-share with
+priority as a pure expert-knowledge knob: once capacities are parameterized
+correctly, derived priorities are not needed for fidelity.
 
 ## 2. Pipe capacity discovery (importer)
 
 | attempt | idea | result |
 |---|---|---|
 | ❌ Constant design velocity (1–2 m/s), no simulation | capacity = π/4·d²·v_design | Much worse than the sweep (worst-10 mean 0.681–0.791 vs 0.770 control) — the sweep's *relative* profile is real signal |
+| ❌ Hazen-Williams design flow from pipe physics alone, no simulation (`physical_capacity_variants.py`) | capacity = 0.278·C·D^2.63·S^0.54 from imported diameter+roughness only — zero WNTR sweep needed | Correlates with shipped capacity (log-log Pearson r=0.84 across 3271 pooled pipes) but the correlation is ~entirely diameter (r=0.844 for diameter alone; roughness spans only 91–199 vs diameter's 2+ orders of magnitude, contributes almost nothing) — best-fit-scaled variant on worst-10: mean 0.821→0.724, worse on 7/10, tied 3/10, never better. A per-pipe geometric formula can't see what the sweep sees: topology + demand distribution (a fat pipe past a light-demand branch needs no capacity; D,C alone can't tell) |
 | ✅ Demand-multiplier sweep peak velocity (shipped) | "What can this pipe do when pushed" ≠ its idle flow | The baseline everything else builds on |
 | ✅ + contingency closures, trunk-biased → exhaustive trunk + N-2 pairs (shipped) | Backup pipes only reveal capacity when something else closes (Net3 pipe 317: 0.44→several× m/s) | Headline import config (E3″/E3‴; `cap_*.csv`, `pairsweep_*.csv` in archive) |
 | ❌ Strict noise floor + dominance ratio for orientation | Be "smarter" about near-zero readings | Reverted — confidently wrong direction can disconnect a whole mesh branch (ADR-0012 "Pipe capacity / orientation") |
@@ -83,8 +123,38 @@ pessimism was pipes (capacity level + split shares) all along.
 
 ## Files
 
-- `importer_variants.py` + `importer_variants_report.md` + `importer_variants_stage{1,2}.csv` — importer-attribute A/B (22 variants × worst-10)
-- `algorithm_variants.py` + `algorithm_variants_report.md` + `algorithm_variants_report.csv` — allocation-algorithm A/B
+This file is the **single tracked narrative** for all experiment attempts —
+every other doc (ADRs, CONTEXT.md, project docs) links here instead of
+retelling the journey. Tracked alongside it: the harness scripts only.
+
+- `importer_variants.py` — importer-attribute A/B (22 variants × worst-10)
+- `algorithm_variants.py` — allocation-algorithm A/B (monkeypatch harness)
+- `priority_modes_fairshare.py` — priority-derivation ablation under tiered fair-share
 - `collect_worst_situations.py` — builds the worst-10 kits; `render_variant_bundles.py` — bakes variant results into loadable bundles for screenshots
-- `archive/complenet-sweeps/` (gitignored) — raw CompleNet E-run outputs; headline numbers live in the paper and `docs/paper/.../complenet_todos.md`
+- `run_headline_fairshare.sh` — the paper's headline benchmark configuration
+- `archive/` (gitignored, local-only) — full detail: per-experiment reports, result CSVs, logs, CompleNet sweep outputs
 - `worst-situations/` (gitignored, **never commit** — real aqueduct data): per-kit `scenario.bundle.json`, engine/EPANET results, `combined5.png` visual comparisons
+
+## 8. Headline benchmark (2026-07-16) — the paper's numbers
+
+Full re-run after shipping the capacity fix: 5 networks (Net1, Net3,
+Cassacco, Tarcento, Zampis) × 3 seeds × 30 situations + exhaustive tanks,
+exhaustive-trunk + 30 N-2 pairs + 20 uniform contingencies, **engine default
+tiered fair-share, NO derived priorities (`--priority-mode none`)**,
+corrected ground truth (severed-component + convergence checks). Raw data:
+`archive/results/headline_fairshare_none.csv` (444 rows).
+
+| | mean FMS | min | n |
+|---|---:|---:|---:|
+| **AGGREGATE** | **0.962** | | 444 |
+| Net1 | 0.988 | 0.818 | 93 |
+| Net3 | 0.990 | 0.857 | 99 |
+| Cassacco | 0.992 | 0.823 | 90 |
+| Tarcento | 0.990 | 0.370 | 70 |
+| Zampis | 0.857 | 0.002 | 92 |
+
+By family: break 0.992, tank 0.986, cluster 0.964, hot 0.956, targeted
+0.952, both 0.939. Zampis remains the outlier (known `PFRC_*` import
+anomaly, ATTEMPTS §7) with a heavy tail — disclosed in the paper's
+limitations. Every other network sits ≈0.99 with **zero fitted parameters**
+(no priorities, no per-network tuning).

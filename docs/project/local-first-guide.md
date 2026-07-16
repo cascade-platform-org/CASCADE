@@ -341,8 +341,33 @@ would silently bind the category to no heuristic.
 
 | `category_type` | Algorithm | Description |
 | --- | --- | --- |
-| `SourceToDemands` | Max-flow with priority costs | Physical resource flows (water, electricity). Delivery ratio → functionality via `dependency_level`. |
+| `SourceToDemands` | Capacitated flow allocation | Physical resource flows (water, electricity). Delivery ratio → functionality via `dependency_level`. How scarcity is shared is a per-graph-type choice — see "Flow allocation strategies" below. |
 | `Requisite` | Pessimistic aggregation | Non-flow logical necessities. Node degrades if any required upstream falls below threshold. |
+
+#### Flow allocation strategies (ADR-0014)
+
+How a `SourceToDemands` category shares **scarce** supply is selected per
+graph type via the `"source-to-demands-flow"` heuristic's `allocation` param:
+
+```json
+"graph_types": [
+  { "name": "water_network",
+    "heuristics": [
+      { "id": "source-to-demands-flow", "enabled": true,
+        "params": { "allocation": "priority_greedy" } }
+    ] }
+]
+```
+
+| `allocation` | Behaviour under scarcity |
+| --- | --- |
+| `tiered_fair_share` *(default — used when the param or the whole heuristic entry is absent)* | Higher-priority tiers are served fully first; consumers of **equal** priority spread the shortage as evenly as the network physically allows (max-min water-filling). |
+| `priority_greedy` | One min-cost max-flow with priority rewards: strict triage, winner-take-all among equals, cheapest to compute. |
+
+Under both, `priority` (1–10, on a consumer's category profile) means "who is
+served first" — with fair-share it additionally guarantees equals share the
+pain instead of one being silently zeroed. The engine resolves the strategy
+once per Propagation run from the first canvas whose graph type declares it.
 
 #### Rule syntax
 
