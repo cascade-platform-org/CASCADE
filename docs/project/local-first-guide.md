@@ -381,6 +381,10 @@ if node-hospital.functionality is <2 then node-reservoir is critical
 # Shorthand using labels defined in functionality_scale
 if node-hospital is operational_warning then node-reservoir is critical
 
+# Negated condition — "is not" folds into ≠ (works with any attribute;
+# an explicit operator is complemented: "is not < 2" reads as ">= 2")
+if node-gas.season is not winter then node-heater is operational
+
 # Intracategorical propagation rule
 worst_of(node-reservoir, node-substation-a) propagates to node-hospital
 

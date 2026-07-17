@@ -286,6 +286,11 @@ class RuleParser:
 
     _ALLOWED_OPERATORS: frozenset[str] = frozenset(_GRAMMAR_OPERATORS)
 
+    # `is not …` folds into the logical complement of the comparison operator.
+    _NEGATED_OPERATORS: dict[str, str] = {
+        "=": "≠", "≠": "=", "<": ">=", ">": "<=", "<=": ">", ">=": "<",
+    }
+
     # Sentinel that temporarily replaces the internal spaces of a recognised
     # multi-word name, so the whitespace-splitting tokenizer keeps it as one
     # token. It is a private-use Unicode code point no human would type, and is
@@ -546,6 +551,18 @@ class RuleParser:
             raise RuleSyntaxError("Expected 'is' keyword after identifier or attribute")
         self.position += 1
 
+        # `is not <value>` — natural-language negation sugar. Only in the
+        # condition (an assignment "then X is not Y" is meaningless); the
+        # negation is folded into the comparison operator below.
+        negated = False
+        if (
+            not is_result_part
+            and self._has_more_tokens()
+            and self._get_current_token().value.lower() == "not"
+        ):
+            negated = True
+            self.position += 1
+
         operator = "="
         if self._has_more_tokens() and self._get_current_token().value in self._ALLOWED_OPERATORS:
             operator = self._get_current_token().value
@@ -563,6 +580,9 @@ class RuleParser:
                     operator = candidate
                     value_raw = value_raw[len(candidate):].strip()
                     break
+
+        if negated:
+            operator = self._NEGATED_OPERATORS[operator]
 
         value_raw = self._denormalize(value_raw)  # restore any protected spaces
         value = self._resolve_value(value_raw, attribute)

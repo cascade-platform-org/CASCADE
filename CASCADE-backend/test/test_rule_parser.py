@@ -351,3 +351,40 @@ def test_spaced_functionality_label_value_resolves():
     cond = ast["condition"]
     assert cond["value"] == 3                       # resolved level
     assert cond["raw_value"] == "operational warning"  # space restored
+
+
+# --- `is not` negation sugar ------------------------------------------------
+
+
+def test_is_not_value_negates_equality():
+    # "is not <value>" folds into the ≠ operator (natural-language negation).
+    ast = _parser().parse("if hospital.season is not winter then tank is critical")
+    cond = ast["condition"]
+    assert cond["operator"] == "≠"
+    assert cond["value"] == "winter"
+    assert cond["attribute"] == "season"
+
+
+def test_is_not_label_negates_functionality_equality():
+    ast = _parser().parse("if hospital is not critical then tank is critical")
+    cond = ast["condition"]
+    assert cond["operator"] == "≠"
+    assert cond["value"] == 1  # 'critical' still resolves to its level
+
+
+def test_is_not_with_explicit_operator_takes_complement():
+    # "is not < 2" reads as "not (level < 2)" → operator ">=".
+    ast = _parser().parse("if hospital is not < 2 then tank is critical")
+    cond = ast["condition"]
+    assert cond["operator"] == ">="
+    assert cond["value"] == 2
+
+
+def test_then_assignment_does_not_consume_not():
+    # Negation is condition-only; "then tank is not critical" is malformed and
+    # must not silently parse ('not' would be read as the assignment value —
+    # an unknown Functionality label, so the rule is ignored with a warning).
+    import pytest as _pytest
+    from core.rule_parser import RuleIgnored
+    with _pytest.raises(RuleIgnored):
+        _parser().parse("if hospital is critical then tank is not critical")
