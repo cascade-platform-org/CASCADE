@@ -184,3 +184,44 @@ from engine.flow import _func_ratio  # noqa: E402
 )
 def test_func_ratio_endpoints_pinned_middle_midpoints(func, n, expected):
     assert _func_ratio(func, n) == pytest.approx(expected)
+
+
+# --- Requisite floor is kept when the flow pass does not cover the node ------
+# (run-level: the requisite_skip precomputation lives in engine/propagation.py)
+
+def _run_water(nodes, edges):
+    cfg = ModelConfiguration(
+        version="1", meta=ConfigMeta(name="t"),
+        functionality_scale=[FunctionalityScaleLevel(level=i, label=str(i), color="#000") for i in (1, 2, 3)],
+        categories=[CategoryDefinition(name="water", category_type="SourceToDemands")],
+    )
+    proj = Project(
+        version="2.0", meta=ProjectMeta(name="p"),
+        nodes={x.id: x for x in nodes}, edges={e.id: e for e in edges},
+        canvases=[Canvas(id="c", graph=Graph(graph_type="g",
+                  node_ids=[x.id for x in nodes], edge_ids=[e.id for e in edges]))],
+    )
+    return {u.id: u for u in run(PropagationRequest(project=proj, config=cfg, scope="global")).updates}
+
+
+def test_node_out_of_category_keeps_requisite_floor():
+    # C was removed from the water category entirely (no tag, no profile) but is
+    # still fed by a water source. The flow pass cannot model C (no demand), so
+    # the universal Requisite pass must apply: a critical source drags C down.
+    nodes = [
+        _source("s", 10, func=1),
+        Node(id="c", functionality=3),  # no categories, no profiles
+    ]
+    edges = [_edge("e", "s", "c")]
+    assert _run_water(nodes, edges)["c"].functionality == 1
+
+
+def test_demandless_member_keeps_requisite_floor():
+    # C is still tagged water but carries no demand — the flow pass models it as
+    # a pass-through, never as a consumer, so the Requisite floor must apply.
+    nodes = [
+        _source("s", 10, func=1),
+        Node(id="c", functionality=3, node_categories=["water"]),
+    ]
+    edges = [_edge("e", "s", "c")]
+    assert _run_water(nodes, edges)["c"].functionality == 1

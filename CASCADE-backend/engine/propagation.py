@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 
 from core.topology import build_incoming_index
 from engine import guards
-from engine.flow import ALLOCATIONS, DEFAULT_ALLOCATION, flow_category_candidates
+from engine.flow import ALLOCATIONS, DEFAULT_ALLOCATION, flow_category_candidates, is_flow_consumer
 from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
 from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
@@ -94,16 +94,25 @@ def run(request: PropagationRequest) -> PropagationResult:
     max_rounds = (len(nodes) + 1) * scale_size + 5
 
     # For each node, precompute which SourceToDemands categories to skip in the
-    # Requisite pass. A category is skipped when every parent that supplies it is
-    # explicitly tagged with that same category — meaning the flow pass fully
-    # captures the dependency and the Requisite floor would be an unfair ceiling.
+    # Requisite pass. A category is skipped only when BOTH hold:
+    #   - the node itself is a demand-bearing flow consumer of it (otherwise the
+    #     flow pass produces no candidate for this node and skipping would erase
+    #     the dependency entirely — e.g. a node that left the category but is
+    #     still fed by its suppliers must keep the Requisite floor), and
+    #   - every parent that supplies it is explicitly tagged with that same
+    #     category — meaning the flow pass fully captures the dependency and
+    #     the Requisite floor would be an unfair ceiling.
     # Cross-category parents or untagged feeders prevent the skip.
     requisite_skip: dict[str, frozenset[str]] = {}
     for nid in nodes:
         skip: set[str] = set()
         all_parents = [nodes[e.source] for e in incoming_index.get(nid, []) if e.source in nodes]
         for cat in flow_categories:
-            if all_parents and all(cat in parent_categories(p) for p in all_parents):
+            if (
+                is_flow_consumer(nodes[nid], cat)
+                and all_parents
+                and all(cat in parent_categories(p) for p in all_parents)
+            ):
                 skip.add(cat)
         requisite_skip[nid] = frozenset(skip)
 
@@ -204,19 +213,45 @@ def run(request: PropagationRequest) -> PropagationResult:
             if level >= current:  # monotone commit: only worsening sticks
                 continue
 
-            # Guard 2 — backup deferral: if a binding category has backup, the
-            # reserve keeps the node fully operational against ANY drop (not just
-            # to critical) — the drop is deferred into functionality_time. A node
-            # already counting down holds without refreshing its countdown.
+            # Guard 2 — backup deferral, per category: a binding category with
+            # backup has its drop deferred into functionality_time (the reserve
+            # keeps that dependency served against ANY drop, not just critical).
+            # But a backup covers ONLY its own category — a concurrent drop
+            # carried by categories WITHOUT backup must still commit this round.
+            # The immediate commit is what the proposal composes to once every
+            # backed category is excluded (treated as "fine while the reserve
+            # lasts"). A node already counting down holds without refreshing
+            # its countdown.
             durations = [
                 d
                 for category in binding
                 if (d := guards.backup_duration(node, category)) is not None
             ]
             if durations:
-                if node_ft[nid] == 0:
-                    node_ft[nid] = max(durations)  # start the countdown
-                continue  # hold current Functionality; defer the drop
+                # Worse (shortest) reserve wins: the node degrades when the
+                # FIRST backup runs out. An already-running countdown is
+                # tightened, never extended or refreshed.
+                pending = min(durations)
+                node_ft[nid] = pending if node_ft[nid] == 0 else min(node_ft[nid], pending)
+                unbacked = {
+                    category: candidate
+                    for category, candidate in candidates.items()
+                    if guards.backup_duration(node, category) is None
+                }
+                fallback = (
+                    compose_categories(unbacked, rules.inter_override(nid), scale_size)
+                    if unbacked
+                    else None
+                )
+                if nested_ast is not None and unbacked:
+                    nested = eval_nested_func_ast(nested_ast, unbacked, nodes, scale_size)
+                    if nested is not None:
+                        fallback = nested
+                if fallback is None:
+                    continue  # every candidate was backed — pure deferral
+                level, responsibility, _unbacked_binding = fallback
+                if level >= current:
+                    continue  # the unbacked categories alone worsen nothing now
 
             node_func[nid] = level
             node_resp[nid] = responsibility

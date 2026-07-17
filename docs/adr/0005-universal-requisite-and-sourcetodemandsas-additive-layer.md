@@ -86,6 +86,15 @@ breaking the schema boundary.
 - Every `SourceToDemands` node also receives a Requisite proposal. For nodes with demand, the
   flow result typically dominates (it accounts for capacity and priority); the Requisite pass
   adds a worst_of floor that can only make the result equal or worse, never better.
+- **Skip refinement (shipped later):** the Requisite floor for a `SourceToDemands` category is
+  waived only when BOTH hold: the node is itself a demand-bearing flow consumer of that category
+  (`flow.py::is_flow_consumer`), AND every parent supplying it is tagged with that same category —
+  i.e. the flow pass fully captures the dependency and the floor would be an unfair ceiling.
+  A node the flow pass does not model (it left the category, or is tagged but demandless) always
+  keeps the Requisite floor, otherwise the dependency would vanish entirely
+  (`engine/propagation.py` `requisite_skip`; regression tests
+  `test_engine_flow.py::test_node_out_of_category_keeps_requisite_floor` /
+  `test_demandless_member_keeps_requisite_floor`).
 - The frontend must implement edge-creation profile auto-population and the orphaned-profile
   warning in the Inspector. These are Client Configuration concerns and are not sent to the
   engine differently — the engine continues to read `category_dependency_profiles` as before.

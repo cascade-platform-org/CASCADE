@@ -126,3 +126,102 @@ def test_sample_is_monotone(name: str):
     for u in res.updates:
         before = nodes[u.id].functionality if u.id in nodes else edges[u.id].functionality
         assert u.functionality <= before, f"{name}:{u.id} improved {before} -> {u.functionality}"
+
+
+# --- Office with Heat sample — user-validated scenario snapshots -------------
+# Topology (CASCADE-app/samples/Office_with_Heat.json):
+#   Electrical Source ─► Electrical Infrastructure ─► Office Pc ─► Office
+#                                       └─► Heater Generator ─► Office
+#   Gas Source ─► Heater Generator          Laptop ─► Office
+# Office profiles: electric dep 2, water dep 2, heat dep 3 + backup 11 h.
+# Heater Generator carries the specific rule
+#   "if office.season is summer then heater_generator is operational"
+# and office.properties.season == "summer", so while the rule is active the
+# heater is shielded from the electric cascade (an improving override is
+# clamped to non-worsening at commit — it holds, it never lifts).
+# Expected outcomes below were validated by hand in the UI (2026-07-17).
+
+_OFFICE = "node_1762946753934"
+_EL_INFRA = "node_1777025959545"
+_EL_SRC = "node_1777025985927"
+_LAPTOP = "node_1777028040487"
+_OFFICE_PC = "node_1777028103615"
+_HEATER = "node_1777278151154"
+_EL_SRC_EDGE = "edge_node_1777025985927_node_1777025959545_0"
+
+
+def _mut_source_critical(nodes):
+    nodes[_EL_SRC]["functionality"] = 1
+
+
+def _mut_source_and_laptop_critical(nodes):
+    nodes[_EL_SRC]["functionality"] = 1
+    nodes[_LAPTOP]["functionality"] = 1
+
+
+def _mut_source_critical_rule_disabled(nodes):
+    nodes[_EL_SRC]["functionality"] = 1
+    # "// " is the shared disabled-rule prefix (shared/rule-grammar.json).
+    nodes[_HEATER]["rules"] = ["// " + r for r in nodes[_HEATER]["rules"]]
+
+
+OFFICE_SCENARIOS: dict[str, tuple] = {
+    # Electric cascade: infrastructure starves (blame split between the critical
+    # source and its edge), Office Pc follows via the digital Requisite chain.
+    # The Office HOLDS: its digital group rides the healthy Laptop (best_of),
+    # and the heater is shielded by the season rule.
+    "electric-source-critical": (
+        _mut_source_critical,
+        {
+            _EL_INFRA: (1, None, {_EL_SRC: 0.5, _EL_SRC_EDGE: 0.5}),
+            _OFFICE_PC: (1, None, {_EL_INFRA: 1.0}),
+        },
+    ),
+    # Both digital suppliers gone: best_of(Laptop=1, Office Pc=1) = 1 drags the
+    # Office to critical, blame split across the two digital feeders.
+    "electric-source-and-laptop-critical": (
+        _mut_source_and_laptop_critical,
+        {
+            _EL_INFRA: (1, None, {_EL_SRC: 0.5, _EL_SRC_EDGE: 0.5}),
+            _OFFICE_PC: (1, None, {_EL_INFRA: 1.0}),
+            _OFFICE: (1, None, {_LAPTOP: 0.5, _OFFICE_PC: 0.5}),
+        },
+    ),
+    # Rule disabled ("// " prefix): the heater is no longer shielded and goes
+    # critical with the electric cascade. The Office's heat dependency has an
+    # 11-hour backup, so instead of dropping it holds at 3 and starts the
+    # countdown (functionality_time = 11).
+    "electric-source-critical-heater-rule-disabled": (
+        _mut_source_critical_rule_disabled,
+        {
+            _EL_INFRA: (1, None, {_EL_SRC: 0.5, _EL_SRC_EDGE: 0.5}),
+            _OFFICE_PC: (1, None, {_EL_INFRA: 1.0}),
+            _HEATER: (1, None, {_EL_INFRA: 1.0}),
+            _OFFICE: (3, 11, None),
+        },
+    ),
+}
+
+
+@pytest.mark.parametrize("scenario", sorted(OFFICE_SCENARIOS))
+def test_office_with_heat_scenario(scenario: str):
+    mutate, expected = OFFICE_SCENARIOS[scenario]
+    bundle = json.loads((SAMPLES / "Office_with_Heat.json").read_text())
+    mutate(bundle["project"]["nodes"])
+    request = PropagationRequest(
+        project=bundle["project"], config=bundle["config"], scope="global"
+    )
+    node_ids = _node_ids(request)
+    res = run(request)
+
+    assert res.warnings == [], f"{scenario}: unexpected warnings {res.warnings}"
+
+    node_updates = {u.id: u for u in res.updates if u.id in node_ids}
+    assert set(node_updates) == set(expected), (
+        f"{scenario}: changed nodes {sorted(node_updates)} != expected {sorted(expected)}"
+    )
+    for nid, (func, ft, resp) in expected.items():
+        update = node_updates[nid]
+        assert update.functionality == func, f"{scenario}:{nid} functionality"
+        assert update.functionality_time == ft, f"{scenario}:{nid} functionality_time"
+        assert (update.responsibility_share or None) == resp, f"{scenario}:{nid} responsibility_share"

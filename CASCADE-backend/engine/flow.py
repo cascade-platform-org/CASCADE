@@ -275,6 +275,13 @@ def _residual_reachable(graph: nx.DiGraph, flow_dict: dict) -> set:
 
 # --- network quantities -----------------------------------------------------
 
+def is_flow_consumer(node: Node, category: str) -> bool:
+    """True when the flow pass will model this node as a demand-bearing
+    consumer of `category` — the only condition under which the flow proposal
+    can stand in for the universal Requisite floor on that category."""
+    return _in_category(node, category) and _demand(node, category) is not None
+
+
 def _in_category(node: Node, category: str) -> bool:
     """A node belongs to a category's flow subgraph if it supplies, demands, or
     is tagged with it."""

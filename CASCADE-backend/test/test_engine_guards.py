@@ -125,3 +125,93 @@ def test_backup_defers_any_drop_not_only_critical():
     update = by_id["c"]
     assert update.functionality == N            # held, not dropped to 2
     assert update.functionality_time == 24
+
+
+# --- backup covers only its own category (per-category deferral) -------------
+
+
+def _cfg2():
+    """Two Requisite categories, so one can be backed and the other not."""
+    return ModelConfiguration(
+        version="1", meta=ConfigMeta(name="t"),
+        functionality_scale=[FunctionalityScaleLevel(level=i, label=str(i), color="#000") for i in (1, 2, 3)],
+        categories=[
+            CategoryDefinition(name="digital", category_type="Requisite"),
+            CategoryDefinition(name="power", category_type="Requisite"),
+        ],
+    )
+
+
+def _run2(nodes, edges):
+    proj = Project(
+        version="2.0", meta=ProjectMeta(name="p"),
+        nodes={x.id: x for x in nodes}, edges={e.id: e for e in edges},
+        canvases=[Canvas(id="c", graph=Graph(graph_type="g",
+                  node_ids=[x.id for x in nodes], edge_ids=[e.id for e in edges]))],
+    )
+    return {u.id: u for u in run(PropagationRequest(project=proj, config=_cfg2(), scope="global")).updates}
+
+
+def _consumer2(*, digital_backup_duration=None, power_backup_duration=None):
+    def profile(duration):
+        return CategoryDependencyProfile(
+            dependency_level=N,
+            backup=duration is not None,
+            backup_duration=duration,
+        )
+    return Node(
+        id="c", functionality=N, node_categories=["digital", "power"],
+        category_dependency_profiles={
+            "digital": profile(digital_backup_duration),
+            "power": profile(power_backup_duration),
+        },
+    )
+
+
+def _two_failed_sources(digital_level=1, power_level=1):
+    return (
+        [
+            Node(id="sd", functionality=digital_level, node_categories=["digital"]),
+            Node(id="sp", functionality=power_level, node_categories=["power"]),
+        ],
+        [
+            Edge(id="ed", source="sd", target="c", functionality=N),
+            Edge(id="ep", source="sp", target="c", functionality=N),
+        ],
+    )
+
+
+def test_unbacked_category_drop_commits_despite_backup_on_other():
+    # digital is backed, power is not; both sources critical (tie). The power
+    # drop must commit NOW — the digital reserve covers only digital — while
+    # the countdown still starts for the deferred digital drop.
+    sources, edges = _two_failed_sources()
+    by_id = _run2([*sources, _consumer2(digital_backup_duration=24)], edges)
+    update = by_id["c"]
+    assert update.functionality == 1             # power (no backup) drags it down now
+    assert update.functionality_time == 24        # digital's reserve countdown runs
+
+
+def test_partial_unbacked_drop_commits_while_backed_drop_defers():
+    # digital critical (backed) would bind at 1; power at 2 (unbacked). The node
+    # drops to 2 immediately (the worse UNBACKED level) and counts down toward
+    # the deeper deferred digital drop.
+    sources, edges = _two_failed_sources(digital_level=1, power_level=2)
+    by_id = _run2([*sources, _consumer2(digital_backup_duration=24)], edges)
+    update = by_id["c"]
+    assert update.functionality == 2
+    assert update.functionality_time == 24
+
+
+def test_two_backed_categories_take_shortest_reserve():
+    # Both categories backed, both critical: pure deferral holds Functionality,
+    # and the countdown is the WORSE (shortest) reserve — the node degrades when
+    # the first backup runs out.
+    sources, edges = _two_failed_sources()
+    by_id = _run2(
+        [*sources, _consumer2(digital_backup_duration=24, power_backup_duration=6)],
+        edges,
+    )
+    update = by_id["c"]
+    assert update.functionality == N  # held
+    assert update.functionality_time == 6
