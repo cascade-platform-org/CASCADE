@@ -198,7 +198,7 @@ One import-time PDD solve with one link (or a trunk pair, N-2) closed at nominal
 _Avoid_: "failure scenario" (that is a runtime Scenario/Event; this is an import-time probe)
 
 **Capacity Margin**:
-Uniform ×2 on Sweep/Contingency-derived pipe/valve capacity (supply re-derives automatically). The observed peak is a lower bound; real hydraulics lets head loss absorb ~2× overshoot. ×2 is the measured knee. Shipped: `map.py::CAPACITY_MARGIN`.
+Uniform multiplier on Sweep/Contingency-derived pipe/valve capacity (supply re-derives automatically). The observed peak is a lower bound; real hydraulics lets head loss absorb ~2× overshoot. An **exposed import parameter** (`ImportOptions.capacity_margin`, default 2.0), not a fitted constant: an across-network sensitivity analysis shows fidelity is stable over a broad range with ×2 on the plateau, and ×2 keeps the busiest real-aqueduct pipes near the ~2.5 m/s water-main design ceiling. An optional `max_velocity` cap (default off) clamps `v_peak × margin` to a physical ceiling so no margin implies an unphysically fast pipe. Default: `map.py::DEFAULT_CAPACITY_MARGIN`.
 _Avoid_: "safety factor" (it removes a systematic underestimate, not adds conservatism)
 
 **Full-Duplex Split**:

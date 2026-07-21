@@ -193,6 +193,21 @@ _CATEGORIES = [
 ]
 
 
+# Default uniform margin on every simulated-velocity-derived pipe/valve
+# capacity (CONTEXT.md "Capacity Margin", ADR-0012 addendum). The
+# sweep/contingency peak velocity is a LOWER bound on deliverable flow,
+# conditional on the probe scenarios exercised — real hydraulics has no hard
+# cap, head loss absorbs roughly this much overshoot before pressure actually
+# collapses. Fidelity is stable across a broad range of this margin; 2.0 is a
+# robust round default (see the sensitivity analysis in the paper's Supp. Mat.
+# and experiments/margin_sweep.py). It is exposed per-import as
+# `ImportOptions.capacity_margin` so a modeller can trade conservatism (lower
+# = more pessimistic / fewer missed criticals) against realism (higher = less
+# cry-wolf). Source supply needs no separate treatment: it is the sum of
+# incident pipe capacities, so it widens with them automatically.
+DEFAULT_CAPACITY_MARGIN = 2.0
+
+
 class ImportOptions(BaseModel):
     """Knobs of the .inp mapping pipeline (defaults per ADR-0012).
 
@@ -221,6 +236,26 @@ class ImportOptions(BaseModel):
                     "the imported values line up with it (the generated scale "
                     "itself is then discarded, not merged in).",
     )
+    capacity_margin: float = Field(
+        default=DEFAULT_CAPACITY_MARGIN, gt=0,
+        description="Uniform multiplier applied to every pipe/valve capacity "
+                    "derived from the hydraulic sweep. The sweep's peak "
+                    "velocity is a lower bound on what a pipe can carry under "
+                    "failure rerouting, so a margin >1 corrects the resulting "
+                    "pessimism. Fidelity is stable across a broad range; lower "
+                    "is more conservative (fewer missed criticals, more false "
+                    "alarms), higher is more optimistic. Default 2.0.",
+    )
+    max_velocity: Optional[float] = Field(
+        default=None, gt=0,
+        description="Optional physical ceiling (m/s) on the margined pipe "
+                    "velocity, so no capacity_margin can imply an unphysically "
+                    "fast pipe. When set, capacity = area x min(v_peak x margin, "
+                    "max_velocity). A water-main design ceiling is ~2.5-3 m/s. "
+                    "Default None (uncapped) keeps the imported capacities and "
+                    "all validated results unchanged; set it to bound a large "
+                    "margin physically.",
+    )
 
 
 # --- intermediate link representation ---------------------------------------
@@ -242,20 +277,17 @@ class _Link(BaseModel):
     velocity_rev: Optional[float] = None
 
 
-# Uniform margin on every simulated-velocity-derived pipe/valve capacity
-# (CONTEXT.md "Capacity Margin", ADR-0012 addendum). The sweep/contingency
-# peak velocity is a LOWER bound on deliverable flow, conditional on the
-# probe scenarios exercised — real hydraulics has no hard cap, head loss
-# absorbs roughly this much overshoot before pressure actually collapses.
-# x2 is the measured knee on the worst-divergence benchmark (FMS 0.770 →
-# 0.878 alone, 0.927 with full-duplex splits; higher margins buy little and
-# grow over-optimism). Source supply needs no separate treatment: it is the
-# sum of incident pipe capacities, so it widens with them automatically.
-CAPACITY_MARGIN = 2.0
-
-
-def _pipe_capacity(diameter_m: float, velocity: float) -> float:
-    return math.pi / 4.0 * diameter_m**2 * velocity * CAPACITY_MARGIN
+def _pipe_capacity(
+    diameter_m: float, velocity: float, margin: float,
+    max_velocity: float | None = None,
+) -> float:
+    # capacity = area x effective velocity, where effective velocity is the
+    # margined sweep velocity, optionally clamped to a physical design ceiling
+    # (max_velocity) so no margin can imply an unphysically fast pipe.
+    v_eff = velocity * margin
+    if max_velocity is not None:
+        v_eff = min(v_eff, max_velocity)
+    return math.pi / 4.0 * diameter_m**2 * v_eff
 
 
 def _demand_value(junction: Any, mode: DemandMode, wn: Any) -> float:
@@ -290,7 +322,8 @@ def compute_junction_demands(wn: Any, mode: DemandMode) -> dict[str, float]:
 
 
 def _collect_links(
-    wn: Any, flow_profiles: dict[str, LinkFlowProfile]
+    wn: Any, flow_profiles: dict[str, LinkFlowProfile], margin: float,
+    max_velocity: float | None = None,
 ) -> list[_Link]:
     """`flow_profiles` — per-pipe/valve LinkFlowProfile from a baseline
     hydraulic sweep (core.importers.inp.sim.link_flow_profiles); a link
@@ -308,7 +341,7 @@ def _collect_links(
             velocity = profile.peak if profile is not None else FALLBACK_VELOCITY_MS
             links.append(_Link(
                 id=lid, kind="pipe", start=link.start_node_name, end=link.end_node_name,
-                capacity=_pipe_capacity(link.diameter, velocity),
+                capacity=_pipe_capacity(link.diameter, velocity, margin, max_velocity),
                 open_=open_,
                 velocity_fwd=profile.velocity_fwd if profile is not None else None,
                 velocity_rev=profile.velocity_rev if profile is not None else None,
@@ -348,7 +381,7 @@ def _collect_links(
             velocity = profile.peak if profile is not None else FALLBACK_VELOCITY_MS
             links.append(_Link(
                 id=lid, kind="valve", start=link.start_node_name, end=link.end_node_name,
-                capacity=_pipe_capacity(diameter, velocity) if diameter else None,
+                capacity=_pipe_capacity(diameter, velocity, margin, max_velocity) if diameter else None,
                 open_=open_,
                 properties={
                     "valve_type": str(getattr(link, "valve_type", "")),
@@ -482,7 +515,7 @@ def build_bundle(
 
     junction_names = set(wn.junction_name_list)
     source_names = set(wn.reservoir_name_list) | set(wn.tank_name_list)
-    links = _collect_links(wn, flow_profiles)
+    links = _collect_links(wn, flow_profiles, options.capacity_margin, options.max_velocity)
 
     demands = compute_junction_demands(wn, options.demand_mode)
 

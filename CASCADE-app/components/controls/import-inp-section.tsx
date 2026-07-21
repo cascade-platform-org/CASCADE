@@ -63,6 +63,8 @@ export function ImportInpSection() {
   const [demandMode, setDemandMode] = useState<"peak" | "base" | "avg">("peak");
   const [derivePriorities, setDerivePriorities] = useState(true);
   const [nLevels, setNLevels] = useState("3");
+  const [capacityMargin, setCapacityMargin] = useState("2");
+  const [maxVelocity, setMaxVelocity] = useState("");
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +80,13 @@ export function ImportInpSection() {
   const nLevelsValid =
     mode === "merge" ||
     (nLevels.trim() !== "" && Number.isInteger(Number(nLevels)) && Number(nLevels) >= 2);
-  const formValid = targetValid && nLevelsValid;
+  const capacityMarginValid =
+    capacityMargin.trim() !== "" && Number(capacityMargin) > 0;
+  // Optional: blank = uncapped; if set it must be a positive number.
+  const maxVelocityValid =
+    maxVelocity.trim() === "" || Number(maxVelocity) > 0;
+  const formValid =
+    targetValid && nLevelsValid && capacityMarginValid && maxVelocityValid;
 
   async function handleImport() {
     if (!file || importing || !formValid) return;
@@ -100,6 +108,8 @@ export function ImportInpSection() {
         // size so functionality values line up with it; the import's own
         // generated scale is never used in this mode (see module docstring).
         nLevels: mode === "merge" ? currentNLevels : Number(nLevels),
+        capacityMargin: Number(capacityMargin),
+        maxVelocity: maxVelocity.trim() === "" ? undefined : Number(maxVelocity),
       });
 
       const reduced =
@@ -337,6 +347,53 @@ export function ImportInpSection() {
               added).
             </p>
           )}
+
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-medium text-zinc-400">
+              Capacity margin
+            </span>
+            <input
+              type="number"
+              min={0}
+              step={0.25}
+              value={capacityMargin}
+              onChange={(e) => setCapacityMargin(e.target.value)}
+              className={cn(
+                "w-full rounded border bg-white px-2 py-1 text-xs focus:outline-none dark:bg-zinc-800 dark:text-zinc-200",
+                capacityMarginValid
+                  ? "border-zinc-200 focus:border-sky-400 dark:border-zinc-700"
+                  : "border-red-400",
+              )}
+            />
+            <span className="mt-0.5 block text-[10px] text-zinc-400">
+              Multiplier on sweep-derived pipe capacity (default 2). Lower = more
+              conservative; higher = more optimistic.
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-medium text-zinc-400">
+              Max velocity (m/s, optional)
+            </span>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="uncapped"
+              value={maxVelocity}
+              onChange={(e) => setMaxVelocity(e.target.value)}
+              className={cn(
+                "w-full rounded border bg-white px-2 py-1 text-xs focus:outline-none dark:bg-zinc-800 dark:text-zinc-200",
+                maxVelocityValid
+                  ? "border-zinc-200 focus:border-sky-400 dark:border-zinc-700"
+                  : "border-red-400",
+              )}
+            />
+            <span className="mt-0.5 block text-[10px] text-zinc-400">
+              Physical ceiling so the margin can&apos;t imply an unphysically
+              fast pipe (water mains ~2.5–3 m/s). Blank = uncapped.
+            </span>
+          </label>
 
           <button
             onClick={() => void handleImport()}

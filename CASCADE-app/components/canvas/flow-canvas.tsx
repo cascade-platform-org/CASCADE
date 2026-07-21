@@ -44,7 +44,7 @@ import { pickHandles } from "@/lib/edge-routing";
 import { CanvasContextMenu } from "./canvas-context-menu";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import { anchorFlowToGeo } from "@/lib/geo-utils";
-import { nodeTypes, toRFNode } from "./cascade-node";
+import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
 import { edgeTypes, toRFEdge } from "./cascade-edge";
 import { CanvasLegend } from "./canvas-legend";
 
@@ -135,16 +135,10 @@ function FlowCanvas() {
           document.querySelector<HTMLElement>(".react-flow__viewport");
         if (!viewport) return undefined;
 
-        const rawBounds = getNodesBounds(nodes);
-        // Expand by OVERFLOW in flow-space so labels/badges that extend beyond
-        // the node's own bounding box are never clipped in the output image.
-        const OVERFLOW = 40;
-        const bounds = {
-          x: rawBounds.x - OVERFLOW,
-          y: rawBounds.y - OVERFLOW,
-          width: rawBounds.width + 2 * OVERFLOW,
-          height: rawBounds.height + 2 * OVERFLOW,
-        };
+        // Expand the node-box bounds so the name labels — centered below each
+        // node and wider than the node itself — are never clipped in the output
+        // image. Geometry lives with the label in cascade-node.tsx.
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
         const PADDING = 48;
         const TARGET_MAX = 1600;
 

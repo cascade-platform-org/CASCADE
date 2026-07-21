@@ -35,6 +35,22 @@ function nodeSize(importance: number | undefined): number {
   return Math.round(MIN_SIZE + (MAX_SIZE - MIN_SIZE) * Math.min(1, Math.max(0, imp)));
 }
 
+// The node name renders centered below the shape (see "Label below") with this
+// max width, so it overflows the node's measured box by up to LABEL_MAX_WIDTH/2
+// on each side and a little below. getNodesBounds only covers the node boxes, so
+// image/SVG exports must expand the capture region by this much or long names
+// get clipped — the single source of truth for that expansion is
+// expandBoundsForLabels below, used by every canvas export path.
+export const LABEL_MAX_WIDTH = 200;
+
+export function expandBoundsForLabels<T extends { x: number; y: number; width: number; height: number }>(
+  b: T,
+): { x: number; y: number; width: number; height: number } {
+  const h = LABEL_MAX_WIDTH / 2 + 16; // centered label reaches ~half its width past the node, plus margin
+  const v = 44;                        // label sits just below the shape; modest vertical pad
+  return { x: b.x - h, y: b.y - v, width: b.width + 2 * h, height: b.height + 2 * v };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers — convert CASCADE nodes/edges → React Flow format
 // ---------------------------------------------------------------------------
@@ -364,7 +380,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
-          maxWidth: 200,
+          maxWidth: LABEL_MAX_WIDTH,
           lineHeight: "14px",
         }}
       >

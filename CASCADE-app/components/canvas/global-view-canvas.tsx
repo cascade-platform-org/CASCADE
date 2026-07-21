@@ -35,7 +35,7 @@ import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
-import { nodeTypes } from "./cascade-node";
+import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider } from "./zoom-slider";
 import { levelColor } from "@/lib/colors";
 
@@ -146,7 +146,9 @@ function GlobalViewCanvas() {
         const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
         if (!viewport || nodes.length === 0) return undefined;
 
-        const bounds = getNodesBounds(nodes);
+        // Expand the node-box bounds so centered name labels are not clipped at
+        // the edges of the fitted image; geometry lives in cascade-node.tsx.
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
         const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
 
         return await toPng(viewport, {

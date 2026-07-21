@@ -97,6 +97,7 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
+import math
 import random
 import statistics
 import sys
@@ -119,6 +120,10 @@ from core.importers.inp import (  # noqa: E402
     contingency_priorities,
     link_flow_profiles,
     scarcity_priorities,
+)
+from core.importers.inp.skeleton import (  # noqa: E402
+    SkeletonError,
+    skeletonize_to_target,
 )
 from core.importers.inp.sim import _check_converged  # noqa: E402 — see module docstring
 from engine.flow import _ratio_to_level  # noqa: E402 — see module docstring
@@ -270,13 +275,31 @@ def _random_situation(
     return Situation(label=f"{kind}#{index}", broken_link_ids=broken, hot_junction_ids=hot, hot_factor=factor)
 
 
+# Physical max design velocity for water mains (m/s). Above this, EPANET is
+# delivering through pipes at speeds real hydraulics would not sustain (surge/
+# erosion). Loose default; used flag-only on the ground truth for now — the
+# same threshold will seed the overload criterion (see the roadmap).
+V_MAX_DESIGN_MS = 3.0
+
+
+@dataclass
+class VelocityFlag:
+    """Per-situation record of where the ground-truth EPANET solve relied on
+    unphysically fast pipes (velocity > V_MAX_DESIGN_MS). Flag-only: recorded,
+    never acted on. See docs/project/overload-cascade-extension-roadmap.md."""
+    n_pipes: int
+    n_over: int
+    max_v: float
+    frac_flow_over: float
+
+
 def _solve_served_ratios(
     wn: wntr.network.WaterNetworkModel,
     demands: dict[str, float],
     situation: Situation,
     required_pressure_m: float,
     minimum_pressure_m: float,
-) -> dict[str, float]:
+) -> tuple[dict[str, float], "VelocityFlag | None"]:
     """Ground truth: a steady-state PDD solve of `wn` under `situation`'s
     interventions, every junction fixed to its `demands` value (the same
     demand_mode value CASCADE was imported with) except the ones in a hot
@@ -335,7 +358,7 @@ def _solve_served_ratios(
             # site in this file, so it isn't threaded through `_run_sweep_step`.
             _check_converged(prefix)
         except Exception:
-            return {}  # a pathological or non-converging situation — no ground truth this round
+            return {}, None  # a pathological or non-converging situation — no ground truth this round
     delivered = results.node["demand"].iloc[0]
 
     # SINGULAR-PDD CORRECTION (found 2026-07-14 debugging the worst-divergence
@@ -361,7 +384,29 @@ def _solve_served_ratios(
             continue
         got = float(delivered.get(jid, 0.0))
         ratios[jid] = max(0.0, got / expected)
-    return ratios
+
+    # VELOCITY-EXCEEDANCE FLAG (flag-only, physical-realism check on the ground
+    # truth): EPANET imposes no velocity cap, so it will "deliver" water through
+    # pipes at unphysical speeds. We record, but do NOT act on, where the
+    # ground-truth solve relies on velocity > V_MAX_DESIGN_MS. This is the seed
+    # of the (future) steady-state overload oracle — see
+    # docs/project/overload-cascade-extension-roadmap.md.
+    vel = results.link["velocity"].iloc[0]
+    flow = results.link["flowrate"].iloc[0]
+    per_pipe = [
+        (v, abs(float(flow.get(pid, 0.0))))
+        for pid in wn.pipe_name_list
+        if math.isfinite(v := abs(float(vel.get(pid, 0.0))))
+    ]
+    total_flow = sum(f for _, f in per_pipe) or 1.0
+    over = [(v, f) for v, f in per_pipe if v > V_MAX_DESIGN_MS]
+    vstats = VelocityFlag(
+        n_pipes=len(per_pipe),
+        n_over=len(over),
+        max_v=max((v for v, _ in per_pipe), default=0.0),
+        frac_flow_over=sum(f for _, f in over) / total_flow,
+    )
+    return ratios, vstats
 
 
 def _severed_junctions(
@@ -606,12 +651,33 @@ def main() -> None:
         help="Additionally close this many random PAIRS of trunk links simultaneously (E3‴): single-link "
              "closures never stress the backup path only a double trunk failure forces into service.",
     )
+    parser.add_argument(
+        "--target-nodes", type=int, default=None,
+        help="Skeletonize each network to at most this many nodes BEFORE both the "
+             "import and the ground-truth solve (both sides use the same reduced "
+             "network, so the comparison stays consistent). Lets large .inp files "
+             "run rapidly. Omit to import the full network.",
+    )
     args = parser.parse_args()
 
     rng = random.Random(args.seed)  # nosec B311 — deterministic test-scenario generation, not security
     all_scores: list[float] = []
     all_confusion = ConfusionCounts()
     scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
+    # Two reference predictors scored per situation, against the same ground
+    # truth and junction set, to give the paper's FMS numbers a floor:
+    #  - "null": every junction predicted fully operational (level N). Its FMS
+    #    is the agreement a model earns for free when a situation barely
+    #    perturbs the network (ceiling effect) — the flow module's margin over
+    #    THIS number, not its absolute FMS, is the evidence it adds value.
+    #  - "reach": pure topological reachability — a junction is critical
+    #    (level 1) iff it has no undirected path to any source through
+    #    in-service links (`_severed_junctions`), else fully operational.
+    #    The field-standard connectivity abstraction; quantity-blind by
+    #    construction (predicts nothing under demand stress).
+    null_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
+    reach_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
+    reach_confusion = ConfusionCounts()
 
     csv_writer = None
     csv_file = None
@@ -621,7 +687,9 @@ def main() -> None:
         # new-format rows to an old-format file would silently shift every
         # column after `seed`, so refuse rather than corrupt.
         header = ["network", "seed", "priority_mode", "contingency_bias", "required_pressure", "minimum_pressure",
-                  "n_levels", "kind", "situation", "fms", "n_compared", "tp", "fp", "fn", "tn"]
+                  "n_levels", "kind", "situation", "fms", "n_compared", "tp", "fp", "fn", "tn",
+                  "fms_null", "fms_reach", "reach_tp", "reach_fp", "reach_fn", "reach_tn",
+                  "gt_pipes", "gt_pipes_over_vmax", "gt_max_velocity", "gt_frac_flow_over_vmax"]
         is_new = not args.csv.exists()
         if not is_new:
             with args.csv.open(newline="") as existing:
@@ -644,6 +712,17 @@ def main() -> None:
         # this repo's own fixtures.
         path = name if ("/" in name or name.lower().endswith(".inp")) else wntr.library.model_library.get_filepath(name)
         wn = wntr.network.WaterNetworkModel(path)
+        if args.target_nodes is not None:
+            # Skeletonize BOTH sides identically: the import and the ground-truth
+            # solve then run on the same reduced network, keeping the comparison
+            # consistent (see docs/project ... skeleton benchmark note).
+            try:
+                wn, _skmap, _thr = skeletonize_to_target(wn, args.target_nodes)
+                print(f"  skeletonized to {len(wn.junction_name_list)} junctions "
+                      f"(threshold {_thr})")
+            except SkeletonError as exc:
+                print(f"  SKIP {name}: skeletonize failed — {exc}")
+                continue
         graph = _build_link_graph(wn)  # for _clustered_break's hop search
         demands = compute_junction_demands(wn, args.demand_mode)
         flow_profiles = link_flow_profiles(
@@ -677,7 +756,7 @@ def main() -> None:
         situations = [_random_situation(wn, graph, rng, i) for i in range(args.situations)]
         situations += _tank_situations(wn)
         for situation in situations:
-            ratios = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
+            ratios, vflag = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
             if not ratios:
                 continue
             levels_true = {jid: _ratio_to_level(ratio, args.n_levels) for jid, ratio in ratios.items()}
@@ -688,14 +767,35 @@ def main() -> None:
             scores_by_kind[kind].append(score)
             confusion = _binary_confusion(levels_true, levels_cascade, demands)
             network_confusion += confusion
+            # Reference predictors (see the comment where their accumulators
+            # are declared): the all-operational null model and the
+            # source-reachability model, scored on the identical junction set.
+            severed = _severed_junctions(wn, situation)
+            levels_null = {jid: args.n_levels for jid in levels_true}
+            levels_reach = {
+                jid: (1 if jid in severed else args.n_levels) for jid in levels_true
+            }
+            fms_null, _ = _fms(levels_true, levels_null, demands, args.n_levels)
+            fms_reach, _ = _fms(levels_true, levels_reach, demands, args.n_levels)
+            null_by_kind[kind].append(fms_null)
+            reach_by_kind[kind].append(fms_reach)
+            r_conf = _binary_confusion(levels_true, levels_reach, demands)
+            reach_confusion += r_conf
             detail = f"breaks={situation.broken_link_ids or '-'} hot={situation.hot_junction_ids or '-'}"
-            print(f"  {situation.label:10s} FMS={score:.3f}  (n={n_compared:3d})  {detail}")
+            vtag = f" v>{V_MAX_DESIGN_MS:g}:{vflag.n_over}/{vflag.n_pipes}(max{vflag.max_v:.1f})" if vflag else ""
+            print(f"  {situation.label:10s} FMS={score:.3f} (null={fms_null:.3f} reach={fms_reach:.3f}, n={n_compared:3d})  {detail}{vtag}")
             if csv_writer is not None:
                 csv_writer.writerow([
                     name, args.seed, priority_mode, args.contingency_bias,
                     args.required_pressure, args.minimum_pressure, args.n_levels,
                     kind, situation.label,
                     f"{score:.6f}", n_compared, confusion.tp, confusion.fp, confusion.fn, confusion.tn,
+                    f"{fms_null:.6f}", f"{fms_reach:.6f}",
+                    r_conf.tp, r_conf.fp, r_conf.fn, r_conf.tn,
+                    vflag.n_pipes if vflag else "",
+                    vflag.n_over if vflag else "",
+                    f"{vflag.max_v:.3f}" if vflag else "",
+                    f"{vflag.frac_flow_over:.6f}" if vflag else "",
                 ])
 
         if network_scores:
@@ -715,7 +815,18 @@ def main() -> None:
         for kind in _ALL_KINDS:
             scores = scores_by_kind[kind]
             if scores:
-                print(f"  {kind:10s} mean FMS = {statistics.mean(scores):.3f}  (n={len(scores)} situations)")
+                print(
+                    f"  {kind:10s} mean FMS = {statistics.mean(scores):.3f}  "
+                    f"(null={statistics.mean(null_by_kind[kind]):.3f} "
+                    f"reach={statistics.mean(reach_by_kind[kind]):.3f}, "
+                    f"n={len(scores)} situations)"
+                )
+        rc = reach_confusion
+        print(
+            f"REACHABILITY-BASELINE binary confusion, n={rc.total}: "
+            f"TP={rc.tp} FP={rc.fp} FN={rc.fn} TN={rc.tn}  "
+            f"precision={rc.precision:.3f} recall={rc.recall:.3f}"
+        )
         c = all_confusion
         print(
             f"AGGREGATE binary confusion (critical=level 1 vs operational), n={c.total}:\n"

@@ -16,6 +16,7 @@ import { useNetworkStore } from "@/store/network-store";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useUiStore } from "@/store/ui-store";
 import { pickHandles } from "@/lib/edge-routing";
+import { expandBoundsForLabels } from "./cascade-node";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -151,14 +152,9 @@ export function CanvasContextMenu({
         pushToast({ message: "Nothing to export", variant: "info", durationMs: 2000 });
         return;
       }
-      const rawBounds = getNodesBounds(nodes);
-      const OVERFLOW = 40;
-      const bounds = {
-        x: rawBounds.x - OVERFLOW,
-        y: rawBounds.y - OVERFLOW,
-        width: rawBounds.width + 2 * OVERFLOW,
-        height: rawBounds.height + 2 * OVERFLOW,
-      };
+      // Expand the node-box bounds so centered name labels are not clipped;
+      // geometry lives with the label in cascade-node.tsx.
+      const bounds = expandBoundsForLabels(getNodesBounds(nodes));
       const PADDING = 48;
       const TARGET_MAX = 1600;
       const zoom = Math.min(2, Math.max(0.15, Math.min(TARGET_MAX / bounds.width, TARGET_MAX / bounds.height)));

@@ -36,7 +36,7 @@ import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
-import { nodeTypes, toRFNode } from "./cascade-node";
+import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
 import { edgeTypes } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
@@ -146,14 +146,9 @@ function MergedViewCanvas() {
           containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport") ??
           document.querySelector<HTMLElement>(".react-flow__viewport");
         if (!viewport) return undefined;
-        const rawBounds = getNodesBounds(nodes);
-        const OVERFLOW = 40;
-        const bounds = {
-          x: rawBounds.x - OVERFLOW,
-          y: rawBounds.y - OVERFLOW,
-          width: rawBounds.width + 2 * OVERFLOW,
-          height: rawBounds.height + 2 * OVERFLOW,
-        };
+        // Expand the node-box bounds so centered name labels are not clipped;
+        // geometry lives with the label in cascade-node.tsx.
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
         const PADDING = 48;
         const TARGET_MAX = 1600;
         const zoom = Math.min(2, Math.max(0.15,

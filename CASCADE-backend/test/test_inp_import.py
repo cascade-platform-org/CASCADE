@@ -274,14 +274,53 @@ def test_flow_profiles_missing_returns_default_capacity():
     sweep) — every pipe falls back to FALLBACK_VELOCITY_MS, never crashes or
     zeroes capacity out."""
     from core.importers.inp import FALLBACK_VELOCITY_MS
-    from core.importers.inp.map import CAPACITY_MARGIN
+    from core.importers.inp.map import DEFAULT_CAPACITY_MARGIN
 
     wn = load_inp(SYNTHETIC_INP)
     bundle = build_bundle(wn, name="t")  # flow_profiles omitted
     edge_a = bundle.project.edges["e_A"]
     # diameter 300mm (J1->J2 pipe "A" in SYNTHETIC_INP), fallback velocity
-    expected = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * CAPACITY_MARGIN * 1_000_000.0
+    expected = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * DEFAULT_CAPACITY_MARGIN * 1_000_000.0
     assert edge_a.capacity == pytest.approx(expected, rel=1e-3)
+
+
+def test_capacity_margin_knob_scales_capacity_linearly():
+    """The `capacity_margin` ImportOptions knob multiplies every derived
+    pipe/valve capacity linearly (default 2.0) — a first-class per-import
+    parameter, not a hardcoded constant. Quadrupling it quadruples capacity."""
+    from core.importers.inp import ImportOptions
+
+    wn = load_inp(SYNTHETIC_INP)
+    cap_1 = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=1.0)
+    ).project.edges["e_A"].capacity
+    cap_4 = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=4.0)
+    ).project.edges["e_A"].capacity
+    assert cap_1 is not None and cap_4 is not None
+    assert cap_4 == pytest.approx(4.0 * cap_1, rel=1e-6)
+
+
+def test_max_velocity_caps_capacity_and_default_is_noop():
+    """`max_velocity` clamps the margined pipe velocity to a physical ceiling,
+    so no margin implies an unphysically fast pipe. Default None leaves every
+    capacity (and all validated results) unchanged."""
+    from core.importers.inp import ImportOptions
+
+    wn = load_inp(SYNTHETIC_INP)
+    uncapped = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=4.0)
+    ).project.edges["e_A"].capacity
+    # None default reproduces the uncapped capacity exactly.
+    default = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=None)
+    ).project.edges["e_A"].capacity
+    assert default == pytest.approx(uncapped)
+    # A tight ceiling reduces the fallback-velocity pipe's capacity.
+    capped = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=0.5)
+    ).project.edges["e_A"].capacity
+    assert capped is not None and uncapped is not None and capped < uncapped
 
 
 def test_orientation_trusts_simulated_direction_over_bfs():
@@ -331,8 +370,8 @@ def test_bidirectional_pipe_becomes_two_edges():
     # the pipe's WHOLE physical capacity — not a proportional share. A pipe
     # can carry all of it either way, just not both at once, and the flow
     # solver never gains from a cancelling two-way cycle.
-    from core.importers.inp.map import CAPACITY_MARGIN
-    full_cap = math.pi / 4.0 * 0.300**2 * 2.0 * CAPACITY_MARGIN * 1_000_000.0  # peak = velocity_fwd
+    from core.importers.inp.map import DEFAULT_CAPACITY_MARGIN
+    full_cap = math.pi / 4.0 * 0.300**2 * 2.0 * DEFAULT_CAPACITY_MARGIN * 1_000_000.0  # peak = velocity_fwd
     assert fwd.capacity == pytest.approx(full_cap, rel=1e-6)
     assert rev.capacity == pytest.approx(full_cap, rel=1e-6)
     assert any("both directions" in w for w in warnings)

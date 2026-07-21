@@ -1,27 +1,33 @@
 """
-engine/flow.py — Priority min-cost max-flow heuristic (PRIVATE IP).
+engine/flow.py — Priority-tiered fair-share flow heuristic (PRIVATE IP).
 
 Implements the flow proposal of ADR-0003 for a single `SourceToDemands`
-category: build a priority-aware capacitated flow network, solve a min-cost
-max-flow, and map each consumer's served ratio to a proposed Functionality level.
+category: build a priority-aware capacitated flow network, allocate scarce
+supply, and map each consumer's served ratio to a proposed Functionality level.
 
-Construction (ADR-0003 → Flow proposal):
+Shared construction (ADR-0003 → Flow proposal):
   - every member node is split in→out with an internal edge capped by its
     per-category throughput (`category_dependency_profiles[g].capacity`,
     unbounded if absent), scaled by the node's Functionality;
   - a super-source feeds each source node's `in` with its effective supply
     (`supply_capacity[g]` scaled by Functionality);
-  - each demanding node's `in` drains to a super-sink with capacity = its
-    `demand`, at a reward (negative cost) scaled by `priority`;
+  - each demanding node's `in` drains to a super-sink capped by its `demand`;
   - original edges (source `out` → target `in`) are capped by the edge's
     capacity scaled by its (post worst-of) Functionality.
 
-max-flow maximises total delivery; the min-cost tie-break (priority rewards vs a
-small uniform friction) routes scarce supply to higher-priority consumers and
-along shorter paths. `served_ratio = delivered / demand` maps to a level.
+Allocation over that graph (see ALLOCATIONS):
+  - tiered_fair_share (DEFAULT, the strategy validated in the paper): strict
+    priority preemption BETWEEN tiers, max-min fairness WITHIN a tier —
+    max-min water-filling by repeated `nx.maximum_flow` with a
+    residual-reachability bottleneck test. Weights are ignored on this path.
+  - priority_greedy: one `nx.max_flow_min_cost`; max-flow maximises total
+    delivery while the min-cost tie-break (priority rewards vs a small uniform
+    friction) routes scarce supply to higher-priority consumers and shorter
+    paths. Winner-take-all among equals.
 
-Capacities/weights are integers (networkx min-cost flow requires it), so all
-quantities are scaled by `SCALE` and rounded; the served ratio is scale-invariant.
+`served_ratio = delivered / demand` maps to a level. Capacities/weights are
+integers (networkx flow solvers require it), so all quantities are scaled by
+`SCALE` and rounded; the served ratio is scale-invariant.
 """
 from __future__ import annotations
 

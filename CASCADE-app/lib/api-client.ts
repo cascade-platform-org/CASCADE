@@ -365,6 +365,15 @@ export interface ImportInpKnobs {
    *  project, pass that project's own functionality_scale.length so the
    *  imported values line up with its (untouched) scale. */
   nLevels?: number;
+  /** Uniform multiplier on every sweep-derived pipe/valve capacity. Backend
+   *  default 2.0; higher = more optimistic (fewer false alarms), lower = more
+   *  conservative (fewer missed criticals). */
+  capacityMargin?: number;
+  /** Optional physical ceiling (m/s) on the margined pipe velocity, so the
+   *  margin can't imply an unphysically fast pipe. Water-main design ceiling
+   *  ~2.5–3 m/s. Omit (undefined) to leave capacities uncapped (backend
+   *  default). */
+  maxVelocity?: number;
 }
 
 /** POST /api/import/inp — convert an EPANET water network to a CASCADE
@@ -386,6 +395,8 @@ export async function importInp(
       demand_mode: knobs.demandMode,
       derive_priorities: knobs.derivePriorities,
       n_levels: knobs.nLevels,
+      capacity_margin: knobs.capacityMargin,
+      max_velocity: knobs.maxVelocity,
     }),
   });
   if (!res.ok) {

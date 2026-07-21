@@ -32,7 +32,7 @@ parses/skeletonizes/solves; pyproj (MIT) does CRS.
 | Junction, demand < 0 | `Source` (`kind: "injection_well"`), supply = the injection rate — the EPANET well idiom; mapping it as Infrastructure deletes the network's supply (Net2's only source is such a junction) |
 | Pump link | inline `Infrastructure` node (`["water","pumping"]`) + two half-edges capped by pump-curve max flow; always imported operational (see below) |
 | Valve link | inline `Infrastructure` node (`["water","valve"]`); `.inp` `Closed` → Functionality 1 |
-| Pipe | edge, `capacity = π/4·d²·v × CAPACITY_MARGIN`, `v` = peak simulated velocity (see Capacity) |
+| Pipe | edge, `capacity = π/4·d²·min(v × capacity_margin, max_velocity)`, `v` = peak simulated velocity (see Capacity) |
 
 **Pumps import as operational regardless of `.inp` status.** A pump's t=0
 status is a duty-cycle artifact (off overnight, waiting on a tank control),
@@ -61,8 +61,11 @@ edited in the Inspector afterwards.
 ### Capacity — Sweep + Contingency + Margin (CONTEXT.md terms)
 
 `.inp` gives diameter, not flow, so a velocity converts one to the other.
-Current rule: `π/4·d²·v_peak × CAPACITY_MARGIN(=2)`, where `v_peak` is each
-pipe/valve's highest simulated velocity across:
+Current rule: `π/4·d²·min(v_peak × capacity_margin, max_velocity)`, where the
+margin defaults to 2 (`DEFAULT_CAPACITY_MARGIN`; exposed as
+`ImportOptions.capacity_margin`) and `max_velocity` is an optional physical
+ceiling (default off/None). `v_peak` is each pipe/valve's highest simulated
+velocity across:
 
 1. the **demand-multiplier Sweep** (1×→8×, independent PDD steady states,
    every junction fixed to the chosen `demand_mode` demand — this anchoring
