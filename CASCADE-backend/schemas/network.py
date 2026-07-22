@@ -300,7 +300,7 @@ class Canvas(BaseModel):
     # Same values as core.importers.inp.map.DemandMode — declared as its own
     # Literal because schemas/ cannot import from core/ (map.py already
     # imports schemas.network; reusing its alias would be a circular import).
-    source_inp_demand_mode: Optional[Literal["peak", "base", "avg"]] = Field(
+    source_inp_demand_mode: Optional[Literal["peak", "peak_hour", "base", "avg"]] = Field(
         default=None,
         description=(
             "demand_mode ('peak'|'base'|'avg') this canvas was imported with — reused by "

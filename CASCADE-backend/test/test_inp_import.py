@@ -210,29 +210,38 @@ def test_demand_survives_engine_fixed_point_rounding():
     assert _scaled(demand) > 0  # must NOT round away to zero
 
 
-def test_source_supply_is_sum_of_outgoing_pipe_capacity(bundle_and_warnings):
-    """Source supply_capacity is always derived from outgoing pipe capacity —
-    not a user choice. R1's only outgoing edge is the pump half-edge (capacity
-    from the pump curve, 30 L/s = 0.03 m3/s SI * FLOW_UNIT_SCALE); T1's only
-    outgoing edge is pipe B, capacity from its own simulated velocity."""
+def test_source_supply_reservoir_unbounded_tank_nominal(bundle_and_warnings):
+    """Supply differs by source TYPE (2026-07-22 model):
+      - a RESERVOIR is modelled as fixed-head / near-infinite (like EPANET),
+        so its supply_capacity is UNBOUNDED_SUPPLY_FALLBACK — the outlet pipe,
+        not the source, is the limit.
+      - a TANK is a finite store, so its supply_capacity is its NOMINAL delivered
+        outflow (one PDD solve), a TIGHTER bound than the sum of its outgoing
+        pipe capacities (pipes are deliberately over-sized)."""
+    from core.importers.inp import UNBOUNDED_SUPPLY_FALLBACK
+
     bundle, _ = bundle_and_warnings
-    assert bundle.project.nodes["R1"].supply_capacity["water"] == pytest.approx(30_000.0)
+    assert bundle.project.nodes["R1"].supply_capacity["water"] == UNBOUNDED_SUPPLY_FALLBACK
     t1_supply = bundle.project.nodes["T1"].supply_capacity["water"]
-    b_capacity = bundle.project.edges["e_B"].capacity
-    assert t1_supply == pytest.approx(b_capacity)
+    b_capacity = bundle.project.edges["e_B"].capacity  # T1's only outgoing pipe
+    # A finite, real deliverable yield — and strictly below the over-sized pipe
+    # capacity the legacy sum-of-pipes rule would have used.
+    assert 0 < t1_supply < UNBOUNDED_SUPPLY_FALLBACK
+    assert t1_supply < b_capacity
 
 
-def test_source_supply_falls_back_without_a_capacitated_pipe():
-    """A source with no outgoing edge at all has nothing sensible to derive
-    supply from — falls back to UNBOUNDED_SUPPLY_FALLBACK with a warning,
-    never crashes or zeroes out."""
+def test_isolated_tank_supply_falls_back_without_a_capacitated_pipe():
+    """A TANK with no incident link has neither a nominal outflow nor an
+    outgoing pipe capacity to derive supply from — falls back to
+    UNBOUNDED_SUPPLY_FALLBACK with a warning, never crashes or zeroes out.
+    (Reservoirs are UNBOUNDED unconditionally and never reach this path.)"""
     from core.importers.inp import UNBOUNDED_SUPPLY_FALLBACK
 
     wn = load_inp(SYNTHETIC_INP)
-    wn.remove_link("P1")  # R1's only connection — now fully isolated
+    wn.remove_link("B")  # T1's only connection — now fully isolated
     warnings: list[str] = []
     bundle = build_bundle(wn, name="t", warnings=warnings)
-    assert bundle.project.nodes["R1"].supply_capacity["water"] == UNBOUNDED_SUPPLY_FALLBACK
+    assert bundle.project.nodes["T1"].supply_capacity["water"] == UNBOUNDED_SUPPLY_FALLBACK
     assert any("no capacitated outgoing pipe" in w for w in warnings)
 
 
@@ -287,40 +296,51 @@ def test_flow_profiles_missing_returns_default_capacity():
 def test_capacity_margin_knob_scales_capacity_linearly():
     """The `capacity_margin` ImportOptions knob multiplies every derived
     pipe/valve capacity linearly (default 2.0) — a first-class per-import
-    parameter, not a hardcoded constant. Quadrupling it quadruples capacity."""
+    parameter, not a hardcoded constant. Quadrupling it quadruples capacity.
+    The `max_velocity` ceiling is disabled here (None) so it can't clamp the
+    high-margin case and hide the linearity — the clamp itself is exercised by
+    `test_max_velocity_caps_capacity_and_default_is_3ms`."""
     from core.importers.inp import ImportOptions
 
     wn = load_inp(SYNTHETIC_INP)
     cap_1 = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=1.0)
+        wn, name="t", options=ImportOptions(capacity_margin=1.0, max_velocity=None)
     ).project.edges["e_A"].capacity
     cap_4 = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0)
+        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=None)
     ).project.edges["e_A"].capacity
     assert cap_1 is not None and cap_4 is not None
     assert cap_4 == pytest.approx(4.0 * cap_1, rel=1e-6)
 
 
-def test_max_velocity_caps_capacity_and_default_is_noop():
+def test_max_velocity_caps_capacity_and_default_is_3ms():
     """`max_velocity` clamps the margined pipe velocity to a physical ceiling,
-    so no margin implies an unphysically fast pipe. Default None leaves every
-    capacity (and all validated results) unchanged."""
+    so a large margin can't imply an unphysically fast pipe. The DEFAULT is
+    3.0 m/s (the water-main design ceiling, matching the ground-truth
+    velocity-exceedance flag); max_velocity=None disables the cap (legacy
+    pre-2026-07 behaviour)."""
+    import math
+
     from core.importers.inp import ImportOptions
 
     wn = load_inp(SYNTHETIC_INP)
-    uncapped = build_bundle(
+    # fallback velocity 1.0 m/s × margin 4.0 = 4.0 m/s margined, above the 3.0 ceiling.
+    capped_default = build_bundle(
         wn, name="t", options=ImportOptions(capacity_margin=4.0)
     ).project.edges["e_A"].capacity
-    # None default reproduces the uncapped capacity exactly.
-    default = build_bundle(
+    capped_explicit = build_bundle(
+        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=3.0)
+    ).project.edges["e_A"].capacity
+    uncapped = build_bundle(
         wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=None)
     ).project.edges["e_A"].capacity
-    assert default == pytest.approx(uncapped)
-    # A tight ceiling reduces the fallback-velocity pipe's capacity.
-    capped = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=0.5)
-    ).project.edges["e_A"].capacity
-    assert capped is not None and uncapped is not None and capped < uncapped
+    assert capped_default is not None and uncapped is not None
+    # The default reproduces the explicit 3.0 ceiling, and both cap below uncapped.
+    assert capped_default == pytest.approx(capped_explicit)
+    assert capped_default < uncapped
+    # Capped capacity is exactly area × 3.0 m/s × 1e6 (velocity pinned to the ceiling).
+    area = math.pi / 4.0 * 0.300**2
+    assert capped_default == pytest.approx(area * 3.0 * 1_000_000.0, rel=1e-6)
 
 
 def test_orientation_trusts_simulated_direction_over_bfs():
@@ -370,8 +390,9 @@ def test_bidirectional_pipe_becomes_two_edges():
     # the pipe's WHOLE physical capacity — not a proportional share. A pipe
     # can carry all of it either way, just not both at once, and the flow
     # solver never gains from a cancelling two-way cycle.
-    from core.importers.inp.map import DEFAULT_CAPACITY_MARGIN
-    full_cap = math.pi / 4.0 * 0.300**2 * 2.0 * DEFAULT_CAPACITY_MARGIN * 1_000_000.0  # peak = velocity_fwd
+    # peak velocity 2.0 m/s × default margin 2.0 = 4.0 m/s, clamped to the
+    # default 3.0 m/s max_velocity ceiling → capacity = area × 3.0 × 1e6.
+    full_cap = math.pi / 4.0 * 0.300**2 * 3.0 * 1_000_000.0
     assert fwd.capacity == pytest.approx(full_cap, rel=1e-6)
     assert rev.capacity == pytest.approx(full_cap, rel=1e-6)
     assert any("both directions" in w for w in warnings)

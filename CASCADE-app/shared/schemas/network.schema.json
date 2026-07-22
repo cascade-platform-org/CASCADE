@@ -742,6 +742,7 @@
             {
               "enum": [
                 "peak",
+                "peak_hour",
                 "base",
                 "avg"
               ],

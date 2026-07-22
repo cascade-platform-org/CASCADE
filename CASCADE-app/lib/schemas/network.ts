@@ -214,9 +214,9 @@ export const CanvasSchema = z.object({
   /**
    * demand_mode this canvas was imported with — reused by graph_type="epanet"
    * propagation for a consistent demand baseline. Mirrors the backend's
-   * Literal["peak","base","avg"] (schemas/network.py Canvas).
+   * Literal["peak","peak_hour","base","avg"] (schemas/network.py Canvas).
    */
-  source_inp_demand_mode: z.enum(["peak", "base", "avg"]).nullish(),
+  source_inp_demand_mode: z.enum(["peak", "peak_hour", "base", "avg"]).nullish(),
   graph: GraphSchema,
 });
 

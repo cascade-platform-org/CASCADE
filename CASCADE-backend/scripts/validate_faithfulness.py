@@ -88,7 +88,7 @@ which junctions WNTR calls "critical," so a fidelity claim that only holds at
 one arbitrary pressure choice would be a weaker claim than it looks.
 
     python scripts/validate_faithfulness.py
-    python scripts/validate_faithfulness.py --networks Net1,Net3 --situations 30 --seed 1
+    python scripts/validate_faithfulness.py --networks Net1,Net3 --seed 1
     python scripts/validate_faithfulness.py --n-levels 5
     python scripts/validate_faithfulness.py --required-pressure 15 --minimum-pressure 5
 """
@@ -97,6 +97,7 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
+import itertools
 import math
 import random
 import statistics
@@ -104,6 +105,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 # Allow `python scripts/validate_faithfulness.py` from CASCADE-backend/ by
 # putting the backend package root on sys.path (same pattern as
@@ -132,12 +134,20 @@ from schemas.config import ModelConfiguration  # noqa: E402
 from schemas.network import Project  # noqa: E402
 from schemas.results import PropagationRequest  # noqa: E402
 
+# Scored families (2026-07-22): dropped break/hot/both (uninformative — see
+# benchmark-protocol.md §5). Each family is capped ~60 situations. `cluster` is
+# random (uses seeds); `targeted`/`tank`/`source` are DETERMINISTIC combinatorial
+# families — 10 singles + 20 pairs + 30 triplets of the consequential units.
+_ALL_KINDS = ["cluster", "targeted", "tank", "source"]
+# `_random_situation`'s legacy kind list (still used by margin_sweep.py and the
+# diag scripts; NOT used by the benchmark's family generation below).
 _KINDS = ["break", "hot", "both", "cluster", "targeted"]
-# "tank" is deliberately not in _KINDS: that list drives `_random_situation`'s
-# rng.choice, and the tank family is exhaustive (`_tank_situations`), not
-# sampled — it's added separately in main()/reported alongside _KINDS in
-# _ALL_KINDS instead.
-_ALL_KINDS = [*_KINDS, "tank"]
+
+# Combinatorial family caps (singles / pairs / triplets per network).
+_FAMILY_SINGLES, _FAMILY_PAIRS, _FAMILY_TRIPLETS = 10, 20, 30
+# Cluster family: random situations, `_CLUSTER_PER_SEED` per seed over
+# `_CLUSTER_SEEDS` seeds (~60 total).
+_CLUSTER_PER_SEED, _CLUSTER_SEEDS = 20, 3
 
 # Cluster attack: how many topological hops from a random epicenter link
 # count as "in the blast radius," and how many of the breakable links found
@@ -149,7 +159,7 @@ _CLUSTER_MAX_BREAKS = 6
 # diameter (the model's own proxy for trunk-main capacity) plus every pump
 # (a pump is a structural bottleneck regardless of diameter) — `k` of that
 # pool are closed per situation.
-_TARGET_TOP_FRACTION = 0.10
+_TARGET_TOP_FRACTION = 0.20
 _TARGET_BREAKS = 3
 
 # Hot period: a broad (not just top-consumer) random subset of junctions see
@@ -232,19 +242,75 @@ def _targeted_break(wn: wntr.network.WaterNetworkModel, rng: random.Random) -> l
     return rng.sample(pool, k)
 
 
-def _tank_situations(wn: wntr.network.WaterNetworkModel) -> list[Situation]:
-    """One Situation per Tank — ALL of its connecting links closed. Tanks
-    aren't links themselves (WNTR has no "close this Tank" flag), so the
-    closest a t=0 steady solve can get to "this tank contributes zero water"
-    is closing every link touching it (`wn.get_links_for_node`), covering
-    whatever mix of pipes/pumps/valves connects it in this particular file.
-    `_cascade_levels`/`_solve_served_ratios` already know how to apply
-    `broken_link_ids` to both sides identically — no new mechanism needed.
-    Exhaustive over every tank, not sampled: see the module docstring."""
+def _combo_situations(
+    units: list[str],
+    prefix: str,
+    links_for: Callable[[str], list[str]],
+) -> list[Situation]:
+    """Deterministic combinatorial family: `_FAMILY_SINGLES` single units, then
+    `_FAMILY_PAIRS` pairs, then `_FAMILY_TRIPLETS` triplets. `units` is pre-sorted
+    by importance, so `itertools.combinations` (lexicographic over that order)
+    yields the highest-impact combos first — no randomness, fully reproducible.
+    `links_for(unit)` maps a unit (a link id, a tank id, a reservoir id) to the
+    link ids that closing it entails; a situation closes the union over its combo.
+    Combos that resolve to no links (e.g. a source with no pipe outlet) are skipped."""
+    combos = (
+        [(u,) for u in units[:_FAMILY_SINGLES]]
+        + list(itertools.islice(itertools.combinations(units, 2), _FAMILY_PAIRS))
+        + list(itertools.islice(itertools.combinations(units, 3), _FAMILY_TRIPLETS))
+    )
     situations: list[Situation] = []
-    for i, tid in enumerate(sorted(wn.tank_name_list)):
-        links = sorted(wn.get_links_for_node(tid))
-        situations.append(Situation(label=f"tank#{i}", broken_link_ids=links))
+    idx = 0
+    for combo in combos:
+        broken = sorted({lid for unit in combo for lid in links_for(unit)})
+        if not broken:
+            continue
+        situations.append(Situation(label=f"{prefix}#{idx}", broken_link_ids=broken))
+        idx += 1
+    return situations
+
+
+def _targeted_situations(wn: wntr.network.WaterNetworkModel) -> list[Situation]:
+    """Capacity-targeted attack: 1/2/3-link closures among the top-20%-diameter
+    pipes plus every pump (the model's proxy for consequential trunk mains),
+    largest first."""
+    pipes = sorted(wn.pipe_name_list, key=lambda p: wn.get_link(p).diameter, reverse=True)
+    pool = pipes[: max(1, round(len(pipes) * _TARGET_TOP_FRACTION))] + list(wn.pump_name_list)
+    return _combo_situations(pool, "targeted", lambda lid: [lid])
+
+
+def _tank_situations(wn: wntr.network.WaterNetworkModel) -> list[Situation]:
+    """Tank loss: 1/2/3 tanks isolated together. A tank isn't a link (WNTR has
+    no "close this tank" flag), so isolating it = closing every link touching it
+    (`get_links_for_node`). Combinatorial, replacing the old exhaustive-per-tank."""
+    tanks = sorted(wn.tank_name_list)
+    return _combo_situations(tanks, "tank", lambda tid: list(wn.get_links_for_node(tid)))
+
+
+def _source_situations(wn: wntr.network.WaterNetworkModel) -> list[Situation]:
+    """Source (reservoir) failure: 1/2/3 reservoirs cut together by closing their
+    outlet link(s). Reachability removes a source cut this way (it becomes
+    topologically isolated), so junctions with no path to a surviving source are
+    flagged — a fair, concentrated comparison (benchmark-protocol.md §6)."""
+    reservoirs = sorted(wn.reservoir_name_list)
+    return _combo_situations(reservoirs, "source", lambda rid: list(wn.get_links_for_node(rid)))
+
+
+def _cluster_situations(
+    wn: wntr.network.WaterNetworkModel, graph: nx.MultiGraph, base_seed: int
+) -> list[Situation]:
+    """Localized hazard: `_CLUSTER_PER_SEED` random clustered breaks per seed over
+    `_CLUSTER_SEEDS` seeds (~60), the only random family — seeds give it variance
+    the deterministic families don't need."""
+    situations: list[Situation] = []
+    idx = 0
+    for s in range(base_seed, base_seed + _CLUSTER_SEEDS):
+        rng = random.Random(s * 7919 + 1)  # nosec B311 — deterministic scenarios
+        for _ in range(_CLUSTER_PER_SEED):
+            broken = _clustered_break(wn, graph, rng)
+            if broken:
+                situations.append(Situation(label=f"cluster#{idx}", broken_link_ids=broken))
+                idx += 1
     return situations
 
 
@@ -597,10 +663,9 @@ def _binary_confusion(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--networks", default="Net1,Net3", help="Comma-separated wntr.library.model_library names.")
-    parser.add_argument("--situations", type=int, default=20, help="Random situations per network.")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-levels", type=int, default=3)
-    parser.add_argument("--demand-mode", default="peak", choices=["peak", "base", "avg"])
+    parser.add_argument("--demand-mode", default="peak_hour", choices=["peak", "peak_hour", "base", "avg"])
     parser.add_argument(
         "--required-pressure", type=float, default=20.0,
         help="WNTR PDD required_pressure (m) for the ground-truth solve — the pressure at/above which a "
@@ -623,18 +688,26 @@ def main() -> None:
         help="Alias for --priority-mode none (kept for earlier E3' runs' command-line compatibility).",
     )
     parser.add_argument(
-        "--priority-mode", choices=["sweep", "contingency", "none"], default="sweep",
-        help="How junction priorities are derived (E3'/E3‴): 'sweep' = scarcity_priorities' "
-             "demand-multiplier failure order (the original method); 'contingency' = "
-             "contingency_priorities' who-fails-under-single-link-closures frequency (poses the "
-             "structural-failure question the engine's shedding order actually answers); 'none' = "
-             "engine default priority everywhere (the ablated arm).",
+        "--priority-mode", choices=["sweep", "contingency", "none"], default="contingency",
+        help="How junction priorities are derived. 'contingency' (DEFAULT, 2026-07-22) = "
+             "contingency_priorities' deterministic cycle-aware severity ranking (demand-weighted "
+             "unmet-service deficit over cycle-trunk singles/pairs/triplets) — cuts false positives "
+             "~44%, precision ~+48% over 'none' at a small recall cost; 'sweep' = scarcity_priorities' "
+             "demand-multiplier failure order (legacy, ablated ~null on FMS); 'none' = engine default "
+             "priority everywhere (fast baseline, precision ~0.34 on the new setup).",
     )
     parser.add_argument(
         "--contingency-bias", type=float, default=0.0,
         help="Fraction of contingency_samples drawn from the top-10%%-diameter-pipes-plus-pumps pool "
              "instead of uniformly over all links (E3''). Diagnoses/fixes the targeted/clustered-attack "
              "precision gap: see link_flow_profiles' contingency_bias_fraction docstring.",
+    )
+    parser.add_argument(
+        "--contingency-multiplier", type=float, default=1.0,
+        help="Demand multiplier applied DURING contingency solves (default 1.0 = nominal "
+             "demand, orthogonal topology-only reroute). >1 sizes backup pipes from the flow "
+             "they carry when a link closure and a demand surge coincide. See "
+             "link_flow_profiles' contingency_multiplier docstring.",
     )
     parser.add_argument(
         "--contingency-samples", type=int, default=20,
@@ -660,7 +733,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    rng = random.Random(args.seed)  # nosec B311 — deterministic test-scenario generation, not security
     all_scores: list[float] = []
     all_confusion = ConfusionCounts()
     scores_by_kind: dict[str, list[float]] = {kind: [] for kind in _ALL_KINDS}
@@ -731,6 +803,7 @@ def main() -> None:
             contingency_bias_fraction=args.contingency_bias,
             contingency_exhaustive_trunk=args.contingency_exhaustive_trunk,
             contingency_trunk_pairs=args.contingency_trunk_pairs,
+            contingency_multiplier=args.contingency_multiplier,
         )
         priority_mode = "none" if args.no_priority_sweep else args.priority_mode
         if priority_mode == "sweep":
@@ -750,11 +823,14 @@ def main() -> None:
         print(f"\n=== {name} ({len(demands)} junctions, n_levels={args.n_levels}) ===")
         network_scores: list[float] = []
         network_confusion = ConfusionCounts()
-        # The `args.situations` random draws (break/hot/both/cluster/targeted)
-        # plus every tank's complete-disservice situation, exhaustively — see
-        # `_tank_situations` / the module docstring's "tank" family.
-        situations = [_random_situation(wn, graph, rng, i) for i in range(args.situations)]
-        situations += _tank_situations(wn)
+        # Four families (benchmark-protocol.md §5), ~60 situations each:
+        # cluster (random, seeded), targeted/tank/source (deterministic combos).
+        situations = (
+            _cluster_situations(wn, graph, args.seed)
+            + _targeted_situations(wn)
+            + _tank_situations(wn)
+            + _source_situations(wn)
+        )
         for situation in situations:
             ratios, vflag = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
             if not ratios:

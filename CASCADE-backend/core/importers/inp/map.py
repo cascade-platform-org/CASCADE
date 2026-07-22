@@ -59,6 +59,7 @@ from core.importers.inp.sim import (
     FALLBACK_VELOCITY_MS,
     NEGLIGIBLE_VELOCITY_MS,
     LinkFlowProfile,
+    nominal_source_outflow,
 )
 from schemas.config import (
     CategoryDefinition,
@@ -110,7 +111,7 @@ def _flow_units(value: float) -> float:
     true SI m³/s to produce real hours)."""
     return value * FLOW_UNIT_SCALE
 
-DemandMode = Literal["peak", "base", "avg"]
+DemandMode = Literal["peak", "peak_hour", "base", "avg"]
 
 # Source supply_capacity is always the sum of a Reservoir/Tank's outgoing pipe
 # capacities — not a user choice. A source with literally no capacitated
@@ -218,7 +219,18 @@ class ImportOptions(BaseModel):
 
     demand_mode: DemandMode = Field(
         default="peak",
-        description="Demand snapshot: base × max/mean pattern multiplier, or base alone.",
+        description="Demand snapshot: base × max/mean pattern multiplier, base "
+                    "alone, or 'peak_hour' (coincident system-peak).",
+    )
+    nominal_supply: bool = Field(
+        default=True,
+        description="Source (reservoir/tank) supply_capacity = its NOMINAL "
+                    "delivered outflow (one nominal PDD solve) instead of the sum "
+                    "of its outgoing pipe capacities. Default True: pipes are "
+                    "over-sized so summing their capacity overstates yield ~6x and "
+                    "leaves sources unable to bottleneck. Set False for the legacy "
+                    "incident-pipe rule (falls back to it automatically if the "
+                    "nominal solve fails).",
     )
     source_crs: str = Field(
         default="EPSG:3004",
@@ -247,14 +259,13 @@ class ImportOptions(BaseModel):
                     "alarms), higher is more optimistic. Default 2.0.",
     )
     max_velocity: Optional[float] = Field(
-        default=None, gt=0,
-        description="Optional physical ceiling (m/s) on the margined pipe "
-                    "velocity, so no capacity_margin can imply an unphysically "
-                    "fast pipe. When set, capacity = area x min(v_peak x margin, "
-                    "max_velocity). A water-main design ceiling is ~2.5-3 m/s. "
-                    "Default None (uncapped) keeps the imported capacities and "
-                    "all validated results unchanged; set it to bound a large "
-                    "margin physically.",
+        default=3.0, gt=0,
+        description="Physical ceiling (m/s) on the margined pipe velocity, so no "
+                    "capacity_margin can imply an unphysically fast pipe: "
+                    "capacity = area x min(v_peak x margin, max_velocity). Default "
+                    "3.0 m/s is the water-main design ceiling (matches the "
+                    "ground-truth velocity-exceedance flag V_MAX_DESIGN_MS). Set "
+                    "to None to disable the cap (uncapped, pre-2026-07 behaviour).",
     )
 
 
@@ -297,12 +308,14 @@ def _demand_value(junction: Any, mode: DemandMode, wn: Any) -> float:
         base = ts.base_value or 0.0
         mult = 1.0
         if mode != "base" and ts.pattern_name:
-            try:
-                m = wn.get_pattern(ts.pattern_name).multipliers
-                if len(m):
-                    mult = float(max(m)) if mode == "peak" else float(sum(m) / len(m))
-            except KeyError:
-                pass
+            # WNTR's get_pattern returns None (not KeyError) for an
+            # unresolved pattern name — a malformed .inp can reference a
+            # pattern it never defines. Guard both: a missing pattern falls
+            # back to the flat multiplier rather than crashing the import.
+            pattern = wn.get_pattern(ts.pattern_name)
+            if pattern is not None and len(pattern.multipliers):
+                m = pattern.multipliers
+                mult = float(max(m)) if mode == "peak" else float(sum(m) / len(m))
         total += base * mult
     return total
 
@@ -314,11 +327,59 @@ def compute_junction_demands(wn: Any, mode: DemandMode) -> dict[str, float]:
     sized against) must agree on. Calling this once and passing the SAME dict
     to both keeps them consistent regardless of `mode`; computing it twice
     from the same (wn, mode) is deterministic, but callers should still
-    prefer passing one shared dict where practical."""
+    prefer passing one shared dict where practical.
+
+    `mode="peak_hour"` is the COINCIDENT system peak: the single pattern hour at
+    which total network consumption is highest, with every junction taken at its
+    own multiplier for THAT hour. This differs from `"peak"`, which gives each
+    junction its OWN maximum multiplier regardless of when it occurs (a junction
+    that peaks at night and another that peaks at noon both count at full,
+    overstating the simultaneous load). Peak-hour is the physically realistic
+    stress a real system actually sees at once."""
+    if mode == "peak_hour":
+        return _peak_hour_demands(wn)
     return {
         jid: _demand_value(_wn_node(wn, jid), mode, wn)
         for jid in wn.junction_name_list
     }
+
+
+def _peak_hour_demands(wn: Any) -> dict[str, float]:
+    """Demand at the single hour of maximum total consumption (coincident peak).
+
+    For each junction we hold its (base, pattern-multipliers) timeseries; we scan
+    the pattern horizon (the longest pattern length, shorter patterns cycled by
+    modulo), find the hour t* maximising total positive demand, and return every
+    junction's demand at t*. Junctions with no pattern are flat (multiplier 1)."""
+    junctions = list(wn.junction_name_list)
+    profiles: dict[str, list[tuple[float, list[float] | None]]] = {}
+    horizon = 1
+    for jid in junctions:
+        node = _wn_node(wn, jid)
+        items: list[tuple[float, list[float] | None]] = []
+        for ts in node.demand_timeseries_list:
+            base = ts.base_value or 0.0
+            mults: list[float] | None = None
+            if ts.pattern_name:
+                pattern = wn.get_pattern(ts.pattern_name)
+                if pattern is not None and len(pattern.multipliers):
+                    mults = [float(m) for m in pattern.multipliers]
+                    horizon = max(horizon, len(mults))
+            items.append((base, mults))
+        profiles[jid] = items
+
+    def value_at(items: list[tuple[float, list[float] | None]], t: int) -> float:
+        total = 0.0
+        for base, mults in items:
+            total += base * (mults[t % len(mults)] if mults else 1.0)
+        return total
+
+    best_t, best_total = 0, float("-inf")
+    for t in range(horizon):
+        total = sum(max(0.0, value_at(profiles[j], t)) for j in junctions)
+        if total > best_total:
+            best_total, best_t = total, t
+    return {j: value_at(profiles[j], best_t) for j in junctions}
 
 
 def _collect_links(
@@ -689,9 +750,34 @@ def build_bundle(
             for endpoint in (a, b):
                 incident_caps[endpoint] = incident_caps.get(endpoint, 0.0) + cap
 
+    # Supply differs by source TYPE (2026-07-22):
+    #  - RESERVOIRS are near-infinite bodies (EPANET models them as fixed-head,
+    #    i.e. unbounded supply); what limits delivery is the outlet pipe, not the
+    #    source. So reservoirs get UNBOUNDED supply. This also keeps multi-source
+    #    failure valid against WNTR: when one reservoir is cut, the survivors —
+    #    infinite in WNTR — must be able to cover the slack in the model too, or
+    #    the model over-predicts starvation the oracle never sees.
+    #  - TANKS are geometry-limited stores; their deliverable yield IS finite, so
+    #    they get their NOMINAL delivered outflow (one PDD solve). This is what
+    #    makes tank isolation/degradation meaningful.
+    #  - Injection wells keep their declared rate (set at node creation, not here).
+    reservoir_names = set(wn.reservoir_name_list)
+    # Only tanks consume the nominal solve (reservoirs are UNBOUNDED below); skip
+    # the extra PDD solve entirely when the network has no tanks.
+    tank_nominal = (
+        nominal_source_outflow(wn, demands)
+        if options.nominal_supply and wn.tank_name_list
+        else {}
+    )
+
     def _supply_for(source_id: str) -> float:
         # `cap` stays true SI m³/s; only the returned, model-bound value is
         # rescaled (`_flow_units`).
+        if source_id in reservoir_names:
+            return UNBOUNDED_SUPPLY_FALLBACK
+        nominal = tank_nominal.get(source_id, 0.0)  # tanks
+        if nominal > 0:
+            return _flow_units(nominal)
         cap = incident_caps.get(source_id, 0.0)
         if cap <= 0:
             warnings.append(

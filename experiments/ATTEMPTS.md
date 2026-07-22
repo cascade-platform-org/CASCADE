@@ -176,3 +176,135 @@ pooled n=537) — **precision** collapses instead (0.92 → 0.35). The
 module gets more false-positive-critical, not more false-negative-critical,
 as families get harder — consistent with the disclosed pessimism bias, but
 the opposite of what was originally predicted.
+
+## 9. Contingency demand multiplier + held-out medium networks (2026-07-21)
+
+Two reviewer-driven probes. Harnesses: `contingency_multiplier_sweep.sh` +
+`aggregate_cmult.py` (multiplier); `margin_sweep.py` on downloaded nets
+(generalization). Raw: `cmult_*.csv`.
+
+### 9a. Should the demand multiplier scale the CONTINGENCY solves too? — NO (null)
+
+Idea: today the demand-escalation sweep runs 1x..8x but the single-link
+contingency solves run at NOMINAL demand (topology change only). Reviewer
+intuition: stack demand onto the contingency closures too, sizing backup
+pipes from "a break AND a surge at once". Added `contingency_multiplier`
+(sim.py `link_flow_profiles`, default 1.0 = shipped) + `--contingency-multiplier`
+(validate). Re-ran the full headline protocol (6 nets x 3 seeds x 30 sit,
+exhaustive-trunk + 20 uniform + 30 pairs, priority none) per multiplier.
+
+| mult | pooled FMS | break | targeted FMS | mod prec | targeted recall |
+|---:|---:|---:|---:|---:|---:|
+| 1.0 (shipped) | 0.958 | 0.983 | 0.939 | 0.62 | 0.94 |
+| 1.25 | 0.958 | 0.983 | 0.939 | 0.62 | 0.94 |
+| 1.5  | 0.957 | 0.974 | 0.939 | 0.60 | 0.94 |
+| 1.75 | 0.958 | 0.981 | 0.937 | 0.62 | 0.94 |
+| 2.0  | 0.955 | 0.970 | 0.939 | 0.60 | 0.94 |
+
+Flat everywhere; break-FMS if anything DECAYS at the top. The 2.5/3.0 arms
+HUNG on Tarcento (its ground truth stops converging >=2.5, see sim.py
+`_run_sweep_step` note) — so pushing the multiplier up doesn't just fail to
+help, it breaks the oracle. WHY null: capacity is the MAX over all solves,
+and the 1x..8x demand sweep already reaches far higher demand than a 1.25-2x
+contingency; the contingency's value is the TOPOLOGY change, not the demand
+level. Kept `contingency_multiplier=1.0` (orthogonal stressors). No main-text
+change — this validates the §4 framing; candidate for a one-line Supp. S2 null.
+
+### 9b. Extending the network sample with held-out MEDIUM networks
+
+Reviewer: 6 nets is thin, reachability looks strong on FMS. Downloaded from
+WaterBenchmarkHub (`raw-networks/benchmark/`): Modena (268 j), CTown (388 j,
+11 pumps/7 tanks), Balerma (443 j), Pescara, MarchiRural. `>50 j` medium band
+— big enough to matter, small enough to converge where the KY nets (ky10/ky4,
+thousands of nodes) self-starve.
+
+- **Pescara** — WNTR parse error (KeyError '79'). Dropped.
+- **Balerma** — DISCARD. Its own NULL model scores 0.48 (break), i.e. the
+  ground-truth PDD solve self-starves (most junctions critical for the
+  do-nothing baseline). Same degenerate class as the abandoned KY nets — not
+  a valid oracle.
+- **Modena, CTown** — VALID. Ordinary-failure FMS GENERALIZES out-of-sample
+  (break 0.998 Modena / 0.968 CTown; these nets set no parameter). But
+  capacity-targeted DETECTION is poor: precision ~0.14-0.15 (heavy cry-wolf),
+  worse than the original six (0.35-0.72).
+
+Is the low precision fixable by the capacity margin? NO — margin sweep on
+Modena (10 sit): x2 -> prec 0.17 recall 0.91; x4 -> prec 0.00 recall 0.00;
+x8 -> 0.00/0.00. Raising the margin trades all false alarms for MISSED
+detections (recall collapses to 0) with FMS barely moving — there is no
+margin giving good precision AND recall. Signature of a MIS-SHAPED imported
+capacity profile (some pipes badly undersized), which a UNIFORM scalar can't
+repair. Coherent with the Zampis/Aqueduct-C story (§7): on real/held-out
+exports the residual is dominated by localized capacity-IMPORT defects, not
+by the allocation model or a global knob.
+
+Decision: do NOT pool Modena/CTown into the headline (import-quality-bound,
+would drag the clean 6-net numbers for the wrong reason). Fold in as a
+1-2 sentence held-out GENERALIZATION note in the Discussion instead:
+ordinary-failure fidelity holds on truly held-out networks, while
+capacity-stress fidelity is bounded by per-network capacity-import quality.
+Turns the "depressing" result into evidence for the limitation already claimed.
+
+## 10. Full benchmark rebuild (2026-07-22) — the current setup
+
+Driven by a precision diagnosis (§ below) + owner decisions. Spec:
+`docs/paper/benchmark-protocol.md`. Runner: `run_final_benchmark.sh` →
+`final_benchmark.csv`.
+
+### Why: precision was the problem, and it was NOT the importer's capacity
+Diagnosed the low flow-module precision (cry-wolf over-prediction of criticality).
+Ruled out, by direct measurement (diag_precision.py, diag_orientation.py):
+- capacity NOT undersized (every pipe <50% utilised even under failure);
+- orientation NOT the cause (forcing all-bidirectional changed nothing);
+- supply NOT short; subgraph fully connected; baseline 0 criticals.
+ROOT CAUSE: hard-capacity max-flow + max-min fair-share SPREADS a rerouting
+shortage across many junctions, while PDD CONCENTRATES loss on the pressure-
+disadvantaged ones. Bimodal in the margin (Modena targeted: x2 -> 237 crit,
+x4 -> 0), so no uniform margin fixes it. The lever is PRIORITY (who gets shed).
+
+### Changes made
+1. **Demand `peak_hour`** — coincident system-peak (max total-consumption hour),
+   not per-junction peaks (which over-count non-coincident loads). Tanks are
+   zero-demand sources already.
+2. **Supply model** — RESERVOIRS unbounded (EPANET fixed-head; the old
+   sum-of-outlet-pipe-caps overstated yield ~6.4x AND, when made nominal, broke
+   multi-source failure vs WNTR's infinite reservoirs — Modena 269: module 242
+   vs WNTR 67). TANKS nominal delivered outflow (geometry-limited, meaningful to
+   degrade). `nominal_source_outflow` (sim.py), `_supply_for` branches by type.
+3. **`max_velocity` = 3.0 m/s default** (was uncapped) — no unphysical capacities.
+4. **Adaptive x8 sweep** — one solve at the highest converging multiplier instead
+   of an 8-step ramp; Tarcento (fails x8) lands x4 instead of zero-capacity.
+5. **Families** — dropped hot/break/both (uninformative). Kept cluster (60 random,
+   3 seeds), targeted (top-20%, 10 singles+20 pairs+30 triplets), tank (10/20/30
+   isolation combos), **source-failure** (10/20/30 reservoir-outlet-closure combos).
+   Deterministic combos (targeted/tank/source), so seeds only vary cluster.
+6. **Priority `contingency` rewritten** (now default) — DETERMINISTIC + CYCLE-AWARE
+   + SEVERITY. Close only CYCLE trunk links (Tarjan bridge filter — a bridge
+   closure only disconnects, which reachability already sees; on the real
+   aqueducts 45-62% of links ARE bridges, so this is very selective, though
+   near-transparent on the atypically-meshed Modena, 1% bridges). Score by
+   demand-weighted deficit `Σ demand·max(0,1-ratio)` over singles+pairs+triplets,
+   not a binary 0.9-threshold count. Fixes the old method's sample-dependence,
+   threshold cliff, and single-break-only blindness.
+7. **Reachability** — a source is removed iff CRITICAL; since source-failure =
+   outlet closure, the existing `_severed_junctions` already does this (no change).
+
+### Precision result (Modena targeted, verified)
+- old setup, none: **0.18**
+- new setup, none: **0.34** (items 1-5 doubled precision on their own, recall 1.00)
+- new setup, cycle-aware priority: **~0.37** (0.25->0.37 on a 15-sit subset;
+  FP -44%, recall 1.00->0.96). Priority earns its ~2-3x scoring slowdown
+  (tiered_fair_share runs per-tier).
+
+### Rejected along the way (negative results, kept honest)
+- Nominal RESERVOIR supply — broke source-failure vs infinite-reservoir WNTR.
+- Free physics priors (hydraulic-distance, effective-resistance, topological-
+  contingency-Reff) — ALL backfired (prec 0.15-0.16 < none's 0.18); vulnerability
+  is hydraulic, not static-topological. Only WNTR-contingency-based priority works
+  (needs solves → import-only; hand-authored networks get expert-labelled priority).
+- System-wide partial source degradation as a family — diffuse regime where a
+  trivial flag-all baseline beats the module; replaced by concentrated source
+  FAILURE (outlet closure).
+
+Bug fixed: `_demand_value` crashed on a junction referencing a missing demand
+pattern (`get_pattern` returns None, not KeyError) — now guarded.

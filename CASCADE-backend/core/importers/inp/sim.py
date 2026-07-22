@@ -59,12 +59,14 @@ directory so concurrent imports can't collide on them.
 from __future__ import annotations
 
 import copy
+import itertools
 import math
 import random
 import tempfile
 from pathlib import Path
 from typing import Any
 
+import networkx as nx
 import wntr
 from pydantic import BaseModel
 
@@ -296,39 +298,67 @@ def scarcity_priorities(
     return priorities
 
 
+def _cycle_links(wn: wntr.network.WaterNetworkModel) -> set[str]:
+    """Link ids that lie on a CYCLE — closing one forces rerouting (informative
+    about capacity-limited vulnerability). A BRIDGE closure only isolates a fixed
+    downstream subtree (pure connectivity, which reachability already captures),
+    so bridges are excluded from contingency analysis. Parallel links between the
+    same node pair are never bridges (each backs the other up)."""
+    all_links = list(wn.pipe_name_list) + list(wn.pump_name_list) + list(wn.valve_name_list)
+    graph = nx.Graph()
+    # Cache each link's node pair in one pass — get_link is not free on large
+    # networks, so we never look a link up twice (self-loops map to None).
+    link_pairs: dict[str, frozenset | None] = {}
+    pair_count: dict[frozenset, int] = {}
+    for lid in all_links:
+        lk: Any = wn.get_link(lid)  # WNTR ships no usable stubs
+        pair = frozenset((lk.start_node_name, lk.end_node_name))
+        if len(pair) < 2:  # self-loop — cannot reroute, treat as non-cycle
+            link_pairs[lid] = None
+            continue
+        link_pairs[lid] = pair
+        pair_count[pair] = pair_count.get(pair, 0) + 1
+        graph.add_edge(lk.start_node_name, lk.end_node_name)
+    bridge_pairs = {frozenset(e) for e in nx.bridges(graph)} if graph.number_of_edges() else set()
+    cycle: set[str] = set()
+    for lid, pair in link_pairs.items():
+        if pair is None:
+            continue
+        if pair in bridge_pairs and pair_count[pair] == 1:
+            continue  # a lone bridge — closing it only disconnects
+        cycle.add(lid)
+    return cycle
+
+
 def contingency_priorities(
     wn: wntr.network.WaterNetworkModel,
     demands: dict[str, float],
     *,
-    contingency_samples: int = 20,
-    fail_threshold: float = 0.9,
-    seed: int = 0,
+    singles: int = 40,
+    pairs: int = 20,
+    triplets: int = 10,
     warnings: list[str] | None = None,
 ) -> dict[str, int]:
-    """Junction id → priority 1..10 from single-link contingency solves —
-    an alternative to `scarcity_priorities`' demand-multiplier sweep.
+    """Junction id → priority 1..10 from a DETERMINISTIC, CYCLE-AWARE contingency
+    ensemble scored by SEVERITY (2026-07-22 rewrite of the single-link binary
+    method, which was sample-dependent, threshold-sensitive, and single-break).
 
-    Rationale (CompleNet E3‴, 2026-07-11): the demand sweep asks "who fails
-    first as demand scales up everywhere?" — a global, demand-side question.
-    But the engine's priority decides who gets shed when a STRUCTURAL failure
-    (break/targeted/cluster) creates a shortfall, and who really loses service
-    then is a local, topology/pressure question the demand sweep never poses
-    (its priority ablation measured ≈0.000 FMS delta). This function poses it
-    directly: close every top-10%-diameter pipe and pump once (plus
-    `contingency_samples` uniform picks), at nominal demand, and count how
-    often each junction's delivered ratio drops below `fail_threshold`.
-    Junctions that real hydraulics abandons under many closures are fragile →
-    LOW priority (the engine sheds them first, matching WNTR); junctions no
-    closure ever touches → priority 10.
+    Three fixes:
+      1. DETERMINISTIC & CYCLE-AWARE — close the largest CYCLE trunk links
+         (top-20% diameter + pumps, bridges excluded via `_cycle_links`; a bridge
+         closure only disconnects, which reachability already sees), plus their
+         pairs and triplets. No random sampling → reproducible, seed-free.
+      2. SEVERITY, not a 0.9 threshold — accumulate demand-weighted unmet service
+         `Σ demand_j · max(0, 1 − ratio_j)`, so a near-total loss outranks a mild
+         dip and big consumers weigh more.
+      3. MULTI-BREAK — pairs/triplets capture failures needing >1 simultaneous
+         break, matching the 2-/3-break benchmark families.
 
-    Frequencies are normalized by the worst junction's frequency (not the
-    solve count): most junctions never fail under any single closure, so a
-    raw-fraction mapping would compress the entire fragile tail into one or
-    two priority levels.
+    High accumulated deficit → fragile → LOW priority (shed first, matching who
+    real hydraulics abandons). Returns {} (uniform priority) when nothing fails.
 
-    Returns {} (engine default priority everywhere) when no solve succeeds or
-    no junction ever fails — same contract as `scarcity_priorities`.
-    """
+    NOTE: this runs its own solves; a future optimisation could derive the deficit
+    from `link_flow_profiles`' capacity-discovery contingencies (same ensemble)."""
     warnings = warnings if warnings is not None else []
 
     junctions = [jid for jid, d in demands.items() if d > 0]
@@ -341,50 +371,52 @@ def contingency_priorities(
     model.options.hydraulic.required_pressure = _REQUIRED_PRESSURE_M
     model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
 
-    # Same trunk pool as link_flow_profiles' exhaustive mode / the harness's
-    # "targeted" family: every consequential link exercised once.
-    all_links = sorted(set(wn.pipe_name_list) | set(wn.valve_name_list) | set(wn.pump_name_list))
+    cycle = _cycle_links(wn)
     by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
-    pool_size = max(1, round(len(by_diameter) * 0.10))
-    trunk_pool = sorted(set(by_diameter[:pool_size]) | set(wn.pump_name_list))
-    rng = random.Random(seed)  # nosec B311 — deterministic sample, not security
-    remaining_pool = sorted(set(all_links) - set(trunk_pool))
-    picks = trunk_pool + rng.sample(remaining_pool, min(contingency_samples, len(remaining_pool)))
+    pool = by_diameter[: max(1, round(len(by_diameter) * 0.20))] + list(wn.pump_name_list)
+    trunk = [lid for lid in pool if lid in cycle][:singles]  # cycle-only, largest first
+    groups: list[tuple[str, ...]] = (
+        [(lid,) for lid in trunk]
+        + list(itertools.islice(itertools.combinations(trunk, 2), pairs))
+        + list(itertools.islice(itertools.combinations(trunk, 3), triplets))
+    )
 
-    fail_counts: dict[str, int] = dict.fromkeys(junctions, 0)
+    deficit: dict[str, float] = dict.fromkeys(junctions, 0.0)
     solved = 0
     with tempfile.TemporaryDirectory(prefix="cascade-epanet-") as tmpdir:
         file_prefix = str(Path(tmpdir) / "contingency-priority")
-        for i, closed_id in enumerate(picks):
-            closed_link: Any = model.get_link(closed_id)  # WNTR ships no usable stubs
-            original_status = closed_link.initial_status
-            closed_link.initial_status = "Closed"
+        for i, group in enumerate(groups):
+            links: list[Any] = [model.get_link(lid) for lid in group]  # WNTR ships no usable stubs
+            original = [lk.initial_status for lk in links]
+            for lk in links:
+                lk.initial_status = "Closed"
             try:
                 results = _run_sweep_step(model, 1.0, f"{file_prefix}-{i}")
-            except Exception:  # nosec B112 — one failed contingency solve is skipped, not fatal (same rule as link_flow_profiles)
+            except Exception:  # nosec B112 — one failed contingency solve is skipped, not fatal
                 continue
             finally:
-                closed_link.initial_status = original_status
+                for lk, status in zip(links, original):
+                    lk.initial_status = status
             solved += 1
             delivered = results.node["demand"].iloc[0]
             for jid in junctions:
                 exp = demands[jid]
                 got = float(delivered.get(jid, 0.0))
                 ratio = got / exp if exp > 0 else 1.0
-                if math.isfinite(ratio) and ratio < fail_threshold:
-                    fail_counts[jid] += 1
+                if math.isfinite(ratio):
+                    deficit[jid] += exp * max(0.0, 1.0 - ratio)
 
     if not solved:
         warnings.append("No contingency solve succeeded — uniform priorities.")
         return {}
-    max_count = max(fail_counts.values())
-    if max_count == 0:
-        warnings.append("No junction lost service under any single-link closure — uniform priorities.")
+    worst = max(deficit.values())
+    if worst <= 0:
+        warnings.append("No junction lost service under any cycle-trunk closure — uniform priorities.")
         return {}
 
     return {
-        jid: max(1, min(10, 10 - round(9 * count / max_count)))
-        for jid, count in fail_counts.items()
+        jid: max(1, min(10, 10 - round(9 * d / worst)))
+        for jid, d in deficit.items()
     }
 
 
@@ -463,6 +495,7 @@ def link_flow_profiles(
     contingency_bias_fraction: float = 0.0,
     contingency_exhaustive_trunk: bool = False,
     contingency_trunk_pairs: int = 0,
+    contingency_multiplier: float = 1.0,
     seed: int = 0,
     warnings: list[str] | None = None,
 ) -> dict[str, LinkFlowProfile]:
@@ -518,6 +551,17 @@ def link_flow_profiles(
     forces into service — exactly the capacity a 3-break `targeted` event
     relies on. Each pair costs one more PDD solve.
 
+    `contingency_multiplier` (default 1.0, i.e. nominal demand): the demand
+    multiplier applied DURING the contingency solves, stacking demand stress
+    on top of the topology change (a link closed *and* demand raised together).
+    1.0 keeps the two stressors orthogonal (topology-only reroute at nominal
+    demand); >1 sizes backup pipes from the flow they carry when a failure and
+    a demand surge coincide. Independent of the demand-sweep's `max_multiplier`
+    (which the contingency pass never sees). NOTE: a network that fails to
+    converge at high demand (e.g. Tarcento at >=2.5, see `_run_sweep_step`'s
+    caller) will simply skip those contingency solves, so a high value can
+    silently reduce to fewer contributing solves rather than raising capacity.
+
     A link absent from the returned dict never reached the noise floor in
     either direction across any solve (no signal at all — isolated/idle
     branch, or every solve failed); its caller falls back to
@@ -539,17 +583,27 @@ def link_flow_profiles(
 
     with tempfile.TemporaryDirectory(prefix="cascade-epanet-") as tmpdir:
         file_prefix = str(Path(tmpdir) / "velocity-sweep")
-        for step, multiplier in enumerate(multipliers):
+        # ADAPTIVE single-target sweep (2026-07-22): peak velocity is reached at
+        # the HIGHEST demand, so a full multi-step ramp is unnecessary — one solve
+        # at the top multiplier suffices. But a fixed top multiplier fails on
+        # networks that do not converge that high (e.g. Tarcento at >=2.5), which
+        # would yield NO capacities at all. So we try the candidates DESCENDING and
+        # keep the first that converges: healthy networks land on the top
+        # multiplier in one solve; a stiff network steps down to its highest
+        # feasible demand. `multipliers` (ascending 1..max) sets the candidate grid.
+        for multiplier in reversed(multipliers):
             try:
                 results = _run_sweep_step(model, multiplier, file_prefix)
-            except Exception as exc:
-                warnings.append(
-                    f"Velocity sweep stopped at multiplier {multiplier:.2f} ({exc}); "
-                    f"pipe capacities derived from {step} of {steps} steps."
-                )
-                break
+            except Exception:  # nosec B112 — too high to converge; try a lower demand
+                continue
             solved_any = True
             _accumulate_profiles(profiles, link_ids, results.link["velocity"].iloc[0], results.link["flowrate"].iloc[0])
+            if multiplier < max_multiplier:
+                warnings.append(
+                    f"Velocity sweep top demand reduced to x{multiplier:.2f} "
+                    f"(x{max_multiplier:.0f} did not converge)."
+                )
+            break
 
         if contingency_samples > 0 or contingency_exhaustive_trunk:
             # sorted(), not a bare set→list: Python's set iteration order for
@@ -587,7 +641,6 @@ def link_flow_profiles(
             if contingency_trunk_pairs > 0 and len(trunk_pool) >= 2:
                 for _ in range(contingency_trunk_pairs):
                     groups.append(tuple(rng.sample(trunk_pool, 2)))
-            model.options.hydraulic.demand_multiplier = 1.0
             for i, closed_ids in enumerate(groups):
                 # Mutate the one shared model in place rather than
                 # deepcopy-ing the whole network (full node/link graph +
@@ -599,7 +652,7 @@ def link_flow_profiles(
                 for link in closed_links:
                     link.initial_status = "Closed"
                 try:
-                    results = _run_sweep_step(model, 1.0, f"{file_prefix}-c{i}")
+                    results = _run_sweep_step(model, contingency_multiplier, f"{file_prefix}-c{i}")
                 except Exception:  # nosec B112: one failed contingency solve is skipped, not fatal — an import must never fail because the hydraulics are imperfect (same rule as scarcity_priorities/the main sweep above)
                     continue
                 finally:
@@ -617,3 +670,39 @@ def link_flow_profiles(
         )
 
     return profiles
+
+
+def nominal_source_outflow(
+    wn: wntr.network.WaterNetworkModel, demands: dict[str, float]
+) -> dict[str, float]:
+    """Per-source (reservoir/tank) delivered outflow at NOMINAL demand — the
+    source's real deliverable yield in m³/s.
+
+    Used as `supply_capacity` instead of the sum of the source's outgoing pipe
+    capacities: pipes are deliberately over-sized (safety margin + peak-sweep
+    velocity), so summing their capacities overstates what a source actually
+    supplies (~6x demand on real data), leaving sources unable to bottleneck and
+    source degradation unrepresentable. The nominal delivered outflow is the
+    physically meaningful "100% supply" baseline that functionality then scales.
+
+    One steady-state PDD solve at the modelled (nominal) demand. Returns `{}` on
+    a solve failure — the caller then falls back to the incident-pipe rule."""
+    model = _fixed_demand_model(wn, demands)
+    model.options.time.duration = 0
+    model.options.hydraulic.demand_model = "PDD"
+    model.options.hydraulic.required_pressure = _REQUIRED_PRESSURE_M
+    model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
+    for pump_id in model.pump_name_list:
+        model.get_link(pump_id).initial_status = "Open"
+    try:
+        with tempfile.TemporaryDirectory(prefix="cascade-epanet-") as tmpdir:
+            results = _run_sweep_step(model, 1.0, str(Path(tmpdir) / "nominal-supply"))
+    except Exception:  # nosec B110 — a non-converging nominal solve just means fall back
+        return {}
+    flow = results.link["flowrate"].iloc[0]
+    sources = set(wn.reservoir_name_list) | set(wn.tank_name_list)
+    out: dict[str, float] = {}
+    for sid in sources:
+        incident = wn.get_links_for_node(sid)  # O(degree), not an all-links scan
+        out[sid] = sum(abs(float(flow.get(lid, 0.0))) for lid in incident)
+    return out
