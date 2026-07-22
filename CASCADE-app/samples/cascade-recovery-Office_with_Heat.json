@@ -145,7 +145,7 @@
             }
           },
           "rules": [
-            "// if office.season is summer then heater_generator is operational"
+            "if office.season is summer then heater_generator is operational"
           ]
         },
         "node_1777278212626": {
@@ -422,7 +422,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ],
                 "responsibility_share": {
                   "node_1777025959545": 1
@@ -701,7 +701,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -973,7 +973,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -1244,7 +1244,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ],
                 "responsibility_share": {
                   "node_1777025959545": 1
@@ -1530,7 +1530,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -1794,7 +1794,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -2078,7 +2078,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ],
                 "responsibility_share": {
                   "node_1777025959545": 1
@@ -2357,7 +2357,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -2629,7 +2629,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -2900,7 +2900,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ],
                 "responsibility_share": {
                   "node_1777025959545": 1
@@ -3186,7 +3186,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
@@ -3450,7 +3450,7 @@
                   }
                 },
                 "rules": [
-                  "// if office.season is summer then heater_generator is operational"
+                  "if office.season is summer then heater_generator is operational"
                 ]
               },
               "node_1777278212626": {
