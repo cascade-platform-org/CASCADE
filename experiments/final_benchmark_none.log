@@ -1,57 +1,57 @@
-=== 15:38 starting Net1 ===
+=== 11:40 starting Net1 ===
 
 === Net1 (9 junctions, n_levels=3) ===
   cluster#0  FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['110', '12', '11', '112'] hot=- v>3:0/12(max1.6)
-  cluster#1  FMS=0.227 (null=0.773 reach=1.000, n=  8)  breaks=['31', '121', '11', '111', '112', '10'] hot=- v>3:0/12(max1.8)
+  cluster#1  FMS=1.000 (null=0.773 reach=1.000, n=  8)  breaks=['31', '121', '11', '111', '112', '10'] hot=- v>3:0/12(max1.8)
   cluster#2  FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['122', '21', '121', '31', '111'] hot=- v>3:0/12(max1.0)
   cluster#3  FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['110', '12', '22', '112', '11', '113'] hot=- v>3:0/12(max1.1)
-  cluster#4  FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['111', '9', '10', '11'] hot=- v>3:0/12(max0.8)
-  cluster#5  FMS=0.318 (null=0.682 reach=1.000, n=  8)  breaks=['10', '21', '111', '112', '31', '122'] hot=- v>3:0/12(max1.1)
+  cluster#4  FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['111', '9', '10', '11'] hot=- v>3:0/12(max0.8)
+  cluster#5  FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['10', '21', '111', '112', '31', '122'] hot=- v>3:0/12(max1.1)
   cluster#6  FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['22', '113', '12', '112', '110', '11'] hot=- v>3:0/12(max1.1)
   cluster#7  FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['112', '110', '113', '12', '22', '11'] hot=- v>3:0/12(max1.1)
   cluster#8  FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['111', '113', '10', '21', '22', '110'] hot=- v>3:0/12(max0.0)
   cluster#9  FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['121', '21', '11', '10', '110', '111'] hot=- v>3:0/12(max0.0)
-  cluster#10 FMS=0.364 (null=0.636 reach=1.000, n=  8)  breaks=['11', '10', '22', '21', '111', '31'] hot=- v>3:0/12(max0.6)
-  cluster#11 FMS=0.318 (null=0.682 reach=1.000, n=  8)  breaks=['10', '111', '11', '31', '122', '121'] hot=- v>3:0/12(max0.6)
-  cluster#12 FMS=0.318 (null=0.682 reach=1.000, n=  8)  breaks=['11', '121', '111', '10', '31', '122'] hot=- v>3:0/12(max0.6)
-  cluster#13 FMS=0.932 (null=0.136 reach=1.000, n=  8)  breaks=['12', '121', '9', '11', '112', '10'] hot=- v>3:0/12(max0.1)
+  cluster#10 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['11', '10', '22', '21', '111', '31'] hot=- v>3:0/12(max0.6)
+  cluster#11 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['10', '111', '11', '31', '122', '121'] hot=- v>3:0/12(max0.6)
+  cluster#12 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['11', '121', '111', '10', '31', '122'] hot=- v>3:0/12(max0.6)
+  cluster#13 FMS=1.000 (null=0.136 reach=1.000, n=  8)  breaks=['12', '121', '9', '11', '112', '10'] hot=- v>3:0/12(max0.1)
   cluster#14 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['110', '121', '10', '11', '21', '111'] hot=- v>3:0/12(max0.0)
-  cluster#15 FMS=0.500 (null=0.500 reach=1.000, n=  8)  breaks=['112', '11', '21', '111', '31', '22'] hot=- v>3:0/12(max0.5)
-  cluster#16 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['9', '111', '11', '10'] hot=- v>3:0/12(max0.8)
+  cluster#15 FMS=1.000 (null=0.500 reach=1.000, n=  8)  breaks=['112', '11', '21', '111', '31', '22'] hot=- v>3:0/12(max0.5)
+  cluster#16 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['9', '111', '11', '10'] hot=- v>3:0/12(max0.8)
   cluster#17 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['31', '111', '21', '121', '122'] hot=- v>3:0/12(max1.0)
-  cluster#18 FMS=0.932 (null=0.136 reach=1.000, n=  8)  breaks=['12', '10', '112', '11', '21', '122'] hot=- v>3:0/12(max0.1)
+  cluster#18 FMS=1.000 (null=0.136 reach=1.000, n=  8)  breaks=['12', '10', '112', '11', '21', '122'] hot=- v>3:0/12(max0.1)
   cluster#19 FMS=1.000 (null=0.273 reach=1.000, n=  8)  breaks=['110', '11', '22', '12', '121', '21'] hot=- v>3:0/12(max0.3)
   cluster#20 FMS=1.000 (null=0.273 reach=1.000, n=  8)  breaks=['110', '12', '122', '22', '111', '112'] hot=- v>3:0/12(max0.2)
   cluster#21 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['111', '110', '10', '121', '12', '21'] hot=- v>3:0/12(max0.0)
   cluster#22 FMS=1.000 (null=0.591 reach=1.000, n=  8)  breaks=['21', '122', '112', '22', '12', '113'] hot=- v>3:0/12(max0.7)
-  cluster#23 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
+  cluster#23 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
   cluster#24 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['12', '110', '11', '112'] hot=- v>3:0/12(max1.6)
   cluster#25 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['12', '112', '110', '11'] hot=- v>3:0/12(max1.6)
   cluster#26 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['111', '10', '112', '12', '9', '110'] hot=- v>3:0/12(max0.0)
   cluster#27 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['110', '112', '11', '113', '22', '12'] hot=- v>3:0/12(max1.1)
-  cluster#28 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['11', '10', '111', '9'] hot=- v>3:0/12(max0.8)
+  cluster#28 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['11', '10', '111', '9'] hot=- v>3:0/12(max0.8)
   cluster#29 FMS=1.000 (null=0.273 reach=1.000, n=  8)  breaks=['122', '12', '22', '111', '110', '112'] hot=- v>3:0/12(max0.2)
   cluster#30 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['12', '112', '111', '9', '110', '11'] hot=- v>3:0/12(max0.0)
   cluster#31 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['21', '112', '10', '121', '12', '110'] hot=- v>3:0/12(max0.0)
-  cluster#32 FMS=0.636 (null=0.364 reach=1.000, n=  8)  breaks=['112', '113', '21', '31', '11', '111'] hot=- v>3:0/12(max0.2)
-  cluster#33 FMS=0.636 (null=0.364 reach=1.000, n=  8)  breaks=['11', '10', '22', '31', '112', '122'] hot=- v>3:0/12(max0.5)
-  cluster#34 FMS=0.727 (null=0.273 reach=1.000, n=  8)  breaks=['21', '111', '113', '12', '112', '10'] hot=- v>3:0/12(max0.2)
-  cluster#36 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['10', '111', '9', '11'] hot=- v>3:0/12(max0.8)
+  cluster#32 FMS=1.000 (null=0.364 reach=1.000, n=  8)  breaks=['112', '113', '21', '31', '11', '111'] hot=- v>3:0/12(max0.2)
+  cluster#33 FMS=1.000 (null=0.364 reach=1.000, n=  8)  breaks=['11', '10', '22', '31', '112', '122'] hot=- v>3:0/12(max0.5)
+  cluster#34 FMS=1.000 (null=0.273 reach=1.000, n=  8)  breaks=['21', '111', '113', '12', '112', '10'] hot=- v>3:0/12(max0.2)
+  cluster#36 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['10', '111', '9', '11'] hot=- v>3:0/12(max0.8)
   cluster#37 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['110', '112', '11', '12', '22', '113'] hot=- v>3:0/12(max1.1)
-  cluster#38 FMS=0.773 (null=0.227 reach=1.000, n=  8)  breaks=['113', '21', '11', '10', '122', '112'] hot=- v>3:0/12(max0.2)
+  cluster#38 FMS=1.000 (null=0.227 reach=1.000, n=  8)  breaks=['113', '21', '11', '10', '122', '112'] hot=- v>3:0/12(max0.2)
   cluster#39 FMS=1.000 (null=0.773 reach=1.000, n=  8)  breaks=['113', '121', '112', '22', '110', '12'] hot=- v>3:0/12(max1.1)
-  cluster#40 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['9', '10', '111', '11'] hot=- v>3:0/12(max0.8)
+  cluster#40 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['9', '10', '111', '11'] hot=- v>3:0/12(max0.8)
   cluster#41 FMS=1.000 (null=0.591 reach=1.000, n=  8)  breaks=['110', '12', '22', '112', '122', '121'] hot=- v>3:0/12(max0.7)
   cluster#42 FMS=1.000 (null=0.727 reach=1.000, n=  8)  breaks=['112', '121', '31', '122', '12', '113'] hot=- v>3:0/12(max1.0)
-  cluster#43 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['9', '10', '11', '111'] hot=- v>3:0/12(max0.8)
-  cluster#44 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
+  cluster#43 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['9', '10', '11', '111'] hot=- v>3:0/12(max0.8)
+  cluster#44 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
   cluster#45 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['111', '31', '122', '121', '21'] hot=- v>3:0/12(max1.0)
   cluster#46 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['31', '122', '111', '21', '121'] hot=- v>3:0/12(max1.0)
   cluster#47 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['12', '10', '9', '110', '111', '121'] hot=- v>3:0/12(max0.0)
-  cluster#48 FMS=0.136 (null=0.864 reach=1.000, n=  8)  breaks=['111', '9', '11', '10'] hot=- v>3:0/12(max0.8)
+  cluster#48 FMS=1.000 (null=0.864 reach=1.000, n=  8)  breaks=['111', '9', '11', '10'] hot=- v>3:0/12(max0.8)
   cluster#49 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['121', '111', '122', '31', '21'] hot=- v>3:0/12(max1.0)
-  cluster#50 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
-  cluster#51 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
+  cluster#50 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
+  cluster#51 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
   cluster#52 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['11', '112', '110', '12', '22', '113'] hot=- v>3:0/12(max1.1)
   cluster#53 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['22', '122', '112', '10', '11', '110'] hot=- v>3:0/12(max0.0)
   cluster#54 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['111', '21', '31', '121', '122'] hot=- v>3:0/12(max1.0)
@@ -60,31 +60,31 @@
   cluster#57 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['110', '112', '11', '113', '22', '12'] hot=- v>3:0/12(max1.1)
   cluster#58 FMS=1.000 (null=0.682 reach=1.000, n=  8)  breaks=['21', '31', '122', '111', '121'] hot=- v>3:0/12(max1.0)
   cluster#59 FMS=1.000 (null=0.636 reach=1.000, n=  8)  breaks=['110', '11', '112', '12', '113', '22'] hot=- v>3:0/12(max1.1)
-  targeted#0 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10'] hot=- v>3:0/12(max0.7)
+  targeted#0 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10'] hot=- v>3:0/12(max0.7)
   targeted#1 FMS=0.909 (null=1.000 reach=1.000, n=  8)  breaks=['110'] hot=- v>3:0/12(max0.7)
-  targeted#2 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['9'] hot=- v>3:0/12(max0.7)
+  targeted#2 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['9'] hot=- v>3:0/12(max0.7)
   targeted#3 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['10', '110'] hot=- v>3:0/12(max0.0)
-  targeted#4 FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
+  targeted#4 FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['10', '9'] hot=- v>3:0/12(max0.7)
   targeted#5 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['110', '9'] hot=- v>3:0/12(max0.0)
   targeted#6 FMS=1.000 (null=0.000 reach=1.000, n=  8)  breaks=['10', '110', '9'] hot=- v>3:0/12(max0.0)
   tank#0     FMS=0.909 (null=1.000 reach=1.000, n=  8)  breaks=['110'] hot=- v>3:0/12(max0.7)
-  source#0   FMS=0.000 (null=1.000 reach=1.000, n=  8)  breaks=['9'] hot=- v>3:0/12(max0.7)
-  -> Net1 mean FMS = 0.713 over 68 situations
-  -> Net1 binary (critical=level 1 vs operational): TP=246 FP=153 FN=0 TN=145  accuracy=0.719 precision=0.617 recall=1.000 f1=0.763
+  source#0   FMS=1.000 (null=1.000 reach=1.000, n=  8)  breaks=['9'] hot=- v>3:0/12(max0.7)
+  -> Net1 mean FMS = 0.997 over 68 situations
+  -> Net1 binary (critical=level 1 vs operational): TP=246 FP=0 FN=0 TN=298  accuracy=1.000 precision=1.000 recall=1.000 f1=1.000
 
-AGGREGATE FMS across 68 situations: 0.713
+AGGREGATE FMS across 68 situations: 0.997
 AGGREGATE FMS by scenario kind (does fidelity hold outside independent random failure?):
-  cluster    mean FMS = 0.740  (null=0.545 reach=1.000, n=59 situations)
-  targeted   mean FMS = 0.558  (null=0.571 reach=1.000, n=7 situations)
+  cluster    mean FMS = 1.000  (null=0.545 reach=1.000, n=59 situations)
+  targeted   mean FMS = 0.987  (null=0.571 reach=1.000, n=7 situations)
   tank       mean FMS = 0.909  (null=1.000 reach=1.000, n=1 situations)
-  source     mean FMS = 0.000  (null=1.000 reach=1.000, n=1 situations)
+  source     mean FMS = 1.000  (null=1.000 reach=1.000, n=1 situations)
 REACHABILITY-BASELINE binary confusion, n=544: TP=246 FP=0 FN=0 TN=298  precision=1.000 recall=1.000
 AGGREGATE binary confusion (critical=level 1 vs operational), n=544:
                   pred critical   pred operational
   true critical             246                   0
-  true operational          153                 145
-  accuracy=0.719  precision=0.617  recall=1.000  f1=0.763
-=== 15:38 starting Net2 ===
+  true operational            0                 298
+  accuracy=1.000  precision=1.000  recall=1.000  f1=1.000
+=== 11:41 starting Net2 ===
 
 === Net2 (35 junctions, n_levels=3) ===
   cluster#0  FMS=1.000 (null=0.480 reach=0.610, n= 32)  breaks=['16', '20', '37', '18', '13', '21'] hot=- v>3:0/40(max0.4)
@@ -214,10 +214,10 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   true critical             954                   0
   true operational            0                2662
   accuracy=1.000  precision=1.000  recall=1.000  f1=1.000
-=== 15:39 starting Net3 ===
+=== 11:41 starting Net3 ===
 
 === Net3 (92 junctions, n_levels=3) ===
-  cluster#0  FMS=0.268 (null=0.862 reach=1.000, n= 59)  breaks=['123', '163', '329', '121', '297', '125'] hot=- v>3:4/117(max4.7)
+  cluster#0  FMS=0.214 (null=0.862 reach=1.000, n= 59)  breaks=['123', '163', '329', '121', '297', '125'] hot=- v>3:4/117(max4.7)
   cluster#1  FMS=0.994 (null=0.998 reach=1.000, n= 59)  breaks=['135', '133', '131', '20'] hot=- v>3:0/117(max2.9)
   cluster#2  FMS=1.000 (null=0.985 reach=1.000, n= 59)  breaks=['50', '289', '295', '293', '287', '281'] hot=- v>3:0/117(max2.9)
   cluster#3  FMS=1.000 (null=0.998 reach=1.000, n= 59)  breaks=['275', '295', '271', '269', '277', '273'] hot=- v>3:0/117(max2.9)
@@ -227,7 +227,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   cluster#7  FMS=1.000 (null=0.991 reach=1.000, n= 59)  breaks=['285', '283', '281', '277', '275', '287'] hot=- v>3:0/117(max2.9)
   cluster#8  FMS=1.000 (null=0.997 reach=1.000, n= 59)  breaks=['203', '205', '202', '186', '209', '199'] hot=- v>3:0/117(max2.9)
   cluster#9  FMS=1.000 (null=0.978 reach=1.000, n= 59)  breaks=['163', '171', '155', '161', '159'] hot=- v>3:0/117(max2.9)
-  cluster#10 FMS=0.051 (null=1.000 reach=1.000, n= 59)  breaks=['217', '309', '183', '116', '313', '311'] hot=- v>3:4/117(max5.7)
+  cluster#10 FMS=0.605 (null=1.000 reach=1.000, n= 59)  breaks=['217', '309', '183', '116', '313', '311'] hot=- v>3:4/117(max5.7)
   cluster#11 FMS=1.000 (null=0.647 reach=1.000, n= 59)  breaks=['233', '231', '235', '229', '323', '239'] hot=- v>3:0/117(max2.8)
   cluster#12 FMS=1.000 (null=0.992 reach=1.000, n= 59)  breaks=['153', '161', '159', '155'] hot=- v>3:0/117(max2.9)
   cluster#13 FMS=1.000 (null=0.991 reach=1.000, n= 59)  breaks=['237', '239', '238', '241', '240'] hot=- v>3:0/117(max2.9)
@@ -235,18 +235,18 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   cluster#15 FMS=1.000 (null=0.992 reach=1.000, n= 59)  breaks=['153', '161', '159', '155'] hot=- v>3:0/117(max2.9)
   cluster#16 FMS=0.985 (null=1.000 reach=1.000, n= 59)  breaks=['121', '120', '297', '129', '122', '303'] hot=- v>3:0/117(max2.8)
   cluster#17 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['299', '305', '119', '117', '297', '307'] hot=- v>3:0/117(max2.9)
-  cluster#18 FMS=0.667 (null=0.991 reach=1.000, n= 59)  breaks=['313', '219', '183', '311', '217', '116'] hot=- v>3:4/117(max6.1)
+  cluster#18 FMS=0.834 (null=0.991 reach=1.000, n= 59)  breaks=['313', '219', '183', '311', '217', '116'] hot=- v>3:4/117(max6.1)
   cluster#19 FMS=1.000 (null=0.993 reach=1.000, n= 59)  breaks=['207', '201', '195', '199', '203', '40'] hot=- v>3:0/117(max2.9)
   cluster#20 FMS=1.000 (null=0.989 reach=1.000, n= 59)  breaks=['203', '205', '237', '319', '204', '202'] hot=- v>3:0/117(max2.9)
   cluster#21 FMS=1.000 (null=0.992 reach=1.000, n= 59)  breaks=['155', '153', '159', '161'] hot=- v>3:0/117(max2.9)
   cluster#22 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['215', '223', '217', '209', '311', '313'] hot=- v>3:0/117(max2.9)
   cluster#23 FMS=1.000 (null=0.983 reach=1.000, n= 59)  breaks=['238', '239', '237', '319', '323', '204'] hot=- v>3:0/117(max2.9)
   cluster#24 FMS=1.000 (null=0.991 reach=1.000, n= 59)  breaks=['287', '277', '275', '281', '285', '283'] hot=- v>3:0/117(max2.9)
-  cluster#25 FMS=0.150 (null=1.000 reach=1.000, n= 59)  breaks=['329', '330', '60', '333', '335'] hot=- v>3:0/117(max2.9)
+  cluster#25 FMS=0.058 (null=1.000 reach=1.000, n= 59)  breaks=['329', '330', '60', '333', '335'] hot=- v>3:0/117(max2.9)
   cluster#26 FMS=1.000 (null=0.998 reach=1.000, n= 59)  breaks=['295', '277', '273', '271', '283', '269'] hot=- v>3:0/117(max2.9)
   cluster#27 FMS=1.000 (null=0.955 reach=1.000, n= 59)  breaks=['111', '225', '103', '109', '113', '114'] hot=- v>3:0/117(max2.9)
   cluster#28 FMS=1.000 (null=0.999 reach=1.000, n= 59)  breaks=['275', '283', '295', '285', '281', '277'] hot=- v>3:0/117(max2.9)
-  cluster#29 FMS=0.169 (null=1.000 reach=1.000, n= 59)  breaks=['171', '123', '129', '125', '161', '297'] hot=- v>3:4/117(max5.0)
+  cluster#29 FMS=0.111 (null=1.000 reach=1.000, n= 59)  breaks=['171', '123', '129', '125', '161', '297'] hot=- v>3:4/117(max5.0)
   cluster#30 FMS=1.000 (null=0.992 reach=1.000, n= 59)  breaks=['133', '137', '135', '131', '145', '147'] hot=- v>3:0/117(max2.9)
   cluster#31 FMS=0.667 (null=0.876 reach=1.000, n= 59)  breaks=['193', '195', '315', '313', '189', '187'] hot=- v>3:3/117(max5.4)
   cluster#32 FMS=0.834 (null=0.997 reach=1.000, n= 59)  breaks=['309', '180', '179', '313', '321', '185'] hot=- v>3:3/117(max6.1)
@@ -270,7 +270,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   cluster#50 FMS=1.000 (null=0.979 reach=1.000, n= 59)  breaks=['305', '115', '112', '121', '116', '114'] hot=- v>3:0/117(max2.9)
   cluster#51 FMS=1.000 (null=0.993 reach=1.000, n= 59)  breaks=['201', '203', '40', '199', '195', '207'] hot=- v>3:0/117(max2.9)
   cluster#52 FMS=1.000 (null=0.998 reach=1.000, n= 59)  breaks=['180', '215', '185', '309', '211', '311'] hot=- v>3:0/117(max2.9)
-  cluster#53 FMS=0.150 (null=1.000 reach=1.000, n= 59)  breaks=['303', '305', '171', '120', '125', '119'] hot=- v>3:0/117(max2.4)
+  cluster#53 FMS=0.058 (null=1.000 reach=1.000, n= 59)  breaks=['303', '305', '171', '120', '125', '119'] hot=- v>3:0/117(max2.4)
   cluster#54 FMS=1.000 (null=0.993 reach=1.000, n= 59)  breaks=['275', '287', '277', '291', '281', '289'] hot=- v>3:0/117(max2.9)
   cluster#55 FMS=1.000 (null=0.978 reach=1.000, n= 59)  breaks=['251', '257', '247', '249'] hot=- v>3:0/117(max2.9)
   cluster#56 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['215', '311', '313', '186', '217', '205'] hot=- v>3:0/117(max2.9)
@@ -281,7 +281,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   targeted#1 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['40'] hot=- v>3:0/117(max2.9)
   targeted#2 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['50'] hot=- v>3:0/117(max2.9)
   targeted#3 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['123'] hot=- v>3:4/117(max4.3)
-  targeted#4 FMS=0.150 (null=1.000 reach=1.000, n= 59)  breaks=['125'] hot=- v>3:0/117(max2.4)
+  targeted#4 FMS=0.058 (null=1.000 reach=1.000, n= 59)  breaks=['125'] hot=- v>3:0/117(max2.4)
   targeted#5 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['173'] hot=- v>3:3/117(max4.5)
   targeted#6 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['175'] hot=- v>3:3/117(max4.5)
   targeted#7 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['177'] hot=- v>3:3/117(max4.4)
@@ -290,7 +290,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   targeted#10 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '40'] hot=- v>3:0/117(max2.9)
   targeted#11 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '50'] hot=- v>3:0/117(max2.9)
   targeted#12 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['123', '20'] hot=- v>3:3/117(max4.6)
-  targeted#13 FMS=0.256 (null=0.992 reach=0.992, n= 59)  breaks=['125', '20'] hot=- v>3:4/117(max5.2)
+  targeted#13 FMS=0.095 (null=0.992 reach=0.992, n= 59)  breaks=['125', '20'] hot=- v>3:4/117(max5.2)
   targeted#14 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['173', '20'] hot=- v>3:4/117(max4.3)
   targeted#15 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['175', '20'] hot=- v>3:4/117(max4.3)
   targeted#16 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['177', '20'] hot=- v>3:4/117(max4.2)
@@ -299,29 +299,29 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   targeted#19 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['187', '20'] hot=- v>3:5/117(max5.3)
   targeted#20 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['189', '20'] hot=- v>3:4/117(max5.7)
   targeted#21 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '321'] hot=- v>3:4/117(max4.3)
-  targeted#22 FMS=0.278 (null=0.970 reach=0.970, n= 59)  breaks=['20', '329'] hot=- v>3:4/117(max5.5)
+  targeted#22 FMS=0.117 (null=0.970 reach=0.970, n= 59)  breaks=['20', '329'] hot=- v>3:4/117(max5.5)
   targeted#23 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '330'] hot=- v>3:0/117(max2.9)
   targeted#24 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '333'] hot=- v>3:0/117(max2.9)
-  targeted#25 FMS=0.278 (null=0.970 reach=0.970, n= 59)  breaks=['20', '60'] hot=- v>3:4/117(max5.5)
+  targeted#25 FMS=0.117 (null=0.970 reach=0.970, n= 59)  breaks=['20', '60'] hot=- v>3:4/117(max5.5)
   targeted#26 FMS=0.981 (null=1.000 reach=1.000, n= 59)  breaks=['129', '20'] hot=- v>3:0/117(max2.9)
   targeted#27 FMS=0.992 (null=1.000 reach=1.000, n= 59)  breaks=['131', '20'] hot=- v>3:0/117(max2.9)
   targeted#28 FMS=0.994 (null=1.000 reach=1.000, n= 59)  breaks=['135', '20'] hot=- v>3:0/117(max2.9)
   targeted#29 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['191', '20'] hot=- v>3:0/117(max2.8)
   targeted#30 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '40', '50'] hot=- v>3:1/117(max3.0)
-  targeted#31 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['123', '20', '40'] hot=- v>3:3/117(max5.0)
-  targeted#32 FMS=0.268 (null=0.848 reach=0.848, n= 59)  breaks=['125', '20', '40'] hot=- v>3:1/117(max3.7)
+  targeted#31 FMS=0.605 (null=1.000 reach=1.000, n= 59)  breaks=['123', '20', '40'] hot=- v>3:3/117(max5.0)
+  targeted#32 FMS=0.207 (null=0.848 reach=0.848, n= 59)  breaks=['125', '20', '40'] hot=- v>3:1/117(max3.7)
   targeted#33 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['173', '20', '40'] hot=- v>3:3/117(max3.6)
   targeted#34 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['175', '20', '40'] hot=- v>3:3/117(max3.5)
-  targeted#35 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['177', '20', '40'] hot=- v>3:3/117(max3.5)
+  targeted#35 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['177', '20', '40'] hot=- v>3:3/117(max3.5)
   targeted#36 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['179', '20', '40'] hot=- v>3:4/117(max3.5)
   targeted#37 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['183', '20', '40'] hot=- v>3:4/117(max3.8)
   targeted#38 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['187', '20', '40'] hot=- v>3:7/117(max4.8)
   targeted#39 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['189', '20', '40'] hot=- v>3:4/117(max6.7)
   targeted#40 FMS=0.834 (null=1.000 reach=1.000, n= 59)  breaks=['20', '321', '40'] hot=- v>3:4/117(max3.5)
-  targeted#41 FMS=0.365 (null=0.741 reach=0.741, n= 59)  breaks=['20', '329', '40'] hot=- v>3:1/117(max3.8)
+  targeted#41 FMS=0.314 (null=0.741 reach=0.741, n= 59)  breaks=['20', '329', '40'] hot=- v>3:1/117(max3.8)
   targeted#42 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '330', '40'] hot=- v>3:0/117(max2.9)
   targeted#43 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '333', '40'] hot=- v>3:0/117(max2.9)
-  targeted#44 FMS=0.365 (null=0.741 reach=0.741, n= 59)  breaks=['20', '40', '60'] hot=- v>3:1/117(max3.8)
+  targeted#44 FMS=0.314 (null=0.741 reach=0.741, n= 59)  breaks=['20', '40', '60'] hot=- v>3:1/117(max3.8)
   targeted#45 FMS=0.981 (null=1.000 reach=1.000, n= 59)  breaks=['129', '20', '40'] hot=- v>3:0/117(max2.9)
   targeted#46 FMS=0.992 (null=1.000 reach=1.000, n= 59)  breaks=['131', '20', '40'] hot=- v>3:0/117(max2.9)
   targeted#47 FMS=0.994 (null=1.000 reach=1.000, n= 59)  breaks=['135', '20', '40'] hot=- v>3:0/117(max2.9)
@@ -329,9 +329,9 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   targeted#49 FMS=1.000 (null=0.876 reach=1.000, n= 59)  breaks=['193', '20', '40'] hot=- v>3:0/117(max2.7)
   targeted#50 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['20', '229', '40'] hot=- v>3:4/117(max6.7)
   targeted#51 FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['10', '20', '40'] hot=- v>3:1/117(max3.3)
-  targeted#52 FMS=0.115 (null=1.000 reach=1.000, n= 59)  breaks=['20', '335', '40'] hot=- v>3:0/117(max2.9)
-  targeted#53 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['123', '20', '50'] hot=- v>3:4/117(max4.8)
-  targeted#54 FMS=0.083 (null=0.959 reach=0.959, n= 59)  breaks=['125', '20', '50'] hot=- v>3:3/117(max5.5)
+  targeted#52 FMS=0.063 (null=1.000 reach=1.000, n= 59)  breaks=['20', '335', '40'] hot=- v>3:0/117(max2.9)
+  targeted#53 FMS=0.605 (null=1.000 reach=1.000, n= 59)  breaks=['123', '20', '50'] hot=- v>3:4/117(max4.8)
+  targeted#54 FMS=0.043 (null=0.959 reach=0.959, n= 59)  breaks=['125', '20', '50'] hot=- v>3:3/117(max5.5)
   targeted#55 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['173', '20', '50'] hot=- v>3:4/117(max5.1)
   targeted#56 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['175', '20', '50'] hot=- v>3:4/117(max5.1)
   targeted#57 FMS=0.667 (null=1.000 reach=1.000, n= 59)  breaks=['177', '20', '50'] hot=- v>3:4/117(max5.0)
@@ -345,24 +345,24 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=3616:
   tank#5     FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '50'] hot=- v>3:0/117(max2.9)
   tank#6     FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['20', '40', '50'] hot=- v>3:1/117(max3.0)
   source#0   FMS=1.000 (null=1.000 reach=1.000, n= 59)  breaks=['10'] hot=- v>3:0/117(max2.9)
-  source#1   FMS=0.150 (null=1.000 reach=1.000, n= 59)  breaks=['60'] hot=- v>3:0/117(max2.9)
-  source#2   FMS=0.073 (null=1.000 reach=1.000, n= 59)  breaks=['10', '60'] hot=- v>3:2/117(max3.7)
-  -> Net3 mean FMS = 0.846 over 130 situations
-  -> Net3 binary (critical=level 1 vs operational): TP=154 FP=479 FN=0 TN=7037  accuracy=0.938 precision=0.243 recall=1.000 f1=0.391
+  source#1   FMS=0.058 (null=1.000 reach=1.000, n= 59)  breaks=['60'] hot=- v>3:0/117(max2.9)
+  source#2   FMS=0.058 (null=1.000 reach=1.000, n= 59)  breaks=['10', '60'] hot=- v>3:2/117(max3.7)
+  -> Net3 mean FMS = 0.843 over 130 situations
+  -> Net3 binary (critical=level 1 vs operational): TP=151 FP=529 FN=3 TN=6987  accuracy=0.931 precision=0.222 recall=0.981 f1=0.362
 
-AGGREGATE FMS across 130 situations: 0.846
+AGGREGATE FMS across 130 situations: 0.843
 AGGREGATE FMS by scenario kind (does fidelity hold outside independent random failure?):
-  cluster    mean FMS = 0.909  (null=0.963 reach=1.000, n=60 situations)
-  targeted   mean FMS = 0.788  (null=0.985 reach=0.987, n=60 situations)
+  cluster    mean FMS = 0.916  (null=0.963 reach=1.000, n=60 situations)
+  targeted   mean FMS = 0.775  (null=0.985 reach=0.987, n=60 situations)
   tank       mean FMS = 1.000  (null=1.000 reach=1.000, n=7 situations)
-  source     mean FMS = 0.408  (null=1.000 reach=1.000, n=3 situations)
+  source     mean FMS = 0.372  (null=1.000 reach=1.000, n=3 situations)
 REACHABILITY-BASELINE binary confusion, n=7670: TP=118 FP=0 FN=36 TN=7516  precision=1.000 recall=0.766
 AGGREGATE binary confusion (critical=level 1 vs operational), n=7670:
                   pred critical   pred operational
-  true critical             154                   0
-  true operational          479                7037
-  accuracy=0.938  precision=0.243  recall=1.000  f1=0.391
-=== 15:45 starting ../raw-networks/aqueducts/Cassacco_totale.inp ===
+  true critical             151                   3
+  true operational          529                6987
+  accuracy=0.931  precision=0.222  recall=0.981  f1=0.362
+=== 11:46 starting ../raw-networks/aqueducts/Cassacco_totale.inp ===
 
 === ../raw-networks/aqueducts/Cassacco_totale.inp (417 junctions, n_levels=3) ===
   cluster#0  FMS=1.000 (null=0.945 reach=1.000, n=410)  breaks=['PCASS_0079', 'PCASS_0081', 'PCASS_0168', 'PCASS_0078', 'PCASS_0082', 'PCASS_0080'] hot=- v>3:0/437(max1.1)
@@ -431,7 +431,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=7670:
   targeted#3 FMS=1.000 (null=1.000 reach=1.000, n=410)  breaks=['PCASS_0053'] hot=- v>3:0/437(max2.5)
   targeted#4 FMS=0.916 (null=0.897 reach=0.897, n=410)  breaks=['PCASS_0066'] hot=- v>3:2/437(max3.8)
   targeted#5 FMS=0.915 (null=0.893 reach=0.893, n=410)  breaks=['PCASS_0069'] hot=- v>3:2/437(max3.8)
-  targeted#6 FMS=0.728 (null=0.910 reach=0.910, n=410)  breaks=['PCASS_0093'] hot=- v>3:2/437(max4.5)
+  targeted#6 FMS=0.910 (null=0.910 reach=0.910, n=410)  breaks=['PCASS_0093'] hot=- v>3:2/437(max4.5)
   targeted#7 FMS=0.910 (null=0.910 reach=0.910, n=410)  breaks=['PCASS_0123'] hot=- v>3:2/437(max3.8)
   targeted#8 FMS=0.911 (null=0.909 reach=0.909, n=410)  breaks=['PCASS_0124'] hot=- v>3:2/437(max3.8)
   targeted#9 FMS=0.915 (null=0.908 reach=0.908, n=410)  breaks=['PCASS_0125'] hot=- v>3:2/437(max3.8)
@@ -488,21 +488,21 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=7670:
   source#0   FMS=1.000 (null=0.392 reach=1.000, n=410)  breaks=['PCASS_0428'] hot=- v>3:0/437(max0.4)
   source#1   FMS=1.000 (null=0.608 reach=1.000, n=410)  breaks=['PCASS_0430'] hot=- v>3:0/437(max1.1)
   source#2   FMS=1.000 (null=0.000 reach=1.000, n=410)  breaks=['PCASS_0428', 'PCASS_0430'] hot=- v>3:0/437(max0.3)
-  -> ../raw-networks/aqueducts/Cassacco_totale.inp mean FMS = 0.992 over 123 situations
-  -> ../raw-networks/aqueducts/Cassacco_totale.inp binary (critical=level 1 vs operational): TP=15589 FP=157 FN=216 TN=34468  accuracy=0.993 precision=0.990 recall=0.986 f1=0.988
+  -> ../raw-networks/aqueducts/Cassacco_totale.inp mean FMS = 0.993 over 123 situations
+  -> ../raw-networks/aqueducts/Cassacco_totale.inp binary (critical=level 1 vs operational): TP=15567 FP=54 FN=238 TN=34571  accuracy=0.994 precision=0.997 recall=0.985 f1=0.991
 
-AGGREGATE FMS across 123 situations: 0.992
+AGGREGATE FMS across 123 situations: 0.993
 AGGREGATE FMS by scenario kind (does fidelity hold outside independent random failure?):
   cluster    mean FMS = 0.995  (null=0.950 reach=0.997, n=60 situations)
-  targeted   mean FMS = 0.988  (null=0.447 reach=0.990, n=60 situations)
+  targeted   mean FMS = 0.991  (null=0.447 reach=0.990, n=60 situations)
   source     mean FMS = 1.000  (null=0.333 reach=1.000, n=3 situations)
 REACHABILITY-BASELINE binary confusion, n=50430: TP=15544 FP=0 FN=261 TN=34625  precision=1.000 recall=0.983
 AGGREGATE binary confusion (critical=level 1 vs operational), n=50430:
                   pred critical   pred operational
-  true critical           15589                 216
-  true operational          157               34468
-  accuracy=0.993  precision=0.990  recall=0.986  f1=0.988
-=== 16:16 starting ../raw-networks/aqueducts/Tarcento_totale.inp ===
+  true critical           15567                 238
+  true operational           54               34571
+  accuracy=0.994  precision=0.997  recall=0.985  f1=0.991
+=== 11:57 starting ../raw-networks/aqueducts/Tarcento_totale.inp ===
 /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "../raw-networks/aqueducts/Tarcento_totale.inp"; added with type None, units conversion left to user
   warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
 
@@ -542,7 +542,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=50430:
   cluster#44 FMS=1.000 (null=0.962 reach=1.000, n=424)  breaks=['PMAG_0173', 'PMAG_0113', 'PMAG_0103', 'PMAG_0111', 'PMAG_0174', 'PMAG_0102'] hot=- v>3:0/499(max1.1)
   cluster#45 FMS=1.000 (null=0.999 reach=1.000, n=424)  breaks=['PTAR_0125', 'PTAR_0258', 'PTAR_0261'] hot=- v>3:0/499(max1.1)
   cluster#46 FMS=0.997 (null=0.993 reach=0.999, n=424)  breaks=['PTAR_0343', 'PTAR_0178', 'PTAR_0357', 'PTAR_0344', 'PTAR_0345', 'PTAR_0180'] hot=- v>3:0/499(max1.5)
-  cluster#47 FMS=0.879 (null=0.918 reach=1.000, n=424)  breaks=['PMAG_0113', 'PMAG_0129', 'PMAG_0119', 'PMAG_0173', 'PMAG_0111', 'PMAG_0105'] hot=- v>3:0/499(max1.1)
+  cluster#47 FMS=0.874 (null=0.918 reach=1.000, n=424)  breaks=['PMAG_0113', 'PMAG_0129', 'PMAG_0119', 'PMAG_0173', 'PMAG_0111', 'PMAG_0105'] hot=- v>3:0/499(max1.1)
   cluster#48 FMS=1.000 (null=0.984 reach=1.000, n=424)  breaks=['PTAR_0366', 'PTAR_0175', 'PTAR_0101', 'PTAR_0100', 'PTAR_0174', 'PTAR_0363'] hot=- v>3:0/499(max1.1)
   cluster#49 FMS=1.000 (null=0.998 reach=1.000, n=424)  breaks=['PTAR_0106', 'PTAR_0313', 'PTAR_0107', 'PTAR_0298', 'PTAR_0102', 'PTAR_0312'] hot=- v>3:0/499(max1.1)
   cluster#50 FMS=1.000 (null=0.992 reach=1.000, n=424)  breaks=['PMAG_0161', 'PMAG_0186', 'PMAG_0131', 'PMAG_0160', 'PMAG_0185', 'PMAG_0132'] hot=- v>3:0/499(max1.1)
@@ -597,7 +597,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=31800:
   true critical            1575                  38
   true operational          888               29299
   accuracy=0.971  precision=0.639  recall=0.976  f1=0.773
-=== 16:33 starting ../raw-networks/aqueducts/Zampis.inp ===
+=== 12:08 starting ../raw-networks/aqueducts/Zampis.inp ===
 
 === ../raw-networks/aqueducts/Zampis.inp (607 junctions, n_levels=3) ===
   cluster#0  FMS=1.000 (null=0.976 reach=1.000, n=601)  breaks=['PZAM_0121', 'PZAM_0132', 'PZAM_0178', 'PZAM_0110', 'PZAM_0133', 'PZAM_0130'] hot=- v>3:0/674(max1.4)
@@ -608,7 +608,7 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=31800:
   cluster#5  FMS=1.000 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0574', 'PZAM_0313', 'PZAM_0589', 'PZAM_0575', 'PZAM_0314', 'PZAM_0316'] hot=- v>3:0/674(max1.6)
   cluster#6  FMS=1.000 (null=0.989 reach=1.000, n=601)  breaks=['PZAM_0300', 'PZAM_0504', 'PZAM_0431', 'PZAM_0506', 'PZAM_0430', 'PZAM_0505'] hot=- v>3:0/674(max1.6)
   cluster#7  FMS=1.000 (null=0.988 reach=1.000, n=601)  breaks=['PZAM_0360', 'PZAM_0361', 'PZAM_0502', 'PZAM_0503', 'PZAM_0501', 'PZAM_0362'] hot=- v>3:0/674(max1.6)
-  cluster#8  FMS=0.322 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0239', 'PZAM_0233', 'PZAM_0642', 'PZAM_0229', 'PZAM_0596', 'PZAM_0298'] hot=- v>3:0/674(max1.6)
+  cluster#8  FMS=0.795 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0239', 'PZAM_0233', 'PZAM_0642', 'PZAM_0229', 'PZAM_0596', 'PZAM_0298'] hot=- v>3:0/674(max1.6)
   cluster#9  FMS=1.000 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0082', 'PZAM_0056', 'PZAM_0018', 'PZAM_0079', 'PZAM_0020', 'PZAM_0084'] hot=- v>3:0/674(max1.6)
   cluster#10 FMS=1.000 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0110', 'PZAM_0112', 'PZAM_0130', 'PZAM_0111', 'PZAM_0178', 'PZAM_0132'] hot=- v>3:0/674(max1.6)
   cluster#11 FMS=1.000 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0033', 'PZAM_0068', 'PZAM_0084', 'PZAM_0034', 'PZAM_0069'] hot=- v>3:0/674(max1.6)
@@ -619,34 +619,34 @@ AGGREGATE binary confusion (critical=level 1 vs operational), n=31800:
   cluster#16 FMS=1.000 (null=0.985 reach=1.000, n=601)  breaks=['PZAM_0234', 'PZAM_0205', 'PZAM_0206', 'PZAM_0284', 'PZAM_0207', 'PZAM_0283'] hot=- v>3:0/674(max1.6)
   cluster#17 FMS=0.999 (null=0.995 reach=0.999, n=601)  breaks=['PZAM_0397', 'PZAM_0311', 'PZAM_0590', 'PZAM_0557'] hot=- v>3:0/674(max1.7)
   cluster#18 FMS=1.000 (null=0.989 reach=1.000, n=601)  breaks=['PZAM_0116', 'PZAM_0126', 'PZAM_0184', 'PZAM_0185', 'PZAM_0172', 'PZAM_0125'] hot=- v>3:0/674(max1.5)
-  cluster#19 FMS=0.679 (null=0.999 reach=1.000, n=601)  breaks=['PZAM_0321', 'PZAM_0541', 'PZAM_0435', 'PZAM_0336', 'PZAM_0433', 'PZAM_0320'] hot=- v>3:0/674(max1.6)
+  cluster#19 FMS=0.001 (null=0.999 reach=1.000, n=601)  breaks=['PZAM_0321', 'PZAM_0541', 'PZAM_0435', 'PZAM_0336', 'PZAM_0433', 'PZAM_0320'] hot=- v>3:0/674(max1.6)
   cluster#20 FMS=0.931 (null=0.730 reach=0.734, n=601)  breaks=['PZAM_0395', 'PZAM_0475', 'PZAM_0419', 'PZAM_0406', 'PZAM_0605', 'PZAM_0473'] hot=- v>3:0/674(max1.8)
-  cluster#21 FMS=0.703 (null=0.974 reach=0.975, n=601)  breaks=['PZAM_0342', 'PZAM_0436', 'PZAM_0351', 'PZAM_0580', 'PZAM_0544', 'PZAM_0337'] hot=- v>3:0/674(max1.7)
-  cluster#22 FMS=0.918 (null=0.994 reach=0.997, n=601)  breaks=['PZAM_0433', 'PZAM_0516', 'PZAM_0510', 'PZAM_0326', 'PZAM_0525', 'PZAM_0322'] hot=- v>3:0/674(max1.6)
+  cluster#21 FMS=0.026 (null=0.974 reach=0.975, n=601)  breaks=['PZAM_0342', 'PZAM_0436', 'PZAM_0351', 'PZAM_0580', 'PZAM_0544', 'PZAM_0337'] hot=- v>3:0/674(max1.7)
+  cluster#22 FMS=0.006 (null=0.994 reach=0.997, n=601)  breaks=['PZAM_0433', 'PZAM_0516', 'PZAM_0510', 'PZAM_0326', 'PZAM_0525', 'PZAM_0322'] hot=- v>3:0/674(max1.6)
   cluster#23 FMS=0.999 (null=0.991 reach=0.999, n=601)  breaks=['PZAM_0412', 'PZAM_0414', 'PZAM_0413', 'PZAM_0334', 'PZAM_0426', 'PZAM_0415'] hot=- v>3:0/674(max1.6)
   cluster#24 FMS=1.000 (null=0.988 reach=1.000, n=601)  breaks=['PZAM_0428', 'PZAM_0417', 'PZAM_0302', 'PZAM_0303', 'PZAM_0592', 'PZAM_0429'] hot=- v>3:0/674(max1.5)
-  cluster#25 FMS=0.973 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0539', 'PZAM_0537', 'PZAM_0536', 'PZAM_0342', 'PZAM_0341', 'PZAM_0538'] hot=- v>3:0/674(max1.6)
+  cluster#25 FMS=0.797 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0539', 'PZAM_0537', 'PZAM_0536', 'PZAM_0342', 'PZAM_0341', 'PZAM_0538'] hot=- v>3:0/674(max1.6)
   cluster#26 FMS=1.000 (null=0.996 reach=1.000, n=601)  breaks=['PZAM_0023', 'PZAM_0052', 'PZAM_0053', 'PZAM_0098'] hot=- v>3:0/674(max1.6)
   cluster#27 FMS=0.996 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0216', 'PZAM_0212', 'PZAM_0240', 'PZAM_0241', 'PZAM_0295', 'PZAM_0231'] hot=- v>3:0/674(max1.6)
   cluster#28 FMS=1.000 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0488', 'PZAM_0489', 'PZAM_0372', 'PZAM_0487', 'PZAM_0371'] hot=- v>3:0/674(max1.6)
-  cluster#29 FMS=0.679 (null=0.999 reach=1.000, n=601)  breaks=['PZAM_0433', 'PZAM_0435', 'PZAM_0434', 'PZAM_0328', 'PZAM_0321', 'PZAM_0541'] hot=- v>3:0/674(max1.6)
-  cluster#30 FMS=0.357 (null=0.969 reach=0.970, n=601)  breaks=['PZAM_0511', 'PZAM_0336', 'PZAM_0338', 'PZAM_0621', 'PZAM_0435', 'PZAM_0541'] hot=- v>3:0/674(max1.6)
+  cluster#29 FMS=0.001 (null=0.999 reach=1.000, n=601)  breaks=['PZAM_0433', 'PZAM_0435', 'PZAM_0434', 'PZAM_0328', 'PZAM_0321', 'PZAM_0541'] hot=- v>3:0/674(max1.6)
+  cluster#30 FMS=0.031 (null=0.969 reach=0.970, n=601)  breaks=['PZAM_0511', 'PZAM_0336', 'PZAM_0338', 'PZAM_0621', 'PZAM_0435', 'PZAM_0541'] hot=- v>3:0/674(max1.6)
   cluster#31 FMS=1.000 (null=0.996 reach=1.000, n=601)  breaks=['PZAM_0602', 'PZAM_0232', 'PZAM_0224', 'PZAM_0231', 'PZAM_0243', 'PZAM_0242'] hot=- v>3:0/674(max1.6)
-  cluster#32 FMS=0.832 (null=0.756 reach=0.882, n=601)  breaks=['PFRC_0631', 'PFRC_0637', 'PZAM_0194', 'PZAM_0286', 'PFRC_0639', 'PZAM_0003'] hot=- v>3:0/674(max1.5)
+  cluster#32 FMS=0.244 (null=0.756 reach=0.882, n=601)  breaks=['PFRC_0631', 'PFRC_0637', 'PZAM_0194', 'PZAM_0286', 'PFRC_0639', 'PZAM_0003'] hot=- v>3:0/674(max1.5)
   cluster#33 FMS=0.756 (null=0.448 reach=0.452, n=601)  breaks=['PZAM_0596', 'PFRC_0626', 'PFRC_0821', 'PFRC_0625', 'PZAM_0228', 'PFRC_0853'] hot=- v>3:0/674(max0.7)
   cluster#34 FMS=1.000 (null=0.996 reach=1.000, n=601)  breaks=['PZAM_0243', 'PZAM_0241', 'PZAM_0224', 'PZAM_0601', 'PZAM_0593', 'PZAM_0602'] hot=- v>3:0/674(max1.6)
   cluster#35 FMS=1.000 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0001', 'PZAM_0002', 'PZAM_0129', 'PZAM_0190'] hot=- v>3:0/674(max1.6)
   cluster#36 FMS=0.999 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0213', 'PZAM_0289', 'PZAM_0292', 'PZAM_0237', 'PZAM_0215', 'PZAM_0216'] hot=- v>3:0/674(max1.6)
   cluster#37 FMS=1.000 (null=0.971 reach=1.000, n=601)  breaks=['PZAM_0522', 'PZAM_0525', 'PZAM_0325', 'PZAM_0524', 'PZAM_0327', 'PZAM_0329'] hot=- v>3:0/674(max1.6)
   cluster#38 FMS=1.000 (null=0.988 reach=1.000, n=601)  breaks=['PZAM_0364', 'PZAM_0408', 'PZAM_0459', 'PZAM_0407', 'PZAM_0363', 'PZAM_0456'] hot=- v>3:0/674(max1.6)
-  cluster#39 FMS=0.880 (null=0.865 reach=0.873, n=601)  breaks=['PZAM_0496', 'PZAM_0367', 'PZAM_0497', 'PZAM_0366', 'PZAM_0495', 'PZAM_0499'] hot=- v>3:0/674(max2.0)
+  cluster#39 FMS=0.670 (null=0.865 reach=0.873, n=601)  breaks=['PZAM_0496', 'PZAM_0367', 'PZAM_0497', 'PZAM_0366', 'PZAM_0495', 'PZAM_0499'] hot=- v>3:0/674(max2.0)
   cluster#40 FMS=1.000 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0086', 'PZAM_0036', 'PZAM_0089', 'PZAM_0088', 'PZAM_0085', 'PZAM_0041'] hot=- v>3:0/674(max1.6)
   cluster#41 FMS=1.000 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0333', 'PZAM_0532', 'PZAM_0331', 'PZAM_0526', 'PZAM_0533', 'PZAM_0330'] hot=- v>3:0/674(max1.6)
   cluster#42 FMS=0.992 (null=0.995 reach=1.000, n=601)  breaks=['PZAM_0401', 'PZAM_0403', 'PZAM_0402', 'PZAM_0309', 'PZAM_0454'] hot=- v>3:0/674(max1.8)
-  cluster#43 FMS=0.298 (null=0.994 reach=0.999, n=601)  breaks=['PZAM_0057', 'PZAM_0053', 'PZAM_0054', 'PZAM_0024', 'PZAM_0025', 'PZAM_0026'] hot=- v>3:0/674(max1.6)
+  cluster#43 FMS=0.006 (null=0.994 reach=0.999, n=601)  breaks=['PZAM_0057', 'PZAM_0053', 'PZAM_0054', 'PZAM_0024', 'PZAM_0025', 'PZAM_0026'] hot=- v>3:0/674(max1.6)
   cluster#44 FMS=1.000 (null=0.987 reach=1.000, n=601)  breaks=['PZAM_0062', 'PZAM_0061', 'PZAM_0028', 'PZAM_0057', 'PZAM_0031', 'PZAM_0029'] hot=- v>3:0/674(max1.6)
   cluster#45 FMS=1.000 (null=0.993 reach=1.000, n=601)  breaks=['PZAM_0642', 'PZAM_0233', 'PZAM_0298', 'PZAM_0228', 'PZAM_0299', 'PZAM_0239'] hot=- v>3:0/674(max1.6)
   cluster#46 FMS=0.999 (null=0.991 reach=0.999, n=601)  breaks=['PZAM_0526', 'PZAM_0333', 'PZAM_0329', 'PZAM_0331', 'PZAM_0332', 'PZAM_0527'] hot=- v>3:0/674(max1.6)
   cluster#47 FMS=1.000 (null=0.980 reach=1.000, n=601)  breaks=['PZAM_0001', 'PZAM_0155', 'PZAM_0133', 'PZAM_0113', 'PZAM_0177', 'PZAM_0302'] hot=- v>3:0/674(max1.4)
-  cluster#48 FMS=1.000 (null=0.976 reach=1.000, n=601)  breaks=['PZAM_0528', 'PZAM_0325', 'PZAM_0524', 'PZAM_0326', 'PZAM_0331', 'PZAM_0322'] hot=- v>3:0/674(max1.6)
+  cluster#48 FMS=0.797 (null=0.976 reach=1.000, n=601)  breaks=['PZAM_0528', 'PZAM_0325', 'PZAM_0524', 'PZAM_0326', 'PZAM_0331', 'PZAM_0322'] hot=- v>3:0/674(max1.6)
   cluster#49 FMS=1.000 (null=0.991 reach=1.000, n=601)  breaks=['PZAM_0306', 'PZAM_0449', 'PZAM_0450', 'PZAM_0451', 'PZAM_0307', 'PZAM_0308'] hot=- v>3:0/674(max1.8)

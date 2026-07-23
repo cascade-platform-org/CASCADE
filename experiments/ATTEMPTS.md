@@ -213,7 +213,7 @@ change — this validates the §4 framing; candidate for a one-line Supp. S2 nul
 ### 9b. Extending the network sample with held-out MEDIUM networks
 
 Reviewer: 6 nets is thin, reachability looks strong on FMS. Downloaded from
-WaterBenchmarkHub (`raw-networks/benchmark/`): Modena (268 j), CTown (388 j,
+WaterBenchmarkHub (now in `raw-networks/aqueducts/`): Modena (268 j), CTown (388 j,
 11 pumps/7 tanks), Balerma (443 j), Pescara, MarchiRural. `>50 j` medium band
 — big enough to matter, small enough to converge where the KY nets (ky10/ky4,
 thousands of nodes) self-starve.
@@ -248,7 +248,7 @@ Turns the "depressing" result into evidence for the limitation already claimed.
 ## 10. Full benchmark rebuild (2026-07-22) — the current setup
 
 Driven by a precision diagnosis (§ below) + owner decisions. Spec:
-`docs/paper/benchmark-protocol.md`. Runner: `run_final_benchmark.sh` →
+`benchmark-protocol.md` (this directory). Runner: `run_final_benchmark.sh` →
 `final_benchmark.csv`.
 
 ### Why: precision was the problem, and it was NOT the importer's capacity
@@ -308,3 +308,46 @@ x4 -> 0), so no uniform margin fixes it. The lever is PRIORITY (who gets shed).
 
 Bug fixed: `_demand_value` crashed on a junction referencing a missing demand
 pattern (`get_pattern` returns None, not KeyError) — now guarded.
+
+## 11. Pump-fed tank supply fix + final numbers (2026-07-23)
+
+The §10 run exposed a CTown catastrophe (FMS 0.029, precision 0.015 — module
+flagged ~everything critical while WNTR/reachability said the network was fine).
+
+Root cause: `nominal_source_outflow` caps a tank at its small nominal outflow.
+Correct for GRAVITY tanks (aqueduct terminal storage) but wrong for PUMP-FED
+pass-through tanks (CTown: reservoir->pump->tank->district). The pump keeps such
+a tank full, so its real deliverability is pipe-limited; the nominal cap
+bottlenecks every downstream district -> mass false starvation.
+
+Fix: `core/importers/inp/sim.py::pump_fed_tanks` — build the gravity graph
+(pipes+valves, NO pumps); a tank outside every reservoir's connected component is
+pump-fed -> gets incident-pipe capacity; else nominal. No reservoir -> no pump-fed
+tank. Wired in `map.py::build_bundle::_supply_for`. Only Net1/Tarcento/CTown
+reclassify. CTown baseline criticals 336->15; spot-check FMS 0.029->0.961.
+
+FINAL 8-network numbers (`final_benchmark.csv`, 939 situations):
+  module FMS 0.921, P 0.657 R 0.955 F1 0.778  vs  reach P 1.000 R 0.461 F1 0.631.
+  Per-net after fix: CTown 0.029->0.902, Net1 0.713->0.997 (P1.0), Tarcento
+  0.967 (unchanged). Delta-null +0.10 (CI 0.08..0.12); delta-reach +0.004
+  (CI -0.01..0.02, spans 0 — reachability's FMS is as high or higher, as stated).
+
+Originally landed as a separate `final_benchmark_v2.csv` (merge of the §10
+pre-fix original + the 3-net re-run, via `merge_pumpfed.py`) sitting alongside
+the pre-fix `final_benchmark.csv` — two files for one result was confusing, so
+the pre-fix file was archived and v2 was renamed to be the one and only
+`final_benchmark.csv` (2026-07-23, later same day).
+
+## Files (current)
+
+- `final_benchmark.csv` — CANONICAL 8-network result (post pump-fed fix).
+  Aggregate with `aggregate_final.py`; paper numbers via `paper_numbers.py`.
+- `final_benchmark_none.csv` — uniform-priority ablation (`--priority-mode none`)
+  for the paper's [none prec] / [FP cut]; `rerun_none_priority.sh`.
+- `run_final_benchmark.sh` — 8-network runner (contingency priorities).
+- `archive/pumpfed-fix-2026-07-23/` — provenance for the fix: the pre-fix
+  `final_benchmark.csv` (CTown still broken), the raw 3-net re-run
+  (`final_benchmark_fixed.csv`), and `merge_pumpfed.py` (already ran once;
+  paths inside are historical, not rerunnable as-is). `rerun_pumpfed_fix.sh`
+  (still in `experiments/`) is the script that produced the re-run.
+- `margin_sweep.py`, `diag_*.py` — importer diagnostics (Supp. Mat. S5 / rebuild).

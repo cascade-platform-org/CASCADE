@@ -210,30 +210,83 @@ def test_demand_survives_engine_fixed_point_rounding():
     assert _scaled(demand) > 0  # must NOT round away to zero
 
 
-def test_source_supply_reservoir_unbounded_tank_nominal(bundle_and_warnings):
-    """Supply differs by source TYPE (2026-07-22 model):
-      - a RESERVOIR is modelled as fixed-head / near-infinite (like EPANET),
-        so its supply_capacity is UNBOUNDED_SUPPLY_FALLBACK — the outlet pipe,
-        not the source, is the limit.
-      - a TANK is a finite store, so its supply_capacity is its NOMINAL delivered
-        outflow (one PDD solve), a TIGHTER bound than the sum of its outgoing
-        pipe capacities (pipes are deliberately over-sized)."""
+def test_source_supply_reservoir_unbounded_pumpfed_tank_pipe_limited(bundle_and_warnings):
+    """Supply by source TYPE (2026-07-23 model):
+      - a RESERVOIR is fixed-head / near-infinite, so supply_capacity is
+        UNBOUNDED_SUPPLY_FALLBACK — the outlet pipe, not the source, is the limit.
+      - a PUMP-FED tank (a reservoir reaches it ONLY across a pump) is a
+        PASS-THROUGH: the pump keeps it full, so its supply is its incident-pipe
+        capacity, not a nominal cap. In the synthetic net R1 reaches T1 only
+        through pump P1, so T1 is pump-fed and its supply equals pipe B's
+        capacity (see `test_gravity_tank_supply_is_nominal_outflow` for the
+        gravity/nominal path)."""
     from core.importers.inp import UNBOUNDED_SUPPLY_FALLBACK
+    from core.importers.inp.sim import pump_fed_tanks
 
     bundle, _ = bundle_and_warnings
     assert bundle.project.nodes["R1"].supply_capacity["water"] == UNBOUNDED_SUPPLY_FALLBACK
+    assert pump_fed_tanks(load_inp(SYNTHETIC_INP)) == {"T1"}
     t1_supply = bundle.project.nodes["T1"].supply_capacity["water"]
-    b_capacity = bundle.project.edges["e_B"].capacity  # T1's only outgoing pipe
-    # A finite, real deliverable yield — and strictly below the over-sized pipe
-    # capacity the legacy sum-of-pipes rule would have used.
-    assert 0 < t1_supply < UNBOUNDED_SUPPLY_FALLBACK
-    assert t1_supply < b_capacity
+    b_capacity = bundle.project.edges["e_B"].capacity  # T1's only incident pipe
+    assert t1_supply == pytest.approx(b_capacity)
+
+
+# Gravity net: reservoir R reaches tank T through pipes alone (no pump), so T is
+# terminal storage — the gravity/nominal supply path and the classifier's other
+# branch. J1/J2 draw demand; T and R both feed J1.
+GRAVITY_TANK_INP = """
+[TITLE]
+Gravity tank test net
+[JUNCTIONS]
+ J1   50   5
+ J2   40   8
+[RESERVOIRS]
+ R    100
+[TANKS]
+ T    80   5   0   10   10   0
+[PIPES]
+ PR   R    J1   500   300   100   0   Open
+ PT   T    J1   500   200   100   0   Open
+ PJ   J1   J2   500   250   100   0   Open
+[COORDINATES]
+ J1  100  100
+ J2  200  100
+ R   0    100
+ T   100  200
+[OPTIONS]
+ Units  LPS
+[END]
+"""
+
+
+def test_gravity_tank_supply_is_nominal_outflow():
+    """A tank a reservoir reaches through PIPES (no pump) is gravity-fed terminal
+    storage: `pump_fed_tanks` leaves it out, so its supply is its NOMINAL
+    delivered outflow — a tighter bound than the over-sized incident-pipe
+    capacity a pass-through tank would get."""
+    from core.importers.inp import UNBOUNDED_SUPPLY_FALLBACK
+    from core.importers.inp.sim import pump_fed_tanks
+
+    wn = load_inp(GRAVITY_TANK_INP)
+    assert pump_fed_tanks(wn) == set()  # R reaches T via pipes → gravity-fed
+    bundle = build_bundle(wn, name="grav")
+    assert bundle.project.nodes["R"].supply_capacity["water"] == UNBOUNDED_SUPPLY_FALLBACK
+    t_supply = bundle.project.nodes["T"].supply_capacity["water"]
+    pt_capacity = bundle.project.edges["e_PT"].capacity  # T's incident pipe
+    # Nominal outflow: finite, positive, and strictly below the over-sized pipe.
+    assert 0 < t_supply < UNBOUNDED_SUPPLY_FALLBACK
+    assert t_supply < pt_capacity
 
 
 def test_isolated_tank_supply_falls_back_without_a_capacitated_pipe():
-    """A TANK with no incident link has neither a nominal outflow nor an
-    outgoing pipe capacity to derive supply from — falls back to
-    UNBOUNDED_SUPPLY_FALLBACK with a warning, never crashes or zeroes out.
+    """A TANK with no incident link has no outgoing pipe capacity to derive
+    supply from — falls back to UNBOUNDED_SUPPLY_FALLBACK with a warning,
+    never crashes or zeroes out. T1 is pump-fed (per
+    `test_source_supply_reservoir_unbounded_pumpfed_tank_pipe_limited`), so
+    isolating it exercises `_pipe_supply`'s own fallback directly, without
+    ever consulting `tank_nominal` — a GRAVITY tank falling back from a
+    zero/missing nominal outflow to `_pipe_supply` is a separate code path
+    this test does not cover.
     (Reservoirs are UNBOUNDED unconditionally and never reach this path.)"""
     from core.importers.inp import UNBOUNDED_SUPPLY_FALLBACK
 

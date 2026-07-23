@@ -60,6 +60,7 @@ from core.importers.inp.sim import (
     NEGLIGIBLE_VELOCITY_MS,
     LinkFlowProfile,
     nominal_source_outflow,
+    pump_fed_tanks,
 )
 from schemas.config import (
     CategoryDefinition,
@@ -224,13 +225,15 @@ class ImportOptions(BaseModel):
     )
     nominal_supply: bool = Field(
         default=True,
-        description="Source (reservoir/tank) supply_capacity = its NOMINAL "
-                    "delivered outflow (one nominal PDD solve) instead of the sum "
-                    "of its outgoing pipe capacities. Default True: pipes are "
-                    "over-sized so summing their capacity overstates yield ~6x and "
-                    "leaves sources unable to bottleneck. Set False for the legacy "
-                    "incident-pipe rule (falls back to it automatically if the "
-                    "nominal solve fails).",
+        description="Type-aware source supply (default True): reservoirs unbounded; "
+                    "a GRAVITY tank (a reservoir reaches it through pipes) gets its "
+                    "NOMINAL delivered outflow (one PDD solve) — pipes are over-sized "
+                    "so summing their capacity overstates yield ~6x and leaves the "
+                    "tank unable to bottleneck; a PUMP-FED tank (a reservoir reaches "
+                    "it only across a pump, e.g. CTown district tanks) is PASS-THROUGH "
+                    "and keeps incident-pipe capacity, since capping it at nominal "
+                    "falsely starves everything downstream. Set False for the legacy "
+                    "incident-pipe rule for all sources.",
     )
     source_crs: str = Field(
         default="EPSG:3004",
@@ -750,34 +753,39 @@ def build_bundle(
             for endpoint in (a, b):
                 incident_caps[endpoint] = incident_caps.get(endpoint, 0.0) + cap
 
-    # Supply differs by source TYPE (2026-07-22):
+    # Supply differs by source TYPE (2026-07-22, tank refinement 2026-07-23):
     #  - RESERVOIRS are near-infinite bodies (EPANET models them as fixed-head,
     #    i.e. unbounded supply); what limits delivery is the outlet pipe, not the
     #    source. So reservoirs get UNBOUNDED supply. This also keeps multi-source
     #    failure valid against WNTR: when one reservoir is cut, the survivors —
     #    infinite in WNTR — must be able to cover the slack in the model too, or
     #    the model over-predicts starvation the oracle never sees.
-    #  - TANKS are geometry-limited stores; their deliverable yield IS finite, so
-    #    they get their NOMINAL delivered outflow (one PDD solve). This is what
-    #    makes tank isolation/degradation meaningful.
+    #  - GRAVITY tanks (a reservoir reaches them through pipes/valves) are finite
+    #    terminal stores, so they get their NOMINAL delivered outflow (one PDD
+    #    solve). This is what makes tank isolation/degradation meaningful.
+    #  - PUMP-FED tanks (a reservoir reaches them ONLY through a pump, e.g. every
+    #    CTown district tank) are PASS-THROUGH: the pump keeps them full, so their
+    #    real deliverability is pipe-limited, not their small nominal outflow.
+    #    Capping them at nominal bottlenecks every downstream district and falsely
+    #    starves the whole network (`pump_fed_tanks`). They get incident-pipe
+    #    capacity, like the reservoir-outlet rule.
     #  - Injection wells keep their declared rate (set at node creation, not here).
     reservoir_names = set(wn.reservoir_name_list)
-    # Only tanks consume the nominal solve (reservoirs are UNBOUNDED below); skip
-    # the extra PDD solve entirely when the network has no tanks.
+    # Reuse the links this function already collected (`links`, above) instead
+    # of a second wn.get_link walk inside pump_fed_tanks.
+    pump_fed = (
+        pump_fed_tanks(wn, ((link.start, link.end) for link in links if link.kind != "pump"))
+        if options.nominal_supply else set()
+    )
+    # Only GRAVITY tanks consume the nominal solve (reservoirs unbounded, pump-fed
+    # tanks pipe-limited below); skip the extra PDD solve when no tank needs it.
     tank_nominal = (
         nominal_source_outflow(wn, demands)
-        if options.nominal_supply and wn.tank_name_list
+        if options.nominal_supply and (set(wn.tank_name_list) - pump_fed)
         else {}
     )
 
-    def _supply_for(source_id: str) -> float:
-        # `cap` stays true SI m³/s; only the returned, model-bound value is
-        # rescaled (`_flow_units`).
-        if source_id in reservoir_names:
-            return UNBOUNDED_SUPPLY_FALLBACK
-        nominal = tank_nominal.get(source_id, 0.0)  # tanks
-        if nominal > 0:
-            return _flow_units(nominal)
+    def _pipe_supply(source_id: str) -> float:
         cap = incident_caps.get(source_id, 0.0)
         if cap <= 0:
             warnings.append(
@@ -786,6 +794,18 @@ def build_bundle(
             )
             return UNBOUNDED_SUPPLY_FALLBACK
         return _flow_units(cap)
+
+    def _supply_for(source_id: str) -> float:
+        # `cap` stays true SI m³/s; only the returned, model-bound value is
+        # rescaled (`_flow_units`).
+        if source_id in reservoir_names:
+            return UNBOUNDED_SUPPLY_FALLBACK
+        if source_id in pump_fed:  # pass-through tank → pipe-limited, not nominal
+            return _pipe_supply(source_id)
+        nominal = tank_nominal.get(source_id, 0.0)  # gravity tank
+        if nominal > 0:
+            return _flow_units(nominal)
+        return _pipe_supply(source_id)
 
     # --- nodes ----------------------------------------------------------------
     nodes: dict[str, Node] = {}

@@ -25,8 +25,8 @@ parses/skeletonizes/solves; pyproj (MIT) does CRS.
 
 | EPANET | CASCADE |
 |---|---|
-| Reservoir | `Source`, `supply_capacity["water"]` = sum of incident pipe capacities |
-| Tank | `Source` + water profile `{backup, backup_duration = volume ÷ downstream demand}` + shared "Running on Reserve" Disservice |
+| Reservoir | `Source`, `supply_capacity["water"]` = unbounded (fixed-head, like WNTR — the outlet pipe limits delivery, not the source) |
+| Tank | `Source` + water profile `{backup, backup_duration = volume ÷ downstream demand}` + shared "Running on Reserve" Disservice. `supply_capacity["water"]`: GRAVITY tank (reservoir reaches it via pipes) = nominal delivered outflow; PUMP-FED pass-through tank (reservoir reaches it only across a pump) = incident-pipe capacity — see "Source supply" below |
 | Junction, demand > 0 | `Service`, water profile `{demand, priority}` |
 | Junction, demand = 0 | `Infrastructure` |
 | Junction, demand < 0 | `Source` (`kind: "injection_well"`), supply = the injection rate — the EPANET well idiom; mapping it as Infrastructure deletes the network's supply (Net2's only source is such a junction) |
@@ -53,10 +53,24 @@ nothing else. (`test_demand_survives_engine_fixed_point_rounding`.)
 the target project's own scale length, so imported values land on the right
 range without importer awareness of the target.
 
-**Source supply** = sum of incident pipe capacities — real data from the
-file, never a user knob. A source with no capacitated pipe falls back to
-`UNBOUNDED_SUPPLY_FALLBACK = 1e7` with a warning. Specific real values are
-edited in the Inspector afterwards.
+**Source supply** is type-aware (2026-07-22 nominal model, 2026-07-23 pump-fed
+refinement), never a user knob:
+- **Reservoirs** → unbounded (`UNBOUNDED_SUPPLY_FALLBACK = 1e7`): EPANET models
+  them fixed-head, so the outlet pipe limits delivery, not the source. This also
+  keeps multi-source failure valid against WNTR (a surviving reservoir must cover
+  the slack, as it does in the oracle).
+- **Gravity tanks** (a reservoir reaches them through pipes/valves) → NOMINAL
+  delivered outflow from one PDD solve (`nominal_source_outflow`). Pipes are
+  over-sized ~6×, so summing their capacity leaves the tank unable to bottleneck
+  and tank-isolation events meaningless.
+- **Pump-fed tanks** (a reservoir reaches them ONLY across a pump —
+  `pump_fed_tanks`, gravity-graph reachability) → incident-pipe capacity. Such a
+  tank is a PASS-THROUGH the pump keeps full; capping it at nominal bottlenecks
+  every downstream district and falsely starves the network (CTown: baseline
+  criticals 336→15, FMS 0.029→0.902 once split out).
+
+A source with no capacitated pipe falls back to `UNBOUNDED_SUPPLY_FALLBACK` with
+a warning. Specific real values are edited in the Inspector afterwards.
 
 ### Capacity — Sweep + Contingency + Margin (CONTEXT.md terms)
 

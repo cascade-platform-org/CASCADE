@@ -5,7 +5,7 @@
 #   peak_hour demand · reservoirs unbounded / tanks nominal supply ·
 #   max_velocity 3.0 · adaptive x8 sweep · cycle-aware severity contingency
 #   priorities · reachability removes critical (outlet-closed) sources.
-# See docs/paper/benchmark-protocol.md.
+# See benchmark-protocol.md (same directory).
 set -u
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
 EXP=../experiments
@@ -16,8 +16,8 @@ NETWORKS="Net1 Net2 Net3 \
 ../raw-networks/aqueducts/Cassacco_totale.inp \
 ../raw-networks/aqueducts/Tarcento_totale.inp \
 ../raw-networks/aqueducts/Zampis.inp \
-../raw-networks/benchmark/Modena.inp \
-../raw-networks/benchmark/CTown.inp"
+../raw-networks/aqueducts/Modena.inp \
+../raw-networks/aqueducts/CTown.inp"
 
 for net in $NETWORKS; do
   echo "=== $(date +%H:%M) starting $net ===" | tee -a "$LOG"

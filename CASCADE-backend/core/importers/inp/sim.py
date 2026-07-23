@@ -64,7 +64,7 @@ import math
 import random
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import networkx as nx
 import wntr
@@ -670,6 +670,50 @@ def link_flow_profiles(
         )
 
     return profiles
+
+
+def pump_fed_tanks(
+    wn: wntr.network.WaterNetworkModel,
+    gravity_pairs: Iterable[tuple[str, str]] | None = None,
+) -> set[str]:
+    """Tank ids that a reservoir can reach ONLY through a pump — pass-through
+    tanks (2026-07-23).
+
+    CTown-class pumped networks feed districts as `reservoir -> pump -> tank ->
+    district`; such a tank is not a finite store to be capped at its nominal
+    outflow but a PASS-THROUGH whose real deliverability is pipe/pump-limited
+    (the pump keeps it full). Capping it at nominal bottlenecks every downstream
+    district and falsely starves the network.
+
+    A tank a reservoir reaches through pipes/valves alone (a gravity aqueduct's
+    terminal storage) is NOT pump-fed and keeps its nominal cap. A network with
+    no reservoir has no pass-through tank either: a sole-source tank is a primary
+    source, not a conduit for a reservoir's supply.
+
+    Detection is purely topological: build the GRAVITY graph (pipes + valves, no
+    pumps); a tank outside every reservoir's connected component there is only
+    reachable across a pump, hence pump-fed.
+
+    `gravity_pairs`: optional pre-collected (start, end) node pairs for every
+    pipe/valve link (pumps excluded). A caller that already walked the
+    network's links once (`build_bundle`'s `_collect_links`) can pass them to
+    avoid a second `wn.get_link` pass over every link; defaults to walking
+    `wn` directly when omitted (e.g. standalone/test callers)."""
+    reservoirs = set(wn.reservoir_name_list)
+    if not reservoirs or not wn.tank_name_list:
+        return set()
+    gravity = nx.Graph()
+    if gravity_pairs is not None:
+        gravity.add_edges_from(gravity_pairs)
+    else:
+        for lid in list(wn.pipe_name_list) + list(wn.valve_name_list):
+            lk: Any = wn.get_link(lid)  # WNTR ships no usable stubs
+            gravity.add_edge(lk.start_node_name, lk.end_node_name)
+    reachable: set[str] = set()
+    for r in reservoirs:
+        if r in gravity and r not in reachable:
+            reachable |= nx.node_connected_component(gravity, r)
+    return {t for t in wn.tank_name_list if t not in reachable}
 
 
 def nominal_source_outflow(
