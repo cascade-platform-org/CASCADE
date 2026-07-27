@@ -375,13 +375,13 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           left: "50%",
           transform: "translateX(-50%)",
           textAlign: "center",
-          fontSize: 10,
+          fontSize: 13,
           color: "#52525b",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
           maxWidth: LABEL_MAX_WIDTH,
-          lineHeight: "14px",
+          lineHeight: "17px",
         }}
       >
         {label.length > 30 ? label.slice(0, 29) + "…" : label}

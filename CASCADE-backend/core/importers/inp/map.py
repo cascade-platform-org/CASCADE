@@ -17,9 +17,14 @@ Mapping rules (docs/adr — INP import):
                          two half-edges — its Functionality gates downstream
                          flow via the universal Requisite pass
   Valve link           → inline Infrastructure node (category "valve"), same
-  Pipe                 → edge, capacity = π/4·d²·v × CAPACITY_MARGIN (m³/s),
-                         v from a baseline hydraulic simulation per pipe
-                         (core/importers/inp/sim.py), not a single assumed constant
+  Pipe                 → edge, capacity = π/4·d²·v (m³/s) with v a uniform
+                         design velocity (DEFAULT_DESIGN_VELOCITY_MS, 2.5 m/s);
+                         orientation still comes from the per-pipe hydraulic
+                         sweep (below). Set ImportOptions.capacity_velocity=None
+                         to size capacity from the per-pipe simulated peak
+                         instead (the "sweep drill", π/4·d²·v_peak × margin,
+                         capped) — an ablation showed it buys nothing over the
+                         constant (ADR-0012 addendum)
 
 Every node on the water path declares the "water" category — the engine's flow
 pass only routes through category members. A pipe's direction is read off the
@@ -209,6 +214,17 @@ _CATEGORIES = [
 # incident pipe capacities, so it widens with them automatically.
 DEFAULT_CAPACITY_MARGIN = 2.0
 
+# Default uniform design velocity (m/s) every pipe capacity is sized at:
+# capacity = area x this. A standard water-main design speed — the velocity a
+# distribution pipe is engineered to carry at peak. This is the shipped
+# capacity method (2026-07-27, ADR-0012 addendum): a full-benchmark ablation
+# (experiments §S2, ATTEMPTS.md §12) found the per-pipe hydraulic sweep buys
+# nothing measurable over this constant (pooled F1 0.770 vs 0.778, FMS 0.926 vs
+# 0.921), so the simpler, standard, reproducible rule is the default and the
+# sweep capacity drill is retained only as an option (ImportOptions.capacity_velocity
+# = None). The sweep itself still runs regardless — it is what ORIENTS edges.
+DEFAULT_DESIGN_VELOCITY_MS = 2.5
+
 
 class ImportOptions(BaseModel):
     """Knobs of the .inp mapping pipeline (defaults per ADR-0012).
@@ -251,24 +267,44 @@ class ImportOptions(BaseModel):
                     "the imported values line up with it (the generated scale "
                     "itself is then discarded, not merged in).",
     )
+    capacity_velocity: Optional[float] = Field(
+        default=DEFAULT_DESIGN_VELOCITY_MS, gt=0,
+        description="Uniform design velocity (m/s) every PIPE capacity is sized "
+                    "at: capacity = area x capacity_velocity (a textbook "
+                    "water-main design speed, no hydraulic solve). Default 2.5 "
+                    "m/s. This is the shipped method — an ablation over all 8 "
+                    "benchmark networks showed the per-pipe hydraulic sweep buys "
+                    "nothing over this constant (pooled F1 0.770 vs 0.778, FMS "
+                    "0.926 vs 0.921; ADR-0012 addendum, experiments §S2). Set to "
+                    "None to fall back to the SWEEP DRILL instead: per-pipe "
+                    "capacity = area x min(v_peak x capacity_margin, "
+                    "max_velocity) from core.importers.inp.sim.link_flow_profiles. "
+                    "Either way the sweep still runs — it is what orients edges "
+                    "(pipe direction from simulated flow sign); only how pipe "
+                    "CAPACITY is derived changes. Valve capacity always uses the "
+                    "sweep formula.",
+    )
     capacity_margin: float = Field(
         default=DEFAULT_CAPACITY_MARGIN, gt=0,
-        description="Uniform multiplier applied to every pipe/valve capacity "
-                    "derived from the hydraulic sweep. The sweep's peak "
-                    "velocity is a lower bound on what a pipe can carry under "
-                    "failure rerouting, so a margin >1 corrects the resulting "
-                    "pessimism. Fidelity is stable across a broad range; lower "
-                    "is more conservative (fewer missed criticals, more false "
-                    "alarms), higher is more optimistic. Default 2.0.",
+        description="Multiplier on the sweep peak velocity — applies to VALVE "
+                    "capacity always, and to PIPE capacity only under the sweep "
+                    "drill (capacity_velocity=None). The sweep's peak velocity is "
+                    "a lower bound on what a conduit can carry under failure "
+                    "rerouting, so a margin >1 corrects the resulting pessimism. "
+                    "Ignored for pipe capacity in the default uniform-velocity "
+                    "method. Default 2.0.",
     )
     max_velocity: Optional[float] = Field(
         default=3.0, gt=0,
-        description="Physical ceiling (m/s) on the margined pipe velocity, so no "
-                    "capacity_margin can imply an unphysically fast pipe: "
-                    "capacity = area x min(v_peak x margin, max_velocity). Default "
-                    "3.0 m/s is the water-main design ceiling (matches the "
-                    "ground-truth velocity-exceedance flag V_MAX_DESIGN_MS). Set "
-                    "to None to disable the cap (uncapped, pre-2026-07 behaviour).",
+        description="Physical ceiling (m/s) on the margined SWEEP velocity, so no "
+                    "capacity_margin can imply an unphysically fast conduit: sweep "
+                    "capacity = area x min(v_peak x margin, max_velocity). Applies "
+                    "to valve capacity always, and to pipe capacity only under the "
+                    "sweep drill (capacity_velocity=None); the default "
+                    "uniform-velocity method sizes pipes at capacity_velocity "
+                    "directly and ignores this. Default 3.0 m/s (water-main design "
+                    "ceiling, matching the ground-truth flag V_MAX_DESIGN_MS). None "
+                    "disables the cap.",
     )
 
 
@@ -291,17 +327,23 @@ class _Link(BaseModel):
     velocity_rev: Optional[float] = None
 
 
-def _pipe_capacity(
+def _conduit_area(diameter_m: float) -> float:
+    return math.pi / 4.0 * diameter_m**2
+
+
+def _sweep_capacity(
     diameter_m: float, velocity: float, margin: float,
     max_velocity: float | None = None,
 ) -> float:
-    # capacity = area x effective velocity, where effective velocity is the
-    # margined sweep velocity, optionally clamped to a physical design ceiling
-    # (max_velocity) so no margin can imply an unphysically fast pipe.
+    # SWEEP DRILL capacity = area x effective velocity, where effective velocity
+    # is the margined sweep peak velocity, optionally clamped to a physical
+    # design ceiling (max_velocity) so no margin can imply an unphysically fast
+    # conduit. Used for valve capacity always, and for pipe capacity only when
+    # the uniform-velocity method is disabled (capacity_velocity=None).
     v_eff = velocity * margin
     if max_velocity is not None:
         v_eff = min(v_eff, max_velocity)
-    return math.pi / 4.0 * diameter_m**2 * v_eff
+    return _conduit_area(diameter_m) * v_eff
 
 
 def _demand_value(junction: Any, mode: DemandMode, wn: Any) -> float:
@@ -388,13 +430,20 @@ def _peak_hour_demands(wn: Any) -> dict[str, float]:
 def _collect_links(
     wn: Any, flow_profiles: dict[str, LinkFlowProfile], margin: float,
     max_velocity: float | None = None,
+    capacity_velocity: float | None = None,
 ) -> list[_Link]:
     """`flow_profiles` — per-pipe/valve LinkFlowProfile from a baseline
     hydraulic sweep (core.importers.inp.sim.link_flow_profiles); a link
     absent from it (no flow across the sweep, or the solve failed) uses
     FALLBACK_VELOCITY_MS and carries no direction signal (velocity_fwd/rev
     stay None), which is exactly the signal build_bundle uses to fall back to
-    BFS orientation for that one link."""
+    BFS orientation for that one link.
+
+    `capacity_velocity` — when set, every PIPE capacity is area x this uniform
+    design velocity (the default method), ignoring the sweep peak/margin/cap
+    for capacity; the sweep is still consulted for ORIENTATION. When None, pipe
+    capacity uses the sweep drill (area x min(v_peak x margin, max_velocity)).
+    Valve capacity always uses the sweep drill regardless."""
     links: list[_Link] = []
     pipe_names = set(wn.pipe_name_list)
     pump_names = set(wn.pump_name_list)
@@ -403,9 +452,18 @@ def _collect_links(
         if lid in pipe_names:
             profile = flow_profiles.get(lid)
             velocity = profile.peak if profile is not None else FALLBACK_VELOCITY_MS
+            # Default: uniform design velocity. Drill (capacity_velocity=None):
+            # per-pipe margined sweep velocity. Orientation is unaffected either
+            # way (it reads velocity_fwd/velocity_rev below).
+            cap_velocity = capacity_velocity if capacity_velocity is not None else velocity
+            capacity = (
+                _conduit_area(link.diameter) * capacity_velocity
+                if capacity_velocity is not None
+                else _sweep_capacity(link.diameter, velocity, margin, max_velocity)
+            )
             links.append(_Link(
                 id=lid, kind="pipe", start=link.start_node_name, end=link.end_node_name,
-                capacity=_pipe_capacity(link.diameter, velocity, margin, max_velocity),
+                capacity=capacity,
                 open_=open_,
                 velocity_fwd=profile.velocity_fwd if profile is not None else None,
                 velocity_rev=profile.velocity_rev if profile is not None else None,
@@ -413,7 +471,12 @@ def _collect_links(
                     "length_m": round(link.length, 2),
                     "diameter_m": round(link.diameter, 4),
                     "roughness": link.roughness,
-                    "velocity_ms": round(velocity, 4),
+                    # Velocity that SET this pipe's capacity: the uniform design
+                    # velocity by default, or the simulated peak under the drill.
+                    "velocity_ms": round(cap_velocity, 4),
+                    # Simulated peak (informational; drives orientation, not capacity
+                    # in the default method) — kept so a modeller can still see it.
+                    "sweep_peak_ms": round(velocity, 4),
                 },
             ))
         elif lid in pump_names:
@@ -445,7 +508,7 @@ def _collect_links(
             velocity = profile.peak if profile is not None else FALLBACK_VELOCITY_MS
             links.append(_Link(
                 id=lid, kind="valve", start=link.start_node_name, end=link.end_node_name,
-                capacity=_pipe_capacity(diameter, velocity, margin, max_velocity) if diameter else None,
+                capacity=_sweep_capacity(diameter, velocity, margin, max_velocity) if diameter else None,
                 open_=open_,
                 properties={
                     "valve_type": str(getattr(link, "valve_type", "")),
@@ -579,7 +642,10 @@ def build_bundle(
 
     junction_names = set(wn.junction_name_list)
     source_names = set(wn.reservoir_name_list) | set(wn.tank_name_list)
-    links = _collect_links(wn, flow_profiles, options.capacity_margin, options.max_velocity)
+    links = _collect_links(
+        wn, flow_profiles, options.capacity_margin, options.max_velocity,
+        options.capacity_velocity,
+    )
 
     demands = compute_junction_demands(wn, options.demand_mode)
 

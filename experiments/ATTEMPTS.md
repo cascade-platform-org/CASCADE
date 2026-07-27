@@ -340,14 +340,94 @@ the pre-fix file was archived and v2 was renamed to be the one and only
 
 ## Files (current)
 
-- `final_benchmark.csv` — CANONICAL 8-network result (post pump-fed fix).
-  Aggregate with `aggregate_final.py`; paper numbers via `paper_numbers.py`.
+- `final_benchmark.csv` — CANONICAL 8-network result (uniform design velocity,
+  post pump-fed fix). Aggregate with `aggregate_final.py`; paper numbers via
+  `paper_numbers.py`.
+- `final_benchmark_drill.csv` — CAPACITY ABLATION: the old sweep-drill capacity
+  method (`--capacity-drill`), `run_capacity_drill_ablation.sh`. Paper Supp. §S2.
 - `final_benchmark_none.csv` — uniform-priority ablation (`--priority-mode none`)
   for the paper's [none prec] / [FP cut]; `rerun_none_priority.sh`.
-- `run_final_benchmark.sh` — 8-network runner (contingency priorities).
+- `run_final_benchmark.sh` — CANONICAL 8-network runner (uniform velocity,
+  contingency priorities; no capacity flag needed since 2026-07-27).
 - `archive/pumpfed-fix-2026-07-23/` — provenance for the fix: the pre-fix
   `final_benchmark.csv` (CTown still broken), the raw 3-net re-run
   (`final_benchmark_fixed.csv`), and `merge_pumpfed.py` (already ran once;
   paths inside are historical, not rerunnable as-is). `rerun_pumpfed_fix.sh`
   (still in `experiments/`) is the script that produced the re-run.
 - `margin_sweep.py`, `diag_*.py` — importer diagnostics (Supp. Mat. S5 / rebuild).
+
+## 12. Drill-design exploration (2026-07-23/24) — what actually drives precision
+
+Long investigation into whether the importer's contingency drills (capacity
+discovery + priority) could be made better/cheaper/simpler. Outcome: **no clean
+improvement over the shipped importer; several exciting leads collapsed under
+controlled testing.** Kept as a record of dead ends so they are not re-tried.
+Diagnostics: `diag_contingency_unification.py`, `diag_batch_drills.py`,
+`diag_priority_budget.py`, `diag_drill_endtoend.py`, `diag_drill_factorial.py`,
+`diag_fp_capacity.py`, `diag_bidi_test.py`, `diag_bidi_validate.py`,
+`diag_tank_family.py`.
+
+### What was tried and what happened
+- **Unify the two drills** (capacity + priority share one ensemble). Motivated
+  by `contingency_priorities`' own TODO. `diag_contingency_unification.py`:
+  capacity discovery includes bridges + a wider pool; priority is cycle-only —
+  they capture different info, so a naive merge loses signal. Also found the
+  cycle-filter is source-BLIND: all 7 CTown tank-connector pipes are plain
+  bridges but NON-bridges once reservoirs+tanks are contracted (the right
+  filter). Real but not pursued to a code change.
+- **Batched capacity drill** (`diag_batch_drills.py`): closing ~5 links per
+  solve, covering each edge ~twice, recovers MORE capacity than exhaustive N-1
+  singles in ~40% of the solves. Efficient — but see end-to-end below.
+- **Priority budget** (`diag_priority_budget.py`): flow-ranked top-15% single
+  closures converge the shed-first ranking to the full ensemble; flow-order
+  beats random (random low-flow picks give zero signal). A valid simplification
+  of `contingency_priorities`, neutral-to-slightly-better; not worth
+  re-benchmarking on its own.
+- **End-to-end (the decider, `diag_drill_endtoend.py` + `_factorial.py`):** on a
+  clean 2x2 (capacity {uniform-2.5, batch} x priority {contingency, flow-rank}),
+  holding graph structure fixed: **batch vs uniform capacity ~= 0 (<=0.005);**
+  the small A->B gains were priority (Net3 +0.031) or structure, NOT the batch
+  drill. Design velocity is INSENSITIVE (2.5/3.0/3.5 byte-identical on all 8,
+  `diag_velocity_sensitivity.py`). So elaborate capacity discovery buys almost
+  nothing over `area x V`.
+- **The false-positive cause — three contradictory probes, resolved:**
+  `diag_fp_capacity.py`: uncapping every pipe to infinity cures 0% of CTown's
+  FPs -> NOT capacity. `diag_bidi_test.py`: forcing pipes bidirectional cured
+  96% -> looked like ORIENTATION is the cause. BUT that test fabricated
+  velocity=1.0, which ALSO reset capacity to area*2 -> CONFOUNDED. The
+  capacity-preserving version (`diag_bidi_validate.py`, real per-pipe velocity
+  both directions) shows orientation alone is a **wash**: precision +/-0.01-0.07
+  across the 8, sometimes NEGATIVE (Tarcento -0.061, Zampis -0.070), with small
+  recall drops on Cassacco/Tarcento. Orientation is NOT the lever.
+  LESSON: the fast one-knob probes silently changed two things at once; trust
+  only the capacity-held-fixed comparisons.
+- **Tank family on CTown (`diag_tank_family.py`):** the "tank recall 0" is a
+  degenerate 0/1 — across all CTown tank isolations WNTR produces ONE critical,
+  reachable-but-pressure-starved. CTown tanks are redundant buffers (reservoir+
+  pumps cover steady state), so isolating them is a near-non-event; the residual
+  is a PRESSURE effect a quantity model can't see. Pooled tank recall is 0.995
+  (gravity tanks). Not a module failure; the meaningful pump-fed-tank test is
+  TEMPORAL (backup_duration), needing an EPS oracle — future work.
+
+### Decision (updated 2026-07-27)
+- **Uniform design velocity is now the DEFAULT capacity method** (superseding
+  the original "no code change" call). The full 8-network ablation came in a
+  clean wash — capacity = area × 2.5 m/s (no drill) vs the sweep drill:
+  pooled **FMS 0.926 vs 0.921, P 0.634 vs 0.657, R 0.980 vs 0.955, F1 0.770 vs
+  0.778**; per-network wins/losses cancel (uniform better on Net3 +0.09 P and
+  Tarcento +0.13 P; drill better on Zampis +0.09 P; rest a tie). Since the
+  elaborate per-pipe discovery buys nothing, the simpler, standard, reproducible
+  constant wins on Occam grounds and becomes the shipped default
+  (`ImportOptions.capacity_velocity=2.5`, `map.py::DEFAULT_DESIGN_VELOCITY_MS`).
+- **Roles inverted, no reruns:** `final_benchmark.csv` (CANONICAL) is now the
+  uniform run; the old drill numbers live in `final_benchmark_drill.csv`
+  (the ablation, `run_capacity_drill_ablation.sh`, `--capacity-drill`). The
+  post-build `--capacity-uniform-velocity` hack was removed — the harness now
+  builds with the importer default and `--capacity-drill` reproduces the old
+  method. ADR-0012 addendum + CONTEXT.md "Design Velocity" record the reversal.
+- **Orientation & priorities unchanged** — still simulation-derived (the sweep
+  runs for orientation; contingency priorities as before). Only pipe-capacity
+  *magnitude* changed.
+- Precision remains a genuine multi-factor, network-specific limitation, not one
+  missing trick — consistent with the paper's framing (quantity-aware module;
+  recall is the win, precision the acknowledged weak axis).

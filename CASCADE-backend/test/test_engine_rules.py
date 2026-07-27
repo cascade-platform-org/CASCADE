@@ -460,3 +460,107 @@ def test_unknown_label_in_function_arg_warns_but_keeps_rule():
     by_id, res = _run([a, bn, c], edges, {"water": "Requisite"})
     assert by_id["c"].functionality == 1  # worst_of applied across the water category
     assert any("ghost" in w for w in res.warnings)
+
+
+# --- generic attribute-set consequents (any field, uniform handling) ---------
+
+
+def test_specific_rule_sets_direct_damage_flag():
+    # A rule consequent may set direct_damage. When the condition holds, the
+    # target is flagged as physically damaged in the emitted update, WITHOUT
+    # changing its functionality (direct_damage is not the propagation variable).
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3,
+             rules=["if a is critical then b.direct_damage is True"])
+    by_id, res = _run([a, b], [], {"x": "Requisite"})
+    assert res.warnings == []                       # no "only functionality" warning
+    assert by_id["b"].direct_damage is True
+    assert by_id["b"].functionality == 3            # functionality untouched
+
+
+def test_direct_damage_rule_does_not_fire_when_condition_false():
+    a = Node(id="a", functionality=3, node_categories=["x"])
+    b = Node(id="b", functionality=3,
+             rules=["if a is critical then b.direct_damage is True"])
+    by_id, _ = _run([a, b], [], {"x": "Requisite"})
+    assert "b" not in by_id                         # nothing emitted
+
+
+def test_specific_rule_sets_custom_property():
+    # A completely custom attribute lands in the update's `properties` bag,
+    # handled identically to first-class fields.
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3,
+             rules=["if a is critical then b.inspection_required is True"])
+    by_id, res = _run([a, b], [], {"x": "Requisite"})
+    assert res.warnings == []
+    assert by_id["b"].properties == {"inspection_required": True}
+
+
+def test_specific_rule_sets_expected_repair_time_int():
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3,
+             rules=["if a is critical then b.expected_repair_time is 48"])
+    by_id, _ = _run([a, b], [], {"x": "Requisite"})
+    assert by_id["b"].expected_repair_time == 48
+
+
+def test_attribute_set_visible_to_other_rule_condition_same_run():
+    # Rule 1 sets a custom flag on b; rule 2 (on c) reads that rule-set flag.
+    # The overlay makes the assignment visible within the same run.
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3,
+             rules=["if a is critical then b.tripped is True"])
+    c = Node(id="c", functionality=3,
+             rules=["if b.tripped is True then c is critical"])
+    by_id, _ = _run([a, b, c], [], {"x": "Requisite"})
+    assert by_id["b"].properties == {"tripped": True}
+    assert by_id["c"].functionality == 1
+
+
+def test_attribute_set_and_functionality_merge_in_one_update():
+    # A node degraded by cascade AND flagged by a rule appears once, carrying
+    # both the new functionality and the direct_damage flag.
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3, node_categories=["x"], rules=[
+        "if a is critical then b.direct_damage is True",
+    ])
+    edge = Edge(id="e", source="a", target="b", functionality=3)
+    by_id, _ = _run([a, b], [edge], {"x": "Requisite"})
+    assert by_id["b"].functionality == 1            # cascaded from a
+    assert by_id["b"].direct_damage is True         # and rule-flagged
+
+
+def test_attribute_set_can_target_an_edge():
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3, node_categories=["x"])
+    edge = Edge(id="e", source="a", target="b", functionality=3,
+                rules=["if a is critical then e.direct_damage is True"])
+    by_id, _ = _run([a, b], [edge], {"x": "Requisite"})
+    assert by_id["e"].direct_damage is True
+
+
+def test_conflicting_attribute_set_rules_warn():
+    # Two rules assign the same (element, attribute). The engine latches the first
+    # to fire; the collision is surfaced as a warning rather than resolved silently.
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    b = Node(id="b", functionality=3, node_categories=["x"])
+    t = Node(id="t", functionality=3, rules=[
+        "if a is critical then t.direct_damage is True",
+        "if b is critical then t.direct_damage is False",
+    ])
+    _, res = _run([a, b, t], [], {"x": "Requisite"})
+    assert any("already assigns 'direct_damage' on 't'" in w for w in res.warnings)
+
+
+def test_distinct_attributes_on_same_target_do_not_warn():
+    # Same target, DIFFERENT attributes → no conflict, no warning.
+    a = Node(id="a", functionality=1, node_categories=["x"])
+    t = Node(id="t", functionality=3, rules=[
+        "if a is critical then t.direct_damage is True",
+        "if a is critical then t.inspection_required is True",
+    ])
+    by_id, res = _run([a, t], [], {"x": "Requisite"})
+    assert res.warnings == []
+    assert by_id["t"].direct_damage is True
+    assert by_id["t"].properties == {"inspection_required": True}

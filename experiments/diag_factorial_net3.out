@@ -1,0 +1,13 @@
+
+=== Net3.inp | 104 candidates | cap 12/family ===
+  34 situations with valid ground truth
+
+  cell                      FMS   prec    rec     F1     FP
+  cap=batch prio=prod     0.888  0.193  1.000  0.324     92
+  cap=unif  prio=prod     0.883  0.193  1.000  0.324     92
+  cap=batch prio=flow     0.889  0.224  1.000  0.367     76
+  cap=unif  prio=flow     0.884  0.224  1.000  0.367     76
+
+  factor isolation (precision):
+    CAPACITY (unif->batch): prio=prod 0.193->0.193   prio=flow 0.224->0.224
+    PRIORITY (prod->flow):  cap=unif  0.193->0.224   cap=batch 0.193->0.224

@@ -8,7 +8,7 @@
  * The tab components own all domain-specific state; this file is a thin router.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "./primitives";
 import { useConfigStore } from "@/store/config-store";
@@ -42,6 +42,15 @@ export function ConfigModal() {
     openDraft();
   }, [openDraft]);
 
+  // Tracks whether a mouse press STARTED on the backdrop itself. A bare
+  // `e.target === e.currentTarget` check on the click handler is not enough:
+  // a DOM `click` fires on the nearest common ancestor of the mousedown and
+  // mouseup targets, so interacting with a native <select> (the category-type
+  // dropdown) and releasing over an option makes the click resolve to the
+  // backdrop — silently closing the modal. Requiring the press to have begun
+  // on the backdrop as well means only a genuine backdrop click closes it.
+  const pressStartedOnBackdrop = useRef(false);
+
   function handleClose() {
     if (isDirty) {
       if (!window.confirm("Unsaved changes — discard?")) return;
@@ -58,8 +67,11 @@ export function ConfigModal() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
+        if (e.target === e.currentTarget && pressStartedOnBackdrop.current) handleClose();
       }}
     >
       <div className="flex h-[80vh] w-[720px] max-w-[95vw] flex-col rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">

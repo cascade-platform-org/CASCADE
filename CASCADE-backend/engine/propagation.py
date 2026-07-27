@@ -68,6 +68,13 @@ def run(request: PropagationRequest) -> PropagationResult:
     edge_intrinsic: dict[str, int] = {e.id: e.functionality for e in edges}
     edge_func: dict[str, int] = dict(edge_intrinsic)
     node_resp: dict[str, dict[str, float]] = {}  # final blame for degraded nodes
+    # Generic attribute-set rule state (ADR-0015). `attr_overlay` holds values a
+    # rule has written this run, keyed by element id then attribute; `attr_latched`
+    # remembers which (element, attribute) pairs a rule has already set so each is
+    # applied at most once — a set-once latch that keeps the fixed point
+    # terminating for these non-monotone attributes.
+    attr_overlay: dict[str, dict[str, object]] = {}
+    attr_latched: set[tuple[str, str]] = set()
 
     incoming_index = build_incoming_index(edges)
     edges_by_id = {e.id: e for e in edges}
@@ -142,7 +149,9 @@ def run(request: PropagationRequest) -> PropagationResult:
                 flow_candidates.setdefault(nid, {})[category] = candidate
 
         # Resolver for specific-rule conditions against the current round's state.
-        resolve = _make_resolver(nodes, edges_by_id, node_func, edge_func, node_ft)
+        resolve = _make_resolver(
+            nodes, edges_by_id, node_func, edge_func, node_ft, attr_overlay
+        )
 
         # Propose → guard → commit per node.
         for nid in nodes:
@@ -257,35 +266,71 @@ def run(request: PropagationRequest) -> PropagationResult:
             node_resp[nid] = responsibility
             changed = True
 
+        # Generic attribute-set rules (ADR-0015): apply every firing assignment
+        # as a set-once latch. Evaluated after the functionality sub-step so a
+        # condition sees this round's committed functionality; the overlay makes a
+        # rule-set attribute visible to later rules' conditions. First writer to a
+        # given (element, attribute) wins and is never overwritten — this is what
+        # bounds the loop for these non-monotone attributes.
+        for target, attribute, value in rules.firing_attr_assignments(resolve):
+            if (target, attribute) in attr_latched:
+                continue
+            attr_latched.add((target, attribute))
+            current = attr_overlay.get(target, {}).get(
+                attribute, _stored_attribute(nodes, edges_by_id, target, attribute)
+            )
+            if current != value:
+                attr_overlay.setdefault(target, {})[attribute] = value
+                changed = True
+
         if not changed:
             converged = True
             break
 
     # --- assemble updates (only changed elements) -------------------------
-    updates: list[ElementUpdate] = []
+    # Accumulate per element so a functionality change and a rule-set attribute on
+    # the same element merge into ONE update rather than two.
+    acc: dict[str, ElementUpdate] = {}
     for nid, node in nodes.items():
         functionality_changed = node_func[nid] < node.functionality
         ft_changed = node_ft[nid] != (node.functionality_time or 0)
         if functionality_changed or ft_changed:
-            updates.append(
-                ElementUpdate(
-                    id=nid,
-                    functionality=node_func[nid],
-                    functionality_time=node_ft[nid] if ft_changed else None,
-                    responsibility_share=node_resp.get(nid) or None,
-                )
+            acc[nid] = ElementUpdate(
+                id=nid,
+                functionality=node_func[nid],
+                functionality_time=node_ft[nid] if ft_changed else None,
+                responsibility_share=node_resp.get(nid) or None,
             )
     for edge in edges:
         if edge_func[edge.id] < edge_intrinsic[edge.id]:
             # An edge degrades only because its source did (ADR-0004), so the
             # source carries the responsibility.
-            updates.append(
-                ElementUpdate(
-                    id=edge.id,
-                    functionality=edge_func[edge.id],
-                    responsibility_share={edge.source: 1.0},
-                )
+            acc[edge.id] = ElementUpdate(
+                id=edge.id,
+                functionality=edge_func[edge.id],
+                responsibility_share={edge.source: 1.0},
             )
+
+    # Fold in generic attribute-set results (ADR-0015). A recognised first-class
+    # field fills its typed ElementUpdate slot; anything else lands in `properties`.
+    # An element touched only by an attribute rule still needs a (required)
+    # functionality value — emit its unchanged current level.
+    _FIRST_CLASS = {"direct_damage", "expected_repair_time", "functionality_time"}
+    for eid, attrs in attr_overlay.items():
+        entry = acc.get(eid)
+        if entry is None:
+            current_func = node_func[eid] if eid in nodes else edge_func[eid]
+            entry = ElementUpdate(id=eid, functionality=current_func)
+            acc[eid] = entry
+        for attribute, value in attrs.items():
+            if attribute in _FIRST_CLASS:
+                setattr(entry, attribute, value)
+            else:
+                props = entry.properties or {}
+                props[attribute] = value
+                entry.properties = props
+
+    updates: list[ElementUpdate] = list(acc.values())
 
     warnings: list[str] = list(rules.warnings)
     if not converged:
@@ -300,13 +345,31 @@ def run(request: PropagationRequest) -> PropagationResult:
     )
 
 
-def _make_resolver(nodes, edges_by_id, node_func, edge_func, node_ft):
+def _stored_attribute(nodes, edges_by_id, element_id, attribute):
+    """The element's stored value for `attribute` (first-class field, else a
+    `properties` entry), or None. Used to skip a no-op attribute-set rule whose
+    value already matches what the element carries."""
+    element = nodes.get(element_id) or edges_by_id.get(element_id)
+    if element is None:
+        return None
+    value = getattr(element, attribute, None)
+    if value is None and element.properties:
+        value = element.properties.get(attribute)
+    return value
+
+
+def _make_resolver(nodes, edges_by_id, node_func, edge_func, node_ft, attr_overlay):
     """Build a resolver for rule conditions: (node_type, name, attribute) → value.
 
-    Functionality and functionality_time read the live working state; any other
-    attribute reads the element's stored field (those don't change during a run).
+    Functionality and functionality_time read the live working state; an attribute
+    a rule has set this run is read from `attr_overlay` (so one rule's assignment
+    is visible to another rule's condition, ADR-0015); any other attribute reads
+    the element's stored field.
     """
     def resolve(node_type, name, attribute):
+        overlay = attr_overlay.get(name)
+        if overlay is not None and attribute in overlay:
+            return overlay[attribute]
         if node_type == "edge":
             edge = edges_by_id.get(name)
             if edge is None:

@@ -298,80 +298,108 @@ def test_isolated_tank_supply_falls_back_without_a_capacitated_pipe():
     assert any("no capacitated outgoing pipe" in w for w in warnings)
 
 
-def test_pipe_capacity_uses_simulated_velocity_not_a_constant():
-    """Regression: pipe capacity used to come from ONE global assumed
-    velocity (design_velocity, now removed) applied uniformly to every pipe.
-    It is now derived per-pipe from a demand-multiplier sweep
-    (core.importers.inp.sim.link_flow_profiles, the highest velocity each
-    link reaches under stress — its velocity at rest would understate real
-    capacity) — different pipes in the same network must be able to end up
-    with different capacities even at the same diameter, because they carry
-    different simulated flow."""
-    from core.importers.inp import FALLBACK_VELOCITY_MS, compute_junction_demands, link_flow_profiles
+def test_default_capacity_is_uniform_design_velocity():
+    """The SHIPPED capacity method (2026-07-27, ADR-0012 addendum): every pipe
+    capacity is area × DEFAULT_DESIGN_VELOCITY_MS (2.5 m/s), a constant design
+    speed — NOT the per-pipe simulated velocity. An all-network ablation showed
+    the sweep drill buys nothing over this constant. Orientation still comes
+    from the sweep, so pipe B still splits full-duplex; only capacity magnitude
+    is the constant."""
+    from core.importers.inp import compute_junction_demands, link_flow_profiles
+    from core.importers.inp.map import DEFAULT_DESIGN_VELOCITY_MS
+
+    wn = load_inp(SYNTHETIC_INP)
+    demands = compute_junction_demands(wn, "peak")
+    profiles = link_flow_profiles(wn, demands, steps=4)
+
+    bundle = build_bundle(wn, name="t", flow_profiles=profiles)  # default = uniform
+    edge_a = bundle.project.edges["e_A"]  # pipe J1->J2, diameter 300mm
+    # Capacity is exactly area × 2.5 m/s (× FLOW_UNIT_SCALE), independent of the
+    # pipe's simulated velocity.
+    expected_a = math.pi / 4.0 * 0.300**2 * DEFAULT_DESIGN_VELOCITY_MS * 1_000_000.0
+    assert edge_a.capacity == pytest.approx(expected_a, rel=1e-6)
+    # Orientation is still simulated: B reverses across the sweep and splits.
+    assert "e_B" not in bundle.project.edges
+    edge_b_fwd = bundle.project.edges["e_B__fwd"]  # diameter 200mm
+    expected_b = math.pi / 4.0 * 0.200**2 * DEFAULT_DESIGN_VELOCITY_MS * 1_000_000.0
+    assert edge_b_fwd.capacity == pytest.approx(expected_b, rel=1e-6)
+
+
+def test_capacity_drill_uses_simulated_velocity_not_a_constant():
+    """The opt-in sweep drill (capacity_velocity=None): pipe capacity is derived
+    per-pipe from the demand-multiplier sweep (link_flow_profiles, the highest
+    velocity each link reaches under stress) — so a pipe carrying more simulated
+    flow ends up with more capacity than the flat design-velocity default gives
+    it. This is the retained ablation method, no longer the default."""
+    from core.importers.inp import (
+        FALLBACK_VELOCITY_MS, ImportOptions, compute_junction_demands, link_flow_profiles,
+    )
 
     wn = load_inp(SYNTHETIC_INP)
     demands = compute_junction_demands(wn, "peak")
     profiles = link_flow_profiles(wn, demands, steps=4)
     assert profiles  # the synthetic network's sweep must produce results
 
-    bundle = build_bundle(wn, name="t", flow_profiles=profiles)
+    bundle = build_bundle(
+        wn, name="t", flow_profiles=profiles, options=ImportOptions(capacity_velocity=None)
+    )
     edge_a = bundle.project.edges["e_A"]  # pipe J1->J2, diameter 300mm
-    # Pipe T1->J1 (200mm) genuinely reverses across the 1x->8x stress sweep
-    # (the tank recharges at light load, discharges once demand outgrows the
-    # pump — real, demand-magnitude-driven behaviour, not sensor noise), so it
-    # is correctly split into two edges rather than staying "e_B".
     assert "e_B" not in bundle.project.edges
     edge_b_fwd = bundle.project.edges["e_B__fwd"]
-    # Not using the removed constant: at least one pipe's derived velocity
-    # differs from the old flat default, proving it came from the simulation.
+    # At least one pipe's simulated velocity differs from the flat fallback,
+    # proving capacity came from the simulation, not a constant.
     assert any(abs(p.peak - FALLBACK_VELOCITY_MS) > 1e-6 for p in profiles.values())
     assert edge_a.capacity is not None and edge_b_fwd.capacity is not None
-    # Capacity from the ACTUAL simulated velocity, not FALLBACK_VELOCITY_MS.
     fallback_a = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * 1_000_000.0
     assert edge_a.capacity != pytest.approx(fallback_a)
 
 
-def test_flow_profiles_missing_returns_default_capacity():
-    """No `flow_profiles` passed (e.g. a caller that skips the velocity
-    sweep) — every pipe falls back to FALLBACK_VELOCITY_MS, never crashes or
-    zeroes capacity out."""
-    from core.importers.inp import FALLBACK_VELOCITY_MS
+def test_flow_profiles_missing_falls_back_under_drill():
+    """No `flow_profiles` under the sweep drill (capacity_velocity=None) — every
+    pipe falls back to FALLBACK_VELOCITY_MS × margin, never crashes or zeroes
+    capacity out. (The default uniform method ignores profiles for capacity
+    entirely — covered by test_default_capacity_is_uniform_design_velocity.)"""
+    from core.importers.inp import FALLBACK_VELOCITY_MS, ImportOptions
     from core.importers.inp.map import DEFAULT_CAPACITY_MARGIN
 
     wn = load_inp(SYNTHETIC_INP)
-    bundle = build_bundle(wn, name="t")  # flow_profiles omitted
+    bundle = build_bundle(  # flow_profiles omitted, drill on
+        wn, name="t", options=ImportOptions(capacity_velocity=None)
+    )
     edge_a = bundle.project.edges["e_A"]
-    # diameter 300mm (J1->J2 pipe "A" in SYNTHETIC_INP), fallback velocity
+    # diameter 300mm (J1->J2 pipe "A"), fallback velocity × margin (2.0 < 3.0 cap)
     expected = math.pi / 4.0 * 0.300**2 * FALLBACK_VELOCITY_MS * DEFAULT_CAPACITY_MARGIN * 1_000_000.0
     assert edge_a.capacity == pytest.approx(expected, rel=1e-3)
 
 
-def test_capacity_margin_knob_scales_capacity_linearly():
-    """The `capacity_margin` ImportOptions knob multiplies every derived
-    pipe/valve capacity linearly (default 2.0) — a first-class per-import
-    parameter, not a hardcoded constant. Quadrupling it quadruples capacity.
-    The `max_velocity` ceiling is disabled here (None) so it can't clamp the
-    high-margin case and hide the linearity — the clamp itself is exercised by
-    `test_max_velocity_caps_capacity_and_default_is_3ms`."""
+def test_capacity_margin_knob_scales_drill_capacity_linearly():
+    """The `capacity_margin` knob multiplies sweep-drill pipe capacity linearly
+    (default 2.0). Only meaningful under the drill (capacity_velocity=None) — the
+    default uniform method sizes pipes at capacity_velocity directly and ignores
+    the margin. The `max_velocity` ceiling is disabled here (None) so it can't
+    clamp the high-margin case and hide the linearity."""
     from core.importers.inp import ImportOptions
 
     wn = load_inp(SYNTHETIC_INP)
     cap_1 = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=1.0, max_velocity=None)
+        wn, name="t",
+        options=ImportOptions(capacity_velocity=None, capacity_margin=1.0, max_velocity=None),
     ).project.edges["e_A"].capacity
     cap_4 = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=None)
+        wn, name="t",
+        options=ImportOptions(capacity_velocity=None, capacity_margin=4.0, max_velocity=None),
     ).project.edges["e_A"].capacity
     assert cap_1 is not None and cap_4 is not None
     assert cap_4 == pytest.approx(4.0 * cap_1, rel=1e-6)
 
 
 def test_max_velocity_caps_capacity_and_default_is_3ms():
-    """`max_velocity` clamps the margined pipe velocity to a physical ceiling,
+    """`max_velocity` clamps the margined SWEEP velocity to a physical ceiling,
     so a large margin can't imply an unphysically fast pipe. The DEFAULT is
     3.0 m/s (the water-main design ceiling, matching the ground-truth
-    velocity-exceedance flag); max_velocity=None disables the cap (legacy
-    pre-2026-07 behaviour)."""
+    velocity-exceedance flag); max_velocity=None disables the cap. Only
+    meaningful under the sweep drill (capacity_velocity=None); the default
+    uniform method sizes pipes at capacity_velocity directly."""
     import math
 
     from core.importers.inp import ImportOptions
@@ -379,13 +407,13 @@ def test_max_velocity_caps_capacity_and_default_is_3ms():
     wn = load_inp(SYNTHETIC_INP)
     # fallback velocity 1.0 m/s × margin 4.0 = 4.0 m/s margined, above the 3.0 ceiling.
     capped_default = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0)
+        wn, name="t", options=ImportOptions(capacity_velocity=None, capacity_margin=4.0)
     ).project.edges["e_A"].capacity
     capped_explicit = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=3.0)
+        wn, name="t", options=ImportOptions(capacity_velocity=None, capacity_margin=4.0, max_velocity=3.0)
     ).project.edges["e_A"].capacity
     uncapped = build_bundle(
-        wn, name="t", options=ImportOptions(capacity_margin=4.0, max_velocity=None)
+        wn, name="t", options=ImportOptions(capacity_velocity=None, capacity_margin=4.0, max_velocity=None)
     ).project.edges["e_A"].capacity
     assert capped_default is not None and uncapped is not None
     # The default reproduces the explicit 3.0 ceiling, and both cap below uncapped.
@@ -443,9 +471,10 @@ def test_bidirectional_pipe_becomes_two_edges():
     # the pipe's WHOLE physical capacity — not a proportional share. A pipe
     # can carry all of it either way, just not both at once, and the flow
     # solver never gains from a cancelling two-way cycle.
-    # peak velocity 2.0 m/s × default margin 2.0 = 4.0 m/s, clamped to the
-    # default 3.0 m/s max_velocity ceiling → capacity = area × 3.0 × 1e6.
-    full_cap = math.pi / 4.0 * 0.300**2 * 3.0 * 1_000_000.0
+    # Under the default uniform method capacity = area × DEFAULT_DESIGN_VELOCITY_MS
+    # (2.5 m/s), regardless of the simulated velocities that drove the split.
+    from core.importers.inp.map import DEFAULT_DESIGN_VELOCITY_MS
+    full_cap = math.pi / 4.0 * 0.300**2 * DEFAULT_DESIGN_VELOCITY_MS * 1_000_000.0
     assert fwd.capacity == pytest.approx(full_cap, rel=1e-6)
     assert rev.capacity == pytest.approx(full_cap, rel=1e-6)
     assert any("both directions" in w for w in warnings)

@@ -232,7 +232,7 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 | `label` | string | Human-readable name |
 | `type` | enum | `hazard` \| `disservice` |
 | `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
-| `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements receive `direct_damage` — that is determined solely by `vulnerability_levels[event.id] > 0`. |
+| `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements a *hazard* flags as `direct_damage` — for a hazard that is determined by `vulnerability_levels[event.id] > 0`. (A specific rule may independently set `direct_damage` on any element — ADR-0015.) |
 | `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
 | `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
 
@@ -301,10 +301,10 @@ Future category types (multicommodity flow, transport, etc.) add as further addi
 
 ### 7.3 Rule System (carried over from v1)
 
-- **Specific rules** — explicit conditions targeting a specific node.
+- **Specific rules** — explicit conditions targeting a specific element: `if <cond> then <target>[.<attr>] is <value>`. A `functionality` consequent (or the bare `then <target> is <level>`) overrides the target's proposal, clamped to worsening. **Any other attribute** — first-class `direct_damage` / `expected_repair_time`, or a custom `properties` key — is a generic **attribute-set** consequent (ADR-0015): the value is written onto the target and emitted, without changing `functionality`. Attribute-sets apply as a set-once latch (first firing per element+attribute wins) so the fixed point stays terminating.
 - **Intracategorical rules** — conditions within one category.
 - **Intercategorical rules** — conditions across categories.
-- Authored with human-readable labels; internally mapped to node IDs.
+- Authored with human-readable labels; internally mapped to node IDs. Labels may not contain `.` (the rule grammar's attribute-access operator); the label input strips it.
 
 ### 7.4 Iterative Convergence
 

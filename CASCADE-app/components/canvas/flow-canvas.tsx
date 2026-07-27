@@ -116,6 +116,17 @@ function FlowCanvas() {
         const nodes = getNodes();
         if (nodes.length === 0) return undefined;
 
+        // Exclude on-screen UI overlays (find-node search, zoom slider, legend,
+        // React Flow attribution/minimap) from the exported image so it shows
+        // only the network and its background. html-to-image calls this filter
+        // for every DOM node; returning false drops that node and its subtree.
+        const filter = (el: HTMLElement) =>
+          !(el instanceof Element &&
+            typeof el.matches === "function" &&
+            el.matches(
+              ".react-flow__panel, .react-flow__controls, .react-flow__minimap, .react-flow__attribution, [data-export-ignore]",
+            ));
+
         // Georeferenced canvas: capture the full container (map + nodes) at its
         // natural screen size so the map tiles appear in the exported image.
         const storeState = (await import("@/store/canvas-store")).useCanvasStore.getState();
@@ -127,6 +138,7 @@ function FlowCanvas() {
           return await toPng(el, {
             width: el.offsetWidth,
             height: el.offsetHeight,
+            filter,
           });
         }
 
@@ -166,6 +178,7 @@ function FlowCanvas() {
           backgroundColor: "#f4f4f5",
           width: captureW,
           height: captureH,
+          filter,
           style: {
             width: `${captureW}px`,
             height: `${captureH}px`,

@@ -1,0 +1,8 @@
+/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "../raw-networks/aqueducts/CTown.inp"; added with type None, units conversion left to user
+  warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
+
+=== CTown.inp: do false positives survive forcing every pipe BIDIRECTIONAL? ===
+  false positives: M_prod=281   M_all-bidirectional=31   (cured by bidirectionality = 269, 96% of prod FPs)
+  of surviving FPs: 0 are undirected-disconnected (genuine)
+  true positives : M_prod=73   M_all-bidirectional=73   (recall lost if bidi << prod)
+  => ORIENTATION confirmed: most FPs vanish when pipes flow both ways

@@ -50,7 +50,7 @@ export function CanvasLegend() {
   ];
 
   return (
-    <div className="absolute bottom-3 right-3 z-10 max-w-[180px]">
+    <div data-export-ignore className="absolute bottom-3 right-3 z-10 max-w-[180px]">
       <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white/90 text-xs shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
         <button
           onClick={() => setOpen((v) => !v)}

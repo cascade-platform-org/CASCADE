@@ -1,0 +1,12 @@
+
+=== Net3.inp | 104 candidates | cap 12/family ===
+  34 situations with valid ground truth
+  --- overall ---
+  A production drill     FMS=0.849  P=0.133 R=1.000 F1=0.235  (TP=22 FP=143 FN=0)
+  B redesign (batch)     FMS=0.889  P=0.224 R=1.000 F1=0.367  (TP=22 FP=76 FN=0)
+  C uniform 2.5 m/s      FMS=0.886  P=0.190 R=1.000 F1=0.319  (TP=22 FP=94 FN=0)
+  --- per family (FMS | prec / rec) ---
+    cluster   A: 0.859 0.22/1.00   B: 0.910 0.55/1.00   C: 0.911 0.42/1.00
+    targeted  A: 0.860 0.00/1.00   B: 0.926 0.00/1.00   C: 0.915 0.00/1.00
+    tank      A: 1.000 1.00/1.00   B: 1.000 1.00/1.00   C: 1.000 1.00/1.00
+    source    A: 0.408 0.00/1.00   B: 0.399 0.00/1.00   C: 0.408 0.00/1.00

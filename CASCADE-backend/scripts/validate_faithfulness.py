@@ -710,6 +710,21 @@ def main() -> None:
              "link_flow_profiles' contingency_multiplier docstring.",
     )
     parser.add_argument(
+        "--capacity-drill", action="store_true",
+        help="CAPACITY ABLATION (ATTEMPTS.md §12, experiments §S2): size pipe "
+             "capacity from the per-pipe hydraulic SWEEP (area x min(v_peak x "
+             "margin, max_v)) instead of the shipped uniform design velocity. "
+             "This is the pre-2026-07-27 method, retained only to reproduce the "
+             "ablation showing it buys nothing over the constant. Sets "
+             "ImportOptions.capacity_velocity=None.",
+    )
+    parser.add_argument(
+        "--capacity-velocity", type=float, default=None,
+        help="Override the uniform design velocity (m/s) pipe capacity is sized "
+             "at (area x V). Default None = the importer default "
+             "(DEFAULT_DESIGN_VELOCITY_MS, 2.5). Ignored under --capacity-drill.",
+    )
+    parser.add_argument(
         "--contingency-samples", type=int, default=20,
         help="Number of single-link contingency solves for capacity discovery (default 20, the importer's "
              "own default). More samples = more backup-capacity coverage at one extra PDD solve each.",
@@ -812,9 +827,17 @@ def main() -> None:
             priorities = contingency_priorities(wn, demands)
         else:
             priorities = {}
+        # Default = shipped uniform design velocity (ImportOptions.capacity_velocity
+        # default 2.5). --capacity-drill reverts pipe capacity to the hydraulic
+        # sweep (the S2 ablation); --capacity-velocity overrides the constant.
+        opt_kwargs = dict(demand_mode=args.demand_mode, n_levels=args.n_levels)
+        if args.capacity_drill:
+            opt_kwargs["capacity_velocity"] = None
+        elif args.capacity_velocity is not None:
+            opt_kwargs["capacity_velocity"] = args.capacity_velocity
         bundle = build_bundle(
             wn, name=name,
-            options=ImportOptions(demand_mode=args.demand_mode, n_levels=args.n_levels),
+            options=ImportOptions(**opt_kwargs),
             flow_profiles=flow_profiles,
             priorities=priorities,
         )

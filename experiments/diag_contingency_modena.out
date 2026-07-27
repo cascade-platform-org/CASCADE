@@ -1,0 +1,20 @@
+
+=== Modena.inp (317 pipes, 0 pumps) ===
+    trunk-10% (unfiltered, production): 32 links, 2 are bridges
+    trunk-20% (cycle-only, priority's pool): 59 links
+    [B-cycle-singles] 59/59 contingency solves converged
+    [C-production] 52/52 contingency solves converged
+    [D-pairs+triplets] 30/30 contingency solves converged
+    A(floor) -> B(cycle singles, few): 310/317 pipes gained capacity, mean +0.0091 m3/s, max +0.0344 m3/s
+    B(cycle singles) -> C(PRODUCTION, current final_benchmark.csv basis): 149/317 pipes gained capacity, mean +0.0019 m3/s, max +0.0083 m3/s
+    B(cycle singles) -> D(cycle singles+pairs+triplets): 103/317 pipes gained capacity, mean +0.0029 m3/s, max +0.0132 m3/s
+    C(PRODUCTION) -> D(cycle full ensemble): 101/317 pipes gained capacity, mean +0.0043 m3/s, max +0.0127 m3/s
+    top pipes where PRODUCTION > cycle-singles-only (id, cap_B, cap_C, diam_mm):
+      206        B=0.0126 C=0.0209 diam=125mm [cycle link]
+      33         B=0.0146 C=0.0230 diam=100mm [cycle link]
+      141        B=0.0703 C=0.0771 diam=200mm [cycle link]
+      139        B=0.0709 C=0.0777 diam=200mm [cycle link]
+      140        B=0.0709 C=0.0777 diam=200mm [cycle link]
+      138        B=0.0803 C=0.0870 diam=200mm [cycle link]
+      135        B=0.0805 C=0.0873 diam=200mm [cycle link]
+      137        B=0.0805 C=0.0873 diam=200mm [cycle link]

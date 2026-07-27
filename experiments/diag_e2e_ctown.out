@@ -1,0 +1,13 @@
+/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "../raw-networks/aqueducts/CTown.inp"; added with type None, units conversion left to user
+  warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
+
+=== CTown.inp | 289 candidates | cap 12/family ===
+  37 situations with valid ground truth
+  --- overall ---
+  A production FMS=0.957  P=0.146 R=0.971 F1=0.253  (TP=101 FP=593 FN=3)
+  B redesign   FMS=0.965  P=0.215 R=0.971 F1=0.352  (TP=101 FP=369 FN=3)
+  --- per family (FMS | prec / rec) ---
+    cluster   A: 0.963 0.37/0.98   B: 0.994 0.89/0.98
+    targeted  A: 0.962 0.00/1.00   B: 0.995 1.00/1.00
+    tank      A: 0.945 0.00/0.00   B: 0.904 0.00/0.00
+    source    A: 0.960 0.00/1.00   B: 0.994 1.00/1.00

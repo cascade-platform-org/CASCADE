@@ -8,9 +8,14 @@ Elements change Functionality — is the engine's exclusive responsibility
 Three rule kinds (ADR-0003 → Heuristic pipeline), all authored on the target
 element's `rules` list:
 
-- **Specific** `if <cond> then <target> is <level>` — highest-priority override
-  guard: when the condition holds, the target's proposal is replaced by the
-  rule's level (still clamped to worsening by the monotone commit).
+- **Specific** `if <cond> then <target>[.<attr>] is <value>` — a firing rule:
+  - `<attr>` omitted or `functionality`: highest-priority override guard — the
+    target's proposal is replaced by the rule's level (still clamped to worsening
+    by the monotone commit).
+  - any other `<attr>` (first-class `direct_damage` / `expected_repair_time`, or
+    a custom property): a generic **attribute-set** consequent (ADR-0015) — the
+    value is written onto the target element and emitted. Applied as a set-once
+    latch, it does not participate in the monotone propagation.
 - **Intracategorical** `op(args) propagates to <target>` — re-parameterises the
   intracategorical aggregation operator for the referenced category at the
   target (default `best_of`).
@@ -137,6 +142,14 @@ class RuleContext:
         self._known: set[str] = set(nodes) | {e.id for e in edges}
 
         self.specific: list[tuple[str, dict[str, Any], int]] = []
+        # Generic attribute-set consequents (ADR-0015): (target, attribute, value,
+        # condition). Any consequent whose attribute is NOT `functionality` — a
+        # first-class field like `direct_damage` / `expected_repair_time`, or a
+        # custom property — is handled here, uniformly, rather than special-cased.
+        self.attr_assignments: list[tuple[str, str, Any, dict[str, Any]]] = []
+        # (target, attribute) pairs already claimed by an attribute-set rule, so a
+        # second rule on the same pair can be flagged (first-firing wins, ADR-0015).
+        self._attr_assigned: set[tuple[str, str]] = set()
         self.intra: dict[str, dict[str, str]] = {}          # target -> {category: operator}
         self.inter: dict[str, tuple[str, list[str]]] = {}   # target -> (operator, categories)
         self.nested_inter: dict[str, dict[str, Any]] = {}   # target -> full nested function AST
@@ -162,18 +175,10 @@ class RuleContext:
         kind = ast["type"]
         if kind == "specific":
             assignment = ast["then"]["assignments"][0]
-            if assignment["attribute"] != "functionality":
-                self.warnings.append(
-                    f"Rule ignored ('{rule_text}'): only functionality assignments are supported."
-                )
-                return
-            level = assignment["value"]
-            if not isinstance(level, int):
-                self.warnings.append(
-                    f"Rule ignored ('{rule_text}'): assigned value is not a Functionality level."
-                )
-                return
-            # Every element named in the condition or as the target must exist.
+            attribute = assignment["attribute"]
+
+            # Every element named in the condition or as the target must exist —
+            # for any consequent kind, so a typo'd target never mis-fires.
             refs = {*_condition_elements(ast["condition"]), assignment["name"]}
             unknown = [self._describe_unknown(r) for r in sorted(refs) if r not in self._known]
             if unknown:
@@ -181,7 +186,38 @@ class RuleContext:
                     f"Rule ignored ('{rule_text}'): {', '.join(unknown)}."
                 )
                 return
-            self.specific.append((assignment["name"], ast["condition"], level))
+
+            if attribute == "functionality":
+                level = assignment["value"]
+                if not isinstance(level, int):
+                    self.warnings.append(
+                        f"Rule ignored ('{rule_text}'): assigned value is not a Functionality level."
+                    )
+                    return
+                self.specific.append((assignment["name"], ast["condition"], level))
+                return
+
+            # Any other attribute is a generic attribute-set consequent (ADR-0015):
+            # when the condition fires, `value` is written onto the target element.
+            # Unlike `functionality` it does NOT participate in the monotone
+            # propagation — it is a plain attribute the engine now also emits.
+            target = assignment["name"]
+            # A second rule assigning the same (element, attribute) can only ever
+            # be a partial no-op: the engine latches the FIRST firing and ignores
+            # the rest, so when both conditions hold the earlier rule wins. Surface
+            # that instead of resolving it silently (same spirit as the
+            # intercategorical "replaces an earlier rule" warning).
+            if (target, attribute) in self._attr_assigned:
+                self.warnings.append(
+                    f"Rule ('{rule_text}'): another rule already assigns "
+                    f"'{attribute}' on '{target}'; when both conditions hold the "
+                    f"first to fire wins."
+                )
+            self._attr_assigned.add((target, attribute))
+            value = _coerce_assignment_value(assignment["value"])
+            self.attr_assignments.append(
+                (target, attribute, value, ast["condition"])
+            )
             return
 
         # intra / intercategorical re-parameterisation
@@ -252,6 +288,19 @@ class RuleContext:
                 sorted({normalize_category_name(c) for c in categories}),
             )
 
+    def firing_attr_assignments(
+        self, resolve: Resolver
+    ) -> list[tuple[str, str, Any]]:
+        """`(target_id, attribute, value)` for every generic attribute-set rule
+        whose condition currently holds. The propagation loop applies these as
+        set-once latches (ADR-0015), so the fixed point stays terminating even
+        though these attributes — unlike `functionality` — are not monotone."""
+        return [
+            (target, attribute, value)
+            for (target, attribute, value, condition) in self.attr_assignments
+            if eval_condition(condition, resolve)
+        ]
+
     def _describe_unknown(self, name: str) -> str:
         """Phrase an unresolved element reference for a warning: distinguish a
         genuine typo from a display label that is ambiguous (shared by ≥2 nodes)."""
@@ -316,6 +365,18 @@ class RuleContext:
         elements = _condition_elements(condition)
         blame = {e: 1.0 / len(elements) for e in elements} if elements else {}
         return level, blame
+
+
+def _coerce_assignment_value(value: Any) -> Any:
+    """Coerce a parsed consequent value for a non-`functionality` attribute.
+
+    The parser already yields ints and floats natively and leaves everything else
+    a string; `true`/`false` (any case) become booleans so `direct_damage is True`
+    and custom boolean flags behave naturally when written onto the element.
+    """
+    if isinstance(value, str) and value.strip().lower() in ("true", "false"):
+        return value.strip().lower() == "true"
+    return value
 
 
 def _condition_elements(ast: dict[str, Any]) -> list[str]:

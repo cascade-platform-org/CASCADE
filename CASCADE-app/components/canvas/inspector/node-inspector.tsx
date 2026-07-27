@@ -228,7 +228,12 @@ export function NodeInspector({ node }: { node: Node }) {
         <Field label="Label">
           <TextInput
             value={node.label ?? ""}
-            onChange={(v) => patch({ label: v })}
+            // Strip periods: a node label doubles as its identifier in rules
+            // ("if El Source is critical then ..."), and "." is the rule
+            // grammar's attribute-access operator — a label like "El. Source"
+            // would tokenize as element "El" + attribute "Source". Disallowing
+            // "." in labels keeps them usable as rule references.
+            onChange={(v) => patch({ label: v.replace(/\./g, "") })}
             placeholder="Node label"
           />
         </Field>

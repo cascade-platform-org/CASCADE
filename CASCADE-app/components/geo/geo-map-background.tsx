@@ -451,6 +451,7 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       {/* Anchor crosshair — marks the anchor correspondence point */}
       {anchorScreenX !== null && anchorScreenY !== null && (
         <div
+          data-export-ignore
           style={{
             position: "absolute",
             left: anchorScreenX,
@@ -469,6 +470,7 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       )}
 
       <div
+        data-export-ignore
         style={{
           position: "absolute",
           bottom: 56,
@@ -489,6 +491,7 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       {/* Debug panel — ?geoDebug=1 */}
       {debugMode && (
         <div
+          data-export-ignore
           style={{
             position: "absolute",
             bottom: 10,

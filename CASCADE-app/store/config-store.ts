@@ -171,8 +171,26 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-function markDirty(state: ConfigState): void {
-  state.isDirty = true;
+/**
+ * Recompute the dirty flag by comparing the working draft against the
+ * committed config, honouring the invariant documented on `isDirty`
+ * ("True when draft differs from config").
+ *
+ * We deliberately do NOT just set `isDirty = true`: mutation actions fire on
+ * every field `onChange`, including no-op writes that echo back the value
+ * already stored (re-selecting the current category type, a focus/blur or
+ * autofill event re-emitting the existing name, etc.). Latching the flag to
+ * true on those made the Config modal warn "Unsaved changes — discard?" even
+ * when nothing had actually changed. A structural compare keeps the flag —
+ * and the "unsaved" badge — truthful, and also clears it automatically when
+ * an edit is manually reverted to its original value.
+ *
+ * Both objects are produced by `deepClone` (JSON round-trip) and mutated in
+ * place by immer, so key insertion order is preserved and a JSON-string
+ * compare is a sound equality test for this small config object.
+ */
+function recomputeDirty(state: ConfigState): void {
+  state.isDirty = JSON.stringify(state.draft) !== JSON.stringify(state.config);
 }
 
 function draftGraphType(draft: ModelConfiguration, name: string): GraphTypeConfig | undefined {
@@ -280,7 +298,7 @@ export const useConfigStore = create<ConfigStore>()(
         const levels = state.draft.functionality_scale;
         const nextLevel = levels.length > 0 ? Math.max(...levels.map((l) => l.level)) + 1 : 1;
         levels.push({ level: nextLevel, label: `level_${nextLevel}`, color: "#94a3b8" });
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -290,7 +308,7 @@ export const useConfigStore = create<ConfigStore>()(
         state.draft.functionality_scale = state.draft.functionality_scale.filter(
           (l) => l.level !== level,
         );
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -299,7 +317,7 @@ export const useConfigStore = create<ConfigStore>()(
         const entry = state.draft.functionality_scale.find((l) => l.level === level);
         if (!entry) return;
         Object.assign(entry, patch);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -307,7 +325,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         const map = new Map(state.draft.functionality_scale.map((l) => [l.level, l]));
         state.draft.functionality_scale = orderedLevels.map((lvl) => map.get(lvl)!).filter(Boolean);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -318,14 +336,14 @@ export const useConfigStore = create<ConfigStore>()(
     addCategory(category) {
       set((state) => {
         state.draft.categories.push(category);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
     removeCategory(name) {
       set((state) => {
         state.draft.categories = state.draft.categories.filter((c) => c.name !== name);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -334,14 +352,14 @@ export const useConfigStore = create<ConfigStore>()(
         const entry = state.draft.categories.find((c) => c.name === name);
         if (!entry) return;
         Object.assign(entry, patch);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
     removeCategoryAt(index) {
       set((state) => {
         state.draft.categories.splice(index, 1);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -350,7 +368,7 @@ export const useConfigStore = create<ConfigStore>()(
         const entry = state.draft.categories[index];
         if (!entry) return;
         Object.assign(entry, patch);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -362,7 +380,7 @@ export const useConfigStore = create<ConfigStore>()(
       const id = nanoid();
       set((state) => {
         state.draft.events.push({ ...event, id });
-        markDirty(state);
+        recomputeDirty(state);
       });
       return id;
     },
@@ -370,7 +388,7 @@ export const useConfigStore = create<ConfigStore>()(
     removeEvent(id) {
       set((state) => {
         state.draft.events = state.draft.events.filter((e) => e.id !== id);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -379,7 +397,7 @@ export const useConfigStore = create<ConfigStore>()(
         const entry = state.draft.events.find((e) => e.id === id);
         if (!entry) return;
         Object.assign(entry, patch);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -387,7 +405,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         const map = new Map(state.draft.events.map((e) => [e.id, e]));
         state.draft.events = orderedIds.map((id) => map.get(id)!).filter(Boolean);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -399,14 +417,14 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         if (state.draft.graph_types.some((gt) => gt.name === name)) return;
         state.draft.graph_types.push({ name, heuristics: [] });
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
     removeGraphType(name) {
       set((state) => {
         state.draft.graph_types = state.draft.graph_types.filter((gt) => gt.name !== name);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -415,7 +433,7 @@ export const useConfigStore = create<ConfigStore>()(
         const gt = draftGraphType(state.draft, oldName);
         if (!gt) return;
         gt.name = newName;
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -424,7 +442,7 @@ export const useConfigStore = create<ConfigStore>()(
         const gt = draftGraphType(state.draft, graphTypeName);
         if (!gt) return;
         gt.heuristics.push(algorithm);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -433,7 +451,7 @@ export const useConfigStore = create<ConfigStore>()(
         const gt = draftGraphType(state.draft, graphTypeName);
         if (!gt) return;
         gt.heuristics = gt.heuristics.filter((h) => h.id !== algorithmId);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -444,7 +462,7 @@ export const useConfigStore = create<ConfigStore>()(
         const alg = gt.heuristics.find((h) => h.id === algorithmId);
         if (!alg) return;
         Object.assign(alg, patch);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -454,7 +472,7 @@ export const useConfigStore = create<ConfigStore>()(
         if (!gt) return;
         const map = new Map(gt.heuristics.map((h) => [h.id, h]));
         gt.heuristics = orderedIds.map((id) => map.get(id)!).filter(Boolean);
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -466,7 +484,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         if (!state.draft.node_defaults) state.draft.node_defaults = {};
         state.draft.node_defaults[name] = {};
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -474,7 +492,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         if (state.draft.node_defaults) {
           delete state.draft.node_defaults[name];
-          markDirty(state);
+          recomputeDirty(state);
         }
       });
     },
@@ -485,7 +503,7 @@ export const useConfigStore = create<ConfigStore>()(
         const val = state.draft.node_defaults[oldName] ?? {};
         delete state.draft.node_defaults[oldName];
         state.draft.node_defaults[newName] = val;
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 
@@ -493,7 +511,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         if (!state.draft.node_defaults) state.draft.node_defaults = {};
         state.draft.node_defaults[name] = { ...state.draft.node_defaults[name], ...patch };
-        markDirty(state);
+        recomputeDirty(state);
       });
     },
 

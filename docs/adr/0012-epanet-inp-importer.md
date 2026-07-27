@@ -32,7 +32,7 @@ parses/skeletonizes/solves; pyproj (MIT) does CRS.
 | Junction, demand < 0 | `Source` (`kind: "injection_well"`), supply = the injection rate — the EPANET well idiom; mapping it as Infrastructure deletes the network's supply (Net2's only source is such a junction) |
 | Pump link | inline `Infrastructure` node (`["water","pumping"]`) + two half-edges capped by pump-curve max flow; always imported operational (see below) |
 | Valve link | inline `Infrastructure` node (`["water","valve"]`); `.inp` `Closed` → Functionality 1 |
-| Pipe | edge, `capacity = π/4·d²·min(v × capacity_margin, max_velocity)`, `v` = peak simulated velocity (see Capacity) |
+| Pipe | edge, `capacity = π/4·d² × capacity_velocity` (uniform 2.5 m/s design velocity, default); orientation from the simulated flow sign. `capacity_velocity=None` reverts to the sweep drill `π/4·d²·min(v_peak × margin, max_velocity)` (see Capacity) |
 
 **Pumps import as operational regardless of `.inp` status.** A pump's t=0
 status is a duty-cycle artifact (off overnight, waiting on a tank control),
@@ -72,14 +72,31 @@ refinement), never a user knob:
 A source with no capacitated pipe falls back to `UNBOUNDED_SUPPLY_FALLBACK` with
 a warning. Specific real values are edited in the Inspector afterwards.
 
-### Capacity — Sweep + Contingency + Margin (CONTEXT.md terms)
+### Capacity — Uniform Design Velocity (default) (CONTEXT.md terms)
 
 `.inp` gives diameter, not flow, so a velocity converts one to the other.
-Current rule: `π/4·d²·min(v_peak × capacity_margin, max_velocity)`, where the
-margin defaults to 2 (`DEFAULT_CAPACITY_MARGIN`; exposed as
-`ImportOptions.capacity_margin`) and `max_velocity` is an optional physical
-ceiling (default off/None). `v_peak` is each pipe/valve's highest simulated
-velocity across:
+**Current default rule: `π/4·d² × capacity_velocity`**, a UNIFORM design
+velocity (`DEFAULT_DESIGN_VELOCITY_MS = 2.5 m/s`, the water-main design speed;
+exposed as `ImportOptions.capacity_velocity`). No hydraulic solve, no margin,
+no cap — a textbook, reproducible constant applied to every pipe. Valve
+capacity keeps the sweep formula below; the sweep still runs regardless because
+it is what **orients** edges (see next section).
+
+**Addendum (2026-07-27) — uniform velocity replaced the sweep drill as the
+default.** The importer previously sized each pipe from its own *simulated peak*
+velocity (`π/4·d²·min(v_peak × capacity_margin, max_velocity)`, margin 2,
+ceiling 3 m/s). A full ablation across all 8 benchmark networks
+(`experiments/ATTEMPTS.md` §12, paper Supp. §S2) showed that elaborate per-pipe
+capacity discovery buys **nothing measurable** over the flat 2.5 m/s constant —
+pooled critical-class F1 0.770 (uniform) vs 0.778 (drill), FMS 0.926 vs 0.921,
+with per-network wins and losses cancelling. The simpler, standard, and more
+defensible rule therefore became the default; this **reverses** the earlier
+"constant design velocity — rejected" note (that rejection rested on a partial
+comparison predating the full ablation). The module's fidelity comes from
+topology, orientation, and priorities — not from tuned capacities.
+
+**Retained sweep drill (`ImportOptions.capacity_velocity=None`).** Sizes each
+pipe from its highest simulated velocity `v_peak` across:
 
 1. the **demand-multiplier Sweep** (1×→8×, independent PDD steady states,
    every junction fixed to the chosen `demand_mode` demand — this anchoring
@@ -87,17 +104,13 @@ velocity across:
 2. **Contingency solves** — single links (and optional N-2 trunk pairs)
    closed at nominal demand: backup pipes only reveal their capacity when a
    topology change reroutes flow through them. Modes: uniform sample,
-   trunk-biased, exhaustive trunk. Accumulation is `max` — a Contingency can
-   only raise a capacity.
+   trunk-biased, exhaustive trunk. Accumulation is `max`.
 
-The ×2 margin corrects a systematic underestimate: the observed peak is a
-lower bound conditional on the probes exercised, while real hydraulics has no
-hard cap (head loss absorbs ~2× overshoot). Measured knee: worst-divergence
-FMS 0.770 → 0.878 alone, 0.927 with full-duplex splits; larger margins grow
-over-optimism. Pipes with no signal at all fall back to
-`FALLBACK_VELOCITY_MS = 1 m/s` (with a warning). Rejected capacity sources —
-constant design velocity, idle-flow velocity — and the full variant study:
-`experiments/ATTEMPTS.md` §2.
+Under the drill, `capacity_margin` (default 2, `DEFAULT_CAPACITY_MARGIN`) and
+the optional `max_velocity` ceiling (default 3 m/s) apply as
+`min(v_peak × margin, max_velocity)`; pipes with no signal fall back to
+`FALLBACK_VELOCITY_MS = 1 m/s`. These two knobs **also** govern valve capacity
+under both methods. Full variant study: `experiments/ATTEMPTS.md` §2, §12.
 
 ### Orientation — simulated sign + Full-Duplex Splits
 
@@ -203,7 +216,7 @@ One line each; measurements in `experiments/ATTEMPTS.md`:
 
 - Custom graph contraction — WNTR skeletonization already does it with demand awareness.
 - Priorities from elevation/distance proxies — ignores loops and pumps.
-- User-set `design_velocity` constant / idle-flow velocity as capacity — both measurably worse than the Sweep peak.
+- ~~Constant design velocity as capacity — worse than the Sweep peak.~~ **Reversed 2026-07-27**: a uniform 2.5 m/s design velocity is now the DEFAULT — the full 8-network ablation (§12) found the sweep peak buys nothing over it (F1 0.770 vs 0.778). Idle-flow velocity remains rejected.
 - Stricter noise/dominance gates on orientation — regressed real two-source networks.
 - Proportional bidirectional splits with hedge shares — superseded by Full-Duplex.
 - Unbounded source supply by default / `supply_mode` / `supply_value` knobs — supply derives from file data, edited in the Inspector when known.

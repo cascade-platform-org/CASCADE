@@ -1,0 +1,20 @@
+
+=== Zampis.inp (674 pipes, 0 pumps) ===
+    trunk-10% (unfiltered, production): 67 links, 14 are bridges
+    trunk-20% (cycle-only, priority's pool): 104 links
+    [B-cycle-singles] 103/104 contingency solves converged
+    [C-production] 86/87 contingency solves converged
+    [D-pairs+triplets] 27/30 contingency solves converged
+    A(floor) -> B(cycle singles, few): 670/674 pipes gained capacity, mean +0.0023 m3/s, max +0.0356 m3/s
+    B(cycle singles) -> C(PRODUCTION, current final_benchmark.csv basis): 88/674 pipes gained capacity, mean +0.0001 m3/s, max +0.0020 m3/s
+    B(cycle singles) -> D(cycle singles+pairs+triplets): 32/674 pipes gained capacity, mean +0.0001 m3/s, max +0.0002 m3/s
+    C(PRODUCTION) -> D(cycle full ensemble): 165/674 pipes gained capacity, mean +0.0015 m3/s, max +0.0106 m3/s
+    top pipes where PRODUCTION > cycle-singles-only (id, cap_B, cap_C, diam_mm):
+      PZAM_0479  B=0.0471 C=0.0491 diam=200mm [cycle link]
+      PZAM_0169  B=0.0041 C=0.0051 diam=80mm [cycle link]
+      PZAM_0240  B=0.0053 C=0.0062 diam=100mm [cycle link]
+      PZAM_0109  B=0.0046 C=0.0054 diam=80mm [cycle link]
+      PZAM_0108  B=0.0050 C=0.0058 diam=80mm [cycle link]
+      PZAM_0100  B=0.0052 C=0.0060 diam=80mm [cycle link]
+      PZAM_0166  B=0.0067 C=0.0073 diam=80mm [cycle link]
+      PZAM_0630  B=0.0089 C=0.0095 diam=81mm [cycle link]

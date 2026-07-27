@@ -1,0 +1,7 @@
+/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "../raw-networks/aqueducts/CTown.inp"; added with type None, units conversion left to user
+  warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
+
+=== CTown.inp: do false positives survive infinite pipe capacity? ===
+  false positives: M_prod=281   M_infinite-pipes=281   (cured by uncapping = 0, 0% of prod FPs)
+  true positives : M_prod=73   M_infinite-pipes=73   (recall preserved if these stay equal)
+  => FPs NOT mainly capacity — investigate source/connectivity

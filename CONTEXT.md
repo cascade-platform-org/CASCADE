@@ -186,11 +186,15 @@ The metered unit of engine work: one Propagation = 1; a model-based analysis = `
 _Avoid_: "engine run", "propagation call" (ambiguous)
 
 **Network Importer**:
-A pure transformation of an external network format into a CASCADE ProjectBundle — parse, reduce, map; never persist, never propagate. One subpackage per format under `CASCADE-backend/core/importers/`; the first is the EPANET `.inp` water importer (`POST /api/import/inp`). All mapping rules — sources (reservoirs, tanks, injection wells), Service/Infrastructure junctions, inline pump/valve nodes, Sweep/Contingency-derived capacities with Capacity Margin and Full-Duplex Splits, skeletonization, generated scenario Events, Replace/Add-as-extra-canvas modes — live in ADR-0012.
+A pure transformation of an external network format into a CASCADE ProjectBundle — parse, reduce, map; never persist, never propagate. One subpackage per format under `CASCADE-backend/core/importers/`; the first is the EPANET `.inp` water importer (`POST /api/import/inp`). All mapping rules — sources (reservoirs, tanks, injection wells), Service/Infrastructure junctions, inline pump/valve nodes, uniform Design Velocity pipe capacities (with the Sweep providing orientation and the retained Capacity Margin drill), Full-Duplex Splits, skeletonization, generated scenario Events, Replace/Add-as-extra-canvas modes — live in ADR-0012.
 _Avoid_: "converter", "uploader"; treating import as sync (nothing is stored server-side)
 
+**Design Velocity**:
+The default pipe-capacity rule: `capacity = π/4·d² × capacity_velocity`, a single uniform design speed (`DEFAULT_DESIGN_VELOCITY_MS = 2.5 m/s`, exposed as `ImportOptions.capacity_velocity`) applied to every pipe — no hydraulic solve. Adopted 2026-07-27 after a full 8-network ablation showed the per-pipe Sweep capacities (the "drill") buy nothing over it (F1 0.770 vs 0.778). Set `capacity_velocity=None` to fall back to the drill. Fidelity comes from topology/orientation/priorities, not tuned capacities. Default: `map.py::DEFAULT_DESIGN_VELOCITY_MS`.
+_Avoid_: "assumed velocity" (it is a validated default, not a guess); do not conflate with the Sweep's per-pipe velocities
+
 **Sweep (demand-multiplier sweep)**:
-The importer's parameterization instrument: independent steady-state PDD solves with all demands scaled 1×→8× (no clock — deliberately not extended-period). Yields per-pipe capacity (peak |velocity| per direction) and direction (flow sign).
+The importer's parameterization instrument: independent steady-state PDD solves with all demands scaled 1×→8× (no clock — deliberately not extended-period). Its primary product is **orientation** (per-pipe flow direction from the flow sign); it also yields per-pipe peak |velocity|, used for pipe capacity only under the retained drill (`capacity_velocity=None`) and always for valve capacity.
 _Avoid_: "simulation" (too generic), "time series" (no clock)
 
 **Contingency (contingency solve)**:
@@ -198,8 +202,8 @@ One import-time PDD solve with one link (or a trunk pair, N-2) closed at nominal
 _Avoid_: "failure scenario" (that is a runtime Scenario/Event; this is an import-time probe)
 
 **Capacity Margin**:
-Uniform multiplier on Sweep/Contingency-derived pipe/valve capacity (supply re-derives automatically). The observed peak is a lower bound; real hydraulics lets head loss absorb ~2× overshoot. An **exposed import parameter** (`ImportOptions.capacity_margin`, default 2.0), not a fitted constant: an across-network sensitivity analysis shows fidelity is stable over a broad range with ×2 on the plateau, and ×2 keeps the busiest real-aqueduct pipes near the ~2.5 m/s water-main design ceiling. An optional `max_velocity` cap (default off) clamps `v_peak × margin` to a physical ceiling so no margin implies an unphysically fast pipe. Default: `map.py::DEFAULT_CAPACITY_MARGIN`.
-_Avoid_: "safety factor" (it removes a systematic underestimate, not adds conservatism)
+Multiplier on Sweep/Contingency peak velocity (`ImportOptions.capacity_margin`, default 2.0), with an optional `max_velocity` cap (default 3.0 m/s) clamping `v_peak × margin`. Since 2026-07-27 this governs **valve** capacity always, and **pipe** capacity only under the retained Sweep drill (`capacity_velocity=None`) — the default Design Velocity method ignores it for pipes. The observed peak is a lower bound; the margin removes that systematic underestimate (not a safety conservatism). Default: `map.py::DEFAULT_CAPACITY_MARGIN`.
+_Avoid_: "safety factor" (it removes a systematic underestimate, not adds conservatism); do not describe it as the default pipe-capacity rule (Design Velocity is)
 
 **Full-Duplex Split**:
 A bidirectional pipe (Sweep signal both ways) imports as two directional edges **each at full physical capacity** — not proportional shares, which starve exactly the reversal direction failure-rerouting needs. Shipped: `map.py::_emit_split`.

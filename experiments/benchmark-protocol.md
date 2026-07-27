@@ -126,28 +126,34 @@ Skeletonization is **bypassed** in validation (full networks imported).
 
 ### 3.2 Pipe capacity (the load-bearing quantity)
 
-`capacity = (π/4)·d²·v_eff`, `v_eff = min(v_peak · margin, max_velocity?)`,
-`margin` default **2.0** (`ImportOptions.capacity_margin`), `max_velocity`
-optional design ceiling.
+**Default (since 2026-07-27): uniform Design Velocity.**
+`capacity = (π/4)·d² × capacity_velocity`, `capacity_velocity` default **2.5 m/s**
+(`ImportOptions.capacity_velocity`, a textbook water-main design speed). No
+hydraulic solve, no margin, no cap. This is the shipped method — the
+capacity ablation (`ATTEMPTS.md` §12, `run_capacity_drill_ablation.sh` →
+`final_benchmark_drill.csv`, paper Supp. §S2) found the per-pipe sweep drill
+buys nothing over it (pooled F1 0.770 vs 0.778, FMS 0.926 vs 0.921).
 
-- `v_peak` = the **max |velocity|** a pipe reaches across TWO families of solves,
-  taking the **maximum over both**:
+The demand sweep + contingency solves **still run** — they are what orients
+edges (§3.3) — but their per-pipe *velocities* no longer set pipe capacity by
+default. Valve capacity still uses the sweep drill formula.
+
+**Retained sweep drill (`--capacity-drill` / `capacity_velocity=None`).** The
+old method: `v_eff = min(v_peak · margin, max_velocity)`, `margin` default 2.0,
+`max_velocity` default 3.0 m/s, where `v_peak` = the **max |velocity|** a pipe
+reaches across TWO families of solves:
   1. **Demand sweep**: escalate every junction's demand 1×→`max_multiplier=8`
      in `steps=8`, at nominal topology.
   2. **Contingency solves**: close each breakable link once **at nominal demand**
-     (`contingency_multiplier = 1.0`), re-solve. This is what sizes *backup*
-     pipes the demand sweep never stresses. Capacity being the max-over-all-solves
-     means a contingency can only *raise* a backup pipe's capacity.
-- **×2 margin justification**: sensitivity-validated (stable over a broad range,
-  ×2 on the plateau, ×3 buys ~nothing) + physically grounded (×2 keeps busiest
-  aqueduct pipes near the ~2.5 m/s design ceiling). It is an *exposed parameter*,
-  NOT fitted to the evaluation.
+     (`contingency_multiplier = 1.0`), re-solve — sizes *backup* pipes the demand
+     sweep never stresses. Max-over-all-solves: a contingency only *raises* capacity.
 
-> VERIFIED THIS SESSION: capacity is NOT the precision bottleneck. On Modena &
-> Net3, every pipe uses <50% of imported capacity even under failure; 0% are
-> undersized vs observed WNTR flow. Raising the margin does not fix precision —
-> it flips the module bimodally from over- (×2) to under-prediction (×4→misses
-> everything). The capacity *scale* is fine; see ISSUE-PREC for the real cause.
+> VERIFIED (2026-07-23/24, §12): capacity magnitude is NOT the precision
+> bottleneck. On Modena & Net3 every pipe uses <50% of imported capacity even
+> under failure; 0% are undersized vs observed WNTR flow; infinite capacity
+> cures 0% of false positives; design velocity 2.5/3.0/3.5 are byte-identical.
+> That insensitivity is exactly why the uniform constant replaced the drill.
+> Precision is topology/priority-bound; see ISSUE-PREC.
 
 ### 3.3 Orientation
 
