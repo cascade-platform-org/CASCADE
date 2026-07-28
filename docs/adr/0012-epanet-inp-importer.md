@@ -138,13 +138,15 @@ of scope — the Sweep has no clock; the tank's depletion is the reserve event.
 ### Hydraulic priorities — optional derivation, expert knob
 
 `priority` (1–10) orders the engine's scarcity shedding (ADR-0014: strict
-tiers under the default fair-share allocation). The importer can derive it
-from a PDD failure-order sweep on the original network (early failure → low
-priority; transferred to the skeleton by demand-weighted mean), or from
-contingency failure frequency — but **every derivation measured ≈ 0 FMS
-effect once capacities are parameterized correctly** (ATTEMPTS.md §1/§1a), so
-priorities are treated as an expert-knowledge input, not a fidelity
-parameter. Sim failure never blocks an import — uniform priorities + warning.
+tiers under the default fair-share allocation). **The importer derives no
+priority** (2026-07-28): every measured auto-derivation either does nothing for
+FMS/level-agreement fidelity (the demand-multiplier scarcity sweep — null on
+both axes) or, worse, *downgrades* the critical-class result at import time —
+the cycle-aware contingency ranking trades precision for recall (0.68→0.63 for
+0.95→0.98; ATTEMPTS.md §13, paper Supp. §S1). Since no automatic derivation
+improves the shipped config, none is offered; `priority` is left an
+**expert-set per-node primitive** (``serve the hospital first''), and imports
+ship with no ordering (pure max-min fair share — the best-precision config).
 
 ### Generated scenario Events
 

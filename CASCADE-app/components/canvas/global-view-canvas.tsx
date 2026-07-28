@@ -146,6 +146,15 @@ function GlobalViewCanvas() {
         const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
         if (!viewport || nodes.length === 0) return undefined;
 
+        // Exclude on-screen UI overlays (zoom slider, read-only badge, React Flow
+        // panels/attribution) from the export — same as the per-canvas capture.
+        const filter = (el: HTMLElement) =>
+          !(el instanceof Element &&
+            typeof el.matches === "function" &&
+            el.matches(
+              ".react-flow__panel, .react-flow__controls, .react-flow__minimap, .react-flow__attribution, [data-export-ignore]",
+            ));
+
         // Expand the node-box bounds so centered name labels are not clipped at
         // the edges of the fitted image; geometry lives in cascade-node.tsx.
         const bounds = expandBoundsForLabels(getNodesBounds(nodes));
@@ -155,6 +164,7 @@ function GlobalViewCanvas() {
           backgroundColor: "#ffffff",
           width: IMG_W,
           height: IMG_H,
+          filter,
           style: {
             width: `${IMG_W}px`,
             height: `${IMG_H}px`,

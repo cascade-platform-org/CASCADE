@@ -214,26 +214,28 @@ resolution. **The scale cancels in `served_ratio = delivered/demand`** — it is
 NOT a bug (a diagnostic that compared scaled capacity to raw WNTR flow gave a
 false "10⁷× too large" reading this session; the real comparison is unit-consistent).
 
-### 3.7 Priorities (junction shedding order) — **RE-OPENED**
+### 3.7 Priorities (junction shedding order) — **RESOLVED (2026-07-28)**
 
-Headline runs use `--priority-mode none` (uniform priority). Three derivations exist:
+The CANONICAL config uses `--priority-mode none` (no ordering; pure max-min fair
+share). Three derivations exist:
 
-- `none`: uniform.
+- `none`: no ordering — the shipped canonical (best precision 0.68).
 - `scarcity` (sweep): multiplier at which each junction first drops below a
-  service threshold. Ablated as ~null **on FMS**.
-- `contingency`: how often each junction fails under single-link closures.
+  service threshold. Ablated as null on both axes.
+- `contingency`: cycle-aware demand-weighted severity from single/pair/triplet
+  closures — the optional **recall lever**.
 
-> FINDING THIS SESSION: the "priorities contribute nothing" claim is **FMS-scoped
-> and wrong for precision**. On Modena, `contingency` priorities cut false
-> positives 569→262 and lifted precision 0.18→0.32 (recall ~flat), FMS 0.892→0.933;
-> neutral on Net3 (no harm). This concentrates the fair-share shed onto the
-> hydraulically-vulnerable junctions WNTR actually starves. CAVEAT: contingency
-> priorities need the WNTR sweep → **import-only, not authorable**. Free physics
-> proxies (hydraulic-distance, effective-resistance, topological-contingency
-> effective-resistance) were all tested and **all backfired** (precision 0.15–0.16
-> < none's 0.18) — vulnerability is genuinely hydraulic, not topological.
-> DECISION NEEDED: run the final benchmark with `--priority-mode contingency`
-> (better precision, changes all numbers) or keep `none` (matches current paper).
+> RESOLVED (ATTEMPTS.md §13): priority's effect is **capacity-method-dependent**.
+> The earlier "contingency lifts precision" finding held only under the SWEEP-DRILL
+> capacity. Under the shipped UNIFORM design-velocity capacity, contingency
+> priority is a **recall lever, not a precision fix**: pooled it lifts recall
+> 0.95→0.98 at a precision cost (0.68→0.63, +28% FP). So the canonical leaves it
+> OFF (best precision/F1), and the priority-on arm (`run_priority_ablation.sh` →
+> `final_benchmark_priority.csv`) is an ablation. Free physics proxies for priority
+> all backfired earlier — vulnerability is genuinely hydraulic, not topological.
+> CAVEAT (code=paper): the importer still auto-derives `scarcity` priorities by
+> default (`derive_priorities=True`) — inconsistent with this canonical; see
+> ATTEMPTS.md §13 open item.
 
 ---
 

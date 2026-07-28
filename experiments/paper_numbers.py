@@ -72,3 +72,27 @@ for f in FAM:
     rs = byfam_ct[f]
     if rs:
         print(f"  CTown {f:9s} FMS={mean(rs,'fms'):.3f} null={mean(rs,'fms_null'):.3f}")
+
+# --- Ablations against the canonical uniform + no-priority run ------------------
+# `rows` above is CANONICAL: uniform design-velocity capacity, no priority.
+#  - PRIORITY arm: same capacity + cycle-aware contingency priority (recall knob)
+#  - CAPACITY arm: the sweep drill, same (none) priority (does discovery help?)
+# All arms cover the same 8 networks/seeds/situations, so totals are paired.
+pc0, rc0, _, fpc0, _ = prf(rows)  # canonical uniform+none
+PRIOR_CSV = Path(__file__).with_name("final_benchmark_priority.csv")
+DRILL_CSV = Path(__file__).with_name("final_benchmark_drill.csv")
+if PRIOR_CSV.exists():
+    pr = list(csv.DictReader(PRIOR_CSV.open()))
+    pp, rp, _, fpp, _ = prf(pr)
+    print("\n=== PRIORITY as a recall knob (canonical none  vs  +contingency) ===")
+    print(f"  canonical (no priority): precision={pc0:.3f} recall={rc0:.3f} FP={fpc0}")
+    print(f"  + contingency priority : precision={pp:.3f} recall={rp:.3f} FP={fpp}")
+    print(f"  -> recall {rc0:.2f}->{rp:.2f} (+{rp - rc0:.2f}); precision {pc0:.2f}->{pp:.2f} ({pp - pc0:+.2f}); "
+          f"FP {fpc0}->{fpp} ({fpp - fpc0:+d})")
+if DRILL_CSV.exists():
+    dr = list(csv.DictReader(DRILL_CSV.open()))
+    pd_, rd_, _, _, _ = prf(dr)
+    f1 = lambda p, r: 2 * p * r / (p + r)
+    print("\n=== CAPACITY ablation (uniform vs drill, both no-priority) ===")
+    print(f"  uniform (canonical): P={pc0:.3f} R={rc0:.3f} F1={f1(pc0,rc0):.3f} FMS={mean(rows,'fms'):.3f}")
+    print(f"  drill              : P={pd_:.3f} R={rd_:.3f} F1={f1(pd_,rd_):.3f} FMS={mean(dr,'fms'):.3f}")

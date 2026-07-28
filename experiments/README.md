@@ -15,9 +15,9 @@ map of *what each file is*.
 
 | | |
 |---|---|
-| **Result data** | **`final_benchmark.csv`** — the 8-network numbers in the paper (uniform design-velocity capacity) |
-| **Capacity ablation** | `final_benchmark_drill.csv` — the old sweep-drill capacity method (paper Supp. §S2) |
-| **Priority ablation** | `final_benchmark_none.csv` — uniform-priority arm (for the priority comparison) |
+| **Result data** | **`final_benchmark.csv`** — the 8-network numbers in the paper (uniform design-velocity capacity, **no priority** — best precision) |
+| **Priority ablation** | `final_benchmark_priority.csv` — contingency priority ON, the optional recall lever (paper Supp. §S1) |
+| **Capacity ablation** | `final_benchmark_drill.csv` — the old sweep-drill capacity method, *worse* than the constant (paper Supp. §S2) |
 | **Read the numbers** | `python3 aggregate_final.py [csv]` |
 | **Paper placeholders** | `python3 paper_numbers.py` |
 
@@ -39,21 +39,22 @@ are preserved for provenance under `archive/pumpfed-fix-2026-07-23/`
 (`pre-fix_final_benchmark.csv`, `final_benchmark_fixed.csv`, `merge_pumpfed.py`
 — see `ATTEMPTS.md` §11 for the full diagnosis).
 
-The capacity method changed on 2026-07-27: pipe capacity is now a **uniform
-design velocity** (area × 2.5 m/s), not the per-pipe hydraulic sweep. An
-ablation showed the sweep "drill" buys nothing over the constant (F1 0.770 vs
-0.778), so the simpler rule became the default — see `ATTEMPTS.md` §12. The
-canonical `final_benchmark.csv` is the uniform run; the drill run is kept as
-the ablation:
+The canonical config was set on 2026-07-28 (see `ATTEMPTS.md` §12–13):
+**uniform design-velocity capacity (area × 2.5 m/s) + no priority ordering.**
+Two findings drove it:
+
+- **Capacity:** a flat design velocity does *as well or better* than the old
+  per-pipe hydraulic "drill" (F1 0.794 vs 0.737, precision 0.682 vs 0.599) —
+  simpler *and* better. `run_capacity_drill_ablation.sh` → `final_benchmark_drill.csv`.
+- **Priority:** the cycle-aware contingency priority is a **recall lever, not a
+  precision fix** — turning it on lifts recall 0.95→0.98 at a precision cost
+  (0.68→0.63). So the canonical leaves it off (best precision), and the
+  priority-on arm is an ablation. `run_priority_ablation.sh` → `final_benchmark_priority.csv`.
 
 ```
-run_capacity_drill_ablation.sh   →  final_benchmark_drill.csv   (--capacity-drill, old method)
-```
-
-Separately, for the paper's "priority restores precision" claim:
-
-```
-rerun_none_priority.sh   →  final_benchmark_none.csv    (same 8 networks, --priority-mode none)
+run_final_benchmark.sh            →  final_benchmark.csv          (CANONICAL: uniform + no priority)
+run_priority_ablation.sh          →  final_benchmark_priority.csv (contingency priority ON)
+run_capacity_drill_ablation.sh    →  final_benchmark_drill.csv    (--capacity-drill, old method)
 ```
 
 ---
@@ -63,9 +64,9 @@ rerun_none_priority.sh   →  final_benchmark_none.csv    (same 8 networks, --pr
 ### Scripts — run these
 | File | What it does |
 |---|---|
-| `run_final_benchmark.sh` | Main runner: 8 networks, four failure families, uniform design-velocity capacity, cycle-aware contingency priorities. Writes `final_benchmark.csv`/`.log`. |
+| `run_final_benchmark.sh` | CANONICAL runner: 8 networks, four families, uniform design-velocity capacity, **no priority**. Writes `final_benchmark.csv`/`.log`. |
+| `run_priority_ablation.sh` | Priority-on ablation (`--priority-mode contingency`, the recall lever) → `final_benchmark_priority.csv`. Paper Supp. §S1. |
 | `run_capacity_drill_ablation.sh` | Capacity ablation (`--capacity-drill`, old sweep method) → `final_benchmark_drill.csv`. Paper Supp. §S2. |
-| `rerun_none_priority.sh` | Uniform-priority ablation (`--priority-mode none`) → `final_benchmark_none.csv`. |
 | `aggregate_final.py [csv]` | Pools a results CSV into per-family / per-network FMS + precision/recall tables. Defaults to `final_benchmark.csv`. |
 | `paper_numbers.py` | Prints the exact values (with bootstrap CIs) that fill the paper's `\dtba` placeholders, from `final_benchmark.csv`. |
 
@@ -79,9 +80,10 @@ rerun_none_priority.sh   →  final_benchmark_none.csv    (same 8 networks, --pr
 ### Data
 | File | What it is |
 |---|---|
-| **`final_benchmark.csv`** / `.log` | **CANONICAL** 8-network result (uniform design velocity, post pump-fed-tank fix). The paper's numbers. |
-| `final_benchmark_drill.csv` / `.log` | Capacity ablation: old sweep-drill method (`--capacity-drill`). Paper Supp. §S2. |
-| `final_benchmark_none.csv` / `.log` | Uniform-priority ablation. |
+| **`final_benchmark.csv`** / `.log` | **CANONICAL** 8-network result (uniform design velocity, no priority, post pump-fed-tank fix). The paper's numbers. |
+| `final_benchmark_priority.csv` / `.log` | Priority-on ablation (contingency, the recall lever). Paper Supp. §S1. |
+| `final_benchmark_drill.csv` / `.log` | Capacity ablation: old sweep-drill method (`--capacity-drill`), worse. Paper Supp. §S2. |
+| `final_benchmark_drill_priority.csv` | drill + contingency (the 4th cell of the capacity×priority 2×2; kept for reference). |
 
 ### Docs
 | File | What it is |

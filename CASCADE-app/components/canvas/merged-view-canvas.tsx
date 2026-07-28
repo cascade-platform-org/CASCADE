@@ -133,13 +133,25 @@ function MergedViewCanvas() {
         const nodes = getNodes();
         if (nodes.length === 0) return undefined;
 
+        // Exclude on-screen UI overlays (find-node search, zoom slider, legend,
+        // geo "reset anchor", React Flow attribution/minimap) from the exported
+        // image so it shows only the network — identical to the per-canvas export
+        // in flow-canvas.tsx. html-to-image calls this filter for every DOM node;
+        // returning false drops that node and its subtree.
+        const filter = (el: HTMLElement) =>
+          !(el instanceof Element &&
+            typeof el.matches === "function" &&
+            el.matches(
+              ".react-flow__panel, .react-flow__controls, .react-flow__minimap, .react-flow__attribution, [data-export-ignore]",
+            ));
+
         // Georeferenced: capture the full container so map tiles appear.
         const isGeoref = (await import("@/store/canvas-store"))
           .useCanvasStore.getState().canvases;
         const hasGeoref = Object.values(isGeoref).some((c) => c.georeferenced);
         if (hasGeoref && containerRef.current) {
           const el = containerRef.current;
-          return await toPng(el, { width: el.offsetWidth, height: el.offsetHeight });
+          return await toPng(el, { width: el.offsetWidth, height: el.offsetHeight, filter });
         }
 
         const viewport =
@@ -168,6 +180,7 @@ function MergedViewCanvas() {
           backgroundColor: "#f4f4f5",
           width: captureW,
           height: captureH,
+          filter,
           style: {
             width: `${captureW}px`,
             height: `${captureH}px`,

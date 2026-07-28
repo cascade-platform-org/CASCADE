@@ -359,20 +359,17 @@ export interface ImportInpKnobs {
   targetNodes?: number;
   sourceCrs?: string;
   demandMode?: "peak" | "base" | "avg";
-  derivePriorities?: boolean;
   /** Size of the functionality scale (1..nLevels) node/edge values are
    *  expressed on. Backend default 3. When merging into an existing
    *  project, pass that project's own functionality_scale.length so the
    *  imported values line up with its (untouched) scale. */
   nLevels?: number;
-  /** Uniform multiplier on every sweep-derived pipe/valve capacity. Backend
-   *  default 2.0; higher = more optimistic (fewer false alarms), lower = more
-   *  conservative (fewer missed criticals). */
+  /** Sweep-drill only: multiplier on the sweep peak velocity for valve capacity,
+   *  and for pipe capacity when capacityVelocity is null. Backend default 2.0.
+   *  The default uniform design-velocity method ignores it for pipes. */
   capacityMargin?: number;
-  /** Optional physical ceiling (m/s) on the margined pipe velocity, so the
-   *  margin can't imply an unphysically fast pipe. Water-main design ceiling
-   *  ~2.5–3 m/s. Omit (undefined) to leave capacities uncapped (backend
-   *  default). */
+  /** Sweep-drill only: physical ceiling (m/s) on the margined sweep velocity
+   *  (valves always; pipes under the drill). Backend default 3.0. */
   maxVelocity?: number;
 }
 
@@ -393,7 +390,6 @@ export async function importInp(
       target_nodes: knobs.targetNodes,
       source_crs: knobs.sourceCrs,
       demand_mode: knobs.demandMode,
-      derive_priorities: knobs.derivePriorities,
       n_levels: knobs.nLevels,
       capacity_margin: knobs.capacityMargin,
       max_velocity: knobs.maxVelocity,

@@ -1,13 +1,12 @@
 """
 api/import_routes.py — EPANET .inp → CASCADE ProjectBundle importer.
 
-POST /api/import/inp — parse, (optionally) skeletonize to a node budget,
-derive flow priorities from a WNTR pressure-driven scarcity sweep, and map to
-the CASCADE schema. Pure transformation: nothing is persisted, the engine is
-never invoked, and the caller loads the returned bundle client-side exactly
-like a local file. Auth = any authenticated caller (`get_current_user`); no
-permission gate because the endpoint grants nothing the client couldn't
-compute from the same file locally.
+POST /api/import/inp — parse, (optionally) skeletonize to a node budget, run a
+hydraulic sweep for edge orientation, and map to the CASCADE schema. Pure
+transformation: nothing is persisted, the engine is never invoked, and the
+caller loads the returned bundle client-side exactly like a local file. Auth =
+any authenticated caller (`get_current_user`); no permission gate because the
+endpoint grants nothing the client couldn't compute from the same file locally.
 
 The heavy lifting (WNTR parse + sweep) is CPU-bound synchronous code — it runs
 in a worker thread so the event loop stays responsive.
@@ -26,9 +25,7 @@ from core.importers.inp import (
     compute_junction_demands,
     link_flow_profiles,
     load_inp,
-    scarcity_priorities,
     skeletonize_to_target,
-    transfer_priorities,
 )
 from schemas.auth import AuthUser
 from schemas.import_inp import ImportInpRequest, ImportInpResponse
@@ -47,8 +44,7 @@ def _run_import(body: ImportInpRequest, target_nodes: int) -> ImportInpResponse:
     original_nodes = wn.num_nodes
 
     # Demand for the chosen mode, on the ORIGINAL network — needed before
-    # skeletonization for both the priority sweep (below) and, later,
-    # transferring those priorities onto retained junctions.
+    # skeletonization (the sweep and emitted demands must agree; see below).
     original_demands = compute_junction_demands(wn, body.demand_mode)
 
     # Skeletonize FIRST: it is the step that can fail (SkeletonError on an
@@ -60,14 +56,11 @@ def _run_import(body: ImportInpRequest, target_nodes: int) -> ImportInpResponse:
     if wn.num_nodes > target_nodes:
         reduced, merged_map, threshold = skeletonize_to_target(wn, target_nodes)
 
+    # No auto-derived shedding priority — the importer ships none (best precision;
+    # see ImportInpRequest). `priority` stays an expert-set per-node primitive.
     priorities: dict[str, int] = {}
-    if body.derive_priorities:
-        # Sweep the ORIGINAL network — the skeleton's merged pipes distort
-        # hydraulics; priorities transfer onto retained junctions afterwards.
-        priorities = scarcity_priorities(wn, original_demands, warnings=warnings)
 
     if reduced is not None:
-        priorities = transfer_priorities(priorities, merged_map, original_demands)
         wn = reduced
         warnings.append(
             f"Skeletonized {original_nodes} → {wn.num_nodes} nodes "

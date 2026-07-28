@@ -431,3 +431,39 @@ Diagnostics: `diag_contingency_unification.py`, `diag_batch_drills.py`,
 - Precision remains a genuine multi-factor, network-specific limitation, not one
   missing trick — consistent with the paper's framing (quantity-aware module;
   recall is the win, precision the acknowledged weak axis).
+
+## 13. Capacity × priority interaction — the canonical is uniform + NO priority (2026-07-28)
+
+Filling the paper's priority placeholders surfaced a genuine interaction that
+inverted the headline. The full 2×2 (all 939 situations, pooled):
+
+| capacity | priority | precision | recall | F1 | FP |
+|---|---|---|---|---|---|
+| **uniform** | **none** | **0.682** | 0.950 | **0.794** | 18287 |
+| uniform | contingency | 0.634 | 0.980 | 0.770 | 23407 |
+| drill | none | 0.599 | 0.957 | 0.737 | 26468 |
+| drill | contingency | 0.657 | 0.955 | 0.778 | 20650 |
+
+- **"Priority restores precision" only held under the drill.** Under uniform
+  capacity, contingency priority *lowers* precision (0.68→0.63) and *raises*
+  recall (0.95→0.98) — it trades precision for recall, the opposite direction.
+- **uniform + none is the best cell** (highest precision 0.682, highest F1
+  0.794) — and needs no priority machinery.
+- **Under none priority, uniform BEATS the drill** (F1 0.794 vs 0.737, precision
+  0.682 vs 0.599) — a stronger capacity-ablation story than the contingency-arm
+  wash (§12).
+
+### Decision
+- **Canonical = uniform capacity + no priority** (`--priority-mode none`,
+  `run_final_benchmark.sh` → `final_benchmark.csv`). Best precision/F1.
+- **Priority reframed as an optional RECALL LEVER** (not a precision fix): the
+  cycle-aware contingency ranking lifts recall 0.95→0.98 at a precision cost
+  (0.68→0.63, +28% FP). Ablation: `run_priority_ablation.sh` →
+  `final_benchmark_priority.csv` (paper Supp. §S1).
+- Paper (main + supplement) rewritten to this framing; all `\dtba` resolved.
+- **OPEN (code=paper):** the importer (`api/import_routes.py`) defaults
+  `derive_priorities=True` and uses `scarcity_priorities` (the legacy sweep the
+  paper ablates as null) — inconsistent with the canonical (no priority) and
+  with the paper's lever (contingency, not scarcity). Needs an owner decision:
+  default `derive_priorities=False`, and/or wire `contingency_priorities` as the
+  opt-in recall lever.

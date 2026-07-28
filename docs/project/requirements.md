@@ -604,9 +604,11 @@ incident pipe capacities) → **place** (pyproj → WGS84 + GeoAnchor, or
 abstract layout).
 
 Knobs: `target_nodes`, `source_crs`, `demand_mode` (peak / base / avg pattern
-multiplier), `derive_priorities`, `n_levels` (functionality scale size, default
+multiplier), `capacity_velocity` (uniform design velocity, default 2.5 m/s),
+`n_levels` (functionality scale size, default
 3 — every node/edge value and the emitted scale itself are generated for this
 size; `generate_scale(3)` reproduces the app's own hardcoded default exactly).
+No shedding priority is auto-derived (the per-node `priority` field is expert-set only).
 A specific node's `supply_capacity` can be edited in the Inspector after
 import; there is no separate fixed-value import knob for that.
 

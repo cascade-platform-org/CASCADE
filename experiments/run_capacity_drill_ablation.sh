@@ -1,11 +1,11 @@
 #!/bin/bash
-# CAPACITY ABLATION (experiments §S2, ATTEMPTS.md §12): identical to
-# run_final_benchmark.sh but pipe capacity is sized from the per-pipe hydraulic
-# SWEEP (area x min(v_peak x margin, max_v)) instead of the shipped uniform
-# design velocity — the pre-2026-07-27 method (--capacity-drill). Quantifies
-# what the elaborate per-pipe capacity discovery buys over a flat 2.5 m/s rule
-# of thumb. Result: essentially nothing (pooled F1 0.778 drill vs 0.770
-# uniform, FMS 0.921 vs 0.926) — which is why uniform velocity is the default.
+# CAPACITY ABLATION (experiments §S2, ATTEMPTS.md §12): identical to the
+# canonical run_final_benchmark.sh (uniform capacity, no priority) but pipe
+# capacity is sized from the per-pipe hydraulic SWEEP (area x min(v_peak x
+# margin, max_v)) instead of the shipped uniform design velocity — the
+# pre-2026-07-27 method (--capacity-drill). Result: the drill is WORSE than the
+# flat 2.5 m/s constant (pooled F1 0.737 drill vs 0.794 uniform, precision 0.599
+# vs 0.682, FMS 0.905 vs 0.918) — which is why uniform velocity is the default.
 set -u
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
 EXP=../experiments
@@ -22,7 +22,7 @@ NETWORKS="Net1 Net2 Net3 \
 for net in $NETWORKS; do
   echo "=== $(date +%H:%M) starting $net ===" | tee -a "$LOG"
   python3 scripts/validate_faithfulness.py --networks "$net" --seed 1 \
-    --contingency-exhaustive-trunk --priority-mode contingency \
+    --contingency-exhaustive-trunk --priority-mode none \
     --demand-mode peak_hour --capacity-drill --csv "$CSV" >>"$LOG" 2>&1 \
     || echo "  FAILED: $net" | tee -a "$LOG"
 done

@@ -29,11 +29,11 @@ class ImportInpRequest(ImportOptions):
         description="Skeletonize until the network fits this node budget. "
                     "None = the caller's entitlement max_nodes (unbounded roles: 300).",
     )
-    derive_priorities: bool = Field(
-        default=True,
-        description="Run the WNTR pressure-driven scarcity sweep to derive "
-                    "flow-allocation priorities (adds a few seconds).",
-    )
+    # No auto-derived shedding priority: every measured derivation (scarcity
+    # sweep, contingency ranking) either does nothing for level-agreement fidelity
+    # or trades precision for recall at import time (ATTEMPTS.md §13, paper
+    # Supp. §S1), so the importer ships no priority ordering (best precision). The
+    # per-node `priority` field remains an expert-set modelling primitive.
 
 
 class ImportInpResponse(BaseModel):

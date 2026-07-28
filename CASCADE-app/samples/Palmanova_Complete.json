@@ -4,8 +4,8 @@
     "meta": {
       "name": "Palmanova_Complete",
       "description": "Model with flow control policies: Hospital water demand given highest priority (10) and Civil Protection given high priority (9), ensuring that during water scarcity, the engine (min-cost max-flow) allocates available supply to critical services first.",
-      "created_at": "2026-06-26T10:08:27.297Z",
-      "updated_at": "2026-06-26T10:08:27.297Z"
+      "created_at": "2026-07-28T13:19:08.318Z",
+      "updated_at": "2026-07-28T13:19:08.318Z"
     },
     "nodes": {
       "node_1762946740143": {
@@ -943,8 +943,8 @@
         "category_dependency_profiles": {
           "water": {
             "dependency_level": 3,
-            "demand": 8,
             "backup": false,
+            "demand": 8,
             "priority": 1
           }
         },
@@ -1058,9 +1058,9 @@
         "category_dependency_profiles": {
           "water": {
             "dependency_level": 3,
+            "backup": false,
             "demand": 8,
-            "priority": 1,
-            "backup": false
+            "priority": 1
           }
         }
       },
@@ -2157,24 +2157,24 @@
         "id": "canvas-electrical",
         "label": "Electrical",
         "color": "#eab308",
-        "georeferenced": false,
-        "map_style": "bright",
+        "georeferenced": true,
+        "map_style": "positron",
         "map_center": {
-          "lng": 13.318841498210872,
-          "lat": 45.908920086917945
+          "lng": 13.316943402102225,
+          "lat": 45.90454633774905
         },
-        "map_zoom": 13.250436385148149,
+        "map_zoom": 13.777712199650587,
         "geo_anchor": {
           "flow": {
-            "x": 357.40373174299066,
-            "y": 95.28089874445998
+            "x": 322.65529553999056,
+            "y": 210.352667546108
           },
           "geo": {
-            "lng": 13.318841498210872,
-            "lat": 45.908920086917945
+            "lng": 13.316943402102225,
+            "lat": 45.90454633774905
           },
-          "rf_zoom": 0.7570580851443119,
-          "ml_zoom": 13.250436385148149
+          "rf_zoom": 1.0910760885200688,
+          "ml_zoom": 13.777712199650587
         },
         "graph": {
           "graph_type": "power",
@@ -2220,23 +2220,23 @@
         "id": "canvas-water",
         "label": "Water",
         "color": "#3b82f6",
-        "georeferenced": false,
+        "georeferenced": true,
         "map_center": {
-          "lng": 13.318841498210872,
-          "lat": 45.908920086917945
+          "lng": 13.316943402102225,
+          "lat": 45.90454633774905
         },
-        "map_zoom": 13.250436385148149,
+        "map_zoom": 13.777712199650587,
         "geo_anchor": {
           "flow": {
-            "x": 357.40373174299066,
-            "y": 95.28089874445998
+            "x": 322.65529553999056,
+            "y": 210.352667546108
           },
           "geo": {
-            "lng": 13.318841498210872,
-            "lat": 45.908920086917945
+            "lng": 13.316943402102225,
+            "lat": 45.90454633774905
           },
-          "rf_zoom": 0.7570580851443119,
-          "ml_zoom": 13.250436385148149
+          "rf_zoom": 1.0910760885200688,
+          "ml_zoom": 13.777712199650587
         },
         "graph": {
           "graph_type": "water",
@@ -2280,23 +2280,23 @@
         "id": "canvas-transport",
         "label": "Transport",
         "color": "#06b6d4",
-        "georeferenced": false,
+        "georeferenced": true,
         "map_center": {
-          "lng": 13.318841498210872,
-          "lat": 45.908920086917945
+          "lng": 13.316943402102225,
+          "lat": 45.90454633774905
         },
-        "map_zoom": 13.250436385148149,
+        "map_zoom": 13.777712199650587,
         "geo_anchor": {
           "flow": {
-            "x": 357.40373174299066,
-            "y": 95.28089874445998
+            "x": 322.65529553999056,
+            "y": 210.352667546108
           },
           "geo": {
-            "lng": 13.318841498210872,
-            "lat": 45.908920086917945
+            "lng": 13.316943402102225,
+            "lat": 45.90454633774905
           },
-          "rf_zoom": 0.7570580851443119,
-          "ml_zoom": 13.250436385148149
+          "rf_zoom": 1.0910760885200688,
+          "ml_zoom": 13.777712199650587
         },
         "graph": {
           "graph_type": "transport",
@@ -2361,25 +2361,25 @@
       },
       {
         "id": "canvas-sl2yRJc6",
-        "label": "Digital",
+        "label": "Managerial",
         "color": "#a855f7",
         "georeferenced": false,
         "map_center": {
-          "lng": 13.318841498210872,
-          "lat": 45.908920086917945
+          "lng": 13.316943402102225,
+          "lat": 45.90454633774905
         },
-        "map_zoom": 13.250436385148149,
+        "map_zoom": 13.777712199650587,
         "geo_anchor": {
           "flow": {
-            "x": 357.40373174299066,
-            "y": 95.28089874445998
+            "x": 322.65529553999056,
+            "y": 210.352667546108
           },
           "geo": {
-            "lng": 13.318841498210872,
-            "lat": 45.908920086917945
+            "lng": 13.316943402102225,
+            "lat": 45.90454633774905
           },
-          "rf_zoom": 0.7570580851443119,
-          "ml_zoom": 13.250436385148149
+          "rf_zoom": 1.0910760885200688,
+          "ml_zoom": 13.777712199650587
         },
         "graph": {
           "graph_type": "power",
@@ -2403,24 +2403,24 @@
         "id": "canvas-MIprF9rJ",
         "label": "Service",
         "color": "#ec4899",
-        "georeferenced": false,
+        "georeferenced": true,
         "map_style": "positron",
         "map_center": {
-          "lng": 13.318841498210872,
-          "lat": 45.908920086917945
+          "lng": 13.316943402102225,
+          "lat": 45.90454633774905
         },
-        "map_zoom": 13.250436385148149,
+        "map_zoom": 13.777712199650587,
         "geo_anchor": {
           "flow": {
-            "x": 357.40373174299066,
-            "y": 95.28089874445998
+            "x": 322.65529553999056,
+            "y": 210.352667546108
           },
           "geo": {
-            "lng": 13.318841498210872,
-            "lat": 45.908920086917945
+            "lng": 13.316943402102225,
+            "lat": 45.90454633774905
           },
-          "rf_zoom": 0.7570580851443119,
-          "ml_zoom": 13.250436385148149
+          "rf_zoom": 1.0910760885200688,
+          "ml_zoom": 13.777712199650587
         },
         "graph": {
           "graph_type": "power",
@@ -2887,12 +2887,12 @@
               "vulnerability_levels": {
                 "strong_earthquake": 1
               },
-              "rules": [
-                "worst_of( best_of(Jalmicco electric, Jalmicco transport), best_of(Jalmicco water, Jalmicco transport)) propagates to Jalmicco"
-              ],
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "rules": [
+                "worst_of( best_of(Jalmicco electric, Jalmicco transport), best_of(Jalmicco water, Jalmicco transport)) propagates to Jalmicco"
+              ]
             },
             "node_1764761676929": {
               "id": "node_1764761676929",
@@ -3399,8 +3399,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -3517,9 +3517,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               },
               "responsibility_share": {
@@ -4140,11 +4140,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -4153,11 +4153,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -4169,11 +4169,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -4272,11 +4272,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -4285,11 +4285,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -4390,11 +4390,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -4404,11 +4404,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -4417,11 +4417,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -4430,11 +4430,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764762932932_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1765797139110__node_1764758863910_1_4": {
               "id": "edge_node_1765797139110__node_1764758863910_1_4",
@@ -4496,11 +4496,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -4512,11 +4512,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -4625,11 +4625,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -5880,8 +5880,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -5995,9 +5995,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -8328,8 +8328,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -8446,9 +8446,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -9064,11 +9064,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -9090,11 +9090,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -9399,11 +9399,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -9415,11 +9415,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -10281,12 +10281,12 @@
               "vulnerability_levels": {
                 "strong_earthquake": 1
               },
-              "rules": [
-                "worst_of( best_of(Jalmicco electric, Jalmicco transport), best_of(Jalmicco water, Jalmicco transport)) propagates to Jalmicco"
-              ],
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "rules": [
+                "worst_of( best_of(Jalmicco electric, Jalmicco transport), best_of(Jalmicco water, Jalmicco transport)) propagates to Jalmicco"
+              ]
             },
             "node_1764761676929": {
               "id": "node_1764761676929",
@@ -10793,8 +10793,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -10911,9 +10911,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               },
               "responsibility_share": {
@@ -11534,11 +11534,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -11547,11 +11547,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -11563,11 +11563,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -11666,11 +11666,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -11679,11 +11679,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -11784,11 +11784,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -11798,11 +11798,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -11811,11 +11811,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -11824,11 +11824,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764762932932_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1765797139110__node_1764758863910_1_4": {
               "id": "edge_node_1765797139110__node_1764758863910_1_4",
@@ -11890,11 +11890,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -11906,11 +11906,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -12019,11 +12019,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -13281,8 +13281,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -13396,9 +13396,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -15721,8 +15721,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -15839,9 +15839,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -16457,11 +16457,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -16483,11 +16483,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -16792,11 +16792,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -16808,11 +16808,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -18194,8 +18194,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -18309,9 +18309,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -20631,8 +20631,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -20746,9 +20746,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -23090,8 +23090,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -23208,9 +23208,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -23826,11 +23826,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -23839,11 +23839,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -23855,11 +23855,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -23958,11 +23958,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -23971,11 +23971,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -24076,11 +24076,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -24090,11 +24090,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -24103,11 +24103,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -24179,11 +24179,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -24195,11 +24195,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -24308,11 +24308,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -25563,8 +25563,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -25678,9 +25678,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -28752,11 +28752,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -28765,11 +28765,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -28781,11 +28781,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -28884,11 +28884,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -28897,11 +28897,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -29002,11 +29002,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -29016,11 +29016,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -29029,11 +29029,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -29105,11 +29105,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -29121,11 +29121,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -29234,11 +29234,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -30504,8 +30504,8 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
-                  "demand": 8,
                   "backup": false,
+                  "demand": 8,
                   "priority": 1
                 }
               },
@@ -30622,9 +30622,9 @@
               "category_dependency_profiles": {
                 "water": {
                   "dependency_level": 3,
+                  "backup": false,
                   "demand": 8,
-                  "priority": 1,
-                  "backup": false
+                  "priority": 1
                 }
               }
             },
@@ -31240,11 +31240,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -31253,11 +31253,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -31269,11 +31269,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -31372,11 +31372,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -31385,11 +31385,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -31490,11 +31490,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -31504,11 +31504,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -31517,11 +31517,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -31593,11 +31593,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -31609,11 +31609,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -31722,11 +31722,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -33718,11 +33718,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -33744,11 +33744,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -34053,11 +34053,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -34069,11 +34069,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -36179,11 +36179,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -36192,11 +36192,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -36208,11 +36208,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -36311,11 +36311,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -36324,11 +36324,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -36429,11 +36429,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -36443,11 +36443,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -36456,11 +36456,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -36532,11 +36532,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -36548,11 +36548,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -36661,11 +36661,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -41087,11 +41087,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -41113,11 +41113,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -41422,11 +41422,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -41438,11 +41438,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -43569,11 +43569,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -43582,11 +43582,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -43598,11 +43598,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -43701,11 +43701,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -43714,11 +43714,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -43819,11 +43819,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -43833,11 +43833,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -43846,11 +43846,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -43922,11 +43922,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -43938,11 +43938,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -44051,11 +44051,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -48477,11 +48477,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -48503,11 +48503,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -48812,11 +48812,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -48828,11 +48828,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -50937,11 +50937,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -50950,11 +50950,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1764756451988": 1
-              }
+              },
+              "sourceHandle": "tr",
+              "targetHandle": "bl"
             },
             "edge_node_1764756534931_1__node_1764756451988_0": {
               "id": "edge_node_1764756534931_1__node_1764756451988_0",
@@ -50966,11 +50966,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -51069,11 +51069,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "bl",
+              "targetHandle": "tr"
             },
             "edge_node_1764758863910__node_1764756677081_1_1": {
               "id": "edge_node_1764758863910__node_1764756677081_1_1",
@@ -51082,11 +51082,11 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764754067370_2__node_1764760888903_1": {
               "id": "edge_node_1764754067370_2__node_1764760888903_1",
@@ -51187,11 +51187,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764758863910_1__node_1764756534931_2_4": {
               "id": "edge_node_1764758863910_1__node_1764756534931_2_4",
@@ -51201,11 +51201,11 @@
               "functionality_time": 0,
               "direct_damage": false,
               "vulnerability_levels": {},
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764758863910_1__node_1764754067370_2_3": {
               "id": "edge_node_1764758863910_1__node_1764754067370_2_3",
@@ -51214,11 +51214,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "br",
+              "targetHandle": "tl"
             },
             "edge_node_1764762932932_1__node_1764760948153_1": {
               "id": "edge_node_1764762932932_1__node_1764760948153_1",
@@ -51290,11 +51290,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -51306,11 +51306,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",
@@ -51419,11 +51419,11 @@
               "functionality": 2,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1764758863910_1": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-I_Juti_m": {
               "id": "edge-I_Juti_m",
@@ -55843,11 +55843,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge_node_1764756451988__node_1764760948153_1": {
               "id": "edge_node_1764756451988__node_1764760948153_1",
@@ -55869,11 +55869,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge_node_1764756534931_1__node_1764756406852_1_1": {
               "id": "edge_node_1764756534931_1__node_1764756406852_1_1",
@@ -56178,11 +56178,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "mr",
+              "targetHandle": "ml"
             },
             "edge-i5VzjVsl": {
               "id": "edge-i5VzjVsl",
@@ -56194,11 +56194,11 @@
               "vulnerability_levels": {
                 "flood": 1
               },
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "flood": 1
-              }
+              },
+              "sourceHandle": "ml",
+              "targetHandle": "mr"
             },
             "edge-ZjCeYL8T": {
               "id": "edge-ZjCeYL8T",

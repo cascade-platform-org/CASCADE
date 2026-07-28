@@ -61,7 +61,6 @@ export function ImportInpSection() {
   const [sourceCrs, setSourceCrs] = useState("EPSG:3004");
   const [customCrs, setCustomCrs] = useState(false);
   const [demandMode, setDemandMode] = useState<"peak" | "base" | "avg">("peak");
-  const [derivePriorities, setDerivePriorities] = useState(true);
   const [nLevels, setNLevels] = useState("3");
   const [capacityMargin, setCapacityMargin] = useState("2");
   const [maxVelocity, setMaxVelocity] = useState("");
@@ -103,7 +102,6 @@ export function ImportInpSection() {
         targetNodes: Number(targetNodes),
         sourceCrs: sourceCrs.trim() || undefined,
         demandMode,
-        derivePriorities,
         // Merge mode: force the import onto the CURRENT project's own scale
         // size so functionality values line up with it; the import's own
         // generated scale is never used in this mode (see module docstring).
@@ -310,15 +308,6 @@ export function ImportInpSection() {
                 <option value="avg">Average</option>
                 <option value="base">Base only</option>
               </select>
-            </label>
-            <label className="flex cursor-pointer items-center gap-1.5 pt-3.5 text-xs text-zinc-600 dark:text-zinc-400">
-              <input
-                type="checkbox"
-                checked={derivePriorities}
-                onChange={(e) => setDerivePriorities(e.target.checked)}
-                className="h-3 w-3 rounded accent-sky-600"
-              />
-              Hydraulic priorities
             </label>
           </div>
 
