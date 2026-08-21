@@ -428,7 +428,7 @@ def _solve_served_ratios(
     delivered = results.node["demand"].iloc[0]
 
     # SINGULAR-PDD CORRECTION (found 2026-07-14 debugging the worst-divergence
-    # kits, see experiments/ATTEMPTS.md §6 and ADR-0013's addendum): when the
+    # kits, see experiments/aqueducts/ATTEMPTS.md §6 and ADR-0013's addendum): when the
     # broken links sever a whole component from EVERY source, the PDD system
     # for that component is singular and EPANET converges — without any
     # "unbalanced" warning — to an arbitrary internal circulation whose
@@ -858,6 +858,9 @@ def main() -> None:
             ratios, vflag = _solve_served_ratios(wn, demands, situation, args.required_pressure, args.minimum_pressure)
             if not ratios:
                 continue
+            # Disconnected junctions already arrive at ratio 0 (the singular-PDD
+            # correction in `_solve_served_ratios`) → level 1, so the served-ratio
+            # quantization below is the sole mapping needed.
             levels_true = {jid: _ratio_to_level(ratio, args.n_levels) for jid, ratio in ratios.items()}
             levels_cascade = _cascade_levels(bundle.project, bundle.config, situation, link_to_edges, link_to_node, demands)
             score, n_compared = _fms(levels_true, levels_cascade, demands, args.n_levels)

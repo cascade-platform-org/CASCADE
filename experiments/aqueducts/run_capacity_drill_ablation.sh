@@ -8,7 +8,7 @@
 # vs 0.682, FMS 0.905 vs 0.918) — which is why uniform velocity is the default.
 set -u
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
-EXP=../experiments
+EXP=../experiments/aqueducts
 CSV=$EXP/final_benchmark_drill.csv
 LOG=$EXP/final_benchmark_drill.log
 rm -f "$CSV" "$LOG"

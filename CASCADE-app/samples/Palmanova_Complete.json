@@ -4,8 +4,8 @@
     "meta": {
       "name": "Palmanova_Complete",
       "description": "Model with flow control policies: Hospital water demand given highest priority (10) and Civil Protection given high priority (9), ensuring that during water scarcity, the engine (min-cost max-flow) allocates available supply to critical services first.",
-      "created_at": "2026-07-28T13:19:08.318Z",
-      "updated_at": "2026-07-28T13:19:08.318Z"
+      "created_at": "2026-07-28T13:33:29.679Z",
+      "updated_at": "2026-07-28T13:33:29.680Z"
     },
     "nodes": {
       "node_1762946740143": {
@@ -101371,7 +101371,7 @@
         "name": "manager",
         "category_type": "Requisite",
         "color": "#8b5cf6",
-        "icon": "LucidePersonStanding"
+        "icon": "LucideUsers"
       },
       {
         "name": "city",

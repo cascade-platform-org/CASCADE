@@ -1,4 +1,0 @@
-/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/../raw-networks/aqueducts/CTown.inp"; added with type None, units conversion left to user
-  warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
-
-=== CTown.inp (388 junctions, 178 situations) ===

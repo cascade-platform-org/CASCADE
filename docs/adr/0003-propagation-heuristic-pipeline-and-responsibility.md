@@ -117,7 +117,7 @@ If set by a Specific Rule, the responsibility dictionary contains all Elements r
 ## Allocation-shape note (2026-07-14, superseded by ADR-0014)
 
 Fairness-shaped alternatives to the flow proposal were measured
-(`experiments/ATTEMPTS.md` §5): global proportional rationing is sharply
+(`experiments/aqueducts/ATTEMPTS.md` §5): global proportional rationing is sharply
 worse; max-min fair-share only beat the LP while importer capacities were
 under-estimated. ADR-0014 later adopted tiered fair-share as the DEFAULT
 allocation for its modelling semantics (priority as an expert knob), with the

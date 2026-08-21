@@ -56,6 +56,11 @@ ignore_imports = [
     # (engine.flow._ratio_to_level), not a reimplementation of either; a dev-
     # only validation harness, same category as benchmark_engine.py above.
     "scripts.validate_faithfulness -> engine.*",
+    # Reproduces the paper's Shapley-vs-centrality case-study numbers by
+    # calling the engine's REAL propagation directly (mirrors the client-side
+    # Monte Carlo estimator in section-model-based.tsx); a dev-only paper
+    # analysis harness, same category as the two scripts above.
+    "scripts.paper_shapley_vs_centrality -> engine.*",
 ]
 
 [tool.pyright]

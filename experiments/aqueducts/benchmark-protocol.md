@@ -380,14 +380,14 @@ Both scored on the **identical** junction set (demand-bearing, present both side
 
 ## 8. Protocol (the run itself)
 
-Final configuration (`experiments/run_final_benchmark.sh`) — one invocation per
+Final configuration (`experiments/aqueducts/run_final_benchmark.sh`) — one invocation per
 network; the four families and cluster's 3 seeds are generated internally:
 
 ```
 for net in {Net1,Net2,Net3, Cassacco,Tarcento,Zampis, Modena,CTown}:   # 8 networks
     validate_faithfulness.py --networks <net>
        --contingency-exhaustive-trunk --priority-mode contingency
-       --demand-mode peak_hour --csv experiments/final_benchmark.csv
+       --demand-mode peak_hour --csv experiments/aqueducts/final_benchmark.csv
 ```
 (The pre-rebuild `run_headline_fairshare.sh` and its multi-seed 6-network loop
 are in `experiments/archive/pre-rebuild-variants/`.)
@@ -528,10 +528,10 @@ and the supply model (reservoirs unbounded) is settled. Source-failure remains a
 recall story (reachability blind by construction) with disclosed precision.
 
 ### The final run
-`experiments/run_final_benchmark.sh` — 8 networks (Net1/2/3 + Cassacco/Tarcento/
+`experiments/aqueducts/run_final_benchmark.sh` — 8 networks (Net1/2/3 + Cassacco/Tarcento/
 Zampis + Modena/CTown), one invocation each (families internal, cluster 3-seeded),
 `--priority-mode contingency --demand-mode peak_hour --contingency-exhaustive-trunk`,
-→ `experiments/final_benchmark.csv`. Slow (hours) due to the priority tiering.
+→ `experiments/aqueducts/final_benchmark.csv`. Slow (hours) due to the priority tiering.
 Per-situation CSV → tables re-derived downstream.
 
 PENDING (after the run): update the PAPER (complenet.tex) — methods prose AND

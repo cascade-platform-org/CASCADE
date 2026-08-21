@@ -1,0 +1,415 @@
+{
+  "meta": {
+    "samples_requested": 800,
+    "k_max": 3,
+    "seed": 0,
+    "shapley_wall_secs": 53.303627729415894,
+    "n_nodes": 39
+  },
+  "spearman": {
+    "shapley_vs_eigenvector": {
+      "rho": -0.3113451316846535,
+      "p": 0.05368775650449803
+    },
+    "shapley_vs_betweenness": {
+      "rho": 0.7425285558139247,
+      "p": 6.249638342046991e-08
+    },
+    "eigenvector_vs_betweenness": {
+      "rho": -0.0365282356341484,
+      "p": 0.8252712398128333
+    }
+  },
+  "per_node": [
+    {
+      "id": "node_1762946740143",
+      "label": "water Operator",
+      "shapley": 0.7061965811965812,
+      "eigenvector": 5.459441547188821e-10,
+      "betweenness": 0.016002844950213372,
+      "shapley_rank": 3,
+      "eigenvector_rank": 30,
+      "betweenness_rank": 14
+    },
+    {
+      "id": "node_1762946753934",
+      "label": "electric Operator",
+      "shapley": 0.7029914529914528,
+      "eigenvector": 5.459441547188821e-10,
+      "betweenness": 0.02418207681365576,
+      "shapley_rank": 4,
+      "eigenvector_rank": 31,
+      "betweenness_rank": 11
+    },
+    {
+      "id": "node_1769766555762",
+      "label": "transport Operator",
+      "shapley": 0.09829059829059819,
+      "eigenvector": 5.459441547188821e-10,
+      "betweenness": 0.0,
+      "shapley_rank": 39,
+      "eigenvector_rank": 32,
+      "betweenness_rank": 31
+    },
+    {
+      "id": "node_1764754067370",
+      "label": "Palmanova electric",
+      "shapley": 0.23824786324786318,
+      "eigenvector": 5.906926198976261e-10,
+      "betweenness": 0.030583214793741112,
+      "shapley_rank": 13,
+      "eigenvector_rank": 29,
+      "betweenness_rank": 9
+    },
+    {
+      "id": "node_1764756406852",
+      "label": "Sottoselva electric",
+      "shapley": 0.23611111111111094,
+      "eigenvector": 4.989639718940399e-10,
+      "betweenness": 0.023470839260312945,
+      "shapley_rank": 14,
+      "eigenvector_rank": 34,
+      "betweenness_rank": 12
+    },
+    {
+      "id": "node_1764756534931",
+      "label": "Joint est electric",
+      "shapley": 0.41239316239316265,
+      "eigenvector": 8.636646972570671e-10,
+      "betweenness": 0.023470839260312945,
+      "shapley_rank": 7,
+      "eigenvector_rank": 26,
+      "betweenness_rank": 13
+    },
+    {
+      "id": "node_1764756677081",
+      "label": "San Marco electric",
+      "shapley": 0.19764957264957275,
+      "eigenvector": 3.023844645038256e-10,
+      "betweenness": 0.004978662873399715,
+      "shapley_rank": 20,
+      "eigenvector_rank": 37,
+      "betweenness_rank": 29
+    },
+    {
+      "id": "node_1764756777009",
+      "label": "Industrial electric",
+      "shapley": 0.27564102564102533,
+      "eigenvector": 3.023844645038256e-10,
+      "betweenness": 0.005689900426742532,
+      "shapley_rank": 10,
+      "eigenvector_rank": 38,
+      "betweenness_rank": 27
+    },
+    {
+      "id": "node_1764760715521",
+      "label": "Sottoselva",
+      "shapley": 0.1153846153846153,
+      "eigenvector": 0.1044367826329865,
+      "betweenness": 0.0,
+      "shapley_rank": 35,
+      "eigenvector_rank": 10,
+      "betweenness_rank": 32
+    },
+    {
+      "id": "node_1764760763435",
+      "label": "Hospital",
+      "shapley": 0.14102564102564083,
+      "eigenvector": 0.038786962295340344,
+      "betweenness": 0.0,
+      "shapley_rank": 26,
+      "eigenvector_rank": 16,
+      "betweenness_rank": 33
+    },
+    {
+      "id": "node_1764760818917",
+      "label": "civil protection Operator",
+      "shapley": 0.24999999999999978,
+      "eigenvector": 9.45603014068348e-10,
+      "betweenness": 0.030938833570412518,
+      "shapley_rank": 12,
+      "eigenvector_rank": 25,
+      "betweenness_rank": 8
+    },
+    {
+      "id": "node_1764760856861",
+      "label": "San Marco",
+      "shapley": 0.10576923076923067,
+      "eigenvector": 0.06377589583715436,
+      "betweenness": 0.0,
+      "shapley_rank": 38,
+      "eigenvector_rank": 13,
+      "betweenness_rank": 34
+    },
+    {
+      "id": "node_1764760888903",
+      "label": "Palmanova",
+      "shapley": 0.1196581196581194,
+      "eigenvector": 0.09577514087348152,
+      "betweenness": 0.0,
+      "shapley_rank": 34,
+      "eigenvector_rank": 11,
+      "betweenness_rank": 35
+    },
+    {
+      "id": "node_1764760948153",
+      "label": "Jalmicco",
+      "shapley": 0.10897435897435889,
+      "eigenvector": 0.038786949830359824,
+      "betweenness": 0.0,
+      "shapley_rank": 36,
+      "eigenvector_rank": 17,
+      "betweenness_rank": 36
+    },
+    {
+      "id": "node_1764761676929",
+      "label": "Industrial",
+      "shapley": 0.1196581196581196,
+      "eigenvector": 0.016332976522406662,
+      "betweenness": 0.0,
+      "shapley_rank": 33,
+      "eigenvector_rank": 18,
+      "betweenness_rank": 37
+    },
+    {
+      "id": "node_1764762932932",
+      "label": "Jalmicco electric",
+      "shapley": 0.1314102564102563,
+      "eigenvector": 3.933751569569714e-10,
+      "betweenness": 0.004978662873399715,
+      "shapley_rank": 29,
+      "eigenvector_rank": 35,
+      "betweenness_rank": 30
+    },
+    {
+      "id": "node_1764763540852",
+      "label": "Sud electric",
+      "shapley": 0.5950854700854697,
+      "eigenvector": 5.233448544556106e-10,
+      "betweenness": 0.05796586059743955,
+      "shapley_rank": 6,
+      "eigenvector_rank": 33,
+      "betweenness_rank": 2
+    },
+    {
+      "id": "node_1764763781720",
+      "label": "Est electric",
+      "shapley": 0.31837606837606786,
+      "eigenvector": 6.809453568003352e-10,
+      "betweenness": 0.010668563300142249,
+      "shapley_rank": 9,
+      "eigenvector_rank": 27,
+      "betweenness_rank": 18
+    },
+    {
+      "id": "node_1764763952810",
+      "label": "Electric Source",
+      "shapley": 1.3792735042735047,
+      "eigenvector": 3.152010046894494e-10,
+      "betweenness": 0.034495021337126605,
+      "shapley_rank": 1,
+      "eigenvector_rank": 36,
+      "betweenness_rank": 6
+    },
+    {
+      "id": "node_1764754067370_1",
+      "label": "Palmanova transport",
+      "shapley": 0.21153846153846165,
+      "eigenvector": 0.353656770155544,
+      "betweenness": 0.007112375533428165,
+      "shapley_rank": 16,
+      "eigenvector_rank": 5,
+      "betweenness_rank": 23
+    },
+    {
+      "id": "node_1764755425117",
+      "label": "Cividale Access",
+      "shapley": 0.19978632478632488,
+      "eigenvector": 0.4358377851382621,
+      "betweenness": 0.006993835941204363,
+      "shapley_rank": 19,
+      "eigenvector_rank": 2,
+      "betweenness_rank": 25
+    },
+    {
+      "id": "node_1764755438669",
+      "label": "Udine Access",
+      "shapley": 0.2745726495726497,
+      "eigenvector": 0.40384183864409146,
+      "betweenness": 0.009009009009009009,
+      "shapley_rank": 11,
+      "eigenvector_rank": 3,
+      "betweenness_rank": 21
+    },
+    {
+      "id": "node_1764755443188",
+      "label": "Aquileia access",
+      "shapley": 0.1794871794871795,
+      "eigenvector": 0.466224722649731,
+      "betweenness": 0.031175912754860126,
+      "shapley_rank": 23,
+      "eigenvector_rank": 1,
+      "betweenness_rank": 7
+    },
+    {
+      "id": "node_1764756406852_1",
+      "label": "Sottoselva transport",
+      "shapley": 0.20405982905982928,
+      "eigenvector": 0.3856406208627433,
+      "betweenness": 0.05523944997629208,
+      "shapley_rank": 17,
+      "eigenvector_rank": 4,
+      "betweenness_rank": 4
+    },
+    {
+      "id": "node_1764756451988",
+      "label": "Jalmicco transport",
+      "shapley": 0.18589743589743574,
+      "eigenvector": 0.14322369665846413,
+      "betweenness": 0.007112375533428165,
+      "shapley_rank": 22,
+      "eigenvector_rank": 7,
+      "betweenness_rank": 24
+    },
+    {
+      "id": "node_1764756534931_1",
+      "label": "joint est transport",
+      "shapley": 0.20085470085470078,
+      "eigenvector": 0.14322369665846413,
+      "betweenness": 0.01422475106685633,
+      "shapley_rank": 18,
+      "eigenvector_rank": 8,
+      "betweenness_rank": 15
+    },
+    {
+      "id": "node_1764756677081_1",
+      "label": "San Marco transport",
+      "shapley": 0.16773504273504286,
+      "eigenvector": 0.23549722522284477,
+      "betweenness": 0.028212422949265053,
+      "shapley_rank": 24,
+      "eigenvector_rank": 6,
+      "betweenness_rank": 10
+    },
+    {
+      "id": "node_1764756777009_1",
+      "label": "Industrial transport",
+      "shapley": 0.22863247863247863,
+      "eigenvector": 0.060310705505712436,
+      "betweenness": 0.009720246562351825,
+      "shapley_rank": 15,
+      "eigenvector_rank": 14,
+      "betweenness_rank": 19
+    },
+    {
+      "id": "node_1764758863910",
+      "label": "Underpass San Marco",
+      "shapley": 0.12179487179487167,
+      "eigenvector": 0.08010883648279106,
+      "betweenness": 0.009246088193456613,
+      "shapley_rank": 32,
+      "eigenvector_rank": 12,
+      "betweenness_rank": 20
+    },
+    {
+      "id": "node_1764754067370_2",
+      "label": "Palmanova Porta Ud",
+      "shapley": 0.13461538461538447,
+      "eigenvector": 4.7184822270706725e-08,
+      "betweenness": 0.011735419630156473,
+      "shapley_rank": 27,
+      "eigenvector_rank": 20,
+      "betweenness_rank": 17
+    },
+    {
+      "id": "node_1764756534931_2",
+      "label": "Joint est water",
+      "shapley": 0.35256410256410275,
+      "eigenvector": 4.7184822270706725e-08,
+      "betweenness": 0.03911806543385491,
+      "shapley_rank": 8,
+      "eigenvector_rank": 21,
+      "betweenness_rank": 5
+    },
+    {
+      "id": "node_1764756777009_2",
+      "label": "Industrial water",
+      "shapley": 0.13247863247863245,
+      "eigenvector": 2.3695447027629826e-08,
+      "betweenness": 0.005689900426742532,
+      "shapley_rank": 28,
+      "eigenvector_rank": 23,
+      "betweenness_rank": 28
+    },
+    {
+      "id": "node_1764758643809_1",
+      "label": "Local water Source",
+      "shapley": 0.18589743589743604,
+      "eigenvector": 4.8996552445165153e-26,
+      "betweenness": 0.0,
+      "shapley_rank": 21,
+      "eigenvector_rank": 39,
+      "betweenness_rank": 38
+    },
+    {
+      "id": "node_1764758863910_1",
+      "label": "San Marco water",
+      "shapley": 0.6730769230769229,
+      "eigenvector": 4.744594204647914e-08,
+      "betweenness": 0.0686344238975818,
+      "shapley_rank": 5,
+      "eigenvector_rank": 19,
+      "betweenness_rank": 1
+    },
+    {
+      "id": "node_1764762932932_1",
+      "label": "Jalmicco water",
+      "shapley": 0.1228632478632477,
+      "eigenvector": 2.3544607723185547e-08,
+      "betweenness": 0.006401137980085349,
+      "shapley_rank": 31,
+      "eigenvector_rank": 24,
+      "betweenness_rank": 26
+    },
+    {
+      "id": "node_1765797139110",
+      "label": "Fauglis water Source",
+      "shapley": 1.0010683760683756,
+      "eigenvector": 6.17585469193275e-10,
+      "betweenness": 0.05618776671408251,
+      "shapley_rank": 2,
+      "eigenvector_rank": 28,
+      "betweenness_rank": 3
+    },
+    {
+      "id": "node_1772615442881",
+      "label": "Civil Protection",
+      "shapley": 0.12606837606837595,
+      "eigenvector": 0.038786962447909336,
+      "betweenness": 0.0,
+      "shapley_rank": 30,
+      "eigenvector_rank": 15,
+      "betweenness_rank": 39
+    },
+    {
+      "id": "node-iCpmpWuA",
+      "label": "Sud-Ovest Joint",
+      "shapley": 0.14957264957264949,
+      "eigenvector": 0.14259300037933564,
+      "betweenness": 0.013276434329065907,
+      "shapley_rank": 25,
+      "eigenvector_rank": 9,
+      "betweenness_rank": 16
+    },
+    {
+      "id": "node-h6xb3ZFP",
+      "label": "Palmanova Porta Cividale",
+      "shapley": 0.10790598290598276,
+      "eigenvector": 4.7089215446371135e-08,
+      "betweenness": 0.007823613086770981,
+      "shapley_rank": 37,
+      "eigenvector_rank": 22,
+      "betweenness_rank": 22
+    }
+  ]
+}

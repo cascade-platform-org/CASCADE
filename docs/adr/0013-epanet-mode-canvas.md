@@ -133,7 +133,7 @@ verified by `lint-imports` passing unchanged.
 
 WNTR's PDD solve on a component severed from every source converges, without
 warning, to an arbitrary internal circulation that reads "fully served"
-(discovered benchmarking the engine — `experiments/ATTEMPTS.md` §6). An
+(discovered benchmarking the engine — `experiments/aqueducts/ATTEMPTS.md` §6). An
 epanet-mode Propagation on such a scenario therefore shows healthy junctions
 that physically receive nothing; the normal engine path marks them critical
 correctly. `scripts/validate_faithfulness.py` already applies the

@@ -1,8 +1,0 @@
-/home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend/.venv/lib/python3.12/site-packages/wntr/epanet/io.py:2082: UserWarning: Not all curves were used in "../raw-networks/aqueducts/CTown.inp"; added with type None, units conversion left to user
-  warnings.warn('Not all curves were used in "{}"; added with type None, units conversion left to user'.format(self.wn.name))
-
-=== CTown.inp: 7 tanks, 1 reservoirs ===
-  tank#7     broken=['P15', 'P215'] | WNTR-crit=  1 severed=  0 reachable=  1 | module-caught=  0 | module lvl on reachable: [3]
-
-  TOTAL over tank situations: WNTR-critical=1  severed(disconnected)=0  reachable(still connected)=1
-  module caught 0/1  (PRESSURE effect — reachable but starved in reality)

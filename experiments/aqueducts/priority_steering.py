@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Can a SINGLE per-network priority vector steer the worst scenarios back?
+"""How far can shedding priority steer the model, and does that range generalize?
 
 Thesis under test (the paper's real priority claim): priorities are not a
 "make-it-better-by-default" knob — we proved that backfires under uniform
@@ -31,16 +31,30 @@ whether steering generalizes or merely trades the tail against the body.
 Ground truth (_solve_served_ratios) is independent of priorities, so we solve
 it once per situation and only re-run the engine per priority vector.
 
-Run:  python experiments/diag_priority_steering.py [net.inp ...]
+Two arms, and the paper reports both (Supp. Mat. S2):
+  PER-SCENARIO oracle — a vector refit for each situation from that situation's
+    own ground truth. This is the EXPRESSIVE-RANGE arm: it measures whether the
+    lever can reach a specified target at all, and it is the source of the
+    paper's 0.04 -> 0.90 (single worst situation) and worst-decile figures.
+  SINGLE per-network vector — one vector for the whole network, fit on the
+    worst-K. This measures whether the range GENERALIZES, and the answer is
+    network-dependent: Modena +0.32 on the fit set and +0.08 held out, C-Town
+    +0.067 and +0.000. An expert-set ordering transfers where the module's
+    error is DISTRIBUTIONAL and not where it is a shortage-magnitude error
+    (C-Town's pump-fed tanks). Neither vector is derivable by the importer —
+    both are fitted from ground truth — which is why the paper presents
+    priority as an authoring input, not a fidelity parameter.
+
+Run:  python experiments/aqueducts/priority_steering.py [net.inp ...]
 """
 from __future__ import annotations
 
 import os
 import statistics
 import sys
-from pathlib import Path
 
-BACKEND = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CASCADE-backend")
+_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BACKEND = os.path.join(_REPO, "CASCADE-backend")
 sys.path.insert(0, BACKEND)
 sys.path.insert(0, os.path.join(BACKEND, "scripts"))
 
@@ -66,10 +80,19 @@ DEFAULT_NETS = [
 ]
 
 
+# Anonymization (paper hard constraint): never print the real export names.
+ALIAS = {"Cassacco_totale": "Aqueduct A", "Tarcento_totale": "Aqueduct B", "Zampis": "Aqueduct C"}
+
+
 def _resolve(name: str) -> str:
     if "/" in name or name.lower().endswith(".inp"):
         return os.path.join(BACKEND, name) if not os.path.isabs(name) else name
     return wntr.library.model_library.get_filepath(name)
+
+
+def _label(path: str) -> str:
+    stem = os.path.basename(path).replace(".inp", "")
+    return ALIAS.get(stem, stem)
 
 
 def _all_situations(wn, graph, seed: int):
@@ -117,6 +140,17 @@ def _steering_vector(worst_labels, truth_ratios, demands) -> dict[str, int]:
     return priorities
 
 
+def _scenario_vector(label: str, truth_ratios) -> dict[str, int]:
+    """PER-SCENARIO oracle: the same 1..10 mapping as `_steering_vector`, but
+    built from ONE situation's ground truth instead of a mean over the worst-K.
+    This is the expressive-range probe — it asks what the lever can reach when
+    the target is known, not what a deployable static ordering achieves."""
+    return {
+        jid: max(1, min(10, round(1 + min(1.0, ratio) * 9)))
+        for jid, ratio in truth_ratios[label].items()
+    }
+
+
 def _summary(tag: str, per_sit, confusion):
     fms = statistics.mean(s for _, s in per_sit) if per_sit else float("nan")
     c = confusion
@@ -148,12 +182,12 @@ def run_network(name: str, seed: int = 1) -> None:
         )
     situations = [(lb, s) for (lb, s) in situations if truth_levels[lb]]
 
-    print(f"\n=== {os.path.basename(path)} ({len(demands)} junctions, {len(situations)} situations) ===")
+    print(f"\n=== {_label(path)} ({len(demands)} junctions, {len(situations)} situations) ===")
 
     opts = ImportOptions(demand_mode=DEMAND_MODE, n_levels=N_LEVELS)
 
     # Baseline: uniform capacity, no priority.
-    base_bundle = build_bundle(wn, name=name, options=opts, flow_profiles=flow_profiles, priorities={})
+    base_bundle = build_bundle(wn, name=_label(path), options=opts, flow_profiles=flow_profiles, priorities={})
     base_sits, base_conf = _score_all(base_bundle, situations, truth_levels, demands)
 
     worst = sorted(base_sits, key=lambda t: t[1])[:WORST_K]
@@ -163,7 +197,7 @@ def run_network(name: str, seed: int = 1) -> None:
 
     # Steering vector fit on the worst-K.
     priorities = _steering_vector(worst_labels, truth_ratios, demands)
-    steer_bundle = build_bundle(wn, name=name, options=opts, flow_profiles=flow_profiles, priorities=priorities)
+    steer_bundle = build_bundle(wn, name=_label(path), options=opts, flow_profiles=flow_profiles, priorities=priorities)
     steer_sits, steer_conf = _score_all(steer_bundle, situations, truth_levels, demands)
 
     base_by = dict(base_sits)
@@ -188,6 +222,27 @@ def run_network(name: str, seed: int = 1) -> None:
     sh = statistics.mean(steer_by[lb] for lb in held)
     print(f"  {'baseline':22s} FMS={bh:.3f}")
     print(f"  {'steered':22s} FMS={sh:.3f}   (delta {sh - bh:+.3f})")
+
+    # --- PER-SCENARIO oracle: expressive range, one vector refit per situation.
+    # Each situation is rebuilt and rescored on its own; this is the arm the
+    # paper quotes for the lever's range, and it is deliberately NOT deployable.
+    print("  -- PER-SCENARIO oracle (expressive range, worst-K) --")
+    per_scenario: list[tuple[str, float, float]] = []
+    for label in sorted(worst_labels):
+        situation = dict(situations)[label]
+        vec = _scenario_vector(label, truth_ratios)
+        one_bundle = build_bundle(
+            wn, name=name, options=opts, flow_profiles=flow_profiles, priorities=vec
+        )
+        sits, _ = _score_all(one_bundle, [(label, situation)], truth_levels, demands)
+        if sits:
+            per_scenario.append((label, base_by[label], sits[0][1]))
+    for label, before, after in sorted(per_scenario, key=lambda t: t[1]):
+        print(f"  {label:22s} {before:.3f} -> {after:.3f}   ({after - before:+.3f})")
+    if per_scenario:
+        mb = statistics.mean(b for _, b, _ in per_scenario)
+        ma = statistics.mean(a for _, _, a in per_scenario)
+        print(f"  {'worst-K mean':22s} {mb:.3f} -> {ma:.3f}   ({ma - mb:+.3f})")
 
 
 def main() -> None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate experiments/final_benchmark.csv into the paper's headline tables.
+"""Aggregate experiments/aqueducts/final_benchmark.csv into the paper's headline tables.
 
 Pools across all 8 networks. Reports, overall / per-family / per-network:
   - mean FMS (module) vs the null and reachability baselines,

@@ -2,7 +2,7 @@
 
 **Status:** accepted (2026-07-07; consolidated to current state 2026-07-16 — the
 full experiment/regression history behind each rule lives in
-`experiments/ATTEMPTS.md`)
+`experiments/aqueducts/ATTEMPTS.md`)
 
 ## Context
 
@@ -86,7 +86,7 @@ it is what **orients** edges (see next section).
 default.** The importer previously sized each pipe from its own *simulated peak*
 velocity (`π/4·d²·min(v_peak × capacity_margin, max_velocity)`, margin 2,
 ceiling 3 m/s). A full ablation across all 8 benchmark networks
-(`experiments/ATTEMPTS.md` §12, paper Supp. §S2) showed that elaborate per-pipe
+(`experiments/aqueducts/ATTEMPTS.md` §12, paper Supp. §S2) showed that elaborate per-pipe
 capacity discovery buys **nothing measurable** over the flat 2.5 m/s constant —
 pooled critical-class F1 0.770 (uniform) vs 0.778 (drill), FMS 0.926 vs 0.921,
 with per-network wins and losses cancelling. The simpler, standard, and more
@@ -110,7 +110,7 @@ Under the drill, `capacity_margin` (default 2, `DEFAULT_CAPACITY_MARGIN`) and
 the optional `max_velocity` ceiling (default 3 m/s) apply as
 `min(v_peak × margin, max_velocity)`; pipes with no signal fall back to
 `FALLBACK_VELOCITY_MS = 1 m/s`. These two knobs **also** govern valve capacity
-under both methods. Full variant study: `experiments/ATTEMPTS.md` §2, §12.
+under both methods. Full variant study: `experiments/aqueducts/ATTEMPTS.md` §2, §12.
 
 ### Orientation — simulated sign + Full-Duplex Splits
 
@@ -214,7 +214,7 @@ engine, not a reimplementation (CLAUDE.md §8a).
 
 ## Alternatives rejected
 
-One line each; measurements in `experiments/ATTEMPTS.md`:
+One line each; measurements in `experiments/aqueducts/ATTEMPTS.md`:
 
 - Custom graph contraction — WNTR skeletonization already does it with demand awareness.
 - Priorities from elevation/distance proxies — ignores loops and pumps.

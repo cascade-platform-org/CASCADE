@@ -91,7 +91,7 @@ A named, per-Canvas configuration profile (`GraphTypeConfig`) that **tunes** the
 _Avoid_: using it to mean the mechanism itself (that is Category Type)
 
 **Flow Allocation**:
-How a `SourceToDemands` category shares **scarce** supply — the first Graph Type policy knob (`source-to-demands-flow` heuristic's `allocation` param, ADR-0014): `tiered_fair_share` (default — priority tiers preempt strictly, equals share max-min-fairly) or `priority_greedy` (single min-cost max-flow, strict triage, winner-take-all among equals, cheapest). Fidelity to real hydraulics is insensitive to the choice once capacities are parameterized correctly (`experiments/ATTEMPTS.md`).
+How a `SourceToDemands` category shares **scarce** supply — the first Graph Type policy knob (`source-to-demands-flow` heuristic's `allocation` param, ADR-0014): `tiered_fair_share` (default — priority tiers preempt strictly, equals share max-min-fairly) or `priority_greedy` (single min-cost max-flow, strict triage, winner-take-all among equals, cheapest). Fidelity to real hydraulics is insensitive to the choice once capacities are parameterized correctly (`experiments/aqueducts/ATTEMPTS.md`).
 _Avoid_: "algorithm" bare (say allocation or allocation strategy)
 
 **Rule**:

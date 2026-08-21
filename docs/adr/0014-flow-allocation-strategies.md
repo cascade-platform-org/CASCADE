@@ -9,7 +9,7 @@ The SourceToDemands flow pass (ADR-0003) answered scarcity with a single
 min-cost max-flow whose priority rewards make it **winner-take-all**: under a
 shared bottleneck, an LP optimum may serve one of two equal-priority
 consumers 100% and the other exactly 0%. The allocation-alternatives study
-(`experiments/ATTEMPTS.md` §5) showed this
+(`experiments/aqueducts/ATTEMPTS.md` §5) showed this
 shape is *not* a hydraulic-fidelity problem once importer capacities are
 right — but for hand-modelled networks there is no ground truth to match,
 and how scarcity is shared is a **policy choice** the modeller should own:
@@ -31,7 +31,7 @@ flow-graph construction (no duplicated build):
   grow (another round with the frozen fixed). The residual-reachability test
   is what makes per-consumer amounts well-defined despite max-flow's
   arbitrary flow decomposition under ties (two earlier constructions failed
-  exactly there — `experiments/ATTEMPTS.md` §5).
+  exactly there — `experiments/aqueducts/ATTEMPTS.md` §5).
 - **`priority_greedy`** — the original single LP (`nx.max_flow_min_cost`,
   priority rewards). Cheapest (one solve per category), strict triage,
   winner-take-all among equals (deterministic only when path costs differ).

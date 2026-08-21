@@ -69,13 +69,21 @@ run_capacity_drill_ablation.sh    →  final_benchmark_drill.csv    (--capacity-
 | `run_capacity_drill_ablation.sh` | Capacity ablation (`--capacity-drill`, old sweep method) → `final_benchmark_drill.csv`. Paper Supp. §S2. |
 | `aggregate_final.py [csv]` | Pools a results CSV into per-family / per-network FMS + precision/recall tables. Defaults to `final_benchmark.csv`. |
 | `paper_numbers.py` | Prints the exact values (with bootstrap CIs) that fill the paper's `\dtba` placeholders, from `final_benchmark.csv`. |
+| `margin_sweep.py` | Held-out capacity-margin sensitivity sweep — the harness behind the supplement's §S5 negative result. |
+| `priority_steering.py` | Both priority arms of Supp. §S2: the **per-scenario oracle** (expressive range — what the lever can reach) and the **single per-network vector** (the negative control — whether that range generalizes; it does not, ≈+0.07). |
+| `orientation_ablation.py` | The one true ablation (Supp. §S5): shipped orientation vs every pipe split both ways, all 8 networks. Orientation buys recall (0.944 vs 0.898) and costs precision (0.729 vs 0.862); it is decisive on Aqueduct C and explains C-Town's over-warning (precision 0.130 -> 0.774 without it). -> `orientation_ablation.csv`. |
+| `cost_benchmark.py` | Per-situation engine vs WNTR timings + one-time import cost — the table in Supp. §S4. Samples evenly across the four families, because engine cost tracks scarcity, not network size. |
 
-### Diagnostics — one-off investigations (not part of the main pipeline)
-| File | What it answers |
-|---|---|
-| `margin_sweep.py` | Held-out selection of the importer's capacity margin (Supp. Mat. S5). |
-| `diag_precision.py` | Why is flow-module precision low (over-prediction of criticality)? |
-| `diag_orientation.py` | Is the low precision caused by fixed pipe orientation rather than capacity? |
+### Diagnostics
+The one-off diagnostic scripts from the 2026-07-28 exploration (orientation
+proxies, tank-supply surge, capacity sweeps, …) were removed after their
+conclusions were folded into `ATTEMPTS.md` §12–§15 — that log is the record.
+
+**Every claim the paper makes now has a script here.** That was not true before
+2026-08-17: the priority-controllability range and the cost table rested on
+`ATTEMPTS.md` prose alone, with their scripts deleted, so a reviewer following
+the Data and Code Availability statement could not reproduce either. If you
+delete a diagnostic, check first whether the paper cites its number.
 
 ### Data
 | File | What it is |

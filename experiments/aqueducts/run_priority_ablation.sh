@@ -6,7 +6,7 @@
 # compare against the canonical final_benchmark.csv with paper_numbers.py.
 set -u
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
-EXP=../experiments
+EXP=../experiments/aqueducts
 CSV=$EXP/final_benchmark_priority.csv
 LOG=$EXP/final_benchmark_priority.log
 rm -f "$CSV" "$LOG"

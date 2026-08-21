@@ -13,7 +13,7 @@
 # See benchmark-protocol.md (same directory).
 set -u
 cd /home/cristian-curaba/Desktop/CASCADE-v2/CASCADE-backend
-EXP=../experiments
+EXP=../experiments/aqueducts
 CSV=$EXP/final_benchmark.csv
 LOG=$EXP/final_benchmark.log
 rm -f "$CSV" "$LOG"
