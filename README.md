@@ -7,6 +7,10 @@ A platform for modelling multi-canvas systems and analysing how failures cascade
 across their Elements. See [CONTEXT.md](CONTEXT.md) for the domain glossary and
 [CLAUDE.md](CLAUDE.md) for development guidelines.
 
+**Arrived from one of the papers?** [`docs/papers.md`](docs/papers.md) maps each
+section to the code that implements it, and shows how to reproduce the reported
+numbers.
+
 ## Layout
 
 | Path              | What                                                        |
@@ -56,6 +60,34 @@ GitHub → *Settings → Branches → Add branch protection rule* for `main`, en
 *Require status checks to pass before merging*, and select the **Backend**,
 **Frontend**, **Docs**, and **Docker** checks.
 
+## Contributing
+
+Issues and pull requests are welcome.
+
+**Reporting a bug or requesting a feature.** Open a
+[GitHub Issue](https://github.com/cascade-platform-org/CASCADE/issues). For a bug,
+say what you did, what you expected, and what happened instead — a failing input is
+worth more than a description of it. For a feature, describe the problem you're
+trying to solve rather than the solution you have in mind; the architecture often
+already has a way in, and it may not be the obvious one.
+
+**Proposing a change.** Fork, branch off `main`, and open a pull request. Before you
+start on anything substantial, open an issue first — this codebase carries a few
+deliberate constraints (the engine boundary in [CLAUDE.md](CLAUDE.md) §7, the
+schema-first rule in §6) that are easy to trip over and awkward to unpick after the
+fact.
+
+- Sign off your commits: `git commit -s`. This is a
+  [Developer Certificate of Origin](https://developercertificate.org/) assertion —
+  it records that you wrote the contribution and can license it under AGPL-3.0.
+- CI must pass: backend lint + tests, frontend type-check + build, docs links, and
+  Docker/compose validation. Run `CASCADE-backend/scripts/audit.sh` locally to catch
+  most of it before pushing.
+- Follow the vocabulary in [CONTEXT.md](CONTEXT.md). One concept, one term.
+
+**Review.** Pull requests are reviewed and merged by the maintainer — there is no
+auto-merge, so expect a conversation rather than a silent accept or reject.
+
 ## Licence
 
 **GNU Affero General Public License v3.0 or later** (`AGPL-3.0-or-later`) — full
@@ -72,6 +104,5 @@ If you use CASCADE in academic work, please cite it via
 [CITATION.cff](CITATION.cff) (GitHub renders a *Cite this repository* button from
 it).
 
-Contributions are accepted under the same licence. Sign off your commits
-(`git commit -s`, a [Developer Certificate of Origin](https://developercertificate.org/)
-assertion) so the provenance of each contribution is recorded.
+Contributions are accepted under the same licence — see
+[Contributing](#contributing) above for the sign-off requirement.

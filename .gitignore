@@ -45,4 +45,7 @@ experiments/aqueducts/*.csv
 # the Data and Code Availability statement promises them.
 !experiments/aqueducts/results/
 !experiments/aqueducts/results/*.csv
-experiments/__pycache__/
+# Any depth, not just experiments/__pycache__/ — a nested one (centrality/) had
+# slipped through and got a .pyc committed.
+__pycache__/
+*.pyc
