@@ -1,0 +1,62 @@
+CASCADE — Composable, Knowledge-Driven Disservice Propagation
+Copyright (C) 2026 Cristian Curaba
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along
+with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+The full licence text is in LICENSE (SPDX identifier: AGPL-3.0-or-later).
+
+
+Why AGPL rather than a permissive licence
+-----------------------------------------
+CASCADE is offered as a hosted platform as well as source. Section 13 of the
+AGPL ("Remote Network Interaction") is the operative clause: anyone who runs a
+modified version as a network service must offer its source to the users of that
+service. A permissive licence would allow a closed, hosted fork; this one does
+not.
+
+This constrains recipients, not the copyright holders. The authors retain
+copyright and may therefore relicense future versions, grant commercial
+exceptions, or extract components into a proprietary product, as ADR-0009
+("engine public now, private-submodule deferred") anticipates. Note that this
+freedom depends on the authors holding copyright in the whole work: a
+contribution merged without a contributor licence agreement or a Developer
+Certificate of Origin sign-off removes that option for the affected files.
+
+Anything already released under this licence stays released under it. AGPL binds
+only distribution and network-service provision — running, reading, modifying and
+citing the code for research carries no obligation whatsoever.
+
+
+Third-party components
+----------------------
+This repository's dependencies are free/open-source under permissive terms
+(predominantly MIT, ISC, BSD-2/3-Clause and Apache-2.0); see
+CASCADE-app/package-lock.json and CASCADE-backend/requirements*.txt for the
+resolved sets. Notable non-MIT/BSD cases, none of which constrain this project's
+outbound licence:
+
+  * jszip                     dual-licensed (MIT OR GPL-3.0-or-later); used under MIT.
+  * @img/sharp-*              LGPL-3.0-or-later native binaries, used unmodified
+                              through a dynamic boundary.
+  * certifi, and ~14 npm packages
+                              MPL-2.0, whose copyleft is file-level and is not
+                              triggered because the files are used unmodified.
+
+PostgreSQL, Caddy and Zitadel are deployed as separate container images. They are
+aggregated with this work, not derived from it or linked into it.
+
+The water-distribution benchmarks bundled under raw-networks/ (Net1, Net2, Net3,
+Modena, C-Town) are third-party public research networks and remain under their
+own terms. The three Italian aqueduct exports used in the paper are proprietary
+utility data, are not distributed here, and are referred to throughout only as
+Aqueduct A, B and C.

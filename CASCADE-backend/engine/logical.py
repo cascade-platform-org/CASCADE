@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Cristian Curaba
 """
 engine/logical.py — Category-aware logical proposal (PRIVATE IP).
 

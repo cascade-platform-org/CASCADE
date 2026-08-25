@@ -1,11 +1,12 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this project live as GitHub Issues on **Cristian-Curaba/CASCADE-app**.
+Issues and PRDs for this project live as GitHub Issues on **cascade-platform-org/CASCADE**.
 Use the `gh` CLI for all operations.
 
-**Repo layout:** `CASCADE-app/` and `CASCADE-backend/` are separate git repositories
-inside the `CASCADE-v2/` workspace. Always run `gh` / `git` from inside `CASCADE-app/`
-(or pass `-R Cristian-Curaba/CASCADE-app` explicitly) — the workspace root is not a repo.
+**Repo layout:** one monorepo (ADR-0009) rooted at `CASCADE-v2/`; `CASCADE-app/` and
+`CASCADE-backend/` are plain subdirectories, not separate repos. Run `gh` / `git` from
+the workspace root; `-R cascade-platform-org/CASCADE` is only needed if your cwd is
+outside the workspace entirely.
 
 ## Conventions
 
@@ -16,12 +17,12 @@ inside the `CASCADE-v2/` workspace. Always run `gh` / `git` from inside `CASCADE
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Run all `gh` commands from within `CASCADE-app/` (where the remote is configured) or pass `-R Cristian-Curaba/CASCADE-app` explicitly.
+Run all `gh` commands from the workspace root, where the remote is configured.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue on `Cristian-Curaba/CASCADE-app`.
+Create a GitHub issue on `cascade-platform-org/CASCADE`.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments` from inside `CASCADE-app/`.
+Run `gh issue view <number> --comments` from the workspace root.

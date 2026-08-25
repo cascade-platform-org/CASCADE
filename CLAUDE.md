@@ -13,6 +13,14 @@ Read **`CONTEXT.md`** (domain glossary) and any ADRs in **`docs/adr/`** that tou
 
 ## 1. Open-Source and License Compliance
 
+**This project is licensed AGPL-3.0-or-later** (`LICENSE`, rationale in `NOTICE`).
+Two consequences for day-to-day work: a new dependency must be licence-compatible
+with AGPL-3.0 outbound (permissive is always fine; anything GPL-family needs
+checking, and anything with a "no commercial use" or "source available" clause is
+not open source and is out), and outside contributions need a DCO sign-off
+(`git commit -s`) so the authors keep the ability to relicense that ADR-0009's
+future engine privatization depends on.
+
 Every package, library, service, and tool used in this project — frontend, backend, database, auth provider, tile server, or CI tool — **must be free and open-source**. No paid tiers, no proprietary SaaS dependencies, no copyright-encumbered code.
 
 Before introducing any new dependency:

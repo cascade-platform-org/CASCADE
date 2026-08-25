@@ -1,6 +1,7 @@
 # CASCADE
 
-[![CI](https://github.com/Cristian-Curaba/CASCADE-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Cristian-Curaba/CASCADE-app/actions/workflows/ci.yml)
+[![CI](https://github.com/cascade-platform-org/CASCADE/actions/workflows/ci.yml/badge.svg)](https://github.com/cascade-platform-org/CASCADE/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 A platform for modelling multi-canvas systems and analysing how failures cascade
 across their Elements. See [CONTEXT.md](CONTEXT.md) for the domain glossary and
@@ -54,3 +55,23 @@ image/compose validation.
 GitHub → *Settings → Branches → Add branch protection rule* for `main`, enable
 *Require status checks to pass before merging*, and select the **Backend**,
 **Frontend**, **Docs**, and **Docker** checks.
+
+## Licence
+
+**GNU Affero General Public License v3.0 or later** (`AGPL-3.0-or-later`) — full
+text in [LICENSE](LICENSE), rationale and third-party components in
+[NOTICE](NOTICE).
+
+The clause that matters in practice is AGPL §13: if you run a **modified**
+version as a network service, you must offer its source to that service's users.
+Running, reading, modifying and citing the code for research triggers no
+obligation at all — obligations attach only to distribution and to providing a
+network service.
+
+If you use CASCADE in academic work, please cite it via
+[CITATION.cff](CITATION.cff) (GitHub renders a *Cite this repository* button from
+it).
+
+Contributions are accepted under the same licence. Sign off your commits
+(`git commit -s`, a [Developer Certificate of Origin](https://developercertificate.org/)
+assertion) so the provenance of each contribution is recorded.

@@ -21,11 +21,14 @@ CASCADE-v2/                  ← workspace root (NOT itself a git repo)
 │   ├── adr/                 ← architectural decision records
 │   ├── agents/              ← skill configuration (this folder)
 │   └── project/             ← product docs (requirements, architecture, local-first guide, api-reference, deployment, rbac-setup)
-├── CASCADE-app/             ← Next.js frontend  [git repo: Cristian-Curaba/CASCADE-app]
-└── CASCADE-backend/         ← FastAPI backend   [git repo: Cristian-Curaba/CASCADE-backend]
+├── CASCADE-app/             ← Next.js frontend
+└── CASCADE-backend/         ← FastAPI backend
 ```
 
-**Important for git operations:** `CASCADE-app/` and `CASCADE-backend/` are independent git repositories. Always `cd` into the correct subdirectory before running `git` or `gh` commands. A `git` command run from `CASCADE-v2/` will fail — there is no root-level repo.
+Single monorepo (ADR-0009): one git repository rooted at `CASCADE-v2/`, published as
+`cascade-platform-org/CASCADE`. `CASCADE-app/` and `CASCADE-backend/` are plain
+subdirectories, not separate repos — run `git`/`gh` from the workspace root, not
+from inside either subdirectory.
 
 ## Use the glossary's vocabulary
 

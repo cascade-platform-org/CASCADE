@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Cristian Curaba
 """
 main.py — CASCADE Propagation Platform backend entry point.
 

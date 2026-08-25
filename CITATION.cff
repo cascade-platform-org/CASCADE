@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: If you use CASCADE in academic work, please cite it as below.
+title: CASCADE
+abstract: >-
+  A category-typed propagation architecture for modelling how service loss
+  cascades across interdependent critical infrastructure. Quantity-aware and
+  purely logical interdependencies share one discrete functionality scale and
+  converge through a single monotonic update rule; a max-min fair-share flow
+  module for water distribution is built directly from EPANET files and
+  validated against pressure-driven WNTR simulation.
+type: software
+authors:
+  - family-names: Curaba
+    given-names: Cristian
+    affiliation: University of Udine, Udine, Italy
+    email: cristian.curaba@uniud.it
+license: AGPL-3.0-or-later
+repository-code: https://github.com/cascade-platform-org/CASCADE
+keywords:
+  - cascading failures
+  - interdependent networks
+  - critical infrastructure
+  - water distribution networks
+  - network flows
