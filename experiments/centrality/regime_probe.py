@@ -24,7 +24,11 @@ are recovered from the links). `eff_ranks_del` reports how many distinct values
 the second one takes.
 
 Run from CASCADE-backend/ (same sys.path convention as scripts/benchmark_engine.py):
-    python ../experiments/centrality/regime_probe.py --n 60 --reps 10
+    python ../experiments/centrality/regime_probe.py --n 60 --reps 20
+
+`--reps 20` is the paper's setting: every table row pools 40 replicates, 20 at
+each of the two conjunction settings p. At `--reps 10` the cells shift by a few
+hundredths and tau(betw) at rho=0 changes sign.
 
 Dev-only paper harness importing engine.* directly, so that it measures the
 engine's real logic rather than a reimplementation of it. No import-linter

@@ -2,7 +2,7 @@
 experiments/centrality/vitality_class.py — when the requirements are computed.
 
 The paper's model reads a node's required services off the network once
-(paper-plan.md §3):
+(paper §3):
 
     C(v) = { kappa(u) : u -> v }
 
