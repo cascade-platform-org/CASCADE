@@ -23,6 +23,12 @@ exclude = [".venv", "test", ".pytest_cache", ".ruff_cache", "__pycache__"]
 #   python-multipart — imported internally by FastAPI/Starlette to parse
 #                   multipart form bodies; our code never imports it directly.
 DEP002 = ["python-dotenv", "uvicorn", "python-multipart"]
+# DEP004 "imported but declared as a dev dependency" — correct, and intended.
+# `scripts/` holds dev-only harnesses (benchmarks, the paper's statistics), not
+# shipped service code, so their imports belong in requirements-dev.txt. deptry
+# has no notion of a dev-only source directory, so name the package here.
+#   scipy — Spearman/Shapley statistics in scripts/paper_shapley_vs_centrality.py.
+DEP004 = ["scipy"]
 
 [tool.vulture]
 exclude = [".venv/", "test/", ".pytest_cache/", ".ruff_cache/"]

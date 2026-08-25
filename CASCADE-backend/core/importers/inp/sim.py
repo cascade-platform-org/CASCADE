@@ -72,6 +72,18 @@ from pydantic import BaseModel
 
 # Pressure-driven-demand parameters: below `minimum` no water is delivered,
 # above `required` full demand is met. 20 m ≈ 2 bar, a common service target.
+def _link(wn: wntr.network.WaterNetworkModel, link_id: str) -> wntr.network.base.Link:
+    """`wn.get_link` with the Optional narrowed away.
+
+    Every id reaching this helper comes from one of `wn`'s own name lists, so a
+    miss is a programming error, not a data condition — raise here rather than
+    let `None` surface as an attribute error a few frames later."""
+    link = wn.get_link(link_id)
+    if link is None:
+        raise KeyError(f"link {link_id!r} is not in the model")
+    return link
+
+
 _REQUIRED_PRESSURE_M = 20.0
 _MINIMUM_PRESSURE_M = 0.0
 
@@ -372,7 +384,7 @@ def contingency_priorities(
     model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
 
     cycle = _cycle_links(wn)
-    by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
+    by_diameter = sorted(wn.pipe_name_list, key=lambda pid: _link(wn, pid).diameter, reverse=True)
     pool = by_diameter[: max(1, round(len(by_diameter) * 0.20))] + list(wn.pump_name_list)
     trunk = [lid for lid in pool if lid in cycle][:singles]  # cycle-only, largest first
     groups: list[tuple[str, ...]] = (
@@ -618,7 +630,7 @@ def link_flow_profiles(
             # Same pool definition as validate_faithfulness.py's "targeted"
             # family: top-10%-by-diameter pipes plus every pump — the
             # links whose loss is disproportionately consequential.
-            by_diameter = sorted(wn.pipe_name_list, key=lambda pid: wn.get_link(pid).diameter, reverse=True)
+            by_diameter = sorted(wn.pipe_name_list, key=lambda pid: _link(wn, pid).diameter, reverse=True)
             pool_size = max(1, round(len(by_diameter) * 0.10))
             trunk_pool = sorted(set(by_diameter[:pool_size]) | set(wn.pump_name_list))
             if contingency_exhaustive_trunk:
@@ -737,7 +749,7 @@ def nominal_source_outflow(
     model.options.hydraulic.required_pressure = _REQUIRED_PRESSURE_M
     model.options.hydraulic.minimum_pressure = _MINIMUM_PRESSURE_M
     for pump_id in model.pump_name_list:
-        model.get_link(pump_id).initial_status = "Open"
+        _link(model, pump_id).initial_status = "Open"
     try:
         with tempfile.TemporaryDirectory(prefix="cascade-epanet-") as tmpdir:
             results = _run_sweep_step(model, 1.0, str(Path(tmpdir) / "nominal-supply"))

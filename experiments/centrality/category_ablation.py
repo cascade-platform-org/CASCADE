@@ -1,24 +1,28 @@
 """
-experiments/centrality/category_ablation.py — edges are not interchangeable.
+experiments/centrality/category_ablation.py — links are not interchangeable.
 
-Network-of-networks studies generally treat every edge alike, inter-network
-edges included: an edge is an edge, and a node's exposure is read off its
-in-degree. On a SERVICE dependency network that reading is unavailable, because
-what an incoming edge means depends on the service category it carries:
+Network-of-networks studies generally treat every link alike, inter-network links
+included: a link is a link, and a node's exposure is read off its in-degree. On a
+SERVICE dependency network what an incoming link means depends on the service
+category it carries:
 
-  - two in-edges of the SAME category are REDUNDANCY   (either one suffices)
-  - two in-edges of DIFFERENT categories are CONJUNCTION (both are required)
+  - two in-links of the SAME category are REDUNDANCY   (either one suffices)
+  - two in-links of DIFFERENT categories are CONJUNCTION (both are required)
 
 Those are opposite meanings on the same picture. This script demonstrates the
 consequence in the most controlled way available: it FIXES the topology — the
-same nodes, the same edges, the same degree sequence — and varies only the
+same nodes, the same links, the same degree sequence — and varies only the
 category labels. Every purely structural quantity is therefore constant by
-construction, while the true importance ranking moves.
+construction, while the importance ranking moves.
 
-The knob is L, the number of service categories. With L = 1 every parent
-supplies the same service, so a node survives on any one of them (pure OR). As L
-grows, parents increasingly supply distinct services, so a node needs all of
-them (pure AND). Identical graph, opposite resilience.
+The knob is L, the number of service categories. With L = 1 every parent supplies
+the same service, so a node survives on any one of them (pure OR). As L grows,
+parents increasingly supply distinct services, so a node needs all of them (pure
+AND). Identical graph, opposite resilience.
+
+The index is computed by conditioning — hold a node present and failed — which
+removes no link and therefore scores the network with each node's required
+services intact.
 
 Run from CASCADE-backend/:
     python ../experiments/centrality/category_ablation.py --n 60 --reps 20
@@ -57,6 +61,30 @@ FAILED, OK = 1, 2
 
 Topology = tuple[int, list[tuple[int, int]]]
 
+
+
+def bootstrap_ci(values: list[float], level: float = 0.95, draws: int = 5000,
+                 seed: int = 0) -> tuple[float, float]:
+    """Percentile bootstrap interval for the mean of `values`.
+
+    Every cell in the paper's tables is a mean over replicates, and a mean with
+    no dispersion beside it invites the reader to trust a digit that may be
+    noise. Resampling the replicates with replacement is the assumption-free way
+    to put an interval on it: no normality, no variance estimate, just the
+    spread of the means the same experiment could have produced.
+    """
+    clean = [x for x in values if x == x]
+    if len(clean) < 2:
+        return (float("nan"), float("nan"))
+    rng = random.Random(seed)
+    n = len(clean)
+    means = sorted(
+        statistics.fmean(clean[rng.randrange(n)] for _ in range(n))
+        for _ in range(draws)
+    )
+    lo = means[int((1 - level) / 2 * draws)]
+    hi = means[min(draws - 1, int((1 + level) / 2 * draws))]
+    return (lo, hi)
 
 def make_config(n_categories: int) -> ModelConfiguration:
     return ModelConfiguration(
@@ -223,30 +251,38 @@ def main() -> None:
         for key, values in acc.items()
         if any(x == x for x in values)
     }
+    ci = {key: bootstrap_ci(values) for key, values in acc.items()
+          if any(x == x for x in values)}
 
     print(f"Fixed topology: n={args.n}, roots={args.roots}, "
           f"max parents={args.max_parents}, {args.reps} replicates\n")
     print("Same graph, same edges, same degrees — only the category labels change.\n")
-    header = f"{'L':>3} {'mean loss':>10} {'live':>6} " + " ".join(
-        f"{'t_' + nm:>9}" for nm in ("reach", "indeg", "outdeg", "betw", "pagerank")
-    )
+    print("Each cell is a mean over replicates with a 95% percentile-bootstrap "
+          "interval.\n")
+    header = (f"{'L':>3} {'mean loss':>22} {'live':>6} "
+              + " ".join(f"{'t_' + nm:>22}" for nm in ("reach", "indeg", "pagerank")))
     print(header)
     for n_cat in levels:
-        row = (f"{n_cat:>3} {summary[f'omega_loss_mean_L{n_cat}']:>10.4f} "
+        def cell(key: str, places: int = 3) -> str:
+            lo, hi = ci[key]
+            return f"{summary[key]:.{places}f} [{lo:.{places}f},{hi:.{places}f}]"
+        row = (f"{n_cat:>3} {cell(f'omega_loss_mean_L{n_cat}', 4):>22} "
                f"{summary[f'live_L{n_cat}']:>6.2f} ")
-        row += " ".join(
-            f"{summary[f'tau_{nm}_L{n_cat}']:>9.3f}"
-            for nm in ("reach", "indeg", "outdeg", "betw", "pagerank")
-        )
+        row += " ".join(f"{cell(f'tau_{nm}_L{n_cat}'):>22}"
+                        for nm in ("reach", "indeg", "pagerank"))
         print(row)
 
+    tau_lo, tau_hi = ci["tau_L1_vs_L8"]
+    top_lo, top_hi = ci["top_L1_vs_L8"]
     print(f"\nSame topology, L={levels[0]} vs L={levels[-1]}: "
-          f"tau={summary['tau_L1_vs_L8']:+.3f}, "
-          f"top-{k} overlap={summary['top_L1_vs_L8']:.3f}")
+          f"tau={summary['tau_L1_vs_L8']:+.3f} [{tau_lo:+.3f},{tau_hi:+.3f}], "
+          f"top-{k} overlap={summary['top_L1_vs_L8']:.3f} "
+          f"[{top_lo:.3f},{top_hi:.3f}]")
     print("Every structural index above is IDENTICAL in both cases, by construction.")
 
     if args.out:
-        args.out.write_text(json.dumps(summary, indent=2))
+        args.out.write_text(json.dumps(
+            {"mean": summary, "ci95": {k: list(v) for k, v in ci.items()}}, indent=2))
         print(f"\nwrote {args.out}")
 
 

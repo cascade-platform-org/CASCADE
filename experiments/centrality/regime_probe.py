@@ -1,19 +1,27 @@
 """
-experiments/centrality/regime_probe.py — does a usable regime exist?
+experiments/centrality/regime_probe.py — how far a topological ranking is right.
 
-The Complex Networks paper claims conditioning (hold v present and failed) and
-deletion (remove v and its edges) rank nodes differently on a service-dependency
-graph, and that structural proxies lose the ranking as redundancy enters.
+A topological index reads nodes and links and reconstructs what each node needs
+from the links that reach it. That reconstruction is exactly the model at one
+setting: every dependency link carries failure unconditionally, which is the
+series reading. This script sweeps away from that setting and measures what the
+reading costs.
 
-Both halves can fail together:
-  - at high sole-supplier density rho, c_cond is close to a descendant count, so
-    plain reachability reproduces it and the model earns nothing;
-  - at low rho, no single failure propagates, so c_cond is ~0 everywhere and
-    there is nothing left to rank.
+  rho = the share of required services supplied by exactly one node.
+        rho = 1  every dependency link is a series element
+        rho = 0  every required service has two suppliers (parallel structure)
 
-This script probes for a middle regime with BOTH a live spread in c_cond AND a
-low rank correlation against reachability, and at the same time checks the two
-propositions numerically.
+At rho = 1 plain reachability reproduces the model's ranking exactly. As rho
+falls, redundancy absorbs single failures and the two part company. Reported
+beside every correlation is the live fraction — the share of nodes whose failure
+reaches beyond themselves — because at low rho most of the vector is tied and a
+correlation there is measuring the tie-break.
+
+The script also carries the two indices of the paper's §4: `c_cond` holds a node
+present and failed (the full description, where a node's required services travel
+with the network) and `c_del` removes it (the topological description, where they
+are recovered from the links). `eff_ranks_del` reports how many distinct values
+the second one takes.
 
 Run from CASCADE-backend/ (same sys.path convention as scripts/benchmark_engine.py):
     python ../experiments/centrality/regime_probe.py --n 60 --reps 10
@@ -52,6 +60,29 @@ from schemas.results import PropagationRequest  # noqa: E402
 
 FAILED, OK = 1, 2  # binary functionality scale
 
+
+
+def bootstrap_ci(values: list[float], level: float = 0.95, draws: int = 5000,
+                 seed: int = 0) -> tuple[float, float]:
+    """Percentile bootstrap interval for the mean of `values`.
+
+    Every cell in the paper's tables is a mean over replicates, and a mean with
+    no dispersion beside it invites the reader to trust a digit that may be
+    noise. Resampling the replicates with replacement is the assumption-free way
+    to put an interval on it.
+    """
+    clean = [x for x in values if x == x]
+    if len(clean) < 2:
+        return (float("nan"), float("nan"))
+    rng = random.Random(seed)
+    n = len(clean)
+    means = sorted(
+        sum(clean[rng.randrange(n)] for _ in range(n)) / n
+        for _ in range(draws)
+    )
+    lo = means[int((1 - level) / 2 * draws)]
+    hi = means[min(draws - 1, int((1 + level) / 2 * draws))]
+    return (lo, hi)
 
 def make_config(n_categories: int) -> ModelConfiguration:
     """All-Requisite categories on a 2-level scale = the paper's Boolean model."""
@@ -332,6 +363,10 @@ def main() -> None:
     rhos = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
     ps = [0.0, 0.5]
     rows = []
+    # Replicate-level values pooled across the conjunction setting p, so the
+    # paper's table (which reports one row per rho) can carry an interval built
+    # from every replicate behind that row rather than from half of them.
+    pooled: dict[tuple[float, str], list] = {}
 
     for rho, p in itertools.product(rhos, ps):
         acc: dict[str, list] = {}
@@ -342,6 +377,8 @@ def main() -> None:
                 project = seed_failures(project, args.seed_failures, args.roots, rng)
             for key, value in analyse_replicate(project, config).items():
                 acc.setdefault(key, []).append(value)
+                if not isinstance(value, bool):
+                    pooled.setdefault((rho, key), []).append(value)
         row = {"rho": rho, "p": p}
         for key, values in acc.items():
             if isinstance(values[0], bool):
@@ -349,11 +386,15 @@ def main() -> None:
             else:
                 clean = [x for x in values if x == x]
                 row[key] = sum(clean) / len(clean) if clean else float("nan")
+                lo, hi = bootstrap_ci(values)
+                row[f"{key}_ci95"] = [lo, hi]
         rows.append(row)
         k = max(1, args.n // 10)
         print(
             f"rho={rho:.1f} p={p:.1f} | live={row['live_fraction']:.2f} "
-            f"| tau reach={row['tau_reach']:+.2f} pr={row['tau_pagerank']:+.2f} "
+            f"| tau reach={row['tau_reach']:+.2f}"
+            f"[{row['tau_reach_ci95'][0]:+.2f},{row['tau_reach_ci95'][1]:+.2f}] "
+            f"pr={row['tau_pagerank']:+.2f} "
             f"betw={row['tau_betw']:+.2f} CUTREACH={row['tau_cutreach']:+.2f} "
             f"| live-only cut={row.get('taulive_cutreach', float('nan')):+.2f} "
             f"reach={row.get('taulive_reach', float('nan')):+.2f} "
@@ -364,8 +405,25 @@ def main() -> None:
             flush=True,
         )
 
+    metrics = ("tau_reach", "tau_pagerank", "tau_betw", "live_fraction")
+    print("\nPooled over the conjunction setting, 95% percentile bootstrap over "
+          f"all {args.reps * len(ps)} replicates per cell:\n")
+    print(f"  {'metric':<14} " + " ".join(f"{r:>21.1f}" for r in rhos))
+    pooled_out: dict[str, dict[str, list]] = {}
+    for metric in metrics:
+        cells = []
+        for rho in rhos:
+            vals = pooled.get((rho, metric), [])
+            clean = [x for x in vals if x == x]
+            mean = sum(clean) / len(clean) if clean else float("nan")
+            lo, hi = bootstrap_ci(vals)
+            cells.append(f"{mean:.3f}[{lo:.3f},{hi:.3f}]")
+            pooled_out.setdefault(metric, {})[str(rho)] = [mean, lo, hi]
+        print(f"  {metric:<14} " + " ".join(f"{c:>21}" for c in cells))
+
     if args.out:
-        args.out.write_text(json.dumps(rows, indent=2))
+        args.out.write_text(json.dumps({"rows": rows, "pooled": pooled_out},
+                                       indent=2))
         print(f"\nwrote {args.out}")
 
 

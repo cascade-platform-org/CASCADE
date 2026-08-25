@@ -19,7 +19,7 @@ The named UI container for one Graph — display metadata plus a `graph_type` na
 _Avoid_: Layer, network layer (use Graph or Canvas by context)
 
 **Multi-canvas**:
-The set of Canvases (and inter-canvas edges) in scope for a Propagation; with every Canvas included it is the **full multi-canvas**.
+The set of Canvases (and inter-canvas edges) in scope for a Propagatiupdon; with every Canvas included it is the **full multi-canvas**.
 _Avoid_: Network of Networks, full graph, multi-canvas project
 
 **Element**:

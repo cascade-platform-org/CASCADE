@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Every number the main paper's \\dtba placeholders need, from final_benchmark.csv.
 
-Bootstrap CIs (10^4 resamples) on paired per-situation FMS differences for the
-null/reach margins. Run: python3 paper_numbers.py
+Precision/recall use the paper's MACRO convention (per situation, then averaged,
+vacuous cells credited 1 — Supp. Mat. S2). Bootstrap CIs (10^4 resamples) on
+paired per-situation FMS differences for the null/reach margins.
+Run: python3 paper_numbers.py
 """
 from __future__ import annotations
 
@@ -22,6 +24,35 @@ def short(r):
 
 
 def prf(rs, pre=""):
+    """Critical-class precision/recall in the convention the PAPER reports:
+    MACRO — computed inside each situation, then averaged over situations, so
+    each failure is one unit of evidence regardless of network size.
+
+    A situation whose ground truth holds no critical junction has undefined
+    recall; we credit a predictor that correctly flags none with recall 1.
+    Symmetrically, a predictor that flags nothing has precision 1. Both
+    conventions are stated in Supp. Mat. S2 ("Metric aggregation"); 187 of the
+    939 situations are vacuous this way.
+
+    NOTE: an earlier revision pooled the confusion counts across situations
+    (micro) and reported 0.682/0.950 where the paper now reports 0.729/0.944.
+    `prf_micro` below keeps that reading available for comparison — the paper
+    uses the macro figures this function returns.
+    """
+    ps, recs = [], []
+    tp = fp = fn = 0
+    for r in rs:
+        t, f, n = int(r[pre + "tp"]), int(r[pre + "fp"]), int(r[pre + "fn"])
+        tp, fp, fn = tp + t, fp + f, fn + n
+        ps.append(t / (t + f) if t + f else 1.0)
+        recs.append(t / (t + n) if t + n else 1.0)
+    p = statistics.mean(ps) if ps else float("nan")
+    rec = statistics.mean(recs) if recs else float("nan")
+    return p, rec, tp, fp, fn
+
+
+def prf_micro(rs, pre=""):
+    """Superseded pooled-confusion reading, kept so the change is checkable."""
     tp = sum(int(r[pre + "tp"]) for r in rs)
     fp = sum(int(r[pre + "fp"]) for r in rs)
     fn = sum(int(r[pre + "fn"]) for r in rs)
@@ -92,7 +123,9 @@ if PRIOR_CSV.exists():
 if DRILL_CSV.exists():
     dr = list(csv.DictReader(DRILL_CSV.open()))
     pd_, rd_, _, _, _ = prf(dr)
-    f1 = lambda p, r: 2 * p * r / (p + r)
+    def f1(p, r):
+        return 2 * p * r / (p + r)
+
     print("\n=== CAPACITY ablation (uniform vs drill, both no-priority) ===")
     print(f"  uniform (canonical): P={pc0:.3f} R={rc0:.3f} F1={f1(pc0,rc0):.3f} FMS={mean(rows,'fms'):.3f}")
     print(f"  drill              : P={pd_:.3f} R={rd_:.3f} F1={f1(pd_,rd_):.3f} FMS={mean(dr,'fms'):.3f}")

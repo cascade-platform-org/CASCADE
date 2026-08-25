@@ -134,7 +134,13 @@ def main() -> None:
             pooled[m][1].append(fms)
             print(f"  {m:>7.2f} {fms:>7.3f} {conf.precision:>6.2f} {conf.recall:>7.2f}", flush=True)
 
-    print(f"\n=== POOLED over {len(args.networks)} held-out network(s) ===", flush=True)
+    # NOT necessarily held out: this prints whatever `--networks` was given. The
+    # margin was CHOSEN on ky10/Net6 (see the module docstring); pass the
+    # evaluation networks here and the pooled row is an in-sample sensitivity
+    # curve, not a held-out score. Say which, so a reader of an old log cannot
+    # mistake one for the other.
+    print(f"\n=== POOLED over {len(args.networks)} network(s): "
+          f"{', '.join(os.path.basename(n) for n in args.networks)} ===", flush=True)
     print(f"  {'margin':>7} {'FMS':>7} {'prec':>6} {'recall':>7}", flush=True)
     for m in margins:
         conf, scores = pooled[m]

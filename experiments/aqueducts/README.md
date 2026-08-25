@@ -72,6 +72,7 @@ run_capacity_drill_ablation.sh    →  final_benchmark_drill.csv    (--capacity-
 | `margin_sweep.py` | Held-out capacity-margin sensitivity sweep — the harness behind the supplement's §S5 negative result. |
 | `priority_steering.py` | Both priority arms of Supp. §S2: the **per-scenario oracle** (expressive range — what the lever can reach) and the **single per-network vector** (the negative control — whether that range generalizes; it does not, ≈+0.07). |
 | `orientation_ablation.py` | The one true ablation (Supp. §S5): shipped orientation vs every pipe split both ways, all 8 networks. Orientation buys recall (0.944 vs 0.898) and costs precision (0.729 vs 0.862); it is decisive on Aqueduct C and explains C-Town's over-warning (precision 0.130 -> 0.774 without it). -> `orientation_ablation.csv`. |
+| `anonymize_results.py` | Rewrites the `network` column to Aqueduct A/B/C and writes `results/` — the publishable per-situation CSVs the paper's Data and Code Availability statement promises. Refuses to write if a real export name survives. Re-run after any benchmark. |
 | `cost_benchmark.py` | Per-situation engine vs WNTR timings + one-time import cost — the table in Supp. §S4. Samples evenly across the four families, because engine cost tracks scarcity, not network size. |
 
 ### Diagnostics
@@ -79,13 +80,24 @@ The one-off diagnostic scripts from the 2026-07-28 exploration (orientation
 proxies, tank-supply surge, capacity sweeps, …) were removed after their
 conclusions were folded into `ATTEMPTS.md` §12–§15 — that log is the record.
 
-**Every claim the paper makes now has a script here.** That was not true before
+**Every number the paper reports for the SHIPPED configuration has a script and a
+CSV here**, and `results/` holds the anonymized per-situation CSVs the Data and
+Code Availability statement promises — every table in the paper and the
+Supplementary Material recomputes from them. That was not true before
 2026-08-17: the priority-controllability range and the cost table rested on
-`ATTEMPTS.md` prose alone, with their scripts deleted, so a reviewer following
-the Data and Code Availability statement could not reproduce either. If you
+`ATTEMPTS.md` prose alone, with their scripts deleted.
+
+The exception is Supp. Mat. S7 (negative results). Those arms measured a
+**superseded** importer on the worst-10 situations, so no script here
+reproduces them; their figures are recorded in `ATTEMPTS.md` §2–§5 with the run
+each came from, and the raw variant reports stay local under `archive/`. If you
 delete a diagnostic, check first whether the paper cites its number.
 
 ### Data
+`results/` holds the **anonymized, tracked** copies (`anonymize_results.py`); the raw
+files below carry the real export path in their `network` column and are gitignored,
+as are all `.log` files from these runs.
+
 | File | What it is |
 |---|---|
 | **`final_benchmark.csv`** / `.log` | **CANONICAL** 8-network result (uniform design velocity, no priority, post pump-fed-tank fix). The paper's numbers. |

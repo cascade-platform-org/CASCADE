@@ -115,9 +115,13 @@ def skeletonize_to_target(
             lo = mid + 1
 
     if best is None:
-        assert coarsest_node_count is not None  # the loop always probes candidates[-1] on this path
+        # The loop always probes candidates[-1] on this path, so the count is
+        # known — but state that as a fallback rather than an `assert`, which
+        # bandit flags (B101) because it vanishes under `python -O`. Only this
+        # message depends on it.
+        floor = coarsest_node_count if coarsest_node_count is not None else "the achievable minimum"
         raise SkeletonError(
-            f"Cannot reduce below {coarsest_node_count} nodes "
+            f"Cannot reduce below {floor} nodes "
             f"(target was {target_nodes}). Sources, pumps and junction topology "
             f"set the irreducible core — raise the target."
         )

@@ -19,3 +19,10 @@ import-linter==2.12          # enforces the engine-isolation layering rule (ADR-
 pyright==1.1.411             # static type checker — the backend's tsc-strict equivalent
 asyncpg-stubs==0.31.2        # asyncpg ships no inline types; this fixes PoolConnectionProxy/Connection mismatches
 detect-secrets==1.5.0        # git-history secrets baseline (no Go binary required)
+
+# ---------------------------------------------------------------------------
+# Paper / experiment harnesses (dev-only, not shipped with the service)
+# ---------------------------------------------------------------------------
+
+scipy==1.18.0                # Spearman/Shapley statistics in scripts/paper_shapley_vs_centrality.py;
+                             # arrives transitively via wntr, declared here so deptry (DEP003) can see it

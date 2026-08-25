@@ -4,8 +4,8 @@ Institutional memory of the engine/importer fidelity work (2026-07). Benchmark
 throughout: **FMS** (demand-weighted level agreement between CASCADE propagation
 and a WNTR/EPANET PDD solve of the same situation), over generated situations on
 8 networks — 3 textbook (Net1/2/3), Modena, C-Town, and 3 real Italian aqueducts
-(**Aqueduct A/B/C** = Cassacco/Tarcento/Zampis; anonymized, `.inp` never
-committed). "Worst-10" (early sections) = the 10 lowest-FMS situations.
+(**Aqueduct A/B/C**; anonymized, the `.inp` exports are proprietary utility data and
+are never committed). "Worst-10" (early sections) = the 10 lowest-FMS situations.
 
 Legend: ✅ shipped/recommended · ❌ tried, worse/no effect · ⚠️ open.
 
@@ -38,9 +38,19 @@ fidelity effect; it is an expert-knowledge knob, not a fidelity fix.
 - ❌ Solve-free geometric capacity (constant velocity; Hazen-Williams `D,C`
   formula): correlates with the sweep but ~entirely via diameter — blind to
   topology+demand (a fat pipe past light demand needs no capacity). Worse on
-  worst-10.
+  worst-10 — an UNDER-SIZED constant at 1–2 m/s scores **0.681–0.791** vs the
+  sweep's 0.927. Read at the time as "the sweep's relative profile carries
+  information"; §12–13's full 8-network ablation overturned that — a
+  *correctly* sized constant (2.5 m/s) matches the drill. The earlier result
+  was an artifact of the size, not evidence for the profile.
 - ✅ **Capacity margin ×2** (sweep peak is a lower bound; head loss absorbs ~2×
-  overshoot): worst-10 0.770→0.878, ×2 the knee.
+  overshoot): worst-10 0.770→0.878, ×2 the knee. Swept over
+  {1, 1.25, 1.5, 1.75, 2, 3} on six networks (`margin_sweep.py`): flat on Net1,
+  Net2, Aqueducts A and B; Net3 0.946→0.998 with the knee at ×1.5; Aqueduct C
+  0.136→0.891 by ×2. Pooled 0.828→0.963 from ×1 to ×2, +0.013 more by ×3;
+  recall flat within every network, precision tracking FMS. Held-out selection
+  on ky10/ky4/Net6 was attempted and abandoned — they do not converge or they
+  self-starve at peak demand without per-network calibration.
 - **Superseded (§12–13):** a flat uniform design velocity (`area × 2.5 m/s`)
   matches the whole sweep drill across 8 networks — now the shipped default.
 
@@ -48,8 +58,13 @@ fidelity effect; it is an expert-knowledge knob, not a fidelity fix.
 - ✅ **Orient by simulated flow sign + full-duplex split** (both directions of a
   two-way pipe get FULL capacity): +0.05 over margin ×2 → 0.927; fixes
   tank-feeder reversals.
-- ❌ Reverse edge on every pipe: no help. Exact orientation is not a lever, but
-  *having* a direction is (§15: removing it wrecks directional nets).
+- ❌ Reverse edge on every pipe (flow graph effectively undirected, as EPANET's
+  links are): **0.772** on the worst-10 — essentially unchanged from the 0.770
+  baseline, and occasionally worse via degenerate ties. The sweep's confident
+  one-way calls are reliable; the real directional defect was only the
+  *proportional* capacity split on pipes already known to be bidirectional.
+  Exact orientation is not a lever, but *having* a direction is (§15: removing
+  it wrecks directional nets).
 
 ## 4. Tanks / pumps / valves — not the worst-10 bottleneck
 Uncapping pumps/valves and unbounding source supply had **zero effect** on the
@@ -73,8 +88,8 @@ together rather than one being arbitrarily zeroed.
 - Set-iteration nondeterminism (hash seed → edge order → degenerate tie flips):
   `engine/flow.py` sorts `members`.
 
-## 7. ⚠️ Still open — Aqueduct C (Zampis) tail
-Zampis's worst situations (suspected `PFRC_*` sub-network import anomaly) are
+## 7. ⚠️ Still open — Aqueduct C tail
+Aqueduct C's worst situations (suspected sub-network import anomaly) are
 immune to capacity ×5, full-duplex, reverse edges, unbounded supply, and every
 allocation — a data defect, not a heuristic one. Disclosed in the paper's
 limitations; per-network minima matter more than means for deployment.
@@ -152,8 +167,8 @@ not binding) — a different, still-unidentified orientation-sensitive mechanism
   orientation (sweep) ≫ no orientation (bidirectional) > wrong orientation
   (elevation). The elevation proxy fails (flow follows pressure, not gravity;
   precision 0.04–0.75); bidirectional-everywhere is catastrophic on directional
-  nets (Zampis F1 0.82→0.42, missed criticals via phantom reroutes). A
-  **trunk-biased sample (~48 solves) matches the exhaustive ~68** (Zampis holds
+  nets (Aqueduct C F1 0.82→0.42, missed criticals via phantom reroutes). A
+  **trunk-biased sample (~48 solves) matches the exhaustive ~68** (Aqueduct C holds
   0.819). The shipped importer already samples; exhaustive is benchmark-only.
 - **Tank surge cap** (raise a gravity tank's cap to its measured surge) recovers
   Net3 (FMS 0.875→0.960, P 0.287→0.509, recall flat) but the demand-sweep surge

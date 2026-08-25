@@ -232,7 +232,7 @@ def run_network(name: str, seed: int = 1) -> None:
         situation = dict(situations)[label]
         vec = _scenario_vector(label, truth_ratios)
         one_bundle = build_bundle(
-            wn, name=name, options=opts, flow_profiles=flow_profiles, priorities=vec
+            wn, name=_label(path), options=opts, flow_profiles=flow_profiles, priorities=vec
         )
         sits, _ = _score_all(one_bundle, [(label, situation)], truth_levels, demands)
         if sits:

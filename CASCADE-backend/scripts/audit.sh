@@ -21,7 +21,13 @@ echo "── bandit (security) ────────────────�
 bandit -c pyproject.toml -r .
 
 echo "── pip-audit (known CVEs) ───────────────────────────"
-pip-audit -r requirements.txt
+# PYSEC-2026-1325 (ecdsa): NO fix version exists — it is ecdsa's documented lack
+# of side-channel resistance, not a defect an upgrade closes. ecdsa arrives only
+# as a transitive dep of python-jose ("ecdsa!=0.15") and is reachable only for
+# ES* JWT algorithms; this service signs with RS256 (config.py::jwt_algorithm),
+# which python-jose routes through the `cryptography` backend instead. Re-check
+# this exception if jwt_algorithm ever moves to an ES* curve.
+pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325
 
 echo "── vulture (dead code) ──────────────────────────────"
 vulture . --config pyproject.toml
