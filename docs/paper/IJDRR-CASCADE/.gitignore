@@ -1,0 +1,13 @@
+# elsarticle.cls / elsarticle-num.bst are LaTeX Project Public License
+# (open source — CLAUDE.md §1) and stay tracked so the PDF builds offline.
+# Ignored: LaTeX build artifacts (regenerated on every compile).
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.spl
+*.synctex.gz
+*.pdf

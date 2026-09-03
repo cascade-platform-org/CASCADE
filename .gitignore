@@ -29,13 +29,15 @@ CASCADE-backend/temp.inp
 CASCADE-backend/temp.rpt
 CASCADE-backend/temp.bin
 
+# Ignore everything under docs/paper/, then re-track the three publishable
+# manuscript sources (folder + its .tex/.bib/figures). Each folder's own
+# .gitignore drops LaTeX build artifacts and any non-open-source class files
+# (the Springer SVProc template — CLAUDE.md §1); elsarticle.cls is LPPL and
+# stays tracked.
 docs/paper/*
-docs/paper/IJDRR-CASCADE/*
-# Track the two publishable paper sources (folders + their .tex/.bib/figures).
-# Each folder's own .gitignore excludes the Springer SVProc class files
-# (not open source — CLAUDE.md §1) and LaTeX build artifacts.
 !docs/paper/FlowAllocationModuleForHydraulic/
 !docs/paper/VitalityForInterdependentNetworks/
+!docs/paper/IJDRR-CASCADE/
 
 # ── Experiments (repo-root, not deployed) ────────────────────────────────────
 # Harness scripts and ATTEMPTS.md ARE tracked. Ignored: investigation kits
