@@ -1,4 +1,4 @@
-"""End-to-end engine tests over the shipped sample bundles in CASCADE-app/samples/.
+"""End-to-end engine tests over the shipped sample bundles in CASCADE-app/samples/public/.
 
 One fixed graph topology (see scripts/build_engine_samples.py); each bundle is a
 different Scenario on it that isolates one engine mechanism. The expected
@@ -21,7 +21,7 @@ import pytest
 from engine.propagation import run
 from schemas.results import PropagationRequest
 
-SAMPLES = Path(__file__).resolve().parents[2] / "CASCADE-app" / "samples"
+SAMPLES = Path(__file__).resolve().parents[2] / "CASCADE-app" / "samples" / "public"
 
 # functionality, functionality_time, responsibility_share
 Expect = dict[str, tuple[int, int | None, dict[str, float] | None]]
@@ -129,7 +129,7 @@ def test_sample_is_monotone(name: str):
 
 
 # --- Office with Heat sample — user-validated scenario snapshots -------------
-# Topology (CASCADE-app/samples/Office_with_Heat.json):
+# Topology (CASCADE-app/samples/public/Office_with_Heat.json):
 #   Electrical Source ─► Electrical Infrastructure ─► Office Pc ─► Office
 #                                       └─► Heater Generator ─► Office
 #   Gas Source ─► Heater Generator          Laptop ─► Office

@@ -503,7 +503,7 @@ def migrate(src: Path, dst_bundle: Path) -> None:
 
 def main() -> None:
     default_src    = Path(__file__).parents[3] / "network_analysis_tool" / "backend" / "saved_networks" / "Full_Palmanova.json"
-    default_bundle = Path(__file__).parents[2] / "CASCADE-app" / "samples" / "Full_Palmanova_bundle.json"
+    default_bundle = Path(__file__).parents[2] / "CASCADE-app" / "samples" / "public" / "Full_Palmanova_bundle.json"
 
     parser = argparse.ArgumentParser(description="Migrate Palmanova network to CASCADE v2.0")
     parser.add_argument("--src",    type=Path, default=default_src,    help="Source JSON path")

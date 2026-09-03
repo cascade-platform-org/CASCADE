@@ -1,4 +1,4 @@
-"""Generate the engine sample bundles under CASCADE-app/samples/.
+"""Generate the engine sample bundles under CASCADE-app/samples/public/.
 
 One fixed graph topology, several scenario bundles on top of it. Each bundle is
 a full, schema-valid Project + ModelConfiguration that doubles as (a) a loadable
@@ -26,7 +26,7 @@ from schemas.results import PropagationResult  # noqa: F401  (resolves Project's
 
 Project.model_rebuild()
 
-SAMPLES_DIR = Path(__file__).resolve().parents[2] / "CASCADE-app" / "samples"
+SAMPLES_DIR = Path(__file__).resolve().parents[2] / "CASCADE-app" / "samples" / "public"
 
 # N = 4. 1 = critical (worst), 4 = operational (best).
 CONFIG: dict[str, Any] = {

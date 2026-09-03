@@ -15,7 +15,7 @@ hazard applied), matching the paper's "static dependency graph" comparison.
 Centrality is computed with networkx on the same directed dependency graph
 (tail -> head, "provides to").
 
-    python scripts/paper_shapley_vs_centrality.py --network ../CASCADE-app/samples/Palmanova_Complete.json --samples 500 --kmax 3
+    python scripts/paper_shapley_vs_centrality.py --network ../CASCADE-app/samples/public/Palmanova_Complete.json --samples 500 --kmax 3
 
 IMPORTANT: run from CASCADE-backend/ (same sys.path convention as
 scripts/benchmark_engine.py). This is a dev-only analysis harness for the
