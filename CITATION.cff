@@ -5,9 +5,7 @@ abstract: >-
   A category-typed propagation architecture for modelling how service loss
   cascades across interdependent critical infrastructure. Quantity-aware and
   purely logical interdependencies share one discrete functionality scale and
-  converge through a single monotonic update rule; a max-min fair-share flow
-  module for water distribution is built directly from EPANET files and
-  validated against pressure-driven WNTR simulation.
+  converge through a single monotonic update rule.
 type: software
 authors:
   - family-names: Curaba

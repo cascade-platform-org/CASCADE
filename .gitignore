@@ -54,3 +54,7 @@ experiments/aqueducts/*.csv
 # slipped through and got a .pyc committed.
 __pycache__/
 *.pyc
+
+
+# Personal setup
+skills-lock.json
