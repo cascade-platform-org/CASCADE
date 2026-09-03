@@ -1,0 +1,17 @@
+# Springer SVProc template — freely downloadable but NOT open source
+# (CLAUDE.md §1); never track it, download it to build.
+svproc.cls
+spmpsci.bst
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.pdf
+*literature-map.md
+*literature-quotes.md
+*prior-art-audit.md

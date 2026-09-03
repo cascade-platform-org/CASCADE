@@ -3,6 +3,10 @@
  * public/samples/ (Next.js serves public/ at the site root, so these ship in
  * every deploy with no backend involved — same-origin fetch, not an API call).
  *
+ * public/samples/ is a generated build artifact (gitignored) — its source of
+ * truth is samples/public/, copied over by scripts/sync-samples.mjs on every
+ * `dev`/`build`. See samples/README.md for the public/private convention.
+ *
  * Kept separate from file-io.ts (browser filesystem only) and api-client.ts
  * (backend calls only): this is neither.
  */

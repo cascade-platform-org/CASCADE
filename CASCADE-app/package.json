@@ -4,8 +4,11 @@
   "license": "AGPL-3.0-or-later",
   "private": true,
   "scripts": {
+    "predev": "npm run sync:samples",
     "dev": "next dev --turbopack",
+    "prebuild": "npm run sync:samples",
     "build": "next build",
+    "sync:samples": "node scripts/sync-samples.mjs",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

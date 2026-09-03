@@ -1,0 +1,768 @@
+% ============================================================================
+% Supplementary Material for:
+%   "Composable, Knowledge-Driven Propagation for Complex Interdependent
+%    Services with a Flow-Allocation Module Validated Against Hydraulic
+%    Simulation" (Curaba & Grimaz, Complex Networks & Their Applications)
+%
+% Content moved here from the main paper's appendices (2026-07-17) to meet
+% the venue's 12-page cap. Distributed alongside the released code, not
+% submitted as part of the proceedings paper. Sections are numbered S1-S8
+% and referenced from the main text as "Supp. Mat. SN".
+%
+% ORDER (reset 2026-08-17): the sections now follow the main paper's own
+% narrative — setup (S1 importer, S2 protocol, S3 inputs), then results
+% (S4 extended validation, S5 ablations, S6 sensitivity), then what did not
+% work (S7), then cost (S8). Any renumbering here MUST be mirrored in every
+% "Supp. Mat. SN" string in complenet.tex — those are plain text, not \ref.
+%
+% STYLE: setup + numbers + take-home message. Tables carry the evidence;
+% prose states the design and the conclusion, and stops.
+%
+% BUILD: pdflatex FlowAllocationModuleForHydraulic-supplementary && bibtex FlowAllocationModuleForHydraulic-supplementary
+%        && pdflatex FlowAllocationModuleForHydraulic-supplementary (x2)
+%
+% Same anonymization hard constraint as the main paper: "Aqueduct A/B/C"
+% only, never real utility names or locations.
+% ============================================================================
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.8cm]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+% hyperref LAST, same reasoning as the main paper: `url` typesets an address but
+% creates no link. Here it mainly makes the many Sec./Table cross-references
+% clickable. `hidelinks` leaves print output unchanged.
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
+
+\newcommand{\worstof}{\mathrm{worst\_of}}
+\newcommand{\bestof}{\mathrm{best\_of}}
+% Supplementary sections are S1, S2, ...
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+
+\title{Supplementary Material\\[2mm]
+\large Composable, Knowledge-Driven Disservice Propagation for Complex Interdependent
+Services with a Flow-Allocation Module Validated Against Hydraulic Simulation}
+\author{Cristian Curaba \and Stefano Grimaz\\
+\normalsize University of Udine, Udine, Italy}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent This document specifies the setup behind the main paper's results
+(Sec.~\ref{app:importer}--\ref{app:inputs}), reports them in full
+(Sec.~\ref{app:extended}--\ref{app:sensitivity}), records what did not work
+(Sec.~\ref{app:negative}), and measures cost (Sec.~\ref{app:cost}). Main-paper
+sections are cited as ``main paper, Sec.~$n$''. The critical-class detection
+figures share the main paper's Table~1 with the per-family FMS and are not
+repeated here.
+
+% ============================================================================
+\section{The EPANET Importer in Full}\label{app:importer}
+
+The main paper's Sec.~4 summarizes the import decisions that carry fidelity.
+This section specifies every stage. The parameterization actually used is in
+Sec.~\ref{app:repro}.
+
+\emph{Structural mapping.} Reservoirs and tanks both become source nodes, with
+supply set by \emph{kind}. A reservoir is a fixed-head body whose outlet pipes
+limit delivery, so it becomes an \emph{unbounded} source --- matching how the
+WNTR solver treats it, and keeping multi-source failure comparable against the
+oracle. A tank's supply is bounded instead: it becomes a \emph{rate-limited} source
+whose ceiling is its \emph{nominal delivered outflow} --- the flow observed on its
+incident links in one solve at nominal demand. That bound is a \emph{rate}: nothing about it runs out.
+A tank's stored volume enters the model as a separate, temporal attribute, its usable volume divided by downstream demand becoming
+a \emph{backup duration} in hours, so the reserve is imported as a countdown
+that starts when the tank's own feed is cut rather than as extra flow. Node
+functionality then scales the rate: a source at level $2$ of $3$ injects a
+proportional fraction of its ceiling. Demanding junctions are served
+nodes; pumps and valves become inline \textsc{Requisite}-typed nodes, so their
+operating state gates downstream flow through the same logical propagation with no
+special-cased device logic; pipes become capacitated, directed edges. Junction
+demand is taken at the single pattern hour of maximum total consumption.
+
+The tank rule has one exception, and it is load-bearing. A tank reachable from a
+reservoir only through a pump is not a store the network draws down but a
+\emph{pass-through} the pumps keep full, and its throughput is set by its pipes,
+not its geometry. We detect this structurally --- a tank outside the component
+every reservoir reaches through pipes and valves alone --- and give such tanks
+incident-pipe capacity instead. Without it C-Town, whose seven tanks are all
+pump-fed, reads as mass starvation: mean FMS $0.03$ against $0.91$ with the rule.
+Which of the two tank behaviours of Sec.~\ref{app:negative} applies to a network
+follows from the same distinction.
+
+\emph{Orientation from simulation.} A \texttt{.inp} file's declared pipe
+direction is one arbitrary operating snapshot; the true direction can differ and
+even reverse under another operating point. We therefore run many steady-state solves
+and read each pipe's direction from the \emph{sign} of its flow.
+
+Three cases arise, separated by two velocity thresholds. A link whose fastest
+reading in either direction never clears a noise floor ($10^{-4}$\,m/s) carries
+no signal: it takes a topology-only (breadth-first) orientation guess and the
+$1$\,m/s fallback velocity. A link clearing the floor in \emph{both} directions
+is genuinely two-way and becomes two opposed directed edges, each carrying the
+pipe's whole capacity. The third case is the one worth stating: a link
+clearing the floor in only \emph{one} direction, but at under $0.3$\,m/s ---
+below the self-cleansing velocity a real main is designed for, where confidently
+one-way trunk flow runs at $0.9$--$4$\,m/s --- is \emph{also} split. The
+asymmetry is deliberate: near a near-zero equilibrium the solver's sign is as
+likely noise as signal, and forcing the wrong one can silently disconnect every
+junction downstream, whereas splitting a pipe that really was one-way costs an
+unused reverse capacity. We tried the stricter alternative --- an absolute-flow
+threshold plus a dominance ratio to pick a winner --- and reverted it: it fixed
+one noisy leaf pipe on the largest aqueduct but scored materially worse across
+the benchmark, severing genuine near-balance points.
+
+\emph{The solves.} \emph{(1)~A demand solve} raises every junction's demand
+together to several times nominal --- as high as the network still converges,
+stepping down adaptively. \emph{(2)~Contingency solves} close one link at a
+time: the top tenth of pipes by diameter and every pump, plus a bounded random
+sample of the rest, re-solving at nominal demand and undoing each closure before
+the next. ``Closing'' sets EPANET status to \textsc{closed}, the same operation
+the validation uses for a break. The second family is what reveals
+\emph{reversal}: a backup pipe sits nearly idle in normal operation and shows its
+working direction only once an upstream link fails and flow reroutes onto it. On
+Net3, a $203$\,mm backup main carries almost no flow under demand escalation
+alone, but a clear reverse flow once an upstream pipe is closed.
+
+\emph{Capacity from a uniform design velocity.} Diameter alone does not fix
+usable capacity, but a diameter and an assumed velocity do: capacity is
+$\tfrac{\pi}{4}d^2 v_{\text{design}}$ with $v_{\text{design}}=2.5$\,m/s, the
+standard water-main design velocity (an exposed import parameter). We initially
+sized capacity per-pipe from the \emph{peak} velocity each pipe reaches across
+the solves above; the ablation of Sec.~\ref{app:ablation} found this does no
+better, so we adopt the simpler, reproducible constant.
+
+\emph{Skeletonization to a node budget.} Real utility exports exceed practical
+importer budgets by an order of magnitude, so the pipeline can reduce to a target
+node count via WNTR's demand-conserving skeletonization --- branch trimming plus
+series and parallel pipe merges below a diameter threshold, searched for the
+smallest threshold meeting the budget. It is bypassed throughout the main paper's
+Sec.~5, which imports every network in full.
+
+% ============================================================================
+\section{Experimental Setup and Protocol}\label{app:repro}
+
+All numbers in the main paper come from one harness
+(\texttt{scripts/validate\_faithfulness.py} in the released code) on a single
+machine. This section records every parameter it uses.
+
+\emph{Software.} Python 3.12.3; WNTR 1.5.0 (driving EPANET~2.2); NetworkX 3.6.1;
+NumPy 2.5.1. All randomness flows through seeded \texttt{random.Random}
+instances, and container iteration is explicitly sorted wherever order can
+influence a solver, so runs reproduce across processes and machines.
+
+\emph{Networks.} Three public EPANET examples, three anonymized Italian aqueduct
+exports, and two public medium benchmarks; all imported in full, no
+skeletonization.
+
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+ & junctions & demand $>0$ & pipes & pumps & tanks & reservoirs\\
+\midrule
+Net1 & 9 & 8 & 12 & 1 & 1 & 1\\
+Net2 & 35 & 32 & 40 & 0 & 1 & 0\\
+Net3 & 92 & 59 & 117 & 2 & 3 & 2\\
+Aqueduct A & 417 & 410 & 437 & 0 & 0 & 2\\
+Aqueduct B & 439 & 424 & 499 & 1 & 3 & 1\\
+Aqueduct C & 607 & 601 & 674 & 0 & 1 & 1\\
+Modena & 268 & 245 & 317 & 0 & 0 & 4\\
+C-Town & 388 & 334 & 429 & 11 & 7 & 1\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\emph{Import parameterization} (Sec.~\ref{app:importer}). Demand snapshot:
+\texttt{peak\_hour}, fixed onto every junction before any solve. Capacity
+(adopted default): $\pi/4\,d^2\,v_{\text{design}}$, $v_{\text{design}}=2.5$\,m/s,
+no solve. The retained per-pipe drill (Table~\ref{tab:capmethod}) instead takes
+the maximum peak velocity over (a)~a demand solve at the highest multiplier
+$\le 8\times$ the network still converges at and (b)~contingency closures, giving
+$\pi/4\,d^2 \min(v_{\mathrm{peak}}\!\times\!2,\ 3\,\text{m/s})$. Both methods
+still run the solves for \emph{orientation}: contingency discovery closes the
+top-tenth-by-diameter pipes and every pump --- exhaustively under the adopted
+configuration (\texttt{--contingency-exhaustive-trunk}) rather than sampled ---
+plus a bounded uniform sample of the remaining links, as singles and optional
+trunk pairs, with non-converged solves discarded. Sources: \textbf{reservoirs
+unbounded}, \textbf{tanks} at nominal delivered outflow (pump-fed tanks excepted,
+Sec.~\ref{app:importer}). Functionality scale $N=3$; flow quantities rescaled by
+$10^6$. \textbf{Priorities: none} --- every junction at the default tier, so the
+allocation is a flat max-min fair share.
+
+\emph{Engine configuration.} Tiered max-min fair-share allocation (the default),
+integer fixed-point scale $10^3$, monotone fixed-point iteration to convergence.
+
+\emph{Ground truth.} One steady-state pressure-driven solve per situation
+(EPANET via WNTR, demand model PDD, required pressure $20\,$m, minimum pressure
+$0\,$m, duration 0, the model's global demand pattern cleared, every pump opened
+to match the working-condition baseline, broken links closed). Two corrections:
+solves reporting ``system unbalanced'' are discarded, and demand junctions with
+no undirected path to any source through in-service links are forced to ratio $0$
+before quantization (those are nodes that cannot phisically receive water).
+
+\emph{Situations.} Four families, each capped at $\sim\!60$ per network (10
+single-, 20 double-, 30 triple-element closures where enough elements exist).
+\emph{cluster}: breakable links within 2 topological hops of a random epicenter,
+over seeds $\{1,2,3\}$ --- the one random family. \emph{targeted}: top-20\%-diameter
+pipes plus all pumps, closed in singles/pairs/triplets, deterministic, largest
+first. \emph{source}: reservoir-outlet closures. \emph{tank}: tank isolation
+(every incident link). The combinatorial families are deterministic, so a network
+with few reservoirs or tanks contributes proportionally fewer of those. Failed
+ground-truth solves are skipped, leaving $n = 939$ scored situations.
+
+\emph{Comparison semantics --- what makes it ``the same situation''.}
+(i)~\textbf{Interventions are binary.} A situation closes links \emph{fully};
+intermediate functionality levels never appear as benchmark \emph{inputs},
+because EPANET has no partially degraded pipe. The module's proportional capacity
+scaling is therefore exercised only in the \emph{outputs}, not validated as an
+input mechanism. (ii)~\textbf{Node outages are incident-link closures}, since
+EPANET cannot remove a node; on the module side the node itself is set to the
+lowest level. (iii)~\textbf{Two different graphs are compared.} The module
+propagates over the \emph{imported} model (inline pump/valve nodes, split
+bidirectional edges --- not isomorphic to the \texttt{.inp} graph); junctions
+match by round-trip identity, and each broken link maps to its imported edge(s)
+and inline node. (iv)~\textbf{Scored population}: only demand-bearing junctions,
+weighted by demand. (v)~\textbf{Out of scope}: EPANET control rules remain in the
+ground-truth model (at a single steady state only their $t{=}0$ effect matters,
+and we accept the result as ground truth); emitters, leakage, valve settings
+beyond a capacity cap and minor losses are not represented; tank levels are fixed
+at initial values, no drawdown. (vi)~\textbf{Thresholds}: levels quantize as
+$\max(1,\min(N,\lceil r \cdot N\rceil))$, so at $N{=}3$ ``critical'' means served
+ratio $\le 1/3$.
+
+\emph{Metric aggregation.} Within a situation, FMS is a demand-weighted mean over
+that situation's demand-bearing junctions; the reported figure is the mean of those
+per-situation values. The $95\%$ intervals in the main text are percentile bootstrap
+intervals over situations ($10^4$ resamples of the paired per-situation differences).
+
+Detection is aggregated the same way: precision and recall are computed inside each
+situation and then averaged. This makes each situation one unit of evidence --- one
+failure, called correctly or not --- which is the question a resilience assessment
+actually poses, and it gives a break on a nine-junction network the same weight as one
+on a six-hundred-junction network.
+
+Two situation classes need a stated convention. In $187$ of the $939$ situations the
+network's redundancy absorbs the disruption entirely and no junction is critical in the
+ground truth; recall is undefined there, and we credit a predictor that correctly
+reports none with recall $1$. Symmetrically, a predictor that flags nothing anywhere
+has undefined precision, and we credit it with precision $1$. The alternative is to
+discard those situations, which would drop a fifth of the benchmark --- and precisely
+the fifth where a false alarm is most costly, since the correct answer is that service
+holds. An absorbed disruption is a question with an answer, and answering it correctly
+is a success.
+
+% ============================================================================
+\section{Input Requirements by Mechanism}\label{app:inputs}
+
+Table~\ref{tab:inputs} contrasts what a hydraulic simulation needs with what each
+propagation mechanism needs. It is the basis of the architecture's data-parsimony
+claim and of the cost argument in Sec.~\ref{app:cost}: the logical propagation needs
+only structure and category assignments --- no demand, capacity, or hydraulic data
+--- which is the structural reason it requires no physical oracle to validate
+(main paper, Sec.~6), unlike the flow module.
+
+\begin{table}[h]
+\centering
+\caption{Input requirements: hydraulic simulation vs.\ the two propagation
+mechanisms. A hydraulic solver takes diameter, roughness, length, elevation and pump
+curves and derives what a conduit carries; the flow module takes that carrying capacity
+directly. Guards default to worst-case full dependency when undeclared, and shedding
+priority is left unset in every experiment reported here}\label{tab:inputs}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Required input & EPANET/WNTR & Flow module & Logical propagation\\
+\midrule
+Topology (nodes, links) & \(\bullet\) & \(\bullet\) & \(\bullet\)\\
+Category assignments & --- & \(\bullet\) & \(\bullet\)\\
+Per-node demand & \(\bullet\) & \(\bullet\) & ---\\
+Per-edge transport capacity & --- & \(\bullet\) & ---\\
+Hydraulic specifications & \(\bullet\) & --- & ---\\
+Shedding priority & --- & optional & ---\\
+Guards (dependency level, backup) & --- & optional & optional\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================================
+\section{Extended Validation Across Failure Families}\label{app:extended}
+
+Table~\ref{tab:extended} gives mean FMS for every network $\times$ family cell.
+\emph{cluster} is the strongest family in aggregate ($0.972$) and \emph{source}
+the weakest ($0.780$), with \emph{targeted} and \emph{tank} between them ($0.871$
+each) --- but those two carry different content: \emph{targeted} is the
+capacity-loaded family that forces the most rerouting, while \emph{tank} is
+dominated by the benchmark-semantics artifact of Sec.~\ref{app:negative}.
+
+The weakest well-sampled cell is Modena under \emph{targeted} ($0.636$ over $60$
+situations); Net3's \emph{source} cell is lower still ($0.372$) but rests on three.
+Absolute FMS is the wrong lens for comparing networks, though, since a network that barely degrades
+under our families leaves almost no error to remove: summed shortfall
+($1-\mathrm{FMS}$) tracks how many situations a network yields (Spearman $+0.76$
+against situation count) more than how well the module does on it. Table~\ref{tab:skill}
+therefore reports \emph{skill} against the null model.
+
+\begin{table}[h]
+\centering
+\caption{Per-network relative performance. $\bar{e}$ is the mean per-situation
+shortfall $1-\mathrm{FMS}$; $\bar{e}_{\mathrm{null}}$ the same for the all-operational
+null model; skill is $1-\bar{e}/\bar{e}_{\mathrm{null}}$ ($1$ perfect, $0$ no better
+than predicting no loss, negative worse). Ordered by skill}\label{tab:skill}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Network & junctions & situations & $\bar{e}$ & $\bar{e}_{\mathrm{null}}$ & skill\\
+\midrule
+Net2       &  35 & 113 & 0.000 & 0.247 & $1.00$\\
+Net1       &   9 &  68 & 0.003 & 0.439 & $0.99$\\
+Aqueduct A & 417 & 123 & 0.007 & 0.310 & $0.98$\\
+Aqueduct B & 439 &  75 & 0.018 & 0.049 & $0.64$\\
+Aqueduct C & 607 & 118 & 0.132 & 0.216 & $0.39$\\
+Modena     & 268 & 134 & 0.200 & 0.268 & $0.25$\\
+C-Town     & 388 & 178 & 0.089 & 0.020 & $-3.40$\\
+Net3       &  92 & 130 & 0.125 & 0.024 & $-4.21$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The ordering this gives differs from the absolute one and is the more useful of the
+two. Modena and Aqueduct~C carry the largest absolute shortfall yet still remove a
+quarter to two-fifths of the null's error. Net3 and C-Town, middling in absolute
+terms, are the two networks where the module is \emph{worse than doing nothing}: both
+have $\bar{e}_{\mathrm{null}}$ near $0.02$, so their families barely disturb service at
+all, and the module's over-warning costs several times the little there was to gain.
+The ratio is volatile at so small a denominator --- the sign is not, and the sign is
+the finding. The causes differ by network and are separated in the main paper's Sec.~6;
+per-network critical-class precision and recall appear in Table~\ref{tab:capmethod}'s
+``Uniform'' columns, that being the adopted configuration.
+
+\begin{table}[t]
+\centering
+\caption{Mean FMS by network (rows) and failure family (columns), pooled over
+seeds. The three bottom rows score the main paper's baselines on the identical
+situations. A cell is empty when the network lacks the relevant element. Same
+$n=939$ scored situations as the main paper's Table~1}\label{tab:extended}
+{%
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Network & cluster & targeted & source & tank\\
+\midrule
+Net1        & 1.000 & 0.987 & 1.000 & 0.909\\
+Net2        & 1.000 & 1.000 & ---   & 1.000\\
+Net3        & 0.917 & 0.842 & 0.372 & 1.000\\
+Aqueduct A  & 0.995 & 0.991 & 1.000 & ---  \\
+Aqueduct B  & 0.999 & 0.959 & 1.000 & 0.929\\
+Aqueduct C  & 0.968 & 0.762 & 0.754 & 1.000\\
+Modena      & 0.970 & 0.636 & 0.777 & ---  \\
+C-Town      & 0.938 & 0.944 & 0.960 & 0.845\\
+\midrule
+Aggregate     & 0.972 & 0.871 & 0.780 & 0.871\\
+Null baseline & 0.875 & 0.744 & 0.646 & 0.953\\
+Reachability  & 0.969 & 0.855 & 0.729 & 0.977\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The binary metric inverts the FMS parity of the bottom rows. Reachability's
+precision is $1.00$ by construction --- it only ever calls a fully severed
+junction critical, and severed junctions are critical by the shared ground-truth
+correction --- so its recall \emph{is} its content, and that recall collapses
+exactly where capacity matters: $0.54$ under \emph{targeted} attack against the
+module's $0.90$, and $0.54$ under \emph{source} failure against $0.92$. Every
+critical junction it misses is connected to a source yet starved. The module pays
+for that recall in precision ($0.73$ on average), allocating scarce supply by fair
+share and so over-predicting. All figures use the adopted default: a flat
+allocation, priority unset throughout.
+
+% ============================================================================
+\section{What Carries the Fidelity: Orientation, Capacity, Priority}\label{app:ablation}
+
+Three inputs shape the imported flow module: which way each edge points, how much each
+pipe can carry, and who is protected under shortage. This section measures what each
+contributes. They are different kinds of question. Orientation is an \emph{ablation}:
+it is part of the shipped importer, so it can be removed and the loss measured.
+Capacity is a \emph{method comparison}: two candidate ways of setting it, one of which
+ships. Priority is a \emph{capability measurement}: what the input can make the model
+do, a separate question from whether it improves agreement with hydraulics, since a
+protect-ordering has no counterpart in WNTR to be checked against. All run under the
+protocol of Sec.~\ref{app:repro} with the canonical configuration otherwise unchanged
+--- orientation and capacity over all eight networks, priority over two.
+
+\emph{Orientation is what the import-time solves buy.} Under the shipped configuration
+the demand and contingency solves serve one purpose: they \emph{orient} edges from the
+sign of the flow, including pipes that carry flow only once a closure reroutes onto
+them. Capacity comes from a constant and priority is left unset, so nothing else in the
+pipeline consumes them. Table~\ref{tab:orient} removes orientation and measures the
+cost: in the ablated arm every pipe becomes two opposed directed edges, the graph as it
+stands with no direction information at all. Capacity is identical between arms, the
+uniform design velocity never reading the solves.
+
+Orientation buys \emph{recall} and costs \emph{precision}. Discarding it moves average
+recall from $0.944$ to $0.898$ and average precision from $0.729$ to $0.862$: the extra
+edges let flow reroute along paths the real network does not offer, so fewer junctions
+are called starved --- which removes false alarms and conceals real ones together.
+Recall falls on five of the eight networks, by as much as $0.239$. A
+resilience assessment is judged on the criticals it finds, and that is why the importer
+orients.
+
+One network settles the question by itself. Aqueduct~C is the only one where removing
+orientation costs on every measure at once --- FMS $-0.144$, precision $-0.136$, recall
+$-0.239$ --- and it is the most strongly directional network we import. There the
+phantom reroutes do not merely soften the module's answer; they invent supply routes
+that carry the network through failures it does not survive.
+
+The same table localizes C-Town's over-warning. Its precision rises from $0.130$ to
+$0.774$ once orientation is discarded, the largest single effect here, which places the
+cause in the orientation the sweep assigns rather than in capacity, supply or
+allocation. C-Town is the network whose seven tanks are all pump-fed, so its flow
+directions genuinely reverse as pumps cycle, and one orientation drawn from a single
+operating regime is the wrong object to give it. Why the sweep settles on the
+directions it does there is open; that the over-warning follows from them is not.
+
+\begin{table}[t]
+\centering
+\caption{Orientation ablation over all eight networks. ``Oriented'' is the shipped
+importer, taking each pipe's direction from the sign of its simulated flow;
+``Undirected'' splits every pipe into two opposed directed edges, the graph with no
+direction information. Capacity, demand, priority, situations and ground truth are
+identical between arms. \emph{edges} is the oriented edge count. Bold marks the better
+arm where they differ}\label{tab:orient}
+\small
+\begin{tabular}{lrccc@{\hskip 1.5em}ccc}
+\toprule
+ & & \multicolumn{3}{c}{Oriented (shipped)} & \multicolumn{3}{c}{Undirected} \\
+\cmidrule(lr){3-5}\cmidrule(l){6-8}
+Network & edges & FMS & $P$ & $R$ & FMS & $P$ & $R$ \\
+\midrule
+Net1       &   20 & 0.997 & 1.000 & 1.000 & 0.997 & 1.000 & 1.000 \\
+Net2       &   60 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 \\
+Net3       &  194 & 0.875 & 0.775 & \textbf{0.991} & \textbf{0.882} & \textbf{0.849} & 0.977 \\
+Aqueduct A &  771 & 0.993 & 0.979 & \textbf{0.942} & \textbf{0.994} & \textbf{1.000} & 0.937 \\
+Aqueduct B &  853 & 0.982 & 0.949 & \textbf{0.855} & \textbf{0.987} & \textbf{0.993} & 0.723 \\
+Aqueduct C & 1290 & \textbf{0.868} & \textbf{0.874} & \textbf{0.890} & 0.724 & 0.738 & 0.651 \\
+Modena     &  575 & \textbf{0.800} & 0.635 & 0.972 & 0.787 & \textbf{0.714} & \textbf{0.974} \\
+C-Town     &  655 & \textbf{0.911} & 0.130 & \textbf{0.908} & 0.869 & \textbf{0.774} & 0.889 \\
+\midrule
+Average    &      & \textbf{0.918} & 0.729 & \textbf{0.944} & 0.892 & \textbf{0.862} & 0.898 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Capacity method.} The importer sizes every pipe at a single design
+velocity, $\tfrac{\pi}{4}d^2 v_{\text{design}}$ with $v_{\text{design}}=2.5$\,m/s. The
+alternative is a per-pipe ``drill'' that sizes each pipe from the peak velocity it
+reaches across the hydraulic solves, on the reasoning that a busier pipe should carry
+more. Table~\ref{tab:capmethod} runs both arms with orientation held fixed.
+
+The constant wins. It gives higher FMS on five networks and matches the drill on the
+other three, higher precision on four and lower on one, and averages $0.918$ FMS against
+$0.905$ and $0.729$ precision against $0.707$, for $F_1$ $0.823$ against $0.813$. The gains are largest on
+the capacity-loaded networks (precision $+0.08$ on Net3, $+0.07$ on Aqueduct~C). The
+drill buys back a little recall ($0.957$ against $0.944$ on average, from flagging more
+junctions) and C-Town's already-degenerate precision is marginally higher under it
+($0.133$ against $0.130$). We ship the constant: it matches or beats a hydraulic
+discovery step while being simpler, standard, and reproducible without any solve. It
+must be sized correctly, though --- at $1$--$2$\,m/s a constant is too small and scores
+worse (Sec.~\ref{app:negative}).
+
+\begin{table}[t]
+\centering
+\caption{Capacity-method ablation, four families pooled per network. ``Uniform'' =
+capacity from a single $2.5$\,m/s design velocity (adopted); ``Drill'' brings per-pipe
+peak-velocity discovery from the hydraulic solves. Orientation is identical in both
+arms and both leave priority unset. $P$/$R$ are critical-class precision and recall.
+Bold marks the better arm where they differ}\label{tab:capmethod}
+\small
+\begin{tabular}{lccc@{\hskip 1.5em}ccc}
+\toprule
+ & \multicolumn{3}{c}{Uniform (adopted)} & \multicolumn{3}{c}{Drill} \\
+\cmidrule(r){2-4}\cmidrule(l){5-7}
+Network & FMS & $P$ & $R$ & FMS & $P$ & $R$ \\
+\midrule
+Net1       & 0.997 & 1.000 & 1.000 & 0.997 & 1.000 & 1.000 \\
+Net2       & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 \\
+Net3       & \textbf{0.875} & \textbf{0.775} & 0.991 & 0.843 & 0.700 & \textbf{0.997} \\
+Aqueduct A & 0.993 & 0.979 & 0.942 & 0.993 & 0.979 & 0.942 \\
+Aqueduct B & \textbf{0.982} & \textbf{0.949} & 0.855 & 0.967 & 0.940 & 0.855 \\
+Aqueduct C & \textbf{0.868} & \textbf{0.874} & 0.890 & 0.845 & 0.803 & \textbf{0.928} \\
+Modena     & \textbf{0.800} & \textbf{0.635} & 0.972 & 0.778 & 0.616 & \textbf{0.989} \\
+C-Town     & \textbf{0.911} & 0.130 & 0.908 & 0.902 & \textbf{0.133} & \textbf{0.934} \\
+\midrule
+Average    & \textbf{0.918} & \textbf{0.729} & 0.944 & 0.905 & 0.707 & \textbf{0.957} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Priority as controllability.} Shedding priority states whom to protect. It is a
+normative input, and WNTR has no equivalent of it, so we measure whether the model
+\emph{realizes} a specified protect-ordering rather than whether that ordering agrees
+with hydraulics. For each situation we take a target shed/protect pattern --- that
+situation's own WNTR-served set serves as a well-defined one --- and ask two questions.
+How far can a priority vector steer the model toward the target? And does one fixed
+vector keep that effect on situations it was not built from? Table~\ref{tab:steering}
+answers both on Modena and C-Town, chosen because between them they show the two kinds
+of divergence the module produces. The mechanism throughout is the allocation's
+strict-tier preemption: a higher-priority junction is rationed before any
+lower-priority one competes.
+
+\begin{table}[h]
+\centering
+\caption{Shedding-priority steering: demand-weighted agreement with the target pattern,
+before $\to$ after, with the gain in bold where material. \emph{Per-situation} refits a
+vector for every situation and measures the reachable range. \emph{Single vector} fits
+one vector per network on its ten worst situations, then scores it both there and on
+the remaining situations it was not fitted to. Both vectors are built from the ground
+truth, so neither is available to the importer (Sec.~\ref{app:negative})}\label{tab:steering}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & Modena & C-Town\\
+\midrule
+per-situation, worst-10     & $0.466 \to 0.831$ \textbf{(+0.365)} & $0.590 \to 0.679$ (+0.089)\\
+\quad of which moved        & \textbf{10 of 10} & 1 of 10\\
+single vector, fit set      & $0.466 \to 0.788$ \textbf{(+0.322)} & $0.590 \to 0.657$ (+0.067)\\
+single vector, held out     & $0.827 \to 0.907$ \textbf{(+0.080)} & $0.930 \to 0.930$ (+0.000)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{The range is wide, and bounded by the kind of error.} On Modena all ten of the
+worst situations improve, each by $+0.33$ to $+0.55$. On C-Town one situation improves
+enormously (\texttt{cluster\#36}, $0.040 \to 0.904$) and the remaining nine, all from
+the \emph{tank} family, move by $+0.012$ or less --- and that is under a per-situation
+oracle, the most favourable condition the lever can be given. The reason is that
+priority \emph{redirects} a shortage; it cannot correct one. Modena's divergence is
+distributional: fair share spreads a shortage that pressure-driven hydraulics
+concentrate, so restating who is protected repairs it. C-Town's tank divergence is the
+pump-fed over-warning of Sec.~\ref{app:negative}, where the shortage itself is wrong,
+and no ordering of the victims helps. Where the total is right and the distribution
+wrong the lever has wide range; where the total is wrong it has none.
+
+\emph{Generalization splits the same way.} One fixed vector per network keeps most of
+the range on Modena, including $+0.08$ on situations it was never fitted to, and none
+of it on C-Town. So on a network whose errors are distributional, a single expert-set
+ordering transfers beyond the situations used to choose it.
+
+This does not make priority derivable. Both vectors are fitted from the ground truth
+the importer is trying to predict, and the orderings that can actually be derived from
+a network --- solve-free proxies and a contingency-severity ranking --- fail
+(Sec.~\ref{app:negative}). The claim is an authoring one: an expert who knows how a
+utility distributes water under shortage states it in one attribute per node, and on a
+distributional network that statement both realizes the intended policy and carries to
+situations it was not tuned on. Both arms:
+\texttt{experiments/aqueducts/priority\_steering.py}.
+
+% ============================================================================
+\section{Ground-Truth Threshold Sensitivity}\label{app:sensitivity}
+
+The comparison inherits exactly one hydraulic constant --- the PDD
+service-pressure convention (required $20$\,m, minimum $0$\,m) --- and one
+quantization choice, the scale size $N{=}3$. A headline that held only at one
+arbitrary setting of either would be weaker than it looks, so we re-ran the full
+protocol on Net1 and Net3 (seeds $\{1,2,3\}$, $192$ scored situations per arm)
+varying required pressure $\{15,20,25\}$\,m, minimum pressure $\{0,5\}$\,m, and
+$N \in \{3,5,10\}$.
+
+Mean FMS spans $0.988$--$0.992$ across every arm against that sweep's own
+baseline of $0.989$ --- a spread of $0.004$, far below the effect of any
+modelling choice tested elsewhere. The $N{=}10$ arm, where agreement must hold at
+a granularity three times finer than the headline scale, loses only $0.001$: the
+module's delivered-ratio estimates track the hydraulic ratios themselves, not
+just their coarse bucketing. Neither the service-pressure convention nor the
+quantization granularity is doing the work. (This sweep predates the
+uniform-capacity configuration, so its absolute level sits above the main paper's
+Table~1; what it establishes is the \emph{insensitivity}, a within-sweep
+comparison.)
+
+% ============================================================================
+\section{Negative Results: What Did Not Improve Fidelity}\label{app:negative}
+% Source: experiments/aqueducts/ATTEMPTS.md (2026-07-12..14) and
+% archive/pre-rebuild-variants/{algorithm_variants,importer_variants}.py.
+% Benchmark: the 10 lowest-FMS situations across five networks (worst-10),
+% ground truth corrected for the singular-PDD artifact described below.
+We record the alternatives we rejected, since several are the ``obvious'' fixes a
+reader might propose. Unless stated otherwise these were measured on the ten situations
+where the module diverges most from the ground truth: mean FMS $0.770$ for the pipeline
+as first described, which the capacity-margin and pipe-splitting refinements raise to
+$0.927$. These are historical measurements taken on that earlier pipeline during the
+exploration logged in \texttt{experiments/aqueducts/ATTEMPTS.md}, which records each
+figure and the run it came from; the shipped configuration is the one every other
+section reports, and re-running these arms today would need the superseded importer.
+
+\emph{Capacity-margin sensitivity (retained drill only).} The $\times 2$ margin
+under the per-pipe drill --- the adopted default uses a fixed design velocity and
+no margin --- is an exposed parameter, not a value fitted to the evaluation.
+Swept over $\{1, 1.25, 1.5, 1.75, 2, 3\}$, fidelity is \emph{insensitive} on four
+networks (Net1, Net2, Aqueducts~A and~B, flat to two decimals) and climbs to a
+plateau on two (Net3 $0.95\!\to\!1.00$, knee near $\times 1.5$; Aqueduct~C
+$0.14\!\to\!0.89$ by $\times 2$). Pooled FMS rises $0.83\!\to\!0.96$ from
+$\times 1$ to $\times 2$ and only $+0.01$ more by $\times 3$; recall is flat
+throughout while precision tracks FMS. So $\times 2$ sits on the plateau for
+every network, and the velocity it implies stays under the $3$\,m/s design ceiling the
+importer caps every margined pipe at. Held-out selection on other
+public networks (ky10, ky4, Net6) was attempted and abandoned --- they do not
+converge or self-starve at peak demand without per-network calibration, and
+skeletonizing does not help. Harness:
+\texttt{experiments/aqueducts/margin\_sweep.py}.
+
+\emph{Source supply.} Setting \emph{reservoir} supply to a bounded nominal outflow rate
+(as we do for tanks) breaks source-failure validation: a failed reservoir's
+survivors, now capped, cannot cover its lost demand, so the module over-predicts
+wholesale, whereas EPANET's fixed-head reservoirs supply the slack. Reservoirs
+are therefore left unbounded.
+
+The symmetric effect appears on \emph{gravity} tanks, which we do cap at
+sustainable nominal outflow while the $t=0$ ground truth treats them as
+fixed-head nodes draining as fast as their pipes permit. On the Net3 situation
+where the module diverges most (\texttt{cluster\#25}, FMS $0.058$, which no
+importer or allocation lever moves) a break isolates a district onto three local
+gravity tanks. A four-way max-flow discriminator localizes the binding constraint
+to source supply rather than conveyance or orientation: directed with real supply
+$48.5\%$ of demand served, directed with supply $=\infty$ $84.9\%$, bidirectional
+with real supply $49.9\%$, bidirectional with supply $=\infty$ $100\%$. Measured
+against the cap, WNTR draws $6.6\times$ the nominal rate from those tanks (one at
+$20\times$), giving $48\%$ served against the WNTR solve's $134\%$. This is a
+depletion-aware model read against a depletion-blind snapshot; an extended-period
+ground truth would narrow it. We keep the cap regardless: raising it to match the
+$t=0$ surge would make the module optimistic about supply no real tank sustains.
+
+This is \emph{not} the explanation for the tank family's average precision of
+$0.20$ (main paper, Sec.~6). That number is C-Town, which supplies $57$ of the
+family's $72$ situations and scores $0.00$ on every one; its tanks are pump-fed
+pass-throughs sized from incident pipes, so no cap binds them. Their over-warning
+follows instead from the orientation the sweep assigns: discarding orientation lifts
+C-Town's precision from $0.130$ to $0.774$ (Table~\ref{tab:orient}). We separate the
+two mechanisms rather than let one stand in for the other.
+
+\emph{Deriving a shedding order.} Three solve-free proxies for junction
+vulnerability (shortest Hazen-Williams distance to a source, junction-to-source
+effective resistance, and effective resistance under topological contingency)
+each scored \emph{worse} than a flat allocation. A more elaborate
+contingency-solve ranking --- closing cycle-trunk links singly, in pairs and in
+triplets, then ordering junctions by accumulated demand-weighted unmet service
+--- shifts the operating point but only as a trade (Table~\ref{tab:priority}):
+recall $0.90 \to 0.92$, precision $0.70 \to 0.67$, FMS one point. Which junctions
+a network abandons under structural failure is a demand-and-pressure property no
+static ordering captures, and an ordering is in any case operator policy rather
+than prediction. The importer therefore assigns none.
+
+\begin{table}[h]
+\centering
+\caption{Why the importer derives no shedding order: critical-class detection
+over the targeted and source families, flat allocation versus the
+cycle-aware contingency severity ranking. The ranking trades precision for recall
+rather than improving agreement}\label{tab:priority}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Shedding order & precision & recall & FMS\\
+\midrule
+none (flat, as reported)     & 0.70 & 0.90 & 0.87\\
+contingency severity ranking & 0.67 & 0.92 & 0.88\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Allocation shape.} The control arm was the single-solve min-cost max-flow
+(the module's alternative strategy). Replacing it with global proportional
+water-filling --- every consumer served the same feasible fraction --- is sharply
+worse ($0.373$): uniform allocation punishes consumers unrelated to the local
+bottleneck, which real hydraulics never does. Max-min fair share does beat the LP
+on \emph{as-imported} capacities ($0.774$ vs $0.724$, never losing), but the
+entire advantage vanishes once the capacity margin is applied ($0.918$ vs
+$0.927$), at materially more solver work. The apparent allocation-shape problem
+was an importer-attribute problem --- which is why the paper treats fair share as
+a scarcity-sharing \emph{policy} choice (equal-priority consumers degrade
+together instead of one being arbitrarily zeroed) rather than a fidelity
+optimization.
+
+\emph{Orientation and component fixes.} Adding a reverse edge to every one-way
+pipe (making the flow graph effectively undirected, as EPANET's links are)
+changes essentially nothing ($0.772$) and occasionally hurts via degenerate ties:
+the sweep's confident one-way calls are reliable, and the real directional defect
+was only the \emph{proportional} capacity split on pipes already known to be
+bidirectional. Lifting pump-curve and valve capacity caps, and removing source
+supply limits entirely, each had zero effect on all ten situations --- neither is
+ever the binding constraint. Replacing the sweep velocities with a low constant
+($1$--$2$\,m/s) looked worse ($0.681$--$0.791$), which we first read as evidence
+that the sweep's relative capacity profile carries information; the full ablation
+of Sec.~\ref{app:ablation} overturns that, the earlier result being an artifact
+of an under-sized constant on two networks.
+
+\emph{A dropped family.} \emph{Partial, system-wide} source degradation was
+tried and dropped: when every source weakens together the loss is diffuse and a
+trivial ``flag every junction'' baseline matches the module. It was replaced by
+concentrated source \emph{failure} (outlet closure).
+
+\emph{A ground-truth artifact, not a module error.} Where breaks sever a
+component from every source, the PDD system for that component is singular and
+WNTR converges, without warning, to an arbitrary internal circulation whose
+per-junction delivered demands read as fully served while summing to $\approx 0$.
+Two of the ten worst situations owed their entire apparent divergence to this:
+the module's ``everyone critical'' answer was correct and the ``ground truth''
+was not. We post-process the WNTR solve, marking demand junctions with no
+undirected path to a source through in-service elements as unserved, and report
+all FMS against the corrected reference.
+
+% ============================================================================
+\section{Computational Cost}\label{app:cost}
+
+Measured on the same single machine as every other number here (consumer Linux
+workstation, single core, Python 3.12; absolute times are machine-shaped, ratios
+are the content). Harness: \texttt{experiments/aqueducts/cost\_benchmark.py}.
+
+\emph{One-time import.} Parse plus the hydraulic sweeps that orient edges cost
+$0.1$--$5.9$\,s per network under the adopted exhaustive-trunk configuration.
+This is paid once per network, not per situation, and it is the only place the
+importer solves hydraulics at all.
+
+\emph{Per-situation.} Table~\ref{tab:cost} times one engine Propagation against
+one WNTR PDD solve of the same situation. The engine figure includes the deep copy of
+the model the harness takes before mutating it; we time that copy separately but leave
+it in the reported number rather than subtract it. Which situations are timed decides the
+answer, because engine cost tracks how much \emph{scarcity} a situation creates
+rather than how large the network is: the fair-share water-filling bisects for a
+common allotment and pays repeated max-flow solves per round, so a break that
+merely disconnects a leaf costs almost nothing while one forcing a large
+contended reroute costs seconds. We therefore sample evenly across the four
+families rather than in proportion to their sizes, which would let the mild
+\emph{cluster} family (459 of the 939 situations) set the figure. The
+within-network spread this exposes is part of the result: on Net3 the slowest
+situation is nearly $100\times$ the median.
+
+\begin{table}[h]
+\centering
+\caption{Per-situation cost, median over $3$ repeats of situations drawn evenly
+from the four families, observed range in brackets. Ratio is of the medians. The
+engine is at parity on textbook networks and one to two orders of magnitude
+slower at aqueduct scale}\label{tab:cost}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Network & import & engine (ms) & WNTR (ms) & ratio\\
+\midrule
+Net1       & $0.1$\,s & $12.6$ \; [$1.9$--$100$]        & $8.4$   & $1.5\times$\\
+Net3       & $0.4$\,s & $51.4$ \; [$41$--$4907$]        & $23.2$  & $2.2\times$\\
+Aqueduct A & $2.8$\,s & $4674$ \; [$3880$--$9674$]      & $82.2$  & $57\times$\\
+Aqueduct B & $4.3$\,s & $11152$ \; [$589$--$13687$]     & $104.4$ & $107\times$\\
+Aqueduct C & $5.9$\,s & $17039$ \; [$4083$--$25283$]    & $129.3$ & $132\times$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The conclusion is not a favourable one, and we state it plainly: this paper
+claims no runtime advantage over a dedicated hydraulic simulator, and at aqueduct
+scale the gap is not a constant factor to be tuned away but one to two orders of
+magnitude, with individual situations taking tens of seconds. 
+The architecture's case is the input requirements of
+Sec.~\ref{app:inputs} --- what it models without hydraulic data, and what it
+composes --- not speed. 
+
+\end{document}

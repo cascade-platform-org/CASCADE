@@ -340,6 +340,20 @@ function MergedViewCanvas() {
     }
   }, [activeTool]);
 
+  // The merged view has no single Canvas to add a node to — there's no
+  // node-creation handler wired up here at all. Auto-reset add-node tool and
+  // tell the user to pick a specific canvas layer instead.
+  useEffect(() => {
+    if (activeTool === "add-node") {
+      useUiStore.getState().pushToast({
+        message: "Select a canvas layer before adding a node — nodes can't be added from the merged view.",
+        variant: "warning",
+        durationMs: 4000,
+      });
+      useUiStore.getState().setActiveTool("select");
+    }
+  }, [activeTool]);
+
   // Ctrl+A: select all
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -375,7 +389,6 @@ function MergedViewCanvas() {
         panOnDrag={panMode ? true : PAN_ON_DRAG_MIDDLE}
         panOnScroll={false}
         selectionOnDrag={false}
-        zoomOnDoubleClick={false}
         connectionMode={ConnectionMode.Loose}
         nodesConnectable={false}
         onlyRenderVisibleElements

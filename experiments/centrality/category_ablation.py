@@ -190,8 +190,41 @@ def structural_indices(topology: Topology) -> dict[str, dict[str, float]]:
     }
 
 
-def topk(scores: dict[str, float], k: int) -> set[str]:
-    return set(sorted(scores, key=lambda v: -scores[v])[:k])
+def inclusion_prob(scores: dict[str, float], k: int) -> dict[str, float]:
+    """P(v lands in the top k) when ties at the cut are broken at random.
+
+    c_prop takes few distinct values under a parallel reading, so more nodes can
+    sit ON the top-k boundary than there are seats and the top-k SET is not
+    determined by the index. Sorting the dict would resolve that by node id, and
+    since both sides of an overlap share that id order the tied nodes enter both
+    sets together, inventing agreement. Each node instead carries the probability
+    that a random tie-break admits it: 1 above the cut, (seats/tied) on it,
+    0 below.
+    """
+    cut = sorted(scores.values(), reverse=True)[k - 1]
+    tied = [v for v in scores if scores[v] == cut]
+    seats = k - sum(1 for v in scores if scores[v] > cut)
+    return {v: 1.0 if scores[v] > cut else (seats / len(tied) if scores[v] == cut else 0.0)
+            for v in scores}
+
+
+def expected_overlap(a: dict[str, float], b: dict[str, float], k: int) -> float:
+    """Share of the top k that two indices agree on, averaged over random tie-breaks.
+
+    The two tie-breaks are independent, so the average intersection size is the
+    sum over nodes of the product of the two inclusion probabilities. Summing that
+    product IS the average shuffling would converge to, so the paper's "ties are
+    broken at random" is computed here rather than sampled: same number, no seed
+    and no draw count to report.
+    """
+    pa, pb = inclusion_prob(a, k), inclusion_prob(b, k)
+    return sum(pa[v] * pb[v] for v in pa) / k
+
+
+def determined_share(scores: dict[str, float], k: int) -> float:
+    """Share of the k seats the index fixes outright, leaving the rest tied."""
+    cut = sorted(scores.values(), reverse=True)[k - 1]
+    return sum(1 for v in scores if scores[v] > cut) / k
 
 
 def main() -> None:
@@ -233,7 +266,7 @@ def main() -> None:
                                  [score[v] for v in ids]).statistic
                 acc.setdefault(f"tau_{name}_L{n_cat}", []).append(tau)
                 acc.setdefault(f"top_{name}_L{n_cat}", []).append(
-                    len(topk(cond, k) & topk(score, k)) / k
+                    expected_overlap(cond, score, k)
                 )
 
         # The headline: the SAME graph, scored under the two extreme readings.
@@ -242,9 +275,11 @@ def main() -> None:
         acc.setdefault("tau_L1_vs_L8", []).append(
             kendalltau([lo[v] for v in ids], [hi[v] for v in ids]).statistic
         )
-        acc.setdefault("top_L1_vs_L8", []).append(
-            len(topk(lo, k) & topk(hi, k)) / k
-        )
+        acc.setdefault("top_L1_vs_L8", []).append(expected_overlap(lo, hi, k))
+        for n_cat in levels:
+            acc.setdefault(f"determined_L{n_cat}", []).append(
+                determined_share(per_level[n_cat], k)
+            )
 
     summary = {
         key: statistics.fmean([x for x in values if x == x])
@@ -257,19 +292,15 @@ def main() -> None:
     print(f"Fixed topology: n={args.n}, roots={args.roots}, "
           f"max parents={args.max_parents}, {args.reps} replicates\n")
     print("Same graph, same edges, same degrees — only the category labels change.\n")
-    print("Each cell is a mean over replicates with a 95% percentile-bootstrap "
-          "interval.\n")
-    header = (f"{'L':>3} {'mean loss':>22} {'live':>6} "
-              + " ".join(f"{'t_' + nm:>22}" for nm in ("reach", "indeg", "pagerank")))
+    print("Each cell is a mean over replicates.\n")
+    indices = ("reach", "pagerank", "indeg", "outdeg", "betw")
+    header = (f"{'L':>3} {'mean loss':>10} {'live':>6} "
+              + " ".join(f"{'t_' + nm:>10}" for nm in indices))
     print(header)
     for n_cat in levels:
-        def cell(key: str, places: int = 3) -> str:
-            lo, hi = ci[key]
-            return f"{summary[key]:.{places}f} [{lo:.{places}f},{hi:.{places}f}]"
-        row = (f"{n_cat:>3} {cell(f'omega_loss_mean_L{n_cat}', 4):>22} "
+        row = (f"{n_cat:>3} {summary[f'omega_loss_mean_L{n_cat}']:>10.4f} "
                f"{summary[f'live_L{n_cat}']:>6.2f} ")
-        row += " ".join(f"{cell(f'tau_{nm}_L{n_cat}'):>22}"
-                        for nm in ("reach", "indeg", "pagerank"))
+        row += " ".join(f"{summary[f'tau_{nm}_L{n_cat}']:>10.3f}" for nm in indices)
         print(row)
 
     tau_lo, tau_hi = ci["tau_L1_vs_L8"]

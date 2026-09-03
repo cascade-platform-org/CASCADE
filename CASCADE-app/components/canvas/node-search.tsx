@@ -8,12 +8,13 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, ScanSearch } from "lucide-react";
 import { Panel, useReactFlow } from "@xyflow/react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
 import type { Node } from "@/lib/schemas/network";
 import { levelColor } from "@/lib/colors";
 
@@ -130,10 +131,26 @@ export function NodeSearch({ nodes: nodesProp }: NodeSearchProps = {}) {
   }
 
   const showDropdown = open && query.trim().length > 0;
+  const attributeScanPanelOpen = useUiStore((s) => s.attributeScanPanelOpen);
 
   return (
     <Panel position="top-center">
-      <div className="relative w-64">
+      <div className="flex items-center gap-1.5">
+        {/* Attribute Scan — to the left of search, same floating-panel styling */}
+        <button
+          title="Attribute Scan"
+          onClick={() => useUiStore.getState().toggleAttributeScanPanel()}
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border shadow-sm backdrop-blur-sm transition-colors",
+            attributeScanPanelOpen
+              ? "border-blue-200 bg-blue-50/90 text-blue-600 dark:border-blue-800 dark:bg-blue-900/40 dark:text-blue-400"
+              : "border-zinc-200 bg-white/90 text-zinc-400 hover:text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/90 dark:hover:text-zinc-300",
+          )}
+        >
+          <ScanSearch size={16} />
+        </button>
+
+        <div className="relative w-64">
         {/* Search input */}
         <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
           <Search size={13} className="shrink-0 text-zinc-400" />
@@ -180,6 +197,7 @@ export function NodeSearch({ nodes: nodesProp }: NodeSearchProps = {}) {
             )}
           </div>
         )}
+        </div>
       </div>
     </Panel>
   );

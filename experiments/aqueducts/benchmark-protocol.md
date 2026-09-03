@@ -534,7 +534,7 @@ Zampis + Modena/CTown), one invocation each (families internal, cluster 3-seeded
 → `experiments/aqueducts/final_benchmark.csv`. Slow (hours) due to the priority tiering.
 Per-situation CSV → tables re-derived downstream.
 
-PENDING (after the run): update the PAPER (complenet.tex) — methods prose AND
+PENDING (after the run): update the PAPER (FlowAllocationModuleForHydraulic.tex) — methods prose AND
 headline numbers — to this setup. Deliberately NOT done yet: the numbers come
 from `final_benchmark.csv`, so paper narrative + tables get rewritten together
 once the run lands, to avoid a half-updated (new methods / old numbers) paper.

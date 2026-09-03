@@ -317,15 +317,37 @@ function FlowCanvas() {
     setInspectorOpen(true);
   }, [selectEdge, toggleEdge, setInspectorOpen]);
 
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((e: React.MouseEvent) => {
     setContextMenu(null);
     if (lassoActiveRef.current) {
       lassoActiveRef.current = false;
       return;
     }
+    if (activeTool === "add-node" && activeCanvas) {
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      const tpl = selectedNodeTemplate ? (nodeDefaults[selectedNodeTemplate] ?? {}) : {};
+      const node: CascadeNode = {
+        ...tpl,
+        id: `node-${nanoid(8)}`,
+        label: tpl.label ?? selectedNodeTemplate ?? "New Node",
+        node_type: tpl.node_type ?? "Service",
+        functionality: n,
+        position,
+      };
+      runWithHistory(() => {
+        upsertNode(node);
+        addNodeToCanvas(node.id, activeCanvas.id);
+      }, "Add node", { updateType: "graph_update", canvasId: activeCanvas.id });
+      selectNode(node.id);
+      setInspectorOpen(true);
+      return;
+    }
     clearSelection();
     setInspectorOpen(false);
-  }, [clearSelection, setInspectorOpen]);
+  }, [
+    activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition,
+    upsertNode, addNodeToCanvas, selectNode, clearSelection, setInspectorOpen,
+  ]);
 
   // ── Rectangle / box select ──
   // Two guards here prevent looping:
@@ -540,28 +562,6 @@ function FlowCanvas() {
     addNodeToCanvas, addEdgeToCanvas, pushToast,
   ]);
 
-  // ── Double-click on pane → add node (when add-node tool active) ──
-  const onPaneDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (activeTool !== "add-node" || !activeCanvas) return;
-    e.preventDefault();
-    const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    const tpl = selectedNodeTemplate ? (nodeDefaults[selectedNodeTemplate] ?? {}) : {};
-    const node: CascadeNode = {
-      ...tpl,
-      id: `node-${nanoid(8)}`,
-      label: tpl.label ?? selectedNodeTemplate ?? "New Node",
-      node_type: tpl.node_type ?? "Service",
-      functionality: n,
-      position,
-    };
-    runWithHistory(() => {
-      upsertNode(node);
-      addNodeToCanvas(node.id, activeCanvas.id);
-    }, "Add node", { updateType: "graph_update", canvasId: activeCanvas.id });
-    selectNode(node.id);
-    setInspectorOpen(true);
-  }, [activeTool, activeCanvas, n, selectedNodeTemplate, nodeDefaults, screenToFlowPosition, upsertNode, addNodeToCanvas, selectNode, setInspectorOpen]);
-
   // ── Right-click on pane → context menu ──
   const onPaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -622,11 +622,9 @@ function FlowCanvas() {
         onSelectionChange={onSelectionChange}
         onNodeContextMenu={onNodeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
-        onDoubleClick={onPaneDoubleClick}
         panOnDrag={panMode ? true : PAN_ON_DRAG_MIDDLE}
         panOnScroll={false}
         selectionOnDrag={false}
-        zoomOnDoubleClick={false}
         connectionMode={ConnectionMode.Loose}
         connectOnClick={activeTool === "add-edge"}
         onlyRenderVisibleElements

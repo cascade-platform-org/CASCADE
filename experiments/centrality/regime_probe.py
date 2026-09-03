@@ -48,9 +48,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "CASCADE-backend"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import networkx as nx  # noqa: E402
 from scipy.stats import kendalltau  # noqa: E402
+
+from category_ablation import expected_overlap  # noqa: E402
 
 from engine.propagation import run  # noqa: E402
 from schemas.config import (  # noqa: E402
@@ -276,6 +279,7 @@ def analyse_replicate(project: Project, config: ModelConfiguration) -> dict:
     # knowing which dependencies are redundant.
     proxies = {
         "reach": {v: len(nx.descendants(digraph, v)) for v in ids},
+        "indeg": dict(digraph.in_degree()),
         "outdeg": dict(digraph.out_degree()),
         "betw": nx.betweenness_centrality(digraph),
         "pagerank": nx.pagerank(digraph.reverse(copy=True)),
@@ -304,13 +308,12 @@ def analyse_replicate(project: Project, config: ModelConfiguration) -> dict:
 
     # Top-k agreement: would a proxy pick the same hardening set?
     k = max(1, n // 10)
-    top_cond = set(sorted(ids, key=lambda v: -c_cond[v])[:k])
     # The practitioner's question: harden the top 10% by vitality — how many of
-    # the nodes propagation would have chosen do you actually get? Ties are
-    # broken at random, so a constant index scores at chance (~k/n).
-    shuffled = list(ids)
-    random.Random(0).shuffle(shuffled)
-    top_del = set(sorted(shuffled, key=lambda v: -c_del[v])[:k])
+    # the nodes propagation would have chosen do you actually get? c_cond is
+    # heavily tied at low rho, so the overlap is the EXPECTED agreement under a
+    # uniform ordering of the tied nodes, computed exactly (see
+    # category_ablation.expected_overlap). A constant index scores at chance,
+    # k/n, rather than inheriting whatever order the node ids happen to impose.
 
     out = {
         "tau_del": kendalltau(cond_vec, del_vec).statistic,
@@ -322,7 +325,7 @@ def analyse_replicate(project: Project, config: ModelConfiguration) -> dict:
         "domination_ok": domination,
         "prop2_ok": prop2,
         "n_divergent": len(divergent),
-        f"top{k}_del": len(top_cond & top_del) / k,
+        f"top{k}_del": expected_overlap(c_cond, c_del, k),
         "eff_ranks_del": effective_ranks(del_vec),
         "eff_ranks_cond": effective_ranks(cond_vec),
         # Is the reduction an IDENTITY? c_cond(v) counts v plus everything its
@@ -339,8 +342,8 @@ def analyse_replicate(project: Project, config: ModelConfiguration) -> dict:
     }
     for name, score in proxies.items():
         out[f"tau_{name}"] = kendalltau(cond_vec, [score[v] for v in ids]).statistic
-        top_proxy = set(sorted(ids, key=lambda v: -score[v])[:k])
-        out[f"top{k}_{name}"] = len(top_cond & top_proxy) / k
+        out[f"top{k}_{name}"] = expected_overlap(
+            c_cond, {v: float(score[v]) for v in ids}, k)
         # tau over the LIVE nodes only. At low rho the full-vector tau is
         # dominated by ties among inert nodes and reports agreement that is
         # really just shared silence.
@@ -409,7 +412,8 @@ def main() -> None:
             flush=True,
         )
 
-    metrics = ("tau_reach", "tau_pagerank", "tau_betw", "live_fraction")
+    metrics = ("tau_reach", "tau_pagerank", "tau_indeg", "tau_outdeg",
+               "tau_betw", "live_fraction")
     print("\nPooled over the conjunction setting, 95% percentile bootstrap over "
           f"all {args.reps * len(ps)} replicates per cell:\n")
     print(f"  {'metric':<14} " + " ".join(f"{r:>21.1f}" for r in rhos))

@@ -28,6 +28,20 @@
     "sizeLabel": "3.9 MB"
   },
   {
+    "id": "office-with-heat",
+    "label": "Office with heat — digital/electric/thermal dependencies",
+    "description": "Small office network spanning digital, electric, and heat services, used as the worked example in the Flow Allocation Module for Hydraulic Networks paper.",
+    "file": "Office_with_Heat.json",
+    "sizeLabel": "444 KB"
+  },
+  {
+    "id": "ijdrr-example",
+    "label": "IJDRR example",
+    "description": "Worked example network for the IJDRR submission, including Personnel elements.",
+    "file": "IJDRR_example.json",
+    "sizeLabel": "40 KB"
+  },
+  {
     "id": "base-georef",
     "label": "Georeferenced base network",
     "description": "Demonstrates map-anchored (georeferenced) canvases with real lat/lng node positions.",

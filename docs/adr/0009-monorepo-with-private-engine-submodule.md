@@ -63,6 +63,6 @@ monorepo remote at the existing `CASCADE-app` GitHub repo.
 
 ## Follow-up
 
-- Update **CLAUDE.md §7** to reflect: engine is published with the paper and
+- Done — CLAUDE.md §7 reflects: engine is published with the paper and
   becomes proprietary later; the boundary discipline exists to make future
   privatization cheap, not to hide the engine today.

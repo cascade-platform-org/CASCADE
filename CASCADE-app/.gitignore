@@ -15,6 +15,12 @@ dist/
 build/
 *.tsbuildinfo
 
+# ── Generated from samples/public/ by scripts/sync-samples.mjs ────────────────
+public/samples/
+
+# ── Working/unpublished sample data — never goes in the public repo ───────────
+samples/private/
+
 # ── Tooling ───────────────────────────────────────────────────────────────────
 .vercel/
 
