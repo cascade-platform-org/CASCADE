@@ -9,23 +9,23 @@ propagates through the network via a rule-driven propagation engine. Build the
 network on a visual canvas, define dependency and recovery rules, and replay
 the cascade step by step.
 
-![CASCADE canvas editor, showing a multi-utility network with a propagated failure](docs/assets/screenshot.png)
+![CASCADE canvas editor — building a multi-utility network and watching a failure propagate](docs/assets/CASCADE-platform.gif)
 
 See [CONTEXT.md](CONTEXT.md) for the domain glossary and
 [CLAUDE.md](CLAUDE.md) for development guidelines.
 
-**Arrived from one of the papers?** [`docs/papers.md`](docs/papers.md) maps each
+**Arrived from a research paper?** [`docs/papers.md`](docs/papers.md) maps each
 section to the code that implements it, and shows how to reproduce the reported
 numbers.
 
 ## Layout
 
-| Path              | What                                                        |
-| ----------------- | ----------------------------------------------------------- |
-| `CASCADE-app/`     | Next.js frontend (static-export SPA)                       |
-| `CASCADE-backend/` | FastAPI backend + propagation engine                       |
-| `deploy/`          | Docker Compose stack (db, backend, web/Caddy, Zitadel)     |
-| `docs/`            | Project docs (`project/`) and decision records (`adr/`)    |
+| Path                 | What                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| `CASCADE-app/`     | Next.js frontend (static-export SPA)                        |
+| `CASCADE-backend/` | FastAPI backend + propagation engine                        |
+| `deploy/`          | Docker Compose stack (db, backend, web/Caddy, Zitadel)      |
+| `docs/`            | Project docs (`project/`) and decision records (`adr/`) |
 
 ## Develop
 
