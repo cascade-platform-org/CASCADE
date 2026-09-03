@@ -1,7 +1,9 @@
 # From the papers to the code
 
 If you arrived here from one of the CASCADE papers, this page maps what you read
-to what runs. The manuscripts themselves are not distributed in this repository.
+to what runs. The LaTeX sources under [`docs/paper/`](paper/) are preprints —
+pre-refereeing versions of manuscripts under review; the peer-reviewed versions
+of record live with their publishers.
 
 ---
 
