@@ -21,6 +21,13 @@ COPY CASCADE-app/ .
 ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# The site's public origin, used for the absolute URLs in page metadata
+# (og:image, twitter:image — link previews). Unset is fine for local builds:
+# the app falls back to localhost. It cannot be a runtime env var, because a
+# static export has already baked the <meta> tags by the time Caddy serves them.
+ARG NEXT_PUBLIC_SITE_URL=""
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 # With output:'export' in next.config.ts, `next build` writes the static site
 # to ./out.
 RUN npm run build

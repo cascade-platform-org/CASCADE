@@ -5,8 +5,11 @@ const description =
   "Multi-canvas infrastructure failure propagation platform — model interdependent services and analyse how failures cascade across their Elements.";
 
 export const metadata: Metadata = {
+  // The public origin absolute metadata URLs (og:image, twitter:image) are
+  // built from. `||` rather than `??`: the deploy passes this as a build arg
+  // that is an empty string when unset, and `new URL("")` throws.
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   ),
   title: {
     default: "CASCADE",

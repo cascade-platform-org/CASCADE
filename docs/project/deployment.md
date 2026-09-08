@@ -93,6 +93,9 @@ JWT_AUDIENCE=your-api-audience
 
 # Base origin only — the client appends /api/... itself.
 NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+# Public origin for absolute metadata URLs (og:image). Under Docker this comes
+# from deploy/.env's SITE_URL as a build arg, not from this file.
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 NEXT_PUBLIC_OIDC_CLIENT_ID=xxx
 NEXT_PUBLIC_OIDC_AUTHORITY=https://provider
 NEXT_PUBLIC_MAPLIBRE_STYLE=https://tiles.example.com/style.json
@@ -133,7 +136,9 @@ cd deploy
 cp .env.example .env
 # Edit .env: set a strong POSTGRES_PASSWORD, a 32-char ZITADEL_MASTERKEY,
 # a ZITADEL_DB_PASSWORD (dedicated least-privilege Postgres role for Zitadel),
-# ENV=production, APP_DOMAIN, ID_DOMAIN, CORS_ORIGINS=https://<APP_DOMAIN>.
+# ENV=production, APP_DOMAIN, ID_DOMAIN, CORS_ORIGINS=https://<APP_DOMAIN>,
+# SITE_URL=https://<APP_DOMAIN> (baked into the frontend image at build time —
+# it is what link previews resolve og:image against).
 # Leave OIDC_* blank for now — you fill them after creating the Zitadel app
 # (see "Identity Provider (Zitadel) Setup" below). chmod 600 .env
 ```

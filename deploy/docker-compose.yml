@@ -63,6 +63,11 @@ services:
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
+      args:
+        # Baked into the static export at build time, so it belongs here and
+        # not under `environment` — a NEXT_PUBLIC_* value set on the running
+        # container arrives long after the HTML was generated. Empty locally.
+        NEXT_PUBLIC_SITE_URL: ${SITE_URL:-}
     environment:
       # Real hostnames in production (app.<domain> / id.<domain>) => automatic
       # HTTPS. Defaults are local HTTP ports for testing without a domain.
