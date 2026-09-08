@@ -120,6 +120,12 @@ export interface UiState {
   temporalJumpRevertSnapshot: GraphSnapshot | null;
   /** Cumulative hours advanced by temporal jumps since the revert snapshot was saved. */
   temporalJumpElapsedHours: number;
+  /**
+   * Newest history entry id at the moment that snapshot was taken — the point
+   * the reverted jumps begin at. Recorded on the revert's history entry so the
+   * Situation can be derived as the one that was live before the jumps.
+   */
+  temporalJumpRevertFromEntryId: string | null;
 
   // --- Node template selection ---
   /** Key into config.node_defaults. Null = blank node (no template). */
@@ -234,8 +240,12 @@ export interface UiActions {
 
   // --- Temporal Jump ---
   setTemporalAutoPropagate: (value: boolean) => void;
-  /** Called before the first jump — saves the snapshot to enable revert. */
-  saveTemporalRevertSnapshot: (snapshot: GraphSnapshot) => void;
+  /**
+   * Called before the first jump — saves the snapshot to enable revert.
+   * `fromEntryId` is the newest history entry at that moment (null when history
+   * is empty); the revert records it so the Situation can be rewound with it.
+   */
+  saveTemporalRevertSnapshot: (snapshot: GraphSnapshot, fromEntryId: string | null) => void;
   /** Adds hours to the elapsed counter after each jump. */
   addTemporalElapsedHours: (hours: number) => void;
   /** Clears both the revert snapshot and elapsed counter (after revert or manual reset). */
@@ -283,6 +293,7 @@ const initialState: UiState = {
   temporalAutoPropagate: true,
   temporalJumpRevertSnapshot: null,
   temporalJumpElapsedHours: 0,
+  temporalJumpRevertFromEntryId: null,
   inspectorOpen: false,
   activeCategoryFilter: null,
   propagationWarnings: [],
@@ -568,8 +579,11 @@ export const useUiStore = create<UiStore>()(
       set((state) => { state.temporalAutoPropagate = value; });
     },
 
-    saveTemporalRevertSnapshot(snapshot) {
-      set((state) => { state.temporalJumpRevertSnapshot = snapshot; });
+    saveTemporalRevertSnapshot(snapshot, fromEntryId) {
+      set((state) => {
+        state.temporalJumpRevertSnapshot = snapshot;
+        state.temporalJumpRevertFromEntryId = fromEntryId;
+      });
     },
 
     addTemporalElapsedHours(hours) {
@@ -580,6 +594,7 @@ export const useUiStore = create<UiStore>()(
       set((state) => {
         state.temporalJumpRevertSnapshot = null;
         state.temporalJumpElapsedHours = 0;
+        state.temporalJumpRevertFromEntryId = null;
       });
     },
 

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Upload, FlaskConical } from "lucide-react";
+import { Compass, Upload, FlaskConical } from "lucide-react";
 import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import { ModelConfigurationSchema } from "@/lib/schemas/config";
 import { loadBundleFile, loadProjectFile } from "@/lib/file-io";
 import { loadSampleManifest, loadSampleBundle, type SampleManifestEntry } from "@/lib/samples";
 import { useCanvasStore } from "@/store/canvas-store";
+import { startGuidedTour } from "@/lib/tour/start-tour";
 import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { Canvas } from "@/lib/schemas/network";
@@ -116,6 +117,13 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
     onComplete();
   }
 
+  function handleStartTour() {
+    // Leave the wizard first: the tour highlights editor controls that do not
+    // exist while this modal is up.
+    onComplete();
+    void startGuidedTour();
+  }
+
   function canAdvance(): boolean {
     if (step === 1) return data.name.trim().length > 0;
     if (step === 2) {
@@ -187,6 +195,7 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
               onChange={patch}
               onLoadFile={handleLoadFile}
               onLoadSample={handleLoadSample}
+              onStartTour={handleStartTour}
               loadError={loadError}
             />
           )}
@@ -276,12 +285,14 @@ function Step1({
   onChange,
   onLoadFile,
   onLoadSample,
+  onStartTour,
   loadError,
 }: {
   data: WizardData;
   onChange: (p: Partial<WizardData>) => void;
   onLoadFile: (file: File) => Promise<void>;
   onLoadSample: (sample: SampleManifestEntry) => Promise<void>;
+  onStartTour: () => void;
   loadError: string | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -366,6 +377,24 @@ function Step1({
           ✗ {loadError}
         </p>
       )}
+
+      {/* First-timers rarely know what to build yet — offer the walkthrough
+          before the blank-project fields, not only after the wizard. */}
+      <button
+        type="button"
+        onClick={onStartTour}
+        className="flex w-full items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-left hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+      >
+        <Compass size={15} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-medium text-blue-900 dark:text-blue-200">
+            New to CASCADE? Take the one-minute tour
+          </span>
+          <span className="block text-xs text-blue-700/80 dark:text-blue-300/80">
+            Opens a small worked example and walks you through breaking it.
+          </span>
+        </span>
+      </button>
 
       {samples.length > 0 && (
         <>

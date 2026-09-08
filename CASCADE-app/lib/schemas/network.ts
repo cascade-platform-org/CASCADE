@@ -254,6 +254,9 @@ export const AnyUpdateTypeSchema = z.enum([
   // Reset button — Functionality restored to N. A session boundary: it ends
   // the current Situation (deriveSituation stops walking at it).
   "scenario_reset",
+  // Temporal Jumps undone — the graph is back to its pre-jump state, so the
+  // Situation is the one that was live before those jumps (see lib/situation.ts).
+  "temporal_jump_revert",
 ]);
 
 export const AnyUpdateEntrySchema = z.object({
@@ -264,6 +267,14 @@ export const AnyUpdateEntrySchema = z.object({
   scope: z.enum(["local", "global"]).optional(),
   canvas_id: z.string().optional(),
   event_id: z.string().optional(),
+  /**
+   * Populated only on temporal_jump_revert entries: the id of the newest
+   * history entry at the moment the pre-jump snapshot was taken. It marks where
+   * the reverted Temporal Jumps begin, so deriveSituation can resume from the
+   * Situation that was live before them. Absent when that entry had already
+   * been evicted from the capped history.
+   */
+  reverts_to_entry_id: z.string().optional(),
   before: GraphSnapshotSchema,
   after: GraphSnapshotSchema,
   propagation_meta: PropagationMetaSchema.optional(),

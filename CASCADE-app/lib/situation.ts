@@ -64,6 +64,22 @@ export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | nu
     // A Reset ends the scenario: everything older belongs to a dead session,
     // and nothing newer was an Event (we would have broken at it above).
     if (entry.update_type === "scenario_reset") return null;
+    // Temporal Jumps were undone. The graph is back to its pre-jump state, so
+    // the Situation is whatever was live *before* those jumps — the jumps
+    // themselves are Events (temporal_jump synthetic ones) and would otherwise
+    // still be reported, along with a Propagation that no longer describes the
+    // graph. Skipping to the recorded boundary rewinds the whole run at once,
+    // however many jumps and Propagations it contained.
+    if (entry.update_type === "temporal_jump_revert") {
+      const boundary = entry.reverts_to_entry_id;
+      const at = boundary ? updateHistory.findIndex((e) => e.id === boundary) : -1;
+      // No boundary recorded, or it has aged out of the capped history: the
+      // pre-jump scenario cannot be reconstructed, and reporting the reverted
+      // one would be worse than reporting none.
+      if (at === -1) return null;
+      i = at - 1; // -1 because the loop's i++ moves onto the boundary entry
+      continue;
+    }
     if (entry.update_type === "propagation") {
       propEntry = entry;
       i++;
@@ -78,6 +94,14 @@ export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | nu
   for (; i < updateHistory.length; i++) {
     const entry = updateHistory[i];
     if (entry.update_type === "propagation" || entry.update_type === "scenario_reset") break;
+    // Same rewind as above: the jumps it undid are not part of this Situation.
+    if (entry.update_type === "temporal_jump_revert") {
+      const boundary = entry.reverts_to_entry_id;
+      const at = boundary ? updateHistory.findIndex((e) => e.id === boundary) : -1;
+      if (at === -1) break;
+      i = at - 1;
+      continue;
+    }
     if (entry.update_type === "event_applied") eventEntries.push(entry);
   }
 

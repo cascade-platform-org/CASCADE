@@ -99,7 +99,8 @@
             "propagation",
             "manual_functionality_update",
             "graph_update",
-            "scenario_reset"
+            "scenario_reset",
+            "temporal_jump_revert"
           ],
           "title": "Update Type",
           "type": "string"
@@ -147,6 +148,19 @@
           ],
           "default": null,
           "title": "Event Id"
+        },
+        "reverts_to_entry_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set only on temporal_jump_revert entries: the id of the newest history entry at the moment the pre-jump snapshot was taken. It marks where the reverted Temporal Jumps begin, so the current Situation can be derived as the one that was live before them. Absent when that entry has already been evicted from the capped history.",
+          "title": "Reverts To Entry Id"
         },
         "before": {
           "$ref": "#/$defs/GraphSnapshot"

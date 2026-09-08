@@ -12,26 +12,11 @@
 import { X } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { UserManual } from "@/components/help/user-manual";
-import { loadSampleBundle } from "@/lib/samples";
-import { TOUR_SAMPLE_FILE } from "@/lib/tour/first-run-tour";
-import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore } from "@/store/config-store";
+import { startGuidedTour } from "@/lib/tour/start-tour";
 
 export function UserManualPanel() {
   const closeUserManualPanel = useUiStore((s) => s.closeUserManualPanel);
   const openRulesManualPanel = useUiStore((s) => s.openRulesManualPanel);
-  const startTour = useUiStore((s) => s.startTour);
-
-  // Replaying the tour reloads its worked example, since the steps name that
-  // network's nodes and its Earthquake hazard.
-  async function replayTour() {
-    const bundle = await loadSampleBundle(TOUR_SAMPLE_FILE);
-    if (bundle) {
-      useCanvasStore.getState().fromProject(bundle.project);
-      useConfigStore.getState().loadConfig(bundle.config);
-    }
-    startTour("first-run");
-  }
 
   return (
     <aside
@@ -54,7 +39,7 @@ export function UserManualPanel() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {/* Hand off rather than stack: the store swaps the right-edge slot. */}
-        <UserManual onOpenRulesManual={openRulesManualPanel} onStartTour={replayTour} />
+        <UserManual onOpenRulesManual={openRulesManualPanel} onStartTour={() => void startGuidedTour()} />
       </div>
     </aside>
   );

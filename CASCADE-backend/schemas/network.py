@@ -350,6 +350,7 @@ AnyUpdateType = Literal[
     "manual_functionality_update", # User manually edited Element functionality
     "graph_update",                # Structural change (topology / non-functionality attributes)
     "scenario_reset",              # Reset button — Functionality restored to N; ends the current Situation
+    "temporal_jump_revert",        # Temporal Jumps undone — the Scenario is back to its pre-jump state
 ]
 
 
@@ -367,6 +368,16 @@ class AnyUpdateEntry(BaseModel):
     scope: Optional[Literal["local", "global"]] = None
     canvas_id: Optional[str] = None    # set for local-scope operations
     event_id: Optional[str] = None     # set for event_applied / event_cleared
+    reverts_to_entry_id: Optional[str] = Field(
+        default=None,
+        description=(
+            "Set only on temporal_jump_revert entries: the id of the newest history "
+            "entry at the moment the pre-jump snapshot was taken. It marks where the "
+            "reverted Temporal Jumps begin, so the current Situation can be derived "
+            "as the one that was live before them. Absent when that entry has already "
+            "been evicted from the capped history."
+        ),
+    )
     before: GraphSnapshot
     after: GraphSnapshot
     propagation_meta: Optional[PropagationMeta] = None  # set for propagation entries

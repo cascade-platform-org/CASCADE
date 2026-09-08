@@ -27,6 +27,7 @@ import {
   selectN,
 } from "@/store/config-store";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useHistoryStore } from "@/store/history-store";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
@@ -48,10 +49,18 @@ function executeRevert({
   scope: "local" | "global";
   clearTemporalJumpProgress: () => void;
 }) {
+  // `temporal_jump_revert`, not a plain manual edit: the Situation track has to
+  // recognise it and rewind to the scenario that was live before the jumps —
+  // otherwise the canvas shows the pre-jump state while the Situation window
+  // still reports the jumps and their Propagation.
   runWithHistory(
     () => useCanvasStore.getState().restoreSnapshot(revertSnapshot),
     `Revert temporal jumps (−${elapsedHours}h)`,
-    { scope },
+    {
+      scope,
+      updateType: "temporal_jump_revert",
+      revertsToEntryId: useUiStore.getState().temporalJumpRevertFromEntryId,
+    },
   );
   clearTemporalJumpProgress();
 }
@@ -110,14 +119,16 @@ export function ActionBar() {
       </ActionButton>
 
       {/* Reset */}
-      <ActionButton
-        onClick={handleReset}
-        title={scope === "local" ? "Reset active canvas elements to Functionality N" : "Reset all elements to Functionality N"}
-        className="text-zinc-600 dark:text-zinc-400"
-      >
-        <RotateCcw size={13} />
-        <span>Reset</span>
-      </ActionButton>
+      <span data-tour="reset" className="flex items-center">
+        <ActionButton
+          onClick={handleReset}
+          title={scope === "local" ? "Reset active canvas elements to Functionality N" : "Reset all elements to Functionality N"}
+          className="text-zinc-600 dark:text-zinc-400"
+        >
+          <RotateCcw size={13} />
+          <span>Reset</span>
+        </ActionButton>
+      </span>
 
       {/* Undo */}
       <ActionButton onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="text-zinc-600 dark:text-zinc-400">
@@ -299,7 +310,12 @@ function TemporalJumpControls({
     const canvasState = useCanvasStore.getState();
     // Save pre-jump state on the very first jump so revert can restore it.
     if (revertSnapshot === null) {
-      saveTemporalRevertSnapshot(canvasState.toGraphSnapshot());
+      // The newest entry now is where the jumps start — the revert records it
+      // so the Situation can be rewound to what was live before them.
+      saveTemporalRevertSnapshot(
+        canvasState.toGraphSnapshot(),
+        useHistoryStore.getState().updateHistory[0]?.id ?? null,
+      );
     }
     // applyEvent pushes its own event_applied entry (with mutation_reversal) —
     // pushing a second one here would double the undo stack per jump and let

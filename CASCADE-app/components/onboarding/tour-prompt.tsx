@@ -11,26 +11,14 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { useUiStore } from "@/store/ui-store";
-import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore } from "@/store/config-store";
-import { loadSampleBundle } from "@/lib/samples";
-import { TOUR_SAMPLE_FILE } from "@/lib/tour/first-run-tour";
+import { startGuidedTour } from "@/lib/tour/start-tour";
 
 export function TourPrompt({ onDismiss }: { onDismiss: () => void }) {
   const [loading, setLoading] = useState(false);
 
   async function takeTour() {
     setLoading(true);
-    const bundle = await loadSampleBundle(TOUR_SAMPLE_FILE);
-    if (bundle) {
-      useCanvasStore.getState().fromProject(bundle.project);
-      useConfigStore.getState().loadConfig(bundle.config);
-    }
-    // A missing sample is not a reason to withhold the tour — the steps still
-    // point at the right controls, they just have nothing interesting to break.
-    onDismiss();
-    useUiStore.getState().startTour("first-run");
+    await startGuidedTour();
     setLoading(false);
   }
 
@@ -48,7 +36,7 @@ export function TourPrompt({ onDismiss }: { onDismiss: () => void }) {
         New here?
       </p>
       <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-        A two-minute tour breaks a small example network and follows the failure
+        A one-minute tour breaks a small example network and follows the failure
         through it. It loads that example, replacing what is open.
       </p>
 

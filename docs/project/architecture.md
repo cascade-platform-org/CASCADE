@@ -119,6 +119,7 @@ Every user action that changes graph state pushes an `AnyUpdateEntry` to `update
 | `propagation` | Receiving a PropagationResult from the server |
 | `manual_functionality_update` | User manually editing Functionality or Functionality Time |
 | `scenario_reset` | Reset button (Functionality restored to N). A session boundary: it ends the current Situation, so the Situation window closes and Save-to-Scorecard falls back to the live canvas |
+| `temporal_jump_revert` | Undoing every Temporal Jump of a run (the −Xh button). Carries `reverts_to_entry_id`, the newest entry at the time the pre-jump snapshot was taken: the Situation and the unsaved-run scan skip back to it, so the jumps and any Propagation run during them stop counting as the current scenario |
 
 ### Data Persistence — File I/O and Version History
 
@@ -321,7 +322,6 @@ CASCADE-v2/
 | Styling | Tailwind CSS | 4 | Utility-first design system |
 | Validation | Zod | 4 | Runtime schema validation, type inference |
 | Maps | MapLibre GL JS | 5 | Open-source map background for georeferenced Canvases |
-| Guided tour | driver.js | 1 | Spotlight walkthrough of the editor (MIT), steps in `lib/tour/` |
 | API Server | FastAPI | — | High-performance async Python API |
 | Backend validation | Pydantic v2 | — | Request/response schema enforcement |
 | Auth | OAuth2/OIDC (provider-agnostic) | — | Identity, JWT validation |

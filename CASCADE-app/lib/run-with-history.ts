@@ -31,6 +31,11 @@ export interface RunWithHistoryOptions {
   scope?: "local" | "global";
   /** EventId for event_applied / event_cleared entries. */
   eventId?: string;
+  /**
+   * Only for temporal_jump_revert entries: the history entry the graph has been
+   * rewound to. See AnyUpdateEntrySchema.reverts_to_entry_id.
+   */
+  revertsToEntryId?: string | null;
 }
 
 export function runWithHistory<T>(
@@ -54,6 +59,7 @@ export function runWithHistory<T>(
     canvas_id,
     ...(opts.scope ? { scope: opts.scope } : {}),
     ...(opts.eventId ? { event_id: opts.eventId } : {}),
+    ...(opts.revertsToEntryId ? { reverts_to_entry_id: opts.revertsToEntryId } : {}),
     before,
     after,
   });

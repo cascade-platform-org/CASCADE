@@ -128,6 +128,24 @@ export interface UnsavedRun {
  * event_applied entry. Pure manual edits (reset, manual functionality change)
  * without an event are not flagged — those are not domain events.
  */
+/**
+ * True when the entry at `index` sits inside a window of Temporal Jumps that
+ * was later reverted — i.e. some newer `temporal_jump_revert` rewound history
+ * to a point older than it. History is newest-first, so "newer" is a smaller
+ * index and the boundary it names is a larger one.
+ */
+function wasReverted(history: AnyUpdateEntry[], index: number): boolean {
+  for (let j = 0; j < index; j++) {
+    const entry = history[j];
+    if (entry.update_type !== "temporal_jump_revert") continue;
+    const boundary = entry.reverts_to_entry_id;
+    if (!boundary) continue;
+    const at = history.findIndex((e) => e.id === boundary);
+    if (at > index) return true;
+  }
+  return false;
+}
+
 export async function findUnsavedRuns(
   history: AnyUpdateEntry[],
   scorecard: ScorecardEntry[],
@@ -141,14 +159,21 @@ export async function findUnsavedRuns(
   for (let i = 0; i < history.length; i++) {
     const entry = history[i];
     if (entry.update_type !== "propagation") continue;
+    // A Propagation that ran during Temporal Jumps the user has since reverted
+    // describes a state the project is no longer in — offering to save it would
+    // write a Scorecard entry for a scenario that was undone.
+    if (wasReverted(history, i)) continue;
 
     // "Session" = entries older than this propagation, up to (not including)
     // the next older propagation or Reset (both end a scenario session — an
     // Event applied before a Reset must not be attributed to a Propagation
-    // that ran on the reset graph).
+    // that ran on the reset graph). A temporal-jump revert ends one too.
     const olderEntries = history.slice(i + 1);
     const prevPropIdx = olderEntries.findIndex(
-      (e) => e.update_type === "propagation" || e.update_type === "scenario_reset",
+      (e) =>
+        e.update_type === "propagation" ||
+        e.update_type === "scenario_reset" ||
+        e.update_type === "temporal_jump_revert",
     );
     const sessionEntries = prevPropIdx === -1
       ? olderEntries

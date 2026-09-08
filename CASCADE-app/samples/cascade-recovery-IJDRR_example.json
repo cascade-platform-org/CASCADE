@@ -1,0 +1,1258 @@
+{
+  "saved_at": "2026-09-08T14:10:40.419Z",
+  "bundle": {
+    "project": {
+      "version": "2.0",
+      "meta": {
+        "name": "IJDRR example",
+        "created_at": "2026-09-08T14:10:40.419Z",
+        "updated_at": "2026-09-08T14:10:40.419Z"
+      },
+      "nodes": {
+        "node-Pr107eaY": {
+          "id": "node-Pr107eaY",
+          "functionality": 3,
+          "label": "Operator",
+          "node_type": "Personnel",
+          "node_categories": [
+            "operator"
+          ],
+          "functionality_time": 0,
+          "direct_damage": false,
+          "position": {
+            "x": 399.0595011899433,
+            "y": 316.29488771584465
+          },
+          "rules": []
+        },
+        "node-3dR9MeCn": {
+          "id": "node-3dR9MeCn",
+          "functionality": 1,
+          "label": "Electric Source",
+          "node_type": "Source",
+          "node_categories": [
+            "electric"
+          ],
+          "functionality_time": 0,
+          "direct_damage": true,
+          "position": {
+            "x": 397.375,
+            "y": 242.625
+          },
+          "supply_capacity": {
+            "electric": 10
+          },
+          "vulnerability_levels": {
+            "oQtVYPRrdEgfa_3HQvQUQ": 2
+          },
+          "rules": [
+            "if Electric Source is critical then Substation.direct_damage is True"
+          ]
+        },
+        "node-KM_lw8FE": {
+          "id": "node-KM_lw8FE",
+          "functionality": 3,
+          "label": "Substation",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "electric"
+          ],
+          "functionality_time": 0,
+          "direct_damage": false,
+          "position": {
+            "x": 508.8922317079705,
+            "y": 240.22310514449543
+          }
+        },
+        "node-uJFHyvJ5": {
+          "id": "node-uJFHyvJ5",
+          "functionality": 3,
+          "label": "Water Pump",
+          "node_type": "Infrastructure",
+          "node_categories": [
+            "water"
+          ],
+          "functionality_time": 0,
+          "direct_damage": false,
+          "position": {
+            "x": 507.6568451820691,
+            "y": 314.7580922072109
+          },
+          "category_dependency_profiles": {
+            "electric": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 24,
+              "demand": 1
+            }
+          }
+        },
+        "node-mYW8d9_h": {
+          "id": "node-mYW8d9_h",
+          "functionality": 3,
+          "label": "City",
+          "node_type": "Service",
+          "functionality_time": 0,
+          "direct_damage": false,
+          "importance": 1,
+          "position": {
+            "x": 615.3129685577912,
+            "y": 305.5327693754286
+          },
+          "category_dependency_profiles": {
+            "electric": {
+              "dependency_level": 2,
+              "demand": 5
+            },
+            "water": {
+              "dependency_level": 3,
+              "demand": 5
+            }
+          }
+        },
+        "node-38A0gTLb": {
+          "id": "node-38A0gTLb",
+          "functionality": 3,
+          "label": "Hospital",
+          "node_type": "Service",
+          "functionality_time": 0,
+          "direct_damage": false,
+          "importance": 0.7,
+          "position": {
+            "x": 623.0185895827192,
+            "y": 237.68194857112297
+          },
+          "category_dependency_profiles": {
+            "electric": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 239,
+              "demand": 1
+            },
+            "water": {
+              "dependency_level": 3,
+              "backup": true,
+              "backup_duration": 48,
+              "demand": 1
+            }
+          }
+        }
+      },
+      "edges": {
+        "edge-i0bQmKRE": {
+          "id": "edge-i0bQmKRE",
+          "source": "node-Pr107eaY",
+          "target": "node-3dR9MeCn",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "tl",
+          "targetHandle": "bl"
+        },
+        "edge-6YzHF_EQ": {
+          "id": "edge-6YzHF_EQ",
+          "source": "node-3dR9MeCn",
+          "target": "node-KM_lw8FE",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "mr",
+          "targetHandle": "ml"
+        },
+        "edge-NPsHMxNF": {
+          "id": "edge-NPsHMxNF",
+          "source": "node-KM_lw8FE",
+          "target": "node-38A0gTLb",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "mr",
+          "targetHandle": "ml"
+        },
+        "edge-f_tnBXBy": {
+          "id": "edge-f_tnBXBy",
+          "source": "node-KM_lw8FE",
+          "target": "node-mYW8d9_h",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "mr",
+          "targetHandle": "tl"
+        },
+        "edge-hRxIEYFn": {
+          "id": "edge-hRxIEYFn",
+          "source": "node-uJFHyvJ5",
+          "target": "node-mYW8d9_h",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "mr",
+          "targetHandle": "ml"
+        },
+        "edge-vztw1dsl": {
+          "id": "edge-vztw1dsl",
+          "source": "node-uJFHyvJ5",
+          "target": "node-38A0gTLb",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "tr",
+          "targetHandle": "bl"
+        },
+        "edge-0eDb-0Ir": {
+          "id": "edge-0eDb-0Ir",
+          "source": "node-KM_lw8FE",
+          "target": "node-uJFHyvJ5",
+          "functionality": 3,
+          "functionality_time": 0,
+          "direct_damage": false,
+          "sourceHandle": "bl",
+          "targetHandle": "tl"
+        }
+      },
+      "canvases": [
+        {
+          "id": "canvas-LljW8fXC",
+          "label": "Main Network",
+          "color": "#3b82f6",
+          "georeferenced": false,
+          "graph": {
+            "graph_type": "graph_type_1",
+            "node_ids": [
+              "node-Pr107eaY",
+              "node-3dR9MeCn",
+              "node-KM_lw8FE",
+              "node-uJFHyvJ5",
+              "node-mYW8d9_h",
+              "node-38A0gTLb"
+            ],
+            "edge_ids": [
+              "edge-i0bQmKRE",
+              "edge-6YzHF_EQ",
+              "edge-NPsHMxNF",
+              "edge-f_tnBXBy",
+              "edge-hRxIEYFn",
+              "edge-vztw1dsl",
+              "edge-0eDb-0Ir"
+            ]
+          }
+        }
+      ],
+      "update_history": [
+        {
+          "id": "6e12a697-c044-455f-a666-a12856839e74",
+          "timestamp": "2026-07-28T08:32:40.578Z",
+          "update_type": "event_applied",
+          "label": "Apply event: Earthquake",
+          "event_id": "oQtVYPRrdEgfa_3HQvQUQ",
+          "before": {
+            "nodes": {
+              "node-Pr107eaY": {
+                "id": "node-Pr107eaY",
+                "functionality": 3,
+                "label": "Operator",
+                "node_type": "Personnel",
+                "node_categories": [
+                  "operator"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 399.0595011899433,
+                  "y": 316.29488771584465
+                },
+                "rules": []
+              },
+              "node-3dR9MeCn": {
+                "id": "node-3dR9MeCn",
+                "functionality": 1,
+                "label": "Electric Source",
+                "node_type": "Source",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 397.375,
+                  "y": 242.625
+                },
+                "supply_capacity": {
+                  "electric": 10
+                },
+                "vulnerability_levels": {
+                  "oQtVYPRrdEgfa_3HQvQUQ": 2
+                },
+                "rules": [
+                  "if Electric Source is critical then Substation.direct_damage is True"
+                ]
+              },
+              "node-KM_lw8FE": {
+                "id": "node-KM_lw8FE",
+                "functionality": 3,
+                "label": "Substation",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 508.8922317079705,
+                  "y": 240.22310514449543
+                }
+              },
+              "node-uJFHyvJ5": {
+                "id": "node-uJFHyvJ5",
+                "functionality": 3,
+                "label": "Water Pump",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "water"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 507.6568451820691,
+                  "y": 314.7580922072109
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 24,
+                    "demand": 1
+                  }
+                }
+              },
+              "node-mYW8d9_h": {
+                "id": "node-mYW8d9_h",
+                "functionality": 3,
+                "label": "City",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 1,
+                "position": {
+                  "x": 615.3129685577912,
+                  "y": 305.5327693754286
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 2,
+                    "demand": 5
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "demand": 5
+                  }
+                }
+              },
+              "node-38A0gTLb": {
+                "id": "node-38A0gTLb",
+                "functionality": 3,
+                "label": "Hospital",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 0.7,
+                "position": {
+                  "x": 623.0185895827192,
+                  "y": 237.68194857112297
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 239,
+                    "demand": 1
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 48,
+                    "demand": 1
+                  }
+                }
+              }
+            },
+            "edges": {
+              "edge-i0bQmKRE": {
+                "id": "edge-i0bQmKRE",
+                "source": "node-Pr107eaY",
+                "target": "node-3dR9MeCn",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tl",
+                "targetHandle": "bl"
+              },
+              "edge-6YzHF_EQ": {
+                "id": "edge-6YzHF_EQ",
+                "source": "node-3dR9MeCn",
+                "target": "node-KM_lw8FE",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-NPsHMxNF": {
+                "id": "edge-NPsHMxNF",
+                "source": "node-KM_lw8FE",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-f_tnBXBy": {
+                "id": "edge-f_tnBXBy",
+                "source": "node-KM_lw8FE",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "tl"
+              },
+              "edge-hRxIEYFn": {
+                "id": "edge-hRxIEYFn",
+                "source": "node-uJFHyvJ5",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-vztw1dsl": {
+                "id": "edge-vztw1dsl",
+                "source": "node-uJFHyvJ5",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tr",
+                "targetHandle": "bl"
+              },
+              "edge-0eDb-0Ir": {
+                "id": "edge-0eDb-0Ir",
+                "source": "node-KM_lw8FE",
+                "target": "node-uJFHyvJ5",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "bl",
+                "targetHandle": "tl"
+              }
+            },
+            "canvases": [
+              {
+                "id": "canvas-LljW8fXC",
+                "label": "Main Network",
+                "color": "#3b82f6",
+                "georeferenced": false,
+                "graph": {
+                  "graph_type": "graph_type_1",
+                  "node_ids": [
+                    "node-Pr107eaY",
+                    "node-3dR9MeCn",
+                    "node-KM_lw8FE",
+                    "node-uJFHyvJ5",
+                    "node-mYW8d9_h",
+                    "node-38A0gTLb"
+                  ],
+                  "edge_ids": [
+                    "edge-i0bQmKRE",
+                    "edge-6YzHF_EQ",
+                    "edge-NPsHMxNF",
+                    "edge-f_tnBXBy",
+                    "edge-hRxIEYFn",
+                    "edge-vztw1dsl",
+                    "edge-0eDb-0Ir"
+                  ]
+                }
+              }
+            ]
+          },
+          "after": {
+            "nodes": {
+              "node-Pr107eaY": {
+                "id": "node-Pr107eaY",
+                "functionality": 3,
+                "label": "Operator",
+                "node_type": "Personnel",
+                "node_categories": [
+                  "operator"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 399.0595011899433,
+                  "y": 316.29488771584465
+                },
+                "rules": []
+              },
+              "node-3dR9MeCn": {
+                "id": "node-3dR9MeCn",
+                "functionality": 1,
+                "label": "Electric Source",
+                "node_type": "Source",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": true,
+                "position": {
+                  "x": 397.375,
+                  "y": 242.625
+                },
+                "supply_capacity": {
+                  "electric": 10
+                },
+                "vulnerability_levels": {
+                  "oQtVYPRrdEgfa_3HQvQUQ": 2
+                },
+                "rules": [
+                  "if Electric Source is critical then Substation.direct_damage is True"
+                ]
+              },
+              "node-KM_lw8FE": {
+                "id": "node-KM_lw8FE",
+                "functionality": 3,
+                "label": "Substation",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 508.8922317079705,
+                  "y": 240.22310514449543
+                }
+              },
+              "node-uJFHyvJ5": {
+                "id": "node-uJFHyvJ5",
+                "functionality": 3,
+                "label": "Water Pump",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "water"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 507.6568451820691,
+                  "y": 314.7580922072109
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 24,
+                    "demand": 1
+                  }
+                }
+              },
+              "node-mYW8d9_h": {
+                "id": "node-mYW8d9_h",
+                "functionality": 3,
+                "label": "City",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 1,
+                "position": {
+                  "x": 615.3129685577912,
+                  "y": 305.5327693754286
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 2,
+                    "demand": 5
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "demand": 5
+                  }
+                }
+              },
+              "node-38A0gTLb": {
+                "id": "node-38A0gTLb",
+                "functionality": 3,
+                "label": "Hospital",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 0.7,
+                "position": {
+                  "x": 623.0185895827192,
+                  "y": 237.68194857112297
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 239,
+                    "demand": 1
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 48,
+                    "demand": 1
+                  }
+                }
+              }
+            },
+            "edges": {
+              "edge-i0bQmKRE": {
+                "id": "edge-i0bQmKRE",
+                "source": "node-Pr107eaY",
+                "target": "node-3dR9MeCn",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tl",
+                "targetHandle": "bl"
+              },
+              "edge-6YzHF_EQ": {
+                "id": "edge-6YzHF_EQ",
+                "source": "node-3dR9MeCn",
+                "target": "node-KM_lw8FE",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-NPsHMxNF": {
+                "id": "edge-NPsHMxNF",
+                "source": "node-KM_lw8FE",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-f_tnBXBy": {
+                "id": "edge-f_tnBXBy",
+                "source": "node-KM_lw8FE",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "tl"
+              },
+              "edge-hRxIEYFn": {
+                "id": "edge-hRxIEYFn",
+                "source": "node-uJFHyvJ5",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-vztw1dsl": {
+                "id": "edge-vztw1dsl",
+                "source": "node-uJFHyvJ5",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tr",
+                "targetHandle": "bl"
+              },
+              "edge-0eDb-0Ir": {
+                "id": "edge-0eDb-0Ir",
+                "source": "node-KM_lw8FE",
+                "target": "node-uJFHyvJ5",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "bl",
+                "targetHandle": "tl"
+              }
+            },
+            "canvases": [
+              {
+                "id": "canvas-LljW8fXC",
+                "label": "Main Network",
+                "color": "#3b82f6",
+                "georeferenced": false,
+                "graph": {
+                  "graph_type": "graph_type_1",
+                  "node_ids": [
+                    "node-Pr107eaY",
+                    "node-3dR9MeCn",
+                    "node-KM_lw8FE",
+                    "node-uJFHyvJ5",
+                    "node-mYW8d9_h",
+                    "node-38A0gTLb"
+                  ],
+                  "edge_ids": [
+                    "edge-i0bQmKRE",
+                    "edge-6YzHF_EQ",
+                    "edge-NPsHMxNF",
+                    "edge-f_tnBXBy",
+                    "edge-hRxIEYFn",
+                    "edge-vztw1dsl",
+                    "edge-0eDb-0Ir"
+                  ]
+                }
+              }
+            ]
+          },
+          "mutation_reversal": {
+            "node-3dR9MeCn.direct_damage": false,
+            "node-3dR9MeCn.expected_repair_time": "__CASCADE_ABSENT__"
+          }
+        },
+        {
+          "id": "G2bUPseSrgzqMJlFdqtTN",
+          "timestamp": "2026-07-28T08:32:26.947Z",
+          "update_type": "manual_functionality_update",
+          "label": "Manual functionality edit",
+          "canvas_id": "canvas-LljW8fXC",
+          "before": {
+            "nodes": {
+              "node-Pr107eaY": {
+                "id": "node-Pr107eaY",
+                "functionality": 3,
+                "label": "Operator",
+                "node_type": "Personnel",
+                "node_categories": [
+                  "operator"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 399.0595011899433,
+                  "y": 316.29488771584465
+                },
+                "rules": []
+              },
+              "node-3dR9MeCn": {
+                "id": "node-3dR9MeCn",
+                "functionality": 3,
+                "label": "Electric Source",
+                "node_type": "Source",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 397.375,
+                  "y": 242.625
+                },
+                "supply_capacity": {
+                  "electric": 10
+                },
+                "vulnerability_levels": {
+                  "oQtVYPRrdEgfa_3HQvQUQ": 2
+                },
+                "rules": [
+                  "if Electric Source is critical then Substation.direct_damage is True"
+                ]
+              },
+              "node-KM_lw8FE": {
+                "id": "node-KM_lw8FE",
+                "functionality": 3,
+                "label": "Substation",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 508.8922317079705,
+                  "y": 240.22310514449543
+                }
+              },
+              "node-uJFHyvJ5": {
+                "id": "node-uJFHyvJ5",
+                "functionality": 3,
+                "label": "Water Pump",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "water"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 507.6568451820691,
+                  "y": 314.7580922072109
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 24,
+                    "demand": 1
+                  }
+                }
+              },
+              "node-mYW8d9_h": {
+                "id": "node-mYW8d9_h",
+                "functionality": 3,
+                "label": "City",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 1,
+                "position": {
+                  "x": 615.3129685577912,
+                  "y": 305.5327693754286
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 2,
+                    "demand": 5
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "demand": 5
+                  }
+                }
+              },
+              "node-38A0gTLb": {
+                "id": "node-38A0gTLb",
+                "functionality": 3,
+                "label": "Hospital",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 0.7,
+                "position": {
+                  "x": 623.0185895827192,
+                  "y": 237.68194857112297
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 239,
+                    "demand": 1
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 48,
+                    "demand": 1
+                  }
+                }
+              }
+            },
+            "edges": {
+              "edge-i0bQmKRE": {
+                "id": "edge-i0bQmKRE",
+                "source": "node-Pr107eaY",
+                "target": "node-3dR9MeCn",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tl",
+                "targetHandle": "bl"
+              },
+              "edge-6YzHF_EQ": {
+                "id": "edge-6YzHF_EQ",
+                "source": "node-3dR9MeCn",
+                "target": "node-KM_lw8FE",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-NPsHMxNF": {
+                "id": "edge-NPsHMxNF",
+                "source": "node-KM_lw8FE",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-f_tnBXBy": {
+                "id": "edge-f_tnBXBy",
+                "source": "node-KM_lw8FE",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "tl"
+              },
+              "edge-hRxIEYFn": {
+                "id": "edge-hRxIEYFn",
+                "source": "node-uJFHyvJ5",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-vztw1dsl": {
+                "id": "edge-vztw1dsl",
+                "source": "node-uJFHyvJ5",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tr",
+                "targetHandle": "bl"
+              },
+              "edge-0eDb-0Ir": {
+                "id": "edge-0eDb-0Ir",
+                "source": "node-KM_lw8FE",
+                "target": "node-uJFHyvJ5",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "bl",
+                "targetHandle": "tl"
+              }
+            },
+            "canvases": [
+              {
+                "id": "canvas-LljW8fXC",
+                "label": "Main Network",
+                "color": "#3b82f6",
+                "georeferenced": false,
+                "graph": {
+                  "graph_type": "graph_type_1",
+                  "node_ids": [
+                    "node-Pr107eaY",
+                    "node-3dR9MeCn",
+                    "node-KM_lw8FE",
+                    "node-uJFHyvJ5",
+                    "node-mYW8d9_h",
+                    "node-38A0gTLb"
+                  ],
+                  "edge_ids": [
+                    "edge-i0bQmKRE",
+                    "edge-6YzHF_EQ",
+                    "edge-NPsHMxNF",
+                    "edge-f_tnBXBy",
+                    "edge-hRxIEYFn",
+                    "edge-vztw1dsl",
+                    "edge-0eDb-0Ir"
+                  ]
+                }
+              }
+            ]
+          },
+          "after": {
+            "nodes": {
+              "node-Pr107eaY": {
+                "id": "node-Pr107eaY",
+                "functionality": 3,
+                "label": "Operator",
+                "node_type": "Personnel",
+                "node_categories": [
+                  "operator"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 399.0595011899433,
+                  "y": 316.29488771584465
+                },
+                "rules": []
+              },
+              "node-3dR9MeCn": {
+                "id": "node-3dR9MeCn",
+                "functionality": 1,
+                "label": "Electric Source",
+                "node_type": "Source",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 397.375,
+                  "y": 242.625
+                },
+                "supply_capacity": {
+                  "electric": 10
+                },
+                "vulnerability_levels": {
+                  "oQtVYPRrdEgfa_3HQvQUQ": 2
+                },
+                "rules": [
+                  "if Electric Source is critical then Substation.direct_damage is True"
+                ]
+              },
+              "node-KM_lw8FE": {
+                "id": "node-KM_lw8FE",
+                "functionality": 3,
+                "label": "Substation",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 508.8922317079705,
+                  "y": 240.22310514449543
+                }
+              },
+              "node-uJFHyvJ5": {
+                "id": "node-uJFHyvJ5",
+                "functionality": 3,
+                "label": "Water Pump",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "water"
+                ],
+                "functionality_time": 0,
+                "direct_damage": false,
+                "position": {
+                  "x": 507.6568451820691,
+                  "y": 314.7580922072109
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 24,
+                    "demand": 1
+                  }
+                }
+              },
+              "node-mYW8d9_h": {
+                "id": "node-mYW8d9_h",
+                "functionality": 3,
+                "label": "City",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 1,
+                "position": {
+                  "x": 615.3129685577912,
+                  "y": 305.5327693754286
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 2,
+                    "demand": 5
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "demand": 5
+                  }
+                }
+              },
+              "node-38A0gTLb": {
+                "id": "node-38A0gTLb",
+                "functionality": 3,
+                "label": "Hospital",
+                "node_type": "Service",
+                "functionality_time": 0,
+                "direct_damage": false,
+                "importance": 0.7,
+                "position": {
+                  "x": 623.0185895827192,
+                  "y": 237.68194857112297
+                },
+                "category_dependency_profiles": {
+                  "electric": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 239,
+                    "demand": 1
+                  },
+                  "water": {
+                    "dependency_level": 3,
+                    "backup": true,
+                    "backup_duration": 48,
+                    "demand": 1
+                  }
+                }
+              }
+            },
+            "edges": {
+              "edge-i0bQmKRE": {
+                "id": "edge-i0bQmKRE",
+                "source": "node-Pr107eaY",
+                "target": "node-3dR9MeCn",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tl",
+                "targetHandle": "bl"
+              },
+              "edge-6YzHF_EQ": {
+                "id": "edge-6YzHF_EQ",
+                "source": "node-3dR9MeCn",
+                "target": "node-KM_lw8FE",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-NPsHMxNF": {
+                "id": "edge-NPsHMxNF",
+                "source": "node-KM_lw8FE",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-f_tnBXBy": {
+                "id": "edge-f_tnBXBy",
+                "source": "node-KM_lw8FE",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "tl"
+              },
+              "edge-hRxIEYFn": {
+                "id": "edge-hRxIEYFn",
+                "source": "node-uJFHyvJ5",
+                "target": "node-mYW8d9_h",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "mr",
+                "targetHandle": "ml"
+              },
+              "edge-vztw1dsl": {
+                "id": "edge-vztw1dsl",
+                "source": "node-uJFHyvJ5",
+                "target": "node-38A0gTLb",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "tr",
+                "targetHandle": "bl"
+              },
+              "edge-0eDb-0Ir": {
+                "id": "edge-0eDb-0Ir",
+                "source": "node-KM_lw8FE",
+                "target": "node-uJFHyvJ5",
+                "functionality": 3,
+                "functionality_time": 0,
+                "direct_damage": false,
+                "sourceHandle": "bl",
+                "targetHandle": "tl"
+              }
+            },
+            "canvases": [
+              {
+                "id": "canvas-LljW8fXC",
+                "label": "Main Network",
+                "color": "#3b82f6",
+                "georeferenced": false,
+                "graph": {
+                  "graph_type": "graph_type_1",
+                  "node_ids": [
+                    "node-Pr107eaY",
+                    "node-3dR9MeCn",
+                    "node-KM_lw8FE",
+                    "node-uJFHyvJ5",
+                    "node-mYW8d9_h",
+                    "node-38A0gTLb"
+                  ],
+                  "edge_ids": [
+                    "edge-i0bQmKRE",
+                    "edge-6YzHF_EQ",
+                    "edge-NPsHMxNF",
+                    "edge-f_tnBXBy",
+                    "edge-hRxIEYFn",
+                    "edge-vztw1dsl",
+                    "edge-0eDb-0Ir"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "scorecard": []
+    },
+    "config": {
+      "version": "1.0",
+      "meta": {
+        "name": "Default Config"
+      },
+      "functionality_scale": [
+        {
+          "level": 1,
+          "label": "critical",
+          "color": "#ef4444"
+        },
+        {
+          "level": 2,
+          "label": "operational_warning",
+          "color": "#f97316"
+        },
+        {
+          "level": 3,
+          "label": "operational",
+          "color": "#22c55e"
+        }
+      ],
+      "categories": [
+        {
+          "name": "operator",
+          "category_type": "Requisite",
+          "icon": "LucideUserRound"
+        },
+        {
+          "name": "water",
+          "category_type": "Requisite",
+          "icon": "Droplet"
+        },
+        {
+          "name": "electric",
+          "category_type": "SourceToDemands",
+          "icon": "Zap"
+        }
+      ],
+      "events": [
+        {
+          "id": "oQtVYPRrdEgfa_3HQvQUQ",
+          "label": "Earthquake",
+          "type": "hazard",
+          "frequency_per_10y": 1,
+          "attribute_mutations": {}
+        }
+      ],
+      "graph_types": [
+        {
+          "name": "graph_type_1",
+          "heuristics": [
+            {
+              "id": "source-to-demands-flow",
+              "enabled": true,
+              "params": {
+                "allocation": "priority_greedy"
+              }
+            }
+          ]
+        }
+      ],
+      "node_defaults": {}
+    }
+  },
+  "folder_name": "samples",
+  "recovery_filename": "cascade-recovery-IJDRR_example.json"
+}

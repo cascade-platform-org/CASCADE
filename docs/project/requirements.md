@@ -368,28 +368,60 @@ together. The rule grammar additionally tracks `CASCADE-backend/core/rule_parser
 
 ### 8.5 Guided tour *(implemented)*
 
-A skippable seven-step walkthrough of the core loop — the network, the
-Inspector, apply an Event, Propagate, advance time — spotlighting the real
-editor UI (`driver.js`, MIT).
+A skippable eleven-step walkthrough of the core loop — read the network, inspect
+an element's attributes, Reset, apply an Event, Propagate, read the cascade,
+advance time — pointing at the real editor UI.
 
+- **Action-gated.** A step that asks the user to do something carries a
+  `waitFor` and advances by itself the moment they do it: select a node, Reset,
+  apply an Event, propagate, jump time. While waiting it shows a `waitHint`
+  line. `waitFor` is **armed when the step appears** — it captures the state it
+  found and returns the predicate — so a step cannot be satisfied by something
+  that had already happened. That is not a detail: the sample ships with the
+  Earthquake applied and propagated, and an absolute check ("the latest history
+  entry is an Event") skipped the step on arrival. Gates that watch history compare entry
+  ids, not just types. `Next` is never removed, so a step nobody can satisfy (a
+  guest without `can_propagate`) stays skippable.
+- **Nothing is dimmed and nothing is blocked.** `components/onboarding/guided-tour.tsx`
+  draws only a ring around the current target and a card beside it, both in a
+  portal, the ring `pointer-events: none`. This is why no tour library is used:
+  driver.js, shepherd and intro.js all dim the page and make everything outside
+  the spotlight inert, and both are wrong here — the user has to *read* the
+  network while a step talks about it, and has to *click* real controls, several
+  of which sit outside whatever the step highlights. (driver.js also forced
+  `pointer-events` onto every descendant of its spotlight, which flipped React
+  Flow's transparent overlay layers into click-catchers and made the canvas
+  unselectable.) The ring follows its target in a `requestAnimationFrame` loop,
+  because the most-highlighted target is a node the user can pan and zoom, which
+  fires neither `scroll` nor `resize`.
 - **Steps** are data in `lib/tour/first-run-tour.ts`; **targets** are
   `data-tour="…"` attributes on the real components, never CSS or
   DOM-structure selectors. A step whose anchor is missing renders centred
   rather than being dropped, and `missingTourAnchors()` warns in development.
-  Do not remove a `data-tour` attribute without removing its step.
+  Do not remove a `data-tour` attribute without removing its step. A step may
+  add `resolve` for a target a `data-tour` cannot aim at — "click the
+  Substation" rings that node, found by label in the canvas store, since ringing
+  the whole canvas says nothing about where to click. A step may also add
+  `cardAnchor` to position its card against a different element while the ring
+  stays on the target: the Temporal Jump step does, because Time opens its panel
+  directly under its own button, where the card would otherwise sit.
 - **It runs on `samples/public/IJDRR_example.json`** — the paper's worked
   example, six nodes with an `Earthquake` hazard — because the copy names that
-  network. Starting the tour loads that bundle, replacing what is open, so both
-  entry points say so first.
-- **Entry points:** a one-time `TourPrompt` over the canvas (first run per
-  browser, `localStorage` key `cascade.tour.firstRun.offered` via
-  `hooks/useFirstRun.ts`), and "Take the guided tour" in the User Manual drawer,
-  available forever after.
+  network. Starting the tour loads that bundle, replacing what is open, so every
+  entry point says so first. `lib/tour/start-tour.ts` is the single launcher.
+  That bundle is saved in its **post-Earthquake, post-Propagation** state — a
+  newcomer opens onto a cascade worth looking at — so the tour has the user
+  Reset first and then cause it themselves rather than read its result. The
+  saved state was produced by the engine itself, not written by hand.
+- **Entry points:** the New Project Wizard's first step (before the blank-project
+  fields — a first-timer has nothing to build yet), a one-time `TourPrompt` over
+  the canvas, and "Take the guided tour" in the User Manual drawer, available
+  forever after. The first two are suppressed once offered (`localStorage` key
+  `cascade.tour.firstRun.offered`, `hooks/useFirstRun.ts`).
 - **State:** `ui-store.activeTour`; `startTour()` closes every drawer and modal
   first so nothing covers a highlighted target.
 - Propagation still needs the server and `can_propagate`. The tour does not
-  work around that — the step explains the button, and a guest simply cannot
-  press it.
+  work around that — the step explains the button, and a guest skips past it.
 
 ---
 
@@ -423,6 +455,12 @@ For each Element with `functionality_time > 0`:
 A Propagation immediately follows to cascade the effects of any expired Elements.
 
 **Stored in history** as an `event_applied` entry (`event_id` = the Temporal Jump's synthetic id, `type = "temporal_jump"`). Undoable with CTRL+Z. Clearable with CTRL+R (uses `mutation_reversal` like any Event).
+
+### 9.2a Reverting a run of jumps
+
+The first jump of a run saves a pre-jump `GraphSnapshot`; the **−Xh** button (in the action bar and the Temporal Jump panel) restores it, undoing every jump of that run at once.
+
+The revert is stored as a **`temporal_jump_revert`** entry carrying `reverts_to_entry_id` — the newest history entry at the moment that snapshot was taken. That id is what makes the revert legible to everything derived from history: `deriveSituation()` (§12.3a) and the unsaved-run scan (§12.8) both skip from the revert straight back to it. Without it, the canvas would show the pre-jump state while the Situation window still reported the jumps and the Propagation that ran during them, and Save-to-Scorecard would offer a run the project had been rewound out of. If that entry has aged out of the capped history, the pre-jump Situation cannot be reconstructed and none is reported — reporting the reverted one would be worse.
 
 ### 9.3 Auto-Advance Mode
 

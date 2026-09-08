@@ -15,7 +15,7 @@
  * "already offered" snapshot so the prompt never flashes during hydration.
  */
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 const KEY = "cascade.tour.firstRun.offered";
 
@@ -40,17 +40,19 @@ function getServerSnapshot(): boolean {
   return true;
 }
 
+/** Record that the tour has been offered, from outside React. */
+export function markTourOffered(): void {
+  try {
+    window.localStorage.setItem(KEY, "1");
+  } catch {
+    /* nothing to persist to — the prompt reappears next session */
+  }
+  listeners.forEach((fn) => fn());
+}
+
 export function useFirstRun() {
   const offered = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const dismiss = useCallback(() => {
-    try {
-      window.localStorage.setItem(KEY, "1");
-    } catch {
-      /* nothing to persist to — the prompt reappears next session */
-    }
-    listeners.forEach((fn) => fn());
-  }, []);
-
-  return { shouldOffer: !offered, dismiss };
+  // markTourOffered is a stable module-level function — no memoisation needed.
+  return { shouldOffer: !offered, dismiss: markTourOffered };
 }
