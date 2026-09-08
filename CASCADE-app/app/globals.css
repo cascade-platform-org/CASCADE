@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ *
+ * CASCADE brand tokens — single source of truth for the palette.
+ * Mirrors docs/brand.md. `brand-critical` is deliberately the same
+ * red as functionality_scale level 1 (see local-first-guide.md).
+ * ------------------------------------------------------------------ */
+@theme {
+  --color-brand-ink: #0f172a;      /* primary mark / text on light      */
+  --color-brand-paper: #f8fafc;    /* mark / text on dark               */
+  --color-brand-slate: #5b6675;    /* mid tonal step                    */
+  --color-brand-mist: #94a3b8;     /* light tonal step / muted text     */
+  --color-brand-abyss: #0b1220;    /* dark surfaces, OG background      */
+  --color-brand-critical: #ef4444; /* the cascade / failure accent      */
+  --color-brand-critical-soft: #f87171;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* non-Tailwind consumers (inline styles, canvas, charts) */
+  --brand-ink: #0f172a;
+  --brand-paper: #f8fafc;
+  --brand-slate: #5b6675;
+  --brand-mist: #94a3b8;
+  --brand-abyss: #0b1220;
+  --brand-critical: #ef4444;
+  --brand-critical-soft: #f87171;
 }
 
 @media (prefers-color-scheme: dark) {

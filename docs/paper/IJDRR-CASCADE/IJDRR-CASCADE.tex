@@ -1,4 +1,4 @@
-\documentclass[review,12pt]{elsarticle}
+\documentclass[article,12pt]{elsarticle}
 \usepackage[utf8]{inputenc}
 
 \usepackage{amsmath}
@@ -19,6 +19,15 @@
   \def\cortext#1#2{}%
   \def\fnref#1{}%
   \def\fntext#1#2{}%
+}
+
+% --- Printed bibliography: drop the url= field (it overflows the text block);
+% DOIs and clickable titles are kept. .bib is untouched. ---
+\usepackage{etoolbox}
+\AtBeginEnvironment{thebibliography}{%
+  \def\url#1{}%          % swallow the \url{...} from each entry's url= field
+  \def\urlprefix{}%      % ...and its "URL " prefix
+  \def\newline{\unskip}% % ...and the dangling line break it sat on
 }
 \journal{International Journal of Disaster Risk Reduction}
 
@@ -45,7 +54,7 @@
 
 \begin{abstract}
 Climate-induced hazards increasingly threaten interconnected critical infrastructure systems, where cascading failures can amplify initial impacts and lead to catastrophic service disruptions. Managing such systems effectively requires understanding their behaviour under stress, including the systemic, cross-sector effects that arise from interdependencies. Existing decision support tools for disaster risk reduction often require extensive historical data, computational resources, and specialized expertise, making them inaccessible in resource-constrained contexts.
-This paper introduces CASCADE (Customizable Assessment of System Cascades And Dependency Effects), a compositional framework enabling rapid, collaborative operativity assessment of interdependent infrastructure networks. CASCADE addresses key gaps by supporting cross-sector dependency modelling, facilitating stakeholder collaboration through intuitive interfaces, enabling knowledge-based rather than data-intensive analysis, and providing systematic stress-testing for disaster preparedness.
+This paper introduces CASCADE (Customizable Assessment of System Cascades And Dependency Effects), a compositional framework enabling rapid, collaborative operativity assessment of interdependent essential services. CASCADE addresses key gaps by supporting cross-sector dependency modelling, facilitating stakeholder collaboration through intuitive interfaces, enabling knowledge-based rather than data-intensive analysis, and providing systematic stress-testing for disaster preparedness.
 The framework offers two methodological innovations: (1) a functionality-status propagation engine modelling how operativity degradation cascades through networks, including time-limited backup systems; and (2) a game-theoretic analysis adapting the Shapley value approach to identify neuralgic nodes across combinatorial failure scenarios. Unlike traditional simulation tools, CASCADE employs a compositional, bottom-up paradigm in which subsystems are developed independently by domain experts and integrated into network-of-networks representations.
 Through a realistic demonstration of urban critical infrastructure under multi-hazard scenarios, we show how CASCADE generates concrete decision-support outputs for strategic investment and emergency preparedness. Its low data requirements, rapid modelling capability, and explicit handling of all relevant dependencies are intended to make it well suited to accessible disaster risk reduction applications in vulnerable, resource-limited contexts, strengthening the resilience of essential services\footnote{Code and results are available at:
 \url{https://github.com/cascade-platform-org/CASCADE-app}. The platform itself runs at \url{https://app.cascade-platform.org/}.}.
@@ -98,7 +107,7 @@ This paper addresses the needs identified above by introducing CASCADE (Customiz
 
 \paragraph{RQ2} Given that preparedness depends on knowing global and complex dynamics, can the modelling process itself \textbf{expand operators' understanding}---revealing dependencies, blind spots, and plausible failure sequences---rather than acting as a black-box calculator?
 
-\paragraph{RQ3} Can a framework support rapid \textbf{stress-testing} of "what-if" situations (e.g.\ upgrading interventions, joint failures), letting stakeholders assess system operativity for strategic investment and preparedness in an anticipatory approach?
+\paragraph{RQ3} Can a framework support rapid \textbf{stress-testing} of "what-if" situations (e.g.\ upgrading interventions, joint failures), letting stakeholders assess strategic investment and preparedness in an anticipatory approach?
 
 
 \subsection{Paper organisation}
@@ -177,7 +186,8 @@ This section first describes what CASCADE is (Section~\ref{subsec:what_cascade_i
 \begin{figure}
     \centering
     \includegraphics[width=0.7\linewidth]{Figures/puzzle.jpg}
-    \caption{\textbf{Schema of a labelled element in CASCADE}. Every node is depicted as a puzzle piece to emphasise that it interlocks with its neighbours through composable connections. An element declares a \texttt{Type} (source, infrastructure, service, or personnel, distinguished by shape) and one or more \texttt{Category} (e.g.\ electric, water, transport, managerial) identifying the service it provides. \texttt{Attributes} (e.g.\ importance, capacity/demand, vulnerability level, cost of disservice, backup) parametrise its behaviour under stress, while \texttt{Edges} — intra-layer or extra-layer, each carrying its own attributes — encode its dependencies on, or provision to, other elements. \texttt{Specific rules} attach optional if--then conditions that override the default propagation logic for this element. Because every connected neighbour (dashed outlines) exposes the same five-part schema — attributes, type, edges, category, specific rules — a network is built by composing identically structured, self-describing pieces, which is what enables CASCADE's compositional, bottom-up modelling paradigm.}
+    \caption{\textbf{Schema of a labelled element in CASCADE}. Every node is depicted as a puzzle piece to emphasise that it interlocks with its neighbours through composable connections. An element declares a \texttt{Type} (source, infrastructure, service, or personnel, distinguished by shape) and one or more \texttt{Category} (e.g.\ electric, water, transport, managerial) identifying the service it provides. \texttt{Attributes} (e.g.\ capacity/demand, vulnerability level, backup, importance \dots) parametrise its behaviour under stress, while \texttt{Edges} — intra-layer or extra-layer, each carrying its own attributes — record which service flows from one element to another. \texttt{Specific rules} attach optional if--then conditions that override the default propagation logic for this element.
+    Because every connected neighbour (dashed outlines) exposes the same schema, a network is built by composing identically structured, self-describing pieces, which is what enables CASCADE's compositional, bottom-up modelling paradigm.}
     \label{fig:puzzle}
 \end{figure}
 \label{subsec:what_cascade_is}
@@ -227,6 +237,7 @@ Because the Shapley analysis (Section~\ref{subsec:shapley}) defines the value of
 
 
 From a user's viewpoint, CASCADE is software designed to support an intuitive, iterative workflow rather than a one-off modelling exercise.
+See Figure~\ref{fig:CASCADEworkflow} for a visual summary of the workflow described in the following.
 
 \paragraph{Modelling the system as a multi-labelled graph}
 Users begin by building a graph/network model of their system. They add nodes for key sources, infrastructures, services, and operators, and connect them with directed dependency edges. Nodes are grouped into categories (e.g.\ electric, water, transport, manager), which later determine how propagation is handled by correctly interpreting redundant services. For each node, users can set a per-category dependency level that controls how strongly an upstream degradation in that category propagates to the node, and can enable a time-constrained backup for any category.
@@ -245,7 +256,7 @@ CASCADE summarises system behaviour through customizable Operativity Score and p
     \centering
     \includegraphics[width=1\linewidth]{Figures/CASCADE Workflow.jpg}
     \caption{The CASCADE workflow. During \textbf{modelling}, the user \emph{sets up}
-the system as an interdependent network-of-networks ( labelled nodes and edges, operational rules, hazards) and \emph{validates} it by running the propagation engine and comparing the cascades against expert or simulation knowledge---a step that surfaces implicit assumptions and loops back for refinement until the model fits. The validated model then drives \textbf{analysis and action}: identifying neuralgic nodes, assessing disruptive events, and tracing long cascades, then acting on the results by comparing interventions, exploring alternatives, and expanding the network-of-networks as new stakeholders contribute their own subsystems. The outer feedback loop keeps the process iterative and participatory.}
+the system as an interdependent network-of-networks (labelled nodes and edges, operational rules, hazards) and \emph{validates} it by running the propagation engine and comparing the cascades against expert or simulation knowledge---a step that surfaces implicit assumptions and loops back for refinement until the model fits. The validated model then drives \textbf{analysis and action}: identifying neuralgic nodes, assessing disruptive events, and tracing long cascades, then acting on the results by comparing interventions, exploring alternatives, and expanding the network-of-networks as new stakeholders contribute their own subsystems. The outer feedback loop keeps the process iterative and participatory.}
 
     \label{fig:CASCADEworkflow}
 \end{figure}
@@ -267,28 +278,23 @@ the system as an interdependent network-of-networks ( labelled nodes and edges, 
   (distinguished by shape); the icon(s) inside a node represent the \emph{category}
   of service it provides (electricity, water, operator). A directed
   \emph{edge} $a\!\rightarrow\!b$ reads ``$a$ supplies/enables $b$'', i.e.\ $b$
-  depends on $a$. Every node carries an integer \emph{Functionality} status on a
-  $1\ldots N$ scale (default $N=3$: $1=$\emph{critical}, red; $2=$\emph{%
-  operational\_warning}, orange; $3=$\emph{operational}, green).  Beyond its status, a node carries knowledge-based attributes. A source declares how much it can provide through \texttt{supply\_capacity}, and a consumer how much it needs through \texttt{demand}. For every category it depends on,
-  a node sets a \texttt{dependency\_level} on the same $1\ldots N$ scale, which
-  tunes how strongly a shortfall in that category drags it down --- from $1$,
-  where the node is effectively immune, up to $N$, where the degradation passes
-  through in full (default is $N$, hence $3$ in this example). It may also keep a \texttt{backup} for a given category, a reserve that holds it at its current status for \texttt{backup\_duration} hours after that supply fails. A node's exposure to a hazard is a \texttt{vulnerability\_level}, from $0$ (unaffected, defaulting value) to $N\!-\!1$ (driven
-  straight to critical). Finally, \texttt{rules} are user-written \texttt{if--then} guards attached to the element they act on.
+  depends on $a$. Every node carries a discrete \emph{Functionality}: \emph{critical} as red; \emph{operational\_warning} as orange and \emph{operational} as green.
+  Beyond its status, a node carries knowledge-based attributes. A source declares how much it can provide through \texttt{supply\_capacity}, and a consumer how much it needs through \texttt{demand}. For every category it depends on,
+  a node sets a \texttt{dependency\_level} which
+  tunes how strongly a shortfall in that category drags it down. It may also keep a \texttt{backup} for a given category, a reserve that holds it at its current status for \texttt{backup\_duration} hours after that supply fails.
+  Node's exposure to a hazard is represented by the \texttt{vulnerability\_level}, from unaffected to fully degraded. Finally, \texttt{rules} are user-written \texttt{if--then} guards attached to the element they act on.
  The \emph{scenario} initialises the state: an Earthquake sets the \texttt{Electric Source} to
-  \emph{critical} via its vulnerability and \texttt{direct\_damage} (rendered as a crack).
+  \emph{critical} via its \texttt{vulnerability\_level} (direct damage is rendered as a crack).
   %
   \textbf{Engine (centre).} The propagation engine iterates to a fixed point. For
   each node it forms a \emph{proposal}, passes it through \emph{guards} (dependency-level attenuation, time-limited backups, and custom rules), and \emph{commits} it monotonically.
   %
   \textbf{Output (right) --- two complementary readings.}
-  \emph{(1)~Propagated state}: the cascaded Functionality of every node on the
-  same colour scale, where an amber ring marks a node currently \emph{holding on
-  backup}. Here the blackout criticalises the \texttt{Substation} (and the rule
-  cracks it), the \texttt{City} degrades to warning, while the \texttt{Hospital}
+  \emph{(1)~Propagated state}: the cascaded Functionality of every node thorugh the colour code, where an amber ring marks a node currently \emph{holding on
+  backup}. Here the blackout criticalises the \texttt{Substation} (the rule
+  cracks it representing a physical damage requiring intervention), the \texttt{City} degrades to warning, while the \texttt{Hospital}
   and \texttt{Water Pump} survive on backup; the single-number \emph{Operativity
-  Score} $\Omega$ --- a weighted mean Functionality expressed as a percentage of
-  the fully operational state --- summarises the whole network state at $\Omega=72\%$.
+  Score} $\Omega$ (weighted mean Functionality) summarizes numerically the propagated situation.
   \emph{(2)~Neuralgic index}: a Shapley-value ranking of how much each node's failure contributes to overall operativity loss (darker $=$ more neuralgic).}
   \label{fig:anatomy}
 \end{figure}
@@ -309,7 +315,7 @@ Two category types exist:
 To accurately reflect these differing realities, the engine combines two complementary mechanisms operating over the same network:
 \begin{enumerate}
   \item \textbf{Universal logical propagation:} In every round, the engine runs a logical aggregation pass over every\footnote{Except for those that have a category typed \emph{SourceToDemands} and with every parent node of the same category: this case is handled with the Capacity-based propagation.} node. The aggregation follows two nested rules. First, among all incoming nodes that carry the \emph{same} category, the engine proposes the best available status (i.e., a \texttt{best\_of} across co-category suppliers): a single healthy supplier is sufficient to satisfy the need of the service associated with that category. Second, across \emph{different} categories the engine takes the worst result (i.e., a \texttt{worst\_of} across categories): a node that receives both electricity and water must have both adequately supplied, so a failure in any one category degrades the node. The resulting status is then fed into the monotonic commit step alongside the capacity-based proposal. By running this pass universally, the engine automatically reads the dependency structure from the labelled graph topology itself: a node that happens to receive edges from two different categories is implicitly treated as requiring both, deferring the need for the user to declare an explicit cross-category rule only to change the defaulting behaviour.
-  \item \textbf{Capacity-based propagation:} For nodes with positive demand in a \emph{SourceToDemands} category, the engine additionally runs a priority-aware min-cost max-flow pass (\cite{edmonds1972theoretical,orlin1997polynomial,SciPyProceedings_11}) and maps the served ratio to a Functionality proposal. This additive layer captures quantity-dependent flow dynamics---such as partial supply and priority-driven flows---that purely logical dependency models cannot represent.
+  \item \textbf{Capacity-based propagation:} For nodes with positive demand in a \emph{SourceToDemands} category, the engine additionally runs a priority-aware min-cost max-flow pass (\cite{edmonds1972theoretical,orlin1997polynomial,SciPyProceedings_11}) and maps the served ratio to a Functionality proposal. This module captures quantity-dependent flow dynamics---such as partial supply and priority-driven flows---that purely logical dependency models cannot represent faithfully.
 \end{enumerate}
 
 Reconciling these heterogeneous mechanisms onto a common functionality-status representation is what makes the engine extensible: because every mechanism ultimately expresses its result as a Functionality value, more sophisticated domain simulations (e.g.\ detailed hydraulic, power-flow, or traffic models) can, as future extension, be wrapped behind the same interface and integrated as additional propagation mechanisms, and made to interact with one
@@ -370,7 +376,7 @@ Because every sampled failure scenario is evaluated using CASCADE's core propaga
 
 
 
-\section{Demonstration Through a Case Study}
+\section{CASCADE Demonstration Through a Case Study}
 \label{sec:case}
 
 
@@ -404,8 +410,7 @@ management.
   an icon inside each node marks its \emph{category} (electric, water, transport,
   managerial, \dots). An amber border flags a node holding on backup (Functionality Time active), and a crack marks direct
   hazard damage. Directed edges denote dependencies (tail \emph{provides to} head);
-  dashed edges cross layers (inter-canvas). This key applies to all subsequent
-  scenario and layer figures.}
+  dashed edges cross layers (inter-canvas).}
   \label{fig:map_legend}
 \end{figure}
 
@@ -516,10 +521,10 @@ Three stressor events are configured for this case study:
 \texttt{strong\_earthquake} (seismic hazard), \texttt{flood}
 (hydrological hazard), and \texttt{digital\_attack} (cyber disservice).
 Vulnerability is encoded as an integer level per node (and per edge):
-0 means no vulnerability; 1 implies a minor effect (element degrades to
+0 means no vulnerability (default); 1 implies a minor effect (element degrades to
 \texttt{operational\_warning}); 2 implies significant exposure (element
 degrades to \texttt{critical}).
-These levels are not arbitrary: they are derived from expert knowledge of each system and, ideally, can be further validated via hazard simulations.
+The vulnearability assignments are derived from expert knowledge of each system or validated via data-driven hazard simulations when available.
 Table~\ref{tab:vulnerability} summarises the non-zero vulnerability entries.
 
 \begin{table}[H]
@@ -611,7 +616,7 @@ When all three hold, the rule intercepts any degradation proposal for
 
 We illustrate CASCADE through three stressors of different origin---a
 \emph{strong earthquake} (Scenario~A), a \emph{flood} (Scenario~B), and a \emph{digital attack} (Scenario~C)---selected to exercise complementary engine mechanisms: physical damage, flow allocation, redundancy, time-limited backups, and cross-sector control dependencies. Each is read as an initial event footprint
-followed by the propagated fixed-point state, and is accompanied by a step-by-step \emph{Propagation Engine Description} and before/after figures.
+followed by the propagated fixed-point state, and is accompanied by a step-by-step \emph{Propagation Engine Description} with before/after figures.
 
 \subsubsection{Scenario~A: Strong earthquake — electric and transport collapse}
 \label{subsubsec:scenarioA}
@@ -779,10 +784,10 @@ or upstream transmission faults --- can reduce the effective output of the
 \texttt{Electric Source} below the aggregate demand of the regional
 network.
 Under scarcity, allocation becomes a managed trade-off: grid operators
-who retain sufficient control over distribution infrastructure may
-selectively steer supply to lower-priority feeders to safeguard critical urban loads.
+who retain control over distribution infrastructure may
+selectively steer supply to higher-priority feeders to safeguard critical urban loads.
 
- Modelling process indicated that \texttt{Palmanova electric} lacked an explicit priority assignment relative to industrial and peripheral consumers, exposing the city of \texttt{Palmanova} --- a large urban hub
+\texttt{Palmanova electric} lacked an explicit priority assignment relative to industrial and peripheral consumers, exposing the city of \texttt{Palmanova} --- a large urban hub
 hosting crucial services --- to avoidable degradation under moderate shortage scenarios.
 The proposed intervention formalises a preferential load-shedding agreement with the grid operator, ensuring that the Palmanova feeder is served before lower-criticality consumers whenever the \texttt{Electric Source} operates below full capacity.
 
@@ -795,8 +800,9 @@ In the model, this intervention is encoded by increasing the
   \includegraphics[width=1\linewidth]%
       {Figures/electric_propagated_prioritized.png}
   \caption{\textbf{Pre- and post-intervention propagated electric shortage.}
-  Before (top) and after (bottom) prioritisation for a moderate-shortage power supply. \texttt{Palmanova electric} receives
-  preferential allocation and the city remains fully operational; the shortage is absorbed by peripheral and industrial nodes where the operational impact is substantially lower.}
+  Before (top) and after (bottom) prioritisation under a moderate \texttt{Electric Source} shortage.
+  Raising \texttt{Palmanova electric}'s \texttt{priority} fully satisfies its demand allowing \texttt{Palmanova} city to remain \texttt{operational}. 
+  The reallocation of the remaining supply to lower-priority nodes doesn't cause any additional worsening due to the functionality scale granularity of the model.}
   \label{fig:electric_pre_post}
 \end{figure}
 
@@ -901,7 +907,7 @@ Finally, we compare traditional topological metrics with the proposed Shapley-ba
 We computed:
 \begin{itemize}
   \item \textbf{Eigenvector and Betweenness Centrality}, computed with NetworkX (power-iteration eigenvector centrality; shortest-path betweenness) on the directed dependency graph (39 nodes, 93 edges);
-  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations (fixed seed, results stable across seeds and across $M \in \{200,500,800\}$), and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop this required about a minute; the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE-app repository, run on the case-study model \texttt{CASCADE-app/samples/public/Palmanova\_Complete.json}) reproduces these exact figures by calling the propagation engine directly. The file \texttt{docs/papers.md} maps each section of this paper to the code that implements or reproduces it.}.
+  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations, and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop this required about a minute; the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE-app repository, run on the case-study model \texttt{CASCADE-app/samples/public/Palmanova\_Complete.json}) reproduces these exact figures by calling the propagation engine directly.}.
 \end{itemize}
 
 \noindent\textbf{Interpretation of results.}
@@ -912,8 +918,8 @@ CASCADE's simulation explicitly encodes these distinctions through categories an
 As shown in Figure~\ref{fig:shapley_ranking}, Shapley values identify neuralgic nodes by accounting for the operational logic of the system --- flow dynamics, requisite conjunctions, and dependency levels --- whereas centrality metrics reward high connectivity (eigenvector) or topological
 bridging (betweenness) regardless of whether those structural positions translate into operational criticality.
 
-To quantify this, we computed Spearman rank correlations between $\hat{\phi}_i$ and each centrality measure across all 39 nodes (Table~\ref{tab:shapley_correlation}). Shapley and eigenvector centrality are weakly \emph{anti}-correlated, at the margin of significance ($\rho=-0.31$, $p=0.05$): eigenvector centrality is dominated by well-connected transport junctions (all ten highest-eigenvector nodes are transport elements, e.g.\ \texttt{Aquileia access} at eigenvector rank~1 but Shapley rank~23), none of which rank above 11th in Shapley value, while it under-ranks every source node. Shapley and betweenness centrality are instead moderately \emph{positively} correlated overall ($\rho=0.74$, $p<10^{-6}$): in this network, several genuine flow bottlenecks (distribution substations, water junctions) are simultaneously high-betweenness and high-Shapley.
-The informative divergences are individually diagnostic cases, summarised in Table~\ref{tab:shapley_correlation}.
+To quantify this, we computed Spearman rank correlations between $\hat{\phi}_i$ and each centrality measure across all 39 nodes (Table~\ref{tab:shapley_correlation}). Shapley and eigenvector centrality are weakly \emph{anti}-correlated, at the margin of significance ($\rho=-0.31$, $p=0.05$): eigenvector centrality is dominated by well-connected transport junctions. Shapley and betweenness centrality are instead moderately \emph{positively} correlated overall ($\rho=0.74$, $p<10^{-6}$): in this network, several genuine flow bottlenecks (distribution substations, water junctions) are simultaneously high-betweenness and high-Shapley.
+Results are summarised in Table~\ref{tab:shapley_correlation}.
 
 A representative contrast: \texttt{Electric Source} scores highest in Shapley value ($\hat{\phi}=1.38$) because its removal collapses the entire power subsystem, yet it ranks only 36th of 39 in eigenvector centrality and 6th in betweenness --- a peripheral-looking source whose criticality both topological metrics understate.
 Conversely, transport bridges such as \texttt{Sottoselva transport} and \texttt{San Marco transport} rank in the top ten of \emph{both} eigenvector and betweenness centrality --- being structurally well-connected junctions --- yet contribute comparatively low marginal Shapley value (17th and 24th respectively), because redundant routing absorbs their failure.
@@ -942,7 +948,9 @@ Conversely, transport bridges such as \texttt{Sottoselva transport} and \texttt{
 \end{table}
 
 \paragraph{From rankings to decisions}
-Read together, these indices support complementary decisions. The Shapley ranking answers ``where does scarce hardening budget buy the most resilience?'': its values are marginal contributions to Operativity loss, so a shortlist of high-$\hat{\phi}_i$ elements pinpoints where reinforcement, redundancy, or backup investment most reduces cascading impact. Moreover, Shapley values share a common, interpretable unit --- fractional Operativity loss --- so they are directly comparable in magnitude: an element with twice the $\hat{\phi}_i$ contributes twice the marginal operativity loss, enabling straightforward prioritisation against an intervention budget. The nodes where the two views \emph{disagree} are the actionable signal: a structurally central node with comparatively low Shapley value (e.g.\ \texttt{Sottoselva transport}, \texttt{San Marco transport}) reveals effective redundancy where mitigation would be misdirected, whereas a peripheral node with high Shapley value (e.g.\ \texttt{Electric Source}) flags a hidden single point of failure that topological screening overlooks. Eigenvector centrality diverges from Shapley value systematically in this network (negative overall correlation). Centrality thus serves as a fast, scenario-free and scalable first pass, while the Shapley analysis refines it with operational logic: the elements where the two rankings diverge are exactly those where topology-only screening is most likely to misjudge operational risk. 
+Read together, these indices support complementary decisions. The Shapley ranking answers ``where does scarce hardening budget buy the the most continuity in essential service delivery?'': its values are marginal contributions to Operativity loss, so a shortlist of high-$\hat{\phi}_i$ elements pinpoints where reinforcement, redundancy, or backup investment most reduces cascading impact. 
+Moreover, Shapley values share a common, interpretable unit --- fractional Operativity loss --- so they are directly comparable in magnitude: an element with twice the $\hat{\phi}_i$ contributes twice the marginal operativity loss, enabling straightforward prioritisation against an intervention budget. The nodes where the two views \emph{disagree} are the actionable signal: a structurally central node with comparatively low Shapley value (e.g.\ \texttt{Sottoselva transport}, \texttt{San Marco transport}) reveals effective redundancy where mitigation would be misdirected, whereas a peripheral node with high Shapley value (e.g.\ \texttt{Electric Source}) flags a hidden single point of failure that topological screening overlooks.
+Eigenvector centrality diverges from Shapley value systematically in this network (negative overall correlation). Centrality thus serves as a fast first pass, while the Shapley analysis refines it with operational logic: the elements where the two rankings diverge are exactly those where topology-only screening is most likely to misjudge operational risk. 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=1\linewidth]%
@@ -1040,7 +1048,8 @@ Finally, another promising avenue is leveraging the propagation engine to extrac
 
 \section{Conclusion} \label{sec:conclusion} Climate-induced hazards and cascading failures represent escalating global challenges, demanding decision-support tools that bridge the gap between theoretical understanding and practical implementation. This paper introduced CASCADE (Customizable Assessment of System Cascades And Dependency Effects), a compositional framework designed to enable rapid, collaborative operativity assessment of interdependent entities, particularly in resource-constrained disaster risk reduction contexts and in the preparedness phase for intersectoral safety enhancement.
 
-The work addressed three closely related research questions. First, it demonstrated how cross-sector interdependencies can be modelled systematically even when formal quantitative data are scarce, utilising a compositional network-of-networks paradigm. This approach enables multi-stakeholder collaboration, allowing diverse organisations to independently encode tacit operational knowledge and seamlessly integrate their subsystems into a shared model of cascading dynamics. Second, it addressed the need for decision-support tools to expand operators' understanding rather than acting as passive, black-box calculators. By making implicit assumptions explicit, the modelling process itself serves as an active learning environment that forces the systematic consideration of dependencies, reveals blind spots, and builds user intuition regarding plausible failure sequences. Third, it provided a mechanism for rapid stress-testing under diverse hazard scenarios to support proactive governance. By combining functionality-status propagation with an adapted Shapley value analysis, the framework allows stakeholders to interactively explore "what-if" situations, evaluating hardening measures or joint failures—to proactively assess system operativity, thereby guiding strategic investment and anticipatory preparedness.
+The work addressed three core issues. First, it demonstrated how cross-sector interdependencies can be modelled systematically even when formal quantitative data are scarce, utilising a compositional network-of-networks paradigm. This approach enables multi-stakeholder collaboration, allowing diverse organisations to independently encode tacit operational knowledge and seamlessly integrate their subsystems into a shared model of cascading dynamics. Second, it addressed the need for decision-support tools to expand operators' understanding rather than acting as passive, black-box calculators. By making implicit assumptions explicit, the modelling process itself serves as an active learning environment that forces the systematic consideration of dependencies, reveals blind spots, and builds user intuition regarding plausible failure sequences. 
+Third, it provided a mechanism for rapid stress-testing under diverse hazard scenarios to support proactive governance. By combining functionality-status propagation with an adapted Shapley value analysis, the framework allows stakeholders to interactively explore "what-if" situations, evaluating hardening measures or joint failures—to proactively assess system operativity, thereby guiding strategic investment and anticipatory preparedness.
 
 The realistic demonstration in Section~\ref{sec:case} illustrated the framework's capability to generate concrete decision-support outputs for disaster preparedness. Notably, the framework translates operativity analysis into financial metrics via cost-of-disservice estimates, enabling budget authorities to perform strategic cost--benefit comparisons. The tool's low data requirements, rapid modelling, and inherently instructive process are intended to support bottom-up disaster risk reduction, helping to broaden access to operativity analysis.
 
