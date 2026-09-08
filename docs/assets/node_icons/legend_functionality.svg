@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="296" viewBox="0 0 360 296">
+<text x="20" y="46" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Functionality status</text>
+<g transform="translate(20,60)" fill="#22c55e" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="86" y="91.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >operational</text>
+<g transform="translate(20,132)" fill="#f97316" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="86" y="163.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >operational warning</text>
+<g transform="translate(20,204)" fill="#ef4444" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="86" y="235.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >critical</text>
+</svg>

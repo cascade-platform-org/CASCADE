@@ -14,6 +14,7 @@ import { ConfigModal } from "@/components/controls/config-modal";
 import { FileIoPanel } from "@/components/controls/file-io-panel";
 import { ActiveRulesPanel } from "@/components/rules/active-rules-panel";
 import { RulesManualPanel } from "@/components/rules/rules-manual-panel";
+import { UserManualPanel } from "@/components/help/user-manual-panel";
 import { InterCanvasEdgeDialogWired } from "./inter-canvas-edge-dialog-wired";
 import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { InterventionPanel } from "@/components/canvas/intervention-panel";
@@ -31,6 +32,9 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { checkServerHealth } from "@/lib/api-client";
 import { loadAllIconsOnce } from "@/lib/category-icons";
 import { SaveScorecardDialog } from "@/components/scorecard/operativity-scorecard";
+import { GuidedTour } from "@/components/onboarding/guided-tour";
+import { TourPrompt } from "@/components/onboarding/tour-prompt";
+import { useFirstRun } from "@/hooks/useFirstRun";
 
 export function EditorShell() {
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
@@ -38,6 +42,7 @@ export function EditorShell() {
   const fileIoPanelOpen = useUiStore((s) => s.fileIoPanelOpen);
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
   const rulesManualPanelOpen = useUiStore((s) => s.rulesManualPanelOpen);
+  const userManualPanelOpen = useUiStore((s) => s.userManualPanelOpen);
   const scorecardPanelOpen = useUiStore((s) => s.scorecardPanelOpen);
   const interventionPanelOpen = useUiStore((s) => s.interventionPanelOpen);
   const attributeScanPanelOpen = useUiStore((s) => s.attributeScanPanelOpen);
@@ -49,6 +54,8 @@ export function EditorShell() {
   const setServerReachable = useUiStore((s) => s.setServerReachable);
 
   useAutosave();
+
+  const { shouldOffer, dismiss } = useFirstRun();
 
   // Load the full Lucide icon set in the background so stored icons render
   // immediately without the user needing to open the config modal first.
@@ -110,7 +117,7 @@ export function EditorShell() {
         {(!globalViewActive || globalViewLayout === "merged") && <Toolbox />}
 
         {/* Canvas area */}
-        <div className="relative flex-1 bg-zinc-100 dark:bg-zinc-900">
+        <div data-tour="canvas" className="relative flex-1 bg-zinc-100 dark:bg-zinc-900">
           {!globalViewActive
             ? <FlowCanvasWithProvider />
             : globalViewLayout === "merged"
@@ -118,6 +125,7 @@ export function EditorShell() {
             : <GroupedViewCanvasWithProvider />
           }
           <SituationWindow />
+          {shouldOffer && <TourPrompt onDismiss={dismiss} />}
         </div>
 
         {/* Inspector: always visible. In grouped global view it stays mounted so
@@ -133,6 +141,7 @@ export function EditorShell() {
       {fileIoPanelOpen && <FileIoPanel />}
       {activeRulesPanelOpen && <ActiveRulesPanel />}
       {rulesManualPanelOpen && <RulesManualPanel />}
+      {userManualPanelOpen && <UserManualPanel />}
       {scorecardPanelOpen && <ScorecardPanel />}
       {interventionPanelOpen && <InterventionPanel />}
       {attributeScanPanelOpen && <AttributeScanPanel />}
@@ -142,6 +151,7 @@ export function EditorShell() {
       )}
       <AnalysisPage />
 
+      <GuidedTour />
       <ToastContainer />
     </div>
   );

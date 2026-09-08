@@ -79,8 +79,11 @@ export const NodeSchema = z.object({
   /**
    * Maximum resource supply per category. Present only on Source nodes.
    * Effective supply = supply_capacity[cat] × (functionality / N).
-   * A node must not carry both supply_capacity[c] and category_dependency_profiles[c].demand
-   * for the same category — the engine warns and treats it as supply-only.
+   * Carrying both supply_capacity[c] and category_dependency_profiles[c].demand
+   * for the same category is not rejected here or by the engine: the flow pass
+   * reads the two independently, so the node enters that category's flow graph
+   * as a source AND a consumer. The Inspector flags it (node-inspector.tsx,
+   * SupplyDemandConflictWarning); it is a modelling slip, not a schema error.
    */
   supply_capacity: z.record(z.string(), z.number()).optional(),
   category_dependency_profiles: z.record(z.string(), CategoryDependencyProfileSchema).optional(),

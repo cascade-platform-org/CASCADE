@@ -28,6 +28,32 @@ import { CanvasMembershipSection } from "./canvas-membership";
 // SupplyCapacityEditor — free-text category name, editable value, removable rows
 // ---------------------------------------------------------------------------
 
+/**
+ * Flags a category the node both supplies and demands.
+ *
+ * Nothing rejects this — no Zod refinement, no Pydantic validator — and the
+ * flow pass reads `supply_capacity` and `profile.demand` independently, so the
+ * node enters that category's flow graph as a source *and* a consumer and
+ * quietly serves part of its own demand. Almost always a modelling slip, so it
+ * is surfaced where it is entered rather than left to be discovered in the
+ * results.
+ */
+function SupplyDemandConflictWarning({ node }: { node: Node }) {
+  const conflicting = Object.keys(node.supply_capacity ?? {}).filter(
+    (cat) => (node.category_dependency_profiles?.[cat]?.demand ?? 0) > 0,
+  );
+  if (conflicting.length === 0) return null;
+
+  return (
+    <p className="mt-2 rounded-md border-l-2 border-amber-400 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200">
+      This node both supplies and demands{" "}
+      <span className="font-medium">{conflicting.join(", ")}</span>. It will act
+      as a source and a consumer of the same category at once, partly serving its
+      own demand. Split it into two nodes, or clear one of the two values.
+    </p>
+  );
+}
+
 function SupplyCapacityEditor({
   supply,
   configCats,
@@ -325,6 +351,7 @@ export function NodeInspector({ node }: { node: Node }) {
             configCats={categories.map((c) => c.name)}
             onChange={(s) => patch({ supply_capacity: s })}
           />
+          <SupplyDemandConflictWarning node={node} />
         </Section>
       )}
 

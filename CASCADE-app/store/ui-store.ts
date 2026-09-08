@@ -64,6 +64,13 @@ export interface UiState {
   // --- Rules Manual panel ---
   rulesManualPanelOpen: boolean;
 
+  // --- User Manual panel ---
+  userManualPanelOpen: boolean;
+
+  // --- Guided tour ---
+  /** Id of the running tour, or null. Only "first-run" exists today. */
+  activeTour: string | null;
+
   // --- Scorecard panel ---
   scorecardPanelOpen: boolean;
   /** When true, the Save-to-Scorecard dialog is open independently of the Scorecard panel. */
@@ -186,7 +193,12 @@ export interface UiActions {
 
   // --- Rules Manual panel ---
   toggleRulesManualPanel: () => void;
+  openRulesManualPanel: () => void;
   closeRulesManualPanel: () => void;
+  toggleUserManualPanel: () => void;
+  closeUserManualPanel: () => void;
+  startTour: (id: string) => void;
+  endTour: () => void;
 
   // --- Scorecard panel ---
   toggleScorecardPanel: () => void;
@@ -260,6 +272,8 @@ const initialState: UiState = {
   interCanvasEdgeSourceNodeId: null,
   activeRulesPanelOpen: false,
   rulesManualPanelOpen: false,
+  userManualPanelOpen: false,
+  activeTour: null,
   scorecardPanelOpen: false,
   scorecardSaveDialogOpen: false,
   dismissedSituationId: null,
@@ -392,12 +406,52 @@ export const useUiStore = create<UiStore>()(
     // Rules Manual panel
     // -------------------------------------------------------------------------
 
+    // The two manual drawers share the same right-edge slot (fixed inset-y-0
+    // right-0 z-50), so opening either one always closes the other — otherwise
+    // the second silently paints over the first.
     toggleRulesManualPanel() {
-      set((state) => { state.rulesManualPanelOpen = !state.rulesManualPanelOpen; });
+      set((state) => {
+        state.rulesManualPanelOpen = !state.rulesManualPanelOpen;
+        if (state.rulesManualPanelOpen) state.userManualPanelOpen = false;
+      });
+    },
+
+    openRulesManualPanel() {
+      set((state) => {
+        state.rulesManualPanelOpen = true;
+        state.userManualPanelOpen = false;
+      });
     },
 
     closeRulesManualPanel() {
       set((state) => { state.rulesManualPanelOpen = false; });
+    },
+
+    toggleUserManualPanel() {
+      set((state) => {
+        state.userManualPanelOpen = !state.userManualPanelOpen;
+        if (state.userManualPanelOpen) state.rulesManualPanelOpen = false;
+      });
+    },
+
+    closeUserManualPanel() {
+      set((state) => { state.userManualPanelOpen = false; });
+    },
+
+    // The tour drives the real UI, so it starts from a clean slate: any drawer
+    // left open would sit above the highlighted target.
+    startTour(id) {
+      set((state) => {
+        state.activeTour = id;
+        state.userManualPanelOpen = false;
+        state.rulesManualPanelOpen = false;
+        state.configModalOpen = false;
+        state.fileIoPanelOpen = false;
+      });
+    },
+
+    endTour() {
+      set((state) => { state.activeTour = null; });
     },
 
     // -------------------------------------------------------------------------

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+  <circle cx="100" cy="55" r="45" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5"/>
+  <text x="100" y="128" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#52525b" text-anchor="middle">Node name</text>
+</svg>

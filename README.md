@@ -14,6 +14,9 @@ the cascade step by step.
 See [CONTEXT.md](CONTEXT.md) for the domain glossary and
 [CLAUDE.md](CLAUDE.md) for development guidelines.
 
+**New to the platform?** [`docs/project/user-manual.md`](docs/project/user-manual.md)
+walks through the concepts and the modelling workflow end to end.
+
 **Arrived from a research paper?** [`docs/papers.md`](docs/papers.md) maps each
 section to the code that implements it, and shows how to reproduce the reported
 numbers.

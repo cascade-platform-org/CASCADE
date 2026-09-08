@@ -76,6 +76,7 @@ export function Inspector() {
 
   return (
     <div
+      data-tour="inspector"
       className={cn(
         "flex shrink-0 flex-col border-l border-zinc-200 bg-white transition-all dark:border-zinc-800 dark:bg-zinc-900",
         inspectorOpen ? "w-80" : "w-0 overflow-hidden",

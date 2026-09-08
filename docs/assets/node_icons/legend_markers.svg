@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="224" viewBox="0 0 430 224">
+<text x="20" y="46" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">State markers</text>
+<g transform="translate(20,60)" fill="#94a3b8" stroke="#fbbf24" stroke-width="5.0" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="86" y="91.0" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1f2937" >Functionality Time Active</text>
+<g transform="translate(20,132)"><circle cx="25.0" cy="25.0" r="24.0" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5"/><path d="M 23.0,0 L 30.0,9.0 L 22.0,13.0 L 31.0,24.0 L 21.0,28.000000000000004 L 29.0,37.5 L 23.0,41.0 L 28.0,50" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M 31.0,24.0 L 38.0,31.0 L 34.0,36.0" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M 23.0,0 L 30.0,9.0 L 22.0,13.0 L 31.0,24.0 L 21.0,28.000000000000004 L 29.0,37.5 L 23.0,41.0 L 28.0,50" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M 31.0,24.0 L 38.0,31.0 L 34.0,36.0" fill="none" stroke="#111827" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="86" y="163.0" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1f2937" >Damaged by Hazard</text>
+</svg>

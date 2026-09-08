@@ -349,6 +349,48 @@ Works in both georeferenced and non-georeferenced modes.
 - Dragging a node in a georeferenced Canvas writes its `geo` via the projection. The map background stays locked to the graph through `useMapViewportSync`.
 - **Deviation from the original spec:** edges are *not* rendered as separate geographic paths, and QGIS/GeoJSON export tooling is not part of this implementation — edges render as normal React Flow edges between the on-map nodes. GeoJSON export of nodes remains a future enhancement (see `local-first-guide.md`).
 
+### 8.4 In-app documentation *(implemented)*
+
+Two right-edge slide-over drawers, both pure-JSX presentational components (no
+markdown dependency) that are the canonical user-facing text for their topic:
+
+| Drawer | Opened from | Covers |
+|---|---|---|
+| **User Manual** (`components/help/`) | Topbar **Help** (`HelpCircle`) | Setting up elements and what each attribute does, rules, running a scenario, testing an intervention, what needs the server |
+| **Rules Manual** (`components/rules/rules-manual.tsx`) | Active Rules panel **Manual** (`BookOpen`), and the User Manual §2 | The rule DSL grammar and how the engine interprets it |
+
+They share the same right-edge slot, so `ui-store` opens either one by closing
+the other (`toggleUserManualPanel` / `toggleRulesManualPanel` / `openRulesManualPanel`).
+
+`docs/project/user-manual.md` mirrors the User Manual for readers outside the
+app; the Rules Manual has no `.md` twin. Change a component and its mirror
+together. The rule grammar additionally tracks `CASCADE-backend/core/rule_parser.py`.
+
+### 8.5 Guided tour *(implemented)*
+
+A skippable seven-step walkthrough of the core loop — the network, the
+Inspector, apply an Event, Propagate, advance time — spotlighting the real
+editor UI (`driver.js`, MIT).
+
+- **Steps** are data in `lib/tour/first-run-tour.ts`; **targets** are
+  `data-tour="…"` attributes on the real components, never CSS or
+  DOM-structure selectors. A step whose anchor is missing renders centred
+  rather than being dropped, and `missingTourAnchors()` warns in development.
+  Do not remove a `data-tour` attribute without removing its step.
+- **It runs on `samples/public/IJDRR_example.json`** — the paper's worked
+  example, six nodes with an `Earthquake` hazard — because the copy names that
+  network. Starting the tour loads that bundle, replacing what is open, so both
+  entry points say so first.
+- **Entry points:** a one-time `TourPrompt` over the canvas (first run per
+  browser, `localStorage` key `cascade.tour.firstRun.offered` via
+  `hooks/useFirstRun.ts`), and "Take the guided tour" in the User Manual drawer,
+  available forever after.
+- **State:** `ui-store.activeTour`; `startTour()` closes every drawer and modal
+  first so nothing covers a highlighted target.
+- Propagation still needs the server and `can_propagate`. The tour does not
+  work around that — the step explains the button, and a guest simply cannot
+  press it.
+
 ---
 
 ## 9. Temporal Jump

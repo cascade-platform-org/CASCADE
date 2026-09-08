@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="734" viewBox="0 0 1180 734">
+<text x="40" y="56" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Node types</text>
+<g transform="translate(40,70)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><polygon points="25.0,0 50,25.0 25.0,50 0,25.0" /></g>
+<text x="106" y="101.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Source</text>
+<g transform="translate(40,142)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><polygon points="10.0,0 40.0,0 50,10.0 50,40.0 40.0,50 10.0,50 0,40.0 0,10.0" /></g>
+<text x="106" y="173.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Infrastructure</text>
+<g transform="translate(40,214)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="106" y="245.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Service</text>
+<g transform="translate(40,286)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><rect x="1" y="1" width="48" height="48" rx="10.0" ry="10.0" /></g>
+<text x="106" y="317.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Personnel</text>
+<text x="40" y="404" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">State markers</text>
+<g transform="translate(40,418)" fill="#94a3b8" stroke="#fbbf24" stroke-width="5.0" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="106" y="449.0" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1f2937" >Functionality Time Active</text>
+<g transform="translate(40,490)"><circle cx="25.0" cy="25.0" r="24.0" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5"/><path d="M 23.0,0 L 30.0,9.0 L 22.0,13.0 L 31.0,24.0 L 21.0,28.000000000000004 L 29.0,37.5 L 23.0,41.0 L 28.0,50" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M 31.0,24.0 L 38.0,31.0 L 34.0,36.0" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M 23.0,0 L 30.0,9.0 L 22.0,13.0 L 31.0,24.0 L 21.0,28.000000000000004 L 29.0,37.5 L 23.0,41.0 L 28.0,50" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M 31.0,24.0 L 38.0,31.0 L 34.0,36.0" fill="none" stroke="#111827" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="106" y="521.0" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1f2937" >Damaged by Hazard</text>
+<text x="40" y="604" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Edges (dependencies)</text>
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker></defs>
+<line x1="40" y1="630" x2="190" y2="630" stroke="#64748b" stroke-width="4" marker-end="url(#ah)"/>
+<text x="215" y="636" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1f2937" >intra-layer</text>
+<line x1="40" y1="678" x2="190" y2="678" stroke="#64748b" stroke-width="4" stroke-dasharray="9,7" marker-end="url(#ah)"/>
+<text x="215" y="684" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1f2937" >inter-layer</text>
+<text x="560" y="56" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Functionality status</text>
+<g transform="translate(560,70)" fill="#22c55e" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="626" y="101.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >operational</text>
+<g transform="translate(560,142)" fill="#f97316" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="626" y="173.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >operational warning</text>
+<g transform="translate(560,214)" fill="#ef4444" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="626" y="245.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >critical</text>
+<text x="560" y="332" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Category icons</text>
+<text x="560" y="352" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#6b7280" >configurable per category</text>
+<rect x="560" y="368" width="50" height="50" rx="6" fill="#f8fafc" stroke="#e4e4e7" stroke-width="1.5"/><g transform="translate(560,368) scale(2.0833333333333335)" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></g>
+<text x="626" y="399.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >electric</text>
+<rect x="560" y="440" width="50" height="50" rx="6" fill="#f8fafc" stroke="#e4e4e7" stroke-width="1.5"/><g transform="translate(560,440) scale(2.0833333333333335)" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></g>
+<text x="626" y="471.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >water</text>
+<rect x="560" y="512" width="50" height="50" rx="6" fill="#f8fafc" stroke="#e4e4e7" stroke-width="1.5"/><g transform="translate(560,512) scale(2.0833333333333335)" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></g>
+<text x="626" y="543.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >transport</text>
+<rect x="560" y="584" width="50" height="50" rx="6" fill="#f8fafc" stroke="#e4e4e7" stroke-width="1.5"/><g transform="translate(560,584) scale(2.0833333333333335)" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></g>
+<text x="626" y="615.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >manager</text>
+<circle cx="585.0" cy="662" r="3.2" fill="#6b7280"/><circle cx="585.0" cy="674" r="3.2" fill="#6b7280"/><circle cx="585.0" cy="686" r="3.2" fill="#6b7280"/>
+</svg>

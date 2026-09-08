@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Settings, Save, Plus, ChevronDown, Layers, X, BookMarked, Wrench } from "lucide-react";
+import { Settings, Save, Plus, ChevronDown, Layers, X, BookMarked, Wrench, HelpCircle } from "lucide-react";
 import { UserButton } from "@/components/auth/user-button";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,16 @@ export function Topbar() {
 
       {/* Right actions */}
       <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
+        {/* "Help" + HelpCircle, distinct from the Active Rules panel's
+            BookOpen "Manual" button, which opens the rule-grammar drawer. */}
+        <TopbarIconButton
+          label="Help"
+          dataTour="help"
+          onClick={() => useUiStore.getState().toggleUserManualPanel()}
+        >
+          <HelpCircle size={15} />
+        </TopbarIconButton>
+
         <TopbarIconButton
           label="Config"
           onClick={() => useUiStore.getState().openConfigModal()}
@@ -714,15 +724,19 @@ function TopbarIconButton({
   label,
   onClick,
   children,
+  dataTour,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  /** Stable anchor id for the guided tour (see lib/tour/first-run-tour.ts). */
+  dataTour?: string;
 }) {
   return (
     <button
       onClick={onClick}
       title={label}
+      data-tour={dataTour}
       className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
     >
       {children}

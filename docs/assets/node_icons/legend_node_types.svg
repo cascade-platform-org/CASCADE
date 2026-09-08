@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="368" viewBox="0 0 360 368">
+<text x="20" y="46" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Node types</text>
+<g transform="translate(20,60)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><polygon points="25.0,0 50,25.0 25.0,50 0,25.0" /></g>
+<text x="86" y="91.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Source</text>
+<g transform="translate(20,132)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><polygon points="10.0,0 40.0,0 50,10.0 50,40.0 40.0,50 10.0,50 0,40.0 0,10.0" /></g>
+<text x="86" y="163.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Infrastructure</text>
+<g transform="translate(20,204)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><circle cx="25.0" cy="25.0" r="24.0" /></g>
+<text x="86" y="235.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Service</text>
+<g transform="translate(20,276)" fill="#94a3b8" stroke="#e4e4e7" stroke-width="2.5" stroke-linejoin="round"><rect x="1" y="1" width="48" height="48" rx="10.0" ry="10.0" /></g>
+<text x="86" y="307.0" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#1f2937" >Personnel</text>
+</svg>

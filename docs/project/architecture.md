@@ -282,7 +282,8 @@ CASCADE-v2/
 │   │   │       ├── tab-graph-types.tsx
 │   │   │       └── tab-node-defaults.tsx
 │   │   ├── geo/                # MapLibre background behind React Flow (geo-map-background)
-│   │   ├── onboarding/         # New Project Wizard
+│   │   ├── help/               # User Manual drawer (mirrors docs/project/user-manual.md)
+│   │   ├── onboarding/         # New Project Wizard, guided tour, first-run prompt
 │   │   ├── rules/              # Rule editor, autocomplete, active rules panel
 │   │   └── scorecard/          # Scorecard panels
 │   ├── hooks/                  # Custom React hooks
@@ -320,6 +321,7 @@ CASCADE-v2/
 | Styling | Tailwind CSS | 4 | Utility-first design system |
 | Validation | Zod | 4 | Runtime schema validation, type inference |
 | Maps | MapLibre GL JS | 5 | Open-source map background for georeferenced Canvases |
+| Guided tour | driver.js | 1 | Spotlight walkthrough of the editor (MIT), steps in `lib/tour/` |
 | API Server | FastAPI | — | High-performance async Python API |
 | Backend validation | Pydantic v2 | — | Request/response schema enforcement |
 | Auth | OAuth2/OIDC (provider-agnostic) | — | Identity, JWT validation |

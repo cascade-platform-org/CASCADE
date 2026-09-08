@@ -133,9 +133,11 @@ export function ActionBar() {
       <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
 
       {/* Event buttons */}
-      {actionBarEvents.map((ev) => (
-        <EventButton key={ev.id} event={ev} pushToast={pushToast} />
-      ))}
+      <span data-tour="events" className="flex items-center gap-1">
+        {actionBarEvents.map((ev) => (
+          <EventButton key={ev.id} event={ev} pushToast={pushToast} />
+        ))}
+      </span>
 
       {/* More ▼ */}
       {overflowEvents.length > 0 && (
@@ -177,7 +179,9 @@ export function ActionBar() {
       <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
 
       {/* Temporal Jump controls */}
-      <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
+      <span data-tour="temporal" className="flex items-center">
+        <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
+      </span>
 
       {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
       {revertSnapshot && elapsedHours > 0 && (
@@ -608,7 +612,10 @@ function PropagateSplitButton({
     : `Run ${scope} propagation (Ctrl+Enter)`;
 
   return (
-    <div className="flex items-center rounded-md border border-green-300 dark:border-green-800">
+    <div
+      data-tour="propagate"
+      className="flex items-center rounded-md border border-green-300 dark:border-green-800"
+    >
       <button
         onClick={disabled ? undefined : onPropagate}
         disabled={disabled}

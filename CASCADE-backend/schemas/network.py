@@ -111,8 +111,10 @@ class Node(BaseModel):
     geo: Optional[GeoCoords] = None
     # Keyed by category name. Present only on Source nodes.
     # Effective supply = supply_capacity[cat] × (functionality / N).
-    # A node must not carry both supply_capacity[c] and category_dependency_profiles[c].demand
-    # for the same category — the engine warns and treats it as supply-only.
+    # Carrying both supply_capacity[c] and category_dependency_profiles[c].demand
+    # for the same category is not rejected here or by the engine: flow.py reads
+    # the two independently, so the node enters that category's flow graph as a
+    # source AND a consumer. The frontend Inspector flags it for the modeller.
     supply_capacity: Optional[dict[str, float]] = None
     category_dependency_profiles: Optional[dict[str, CategoryDependencyProfile]] = None
     vulnerability_levels: Optional[VulnerabilityLevels] = Field(

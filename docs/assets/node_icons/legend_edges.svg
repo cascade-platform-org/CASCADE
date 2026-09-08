@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="166" viewBox="0 0 380 166">
+<text x="20" y="46" font-family="Helvetica, Arial, sans-serif" font-size="23" fill="#1f2937" font-weight="bold">Edges (dependencies)</text>
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker></defs>
+<line x1="20" y1="72" x2="170" y2="72" stroke="#64748b" stroke-width="4" marker-end="url(#ah)"/>
+<text x="195" y="78" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1f2937" >intra-layer</text>
+<line x1="20" y1="120" x2="170" y2="120" stroke="#64748b" stroke-width="4" stroke-dasharray="9,7" marker-end="url(#ah)"/>
+<text x="195" y="126" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1f2937" >inter-layer</text>
+</svg>
