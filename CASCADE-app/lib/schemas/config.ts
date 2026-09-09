@@ -65,16 +65,18 @@ export const EventDefinitionSchema = z.object({
    */
   duration_hours: z.number().int().min(1).optional(),
   /**
-   * Per-element repair times for physical damage. Hazards only.
-   * Key = ElementId. Absence means no direct physical damage for that element
-   * (functionality drop only, no direct_damage flag).
-   */
-  /**
-   * Global default repair time (hours) applied to ALL elements when this hazard fires,
-   * unless the element has a specific entry in direct_damage_effects.
-   * When undefined, only elements listed in direct_damage_effects receive direct_damage.
+   * Fallback repair time (hours) for Elements this Hazard damages that have no
+   * `direct_damage_effects` entry. Hazards only. Leaving it unset means such an
+   * Element keeps whatever `expected_repair_time` it already had — it does NOT
+   * exempt it from `direct_damage`.
    */
   default_repair_time: z.number().int().min(0).optional(),
+  /**
+   * Per-Element `expected_repair_time` OVERRIDES, keyed by ElementId. Hazards only.
+   * These do not decide which Elements are damaged: a Hazard flags every Element
+   * with `vulnerability_levels[event.id] > 0` (requirements §6.4), and this map
+   * only refines the repair estimate for some of them.
+   */
   direct_damage_effects: z.record(z.string(), DirectDamageEffectSchema).optional(),
   /**
    * Unrestricted field overwrites applied to Elements when this Event is triggered.

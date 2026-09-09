@@ -14,7 +14,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
-import { nanoid } from "nanoid";
 import { cn } from "@/lib/utils";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -26,6 +25,7 @@ import {
   selectOverflowEvents,
   selectN,
 } from "@/store/config-store";
+import { temporalJumpEvent } from "@/lib/event-application";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { runWithHistory } from "@/lib/run-with-history";
@@ -285,16 +285,6 @@ function TemporalJumpControls({
   const displayTicks = (revertSnapshot !== null || isAutoAdvancing) ? snapshotTicks : liveTicks;
   const maxHours = displayTicks[displayTicks.length - 1] ?? 0;
 
-  function buildSyntheticEvent(hours: number): EventDefinition {
-    return {
-      id: `tj-${nanoid(6)}`,
-      label: `Temporal Jump (+${hours}h)`,
-      type: "temporal_jump",
-      frequency_per_10y: 0,
-      duration_hours: hours,
-    };
-  }
-
   function getMinFt(): number | null {
     const state = useCanvasStore.getState();
     const allFt = [
@@ -306,7 +296,7 @@ function TemporalJumpControls({
   }
 
   async function applyJump(hours: number) {
-    const event = buildSyntheticEvent(hours);
+    const event = temporalJumpEvent(hours);
     const canvasState = useCanvasStore.getState();
     // Save pre-jump state on the very first jump so revert can restore it.
     if (revertSnapshot === null) {

@@ -18,7 +18,7 @@ fact.
 - Sign off your commits: `git commit -s`. This is a
   [Developer Certificate of Origin](https://developercertificate.org/) assertion —
   it records that you wrote the contribution and can license it under AGPL-3.0.
-- CI must pass: backend lint + tests, frontend type-check + build, docs links, and
+- CI must pass: backend lint + tests, frontend type-check + unit tests + build, docs links, and
   Docker/compose validation. Run `CASCADE-backend/scripts/audit.sh` locally to catch
   most of it before pushing.
 - Follow the vocabulary in [CONTEXT.md](CONTEXT.md). One concept, one term.

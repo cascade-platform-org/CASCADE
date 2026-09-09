@@ -42,6 +42,10 @@ _Avoid_: Accident, failure (when physical damage is meant)
 An Event degrading Functionality without physical damage; resolves when its upstream cause resolves.
 _Avoid_: Outage, disruption (when the no-damage meaning is intended)
 
+**Mutation Reversal**:
+The inverse of one Event application: every field it overwrote, keyed `"<elementId>.<field>"`, holding that field's value from before. A field that did not exist beforehand is recorded as the `ABSENT` sentinel and is **deleted** on reversal, never written back as `null` — an optional field set to `null` fails the Zod/Pydantic schemas and desyncs the Scorecard dedup hash from the true prior state. Produced and consumed only by the Event-application module (`lib/event-application.ts`); stored on the history entry as `mutation_reversal`. **Empty is not the same as absent**: an Event that changed nothing records `{}` (reversing it is correctly a no-op), while a legacy entry predating the field records nothing at all and can only be reversed by restoring its whole `before` snapshot — a full rewind that discards later work, so it must never be reached for a modern Event.
+_Avoid_: "undo record", "diff", "patch" (a Mutation Reversal is one Event's inverse, not a general diff)
+
 **Scenario**:
 A Functionality state of a multi-canvas fed to a Propagation — created by applying an Event, manual what-if edits, or restoring history.
 _Avoid_: Simulation state, hazard scenario (a Scenario need not come from a Hazard)

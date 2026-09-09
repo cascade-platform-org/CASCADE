@@ -31,42 +31,10 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { applyEventToSnapshot, temporalJumpEvent } from "@/lib/event-application";
 import { deriveSituation, situationSnapshots, situationEventIds } from "@/lib/situation";
 import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
 
-// ---------------------------------------------------------------------------
-// Ephemeral temporal jump math (client-side, no propagation call)
-// ---------------------------------------------------------------------------
-
-function applyTemporalJump(snapshot: GraphSnapshot, hours: number): GraphSnapshot {
-  const newNodes = { ...snapshot.nodes };
-  const newEdges = { ...snapshot.edges };
-
-  for (const [id, node] of Object.entries(newNodes)) {
-    const ft = node.functionality_time ?? 0;
-    if (ft > 0) {
-      const remaining = ft - hours;
-      newNodes[id] = {
-        ...node,
-        functionality_time: Math.max(0, remaining),
-        ...(remaining <= 0 ? { functionality: 1 } : {}),
-      };
-    }
-  }
-  for (const [id, edge] of Object.entries(newEdges)) {
-    const ft = edge.functionality_time ?? 0;
-    if (ft > 0) {
-      const remaining = ft - hours;
-      newEdges[id] = {
-        ...edge,
-        functionality_time: Math.max(0, remaining),
-        ...(remaining <= 0 ? { functionality: 1 } : {}),
-      };
-    }
-  }
-
-  return { ...snapshot, nodes: newNodes, edges: newEdges };
-}
 
 // ---------------------------------------------------------------------------
 // Dialog
@@ -178,11 +146,13 @@ export function SaveScorecardDialog({
   const temporalJumpHours = temporalHours.trim() !== "" ? parseInt(temporalHours, 10) : undefined;
   const temporalValid = temporalJumpHours === undefined || (Number.isInteger(temporalJumpHours) && temporalJumpHours > 0);
 
+  // A Temporal Jump preview goes through the same Event-application module the
+  // canvas uses, so the dialog cannot drift from what applying it would really do.
   const temporalSnapshot: GraphSnapshot | undefined =
     temporalJumpHours && temporalValid && after
-      ? applyTemporalJump(after, temporalJumpHours)
+      ? applyEventToSnapshot(after, temporalJumpEvent(temporalJumpHours), n).snapshot
       : temporalJumpHours && temporalValid && !after
-        ? applyTemporalJump(before, temporalJumpHours)
+        ? applyEventToSnapshot(before, temporalJumpEvent(temporalJumpHours), n).snapshot
         : undefined;
 
   const scoreBefore = computeOperativityScore(before, n, oiWeightAttr);

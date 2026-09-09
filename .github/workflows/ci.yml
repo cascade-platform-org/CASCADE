@@ -64,7 +64,7 @@ jobs:
           git diff --exit-code -- ../CASCADE-app/shared/schemas/
 
   frontend:
-    name: Frontend — type-check + build
+    name: Frontend — type-check + tests + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -83,6 +83,9 @@ jobs:
 
       - name: Type-check (tsc --noEmit)
         run: npx --no-install tsc --noEmit
+
+      - name: Unit tests (vitest)
+        run: npm test
 
       - name: Build (static export)
         run: npm run build

@@ -86,6 +86,27 @@ All application state is managed through nine Zustand stores:
 
 The stores are the single source of truth. Components subscribe to slices they need.
 
+### Event Application
+
+`lib/event-application.ts` is the single home for what an Event *does* to a
+Scenario: the imposed Functionality from `vulnerability_levels`, the Hazard
+`direct_damage` fan-out, `attribute_mutations`, and Temporal Jump expiry. It is a
+pure transform — `(GraphSnapshot, EventDefinition, N) → { snapshot, reversal }` —
+so the live canvas and every what-if path (Save-to-Scorecard, Scorecard gap-fill,
+the Run button on an uncovered Event) get the same answer from the same code.
+`reverseMutations` is its inverse, driven by the Mutation Reversal record the
+application returns.
+
+`canvas-store.applyEvent` / `clearEvent` are thin adapters over it: they build a
+snapshot, call the module, commit the result, and push the history entry. The
+transform itself touches no store, which is what makes it testable.
+
+**Per-Element reference identity is part of its interface.** The returned
+snapshot reuses the caller's object for every Element the Event did not touch, so
+callers can diff before/after by identity to count affected Elements
+(`countChangedElements` in `components/canvas/action-bar.tsx`). A wholesale clone
+would silently report every Element as affected.
+
 ### Data Model — Global Element Registry (ADR-0001)
 
 Nodes and edges have globally unique IDs and live in a single registry at the Project level (`Project.nodes`, `Project.edges`). Each Canvas holds only `node_ids` and `edge_ids` — references, not copies. A node that participates in multiple Canvases is stored once; both Canvases reference the same ID. Propagation updates the registry once; all Canvases reflect the change automatically.

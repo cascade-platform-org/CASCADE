@@ -30,6 +30,7 @@ import type { PropagationResult, EventDefinition } from "@/lib/schemas";
 import { assignElementUpdate } from "@/lib/element-update";
 import { pickHandles } from "@/lib/edge-routing";
 import { nanoid } from "nanoid";
+import { applyEventToSnapshot, reverseMutations } from "@/lib/event-application";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -37,15 +38,6 @@ import { useNetworkStore } from "@/store/network-store";
 // ---------------------------------------------------------------------------
 // State shape
 // ---------------------------------------------------------------------------
-
-/**
- * Sentinel stored in `mutation_reversal` for a field that had no value before an
- * Event was applied (as opposed to a field that was explicitly `null`/`false`).
- * clearEvent() deletes the key when it sees this marker instead of writing back
- * a literal `null`, which would violate the optional-but-not-nullable Zod/Pydantic
- * field schemas and desync the Scorecard dedup hash from the true prior state.
- */
-const ABSENT = "__CASCADE_ABSENT__";
 
 export interface CanvasState {
   /** Global node registry. Single authoritative state per node. */
@@ -443,142 +435,13 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     applyEvent(event: EventDefinition, n: number) {
-      const state = get();
-      const reversal: Record<string, unknown> = {};
-
-      function capture(elementId: string, field: string, value: unknown) {
-        reversal[`${elementId}.${field}`] = value;
-      }
-
-      const allElements: Array<{ id: string; el: Node | Edge }> = [
-        ...Object.values(state.nodes).map((el) => ({ id: el.id, el })),
-        ...Object.values(state.edges).map((el) => ({ id: el.id, el })),
-      ];
-
-      // ── 0. Temporal Jump — advance functionality_time, expire if ≤ 0 ──
-      const temporalExpired = new Map<string, { functionality: number; functionality_time: number }>();
-      const expiredIds = new Set<string>();  // elements whose backup expired (functionality → 1)
-      if (event.type === "temporal_jump") {
-        const hours = event.duration_hours ?? 0;
-        for (const { id, el } of allElements) {
-          const ft = el.functionality_time ?? 0;
-          if (ft <= 0) continue;
-          capture(id, "functionality_time", ft);
-          const newFt = ft - hours;
-          if (newFt <= 0) {
-            capture(id, "functionality", el.functionality);
-            capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
-            expiredIds.add(id);
-            temporalExpired.set(id, { functionality: 1, functionality_time: 0 });
-          } else {
-            temporalExpired.set(id, { functionality: el.functionality ?? n, functionality_time: newFt });
-          }
-        }
-      }
-
-      // ── 1. vulnerability_levels drops → functionality ──
-      const vuln = new Map<string, number>();
-      for (const { id, el } of allElements) {
-        const level = el.vulnerability_levels?.[event.id] ?? 0;
-        if (level === 0) continue;
-        const imposed = Math.max(1, n - level);
-        if (imposed < (el.functionality ?? n)) {
-          capture(id, "functionality", el.functionality);
-          capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
-          vuln.set(id, imposed);
-        }
-      }
-
-      // ── 2. direct_damage for hazards ──
-      // A hazard sets direct_damage = true on every element whose vulnerability_level > 0
-      // (i.e., the hazard produces any worsening of functionality on that element).
-      // direct_damage_effects provides per-element expected_repair_time overrides only;
-      // default_repair_time is the fallback repair time when no override is present.
-      const directDamageElements: Array<{ id: string; repairTime: number | undefined }> = [];
-      if (event.type === "hazard") {
-        const explicitEffects = event.direct_damage_effects ?? {};
-        const defaultRepairTime = event.default_repair_time;
-        for (const { id, el } of allElements) {
-          const level = el.vulnerability_levels?.[event.id] ?? 0;
-          if (level === 0) continue;
-          capture(id, "direct_damage", el.direct_damage ?? ABSENT);
-          capture(id, "expected_repair_time", el.expected_repair_time ?? ABSENT);
-          const repairTime = explicitEffects[id]?.expected_repair_time ?? defaultRepairTime;
-          directDamageElements.push({ id, repairTime });
-        }
-      }
-
-      // ── 3. attribute_mutations ──
-      // Split on the LAST "." — field names are fixed identifiers that never
-      // contain a dot, but a free-form element id (e.g. a raw .inp label)
-      // can; splitting on the first dot would truncate such an id.
-      for (const [key, _newVal] of Object.entries(event.attribute_mutations ?? {})) {
-        const dotIdx = key.lastIndexOf(".");
-        if (dotIdx === -1) continue;
-        const elementId = key.slice(0, dotIdx);
-        const field = key.slice(dotIdx + 1);
-        const el: Node | Edge | undefined = state.nodes[elementId] ?? state.edges[elementId];
-        if (!el) continue;
-        const existing = (el as Record<string, unknown>)[field];
-        capture(elementId, field, existing === undefined ? ABSENT : existing);
-        if (field === "functionality") {
-          capture(elementId, "responsibility_share", el.responsibility_share ?? ABSENT);
-        }
-      }
-
-      // ── Apply everything ──
-      const before = state.toGraphSnapshot();
+      const before = get().toGraphSnapshot();
+      const { snapshot, reversal } = applyEventToSnapshot(before, event, n);
 
       set((draft) => {
-        // The Event is the direct cause for elements it drops — set the
-        // responsibility share to the EventId so the UI shows "Event: …" rather
-        // than a stale propagation cause from a previous run.
-        const eventCause = { [event.id]: 1.0 };
-        for (const [id, { functionality, functionality_time }] of temporalExpired) {
-          if (draft.nodes[id]) {
-            draft.nodes[id].functionality_time = functionality_time;
-            draft.nodes[id].functionality = functionality;
-            if (expiredIds.has(id)) draft.nodes[id].responsibility_share = eventCause;
-          } else if (draft.edges[id]) {
-            draft.edges[id].functionality_time = functionality_time;
-            draft.edges[id].functionality = functionality;
-            if (expiredIds.has(id)) draft.edges[id].responsibility_share = eventCause;
-          }
-        }
-        for (const [id, imposed] of vuln) {
-          if (draft.nodes[id]) {
-            draft.nodes[id].functionality = imposed;
-            draft.nodes[id].responsibility_share = eventCause;
-          } else if (draft.edges[id]) {
-            draft.edges[id].functionality = imposed;
-            draft.edges[id].responsibility_share = eventCause;
-          }
-        }
-        for (const { id, repairTime } of directDamageElements) {
-          if (draft.nodes[id]) {
-            draft.nodes[id].direct_damage = true;
-            if (repairTime !== undefined) draft.nodes[id].expected_repair_time = repairTime;
-          } else if (draft.edges[id]) {
-            draft.edges[id].direct_damage = true;
-            if (repairTime !== undefined) draft.edges[id].expected_repair_time = repairTime;
-          }
-        }
-        for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {
-          const dotIdx = key.lastIndexOf(".");
-          if (dotIdx === -1) continue;
-          const elementId = key.slice(0, dotIdx);
-          const field = key.slice(dotIdx + 1);
-          if (draft.nodes[elementId]) {
-            (draft.nodes[elementId] as Record<string, unknown>)[field] = newVal;
-            if (field === "functionality") draft.nodes[elementId].responsibility_share = eventCause;
-          } else if (draft.edges[elementId]) {
-            (draft.edges[elementId] as Record<string, unknown>)[field] = newVal;
-            if (field === "functionality") draft.edges[elementId].responsibility_share = eventCause;
-          }
-        }
+        draft.nodes = snapshot.nodes;
+        draft.edges = snapshot.edges;
       });
-
-      const after = get().toGraphSnapshot();
 
       useHistoryStore.getState().pushUpdateEntry({
         id: crypto.randomUUID(),
@@ -587,7 +450,7 @@ export const useCanvasStore = create<CanvasStore>()(
         label: `Apply event: ${event.label}`,
         event_id: event.id,
         before,
-        after,
+        after: snapshot,
         mutation_reversal: reversal,
       });
     },
@@ -597,23 +460,23 @@ export const useCanvasStore = create<CanvasStore>()(
       const entry = historyState.updateHistory.find((h) => h.update_type === "event_applied");
       if (!entry) return false;
 
-      if (entry.mutation_reversal && Object.keys(entry.mutation_reversal).length > 0) {
+      // Branch on whether a Mutation Reversal was RECORDED, not on whether it is
+      // non-empty. An Event that changed nothing (nothing vulnerable to it, a
+      // Temporal Jump with nothing on backup) legitimately records `{}`, and
+      // reversing `{}` is correctly a no-op. Treating empty as "no record" sent
+      // those Events down the snapshot path below, which rewinds the WHOLE graph
+      // to the moment before the Event — discarding every Propagation, manual
+      // edit and later Event since. Clearing an Event that did nothing would
+      // silently throw away the user's subsequent work.
+      if (entry.mutation_reversal) {
+        const reverted = reverseMutations(get().toGraphSnapshot(), entry.mutation_reversal);
         set((draft) => {
-          for (const [key, oldVal] of Object.entries(entry.mutation_reversal!)) {
-            const dotIdx = key.lastIndexOf(".");
-            if (dotIdx === -1) continue;
-            const elementId = key.slice(0, dotIdx);
-            const field = key.slice(dotIdx + 1);
-            const target = draft.nodes[elementId] ?? draft.edges[elementId];
-            if (!target) continue;
-            if (oldVal === ABSENT) {
-              delete (target as Record<string, unknown>)[field];
-            } else {
-              (target as Record<string, unknown>)[field] = oldVal;
-            }
-          }
+          draft.nodes = reverted.nodes;
+          draft.edges = reverted.edges;
         });
       } else {
+        // Legacy entries, written before mutation_reversal existed, carry only
+        // snapshots — a full rewind is the only reversal available for them.
         get().restoreSnapshot(entry.before);
       }
 

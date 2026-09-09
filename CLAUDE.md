@@ -144,6 +144,7 @@ Run before considering non-trivial backend or frontend work done, and always bef
 | Backend | `CASCADE-backend/scripts/audit.sh` | ruff, pyright, bandit (security), pip-audit (CVEs), vulture (dead code), deptry (deps), import-linter (engine isolation, ADR-0009), pytest |
 | Frontend | `npm run lint` (CASCADE-app) | eslint (correctness + React hooks) |
 | Frontend | `npm run type-check` | tsc --noEmit |
+| Frontend | `npm test` | vitest — unit tests for the pure `lib/` modules |
 | Frontend | `npm run audit:deadcode` | knip (unused exports/deps/files) |
 | Frontend | `npm run audit:circular` | madge (circular imports) |
 | Both | `git ls-files \| xargs detect-secrets scan --baseline .secrets.baseline` | secrets in tracked files |

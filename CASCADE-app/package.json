@@ -14,7 +14,9 @@
     "type-check": "tsc --noEmit",
     "audit:deadcode": "knip",
     "audit:circular": "madge --circular --extensions ts,tsx --ts-config tsconfig.json .",
-    "audit:deps": "npm audit --omit=dev"
+    "audit:deps": "npm audit --omit=dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",
@@ -49,7 +51,8 @@
     "madge": "^8.0.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "postcss": "^8.5.15"

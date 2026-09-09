@@ -54,7 +54,7 @@ TEST_DATABASE_URL=postgresql://postgres:pw@localhost:5433/postgres python -m pyt
 ruff check .
 
 # Frontend
-cd CASCADE-app && npm ci && npx tsc --noEmit && npm run build
+cd CASCADE-app && npm ci && npx tsc --noEmit && npm test && npm run build
 ```
 
 ## CI
@@ -62,7 +62,7 @@ cd CASCADE-app && npm ci && npx tsc --noEmit && npm run build
 Every push to `main` and every pull request runs
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml): backend lint + tests
 (against a real Postgres) + Pydantic→JSON-Schema drift check, frontend
-type-check + build, docs integrity + internal-link check, and Docker
+type-check + unit tests + build, docs integrity + internal-link check, and Docker
 image/compose validation.
 
 **Recommended:** protect `main` so changes must pass CI before merging —
