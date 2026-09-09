@@ -11,24 +11,27 @@ If either of these files doesn't exist yet, **proceed silently**. Don't flag the
 
 ## File structure
 
-Single workspace, two separate git repositories:
+One monorepo (ADR-0009): a single git repository rooted at `CASCADE-v2/`,
+published as `cascade-platform-org/CASCADE`. `CASCADE-app/` and
+`CASCADE-backend/` are plain subdirectories, not separate repos — run `git`/`gh`
+from the workspace root, not from inside either subdirectory.
 
 ```
-CASCADE-v2/                  ← workspace root (NOT itself a git repo)
+CASCADE-v2/                  ← repository root
 ├── CLAUDE.md
 ├── CONTEXT.md               ← domain glossary for the whole system
 ├── docs/
 │   ├── adr/                 ← architectural decision records
 │   ├── agents/              ← skill configuration (this folder)
-│   └── project/             ← product docs (requirements, architecture, local-first guide, api-reference, deployment, rbac-setup)
+│   ├── paper/               ← LaTeX preprint sources
+│   └── project/             ← product docs: requirements, architecture,
+│                              local-first-guide, api-reference, deployment,
+│                              rbac-setup, user-manual,
+│                              privacy-and-data-protection
+├── experiments/             ← validation harnesses and result CSVs
 ├── CASCADE-app/             ← Next.js frontend
 └── CASCADE-backend/         ← FastAPI backend
 ```
-
-Single monorepo (ADR-0009): one git repository rooted at `CASCADE-v2/`, published as
-`cascade-platform-org/CASCADE`. `CASCADE-app/` and `CASCADE-backend/` are plain
-subdirectories, not separate repos — run `git`/`gh` from the workspace root, not
-from inside either subdirectory.
 
 ## Use the glossary's vocabulary
 

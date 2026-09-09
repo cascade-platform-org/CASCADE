@@ -1,4 +1,6 @@
-# Rule functionality value resolution: dual-form with label→integer resolution at parse time
+# ADR-0002 — Rule functionality value resolution: dual-form with label→integer resolution at parse time
+
+**Status:** accepted
 
 Rules are authored client-side and may express Functionality values in two equivalent forms:
 

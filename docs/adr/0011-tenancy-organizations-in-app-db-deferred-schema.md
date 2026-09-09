@@ -1,13 +1,47 @@
-# Tenancy: organizations owned by the app DB, schema lands with its first consumer
+# ADR-0011 — Tenancy: organizations owned by the app DB, schema lands with its first consumer
 
-**Status:** accepted
+**Status:** accepted (amended 2026-09-09: Server Sync shipped owner-scoped, not org-scoped — see the amendment below)
 
 CASCADE serves **both** standalone individuals (researchers, solo consultants)
 and **organizations** with teams (B2B critical-infrastructure customers). We need
 a tenancy model that supports both without forcing a painful retrofit once shared
-data exists — but we are **local-first with server Sync deferred** (ADR-0007), so
-today the server holds no shareable data and there is nothing yet to isolate
-between customers.
+data exists — but at the time of this decision we were **local-first with server
+Sync deferred** (ADR-0007), so the server held no shareable data and there was
+nothing yet to isolate between customers. (Sync has since shipped, owner-scoped —
+see the amendment above.)
+
+## Amendment (2026-09-09): Sync shipped owner-scoped; the org constraint re-arms later
+
+The constraint below said the first server-stored shareable resource "MUST be
+org-scoped from its first line of code". Server Sync (requirements.md §13.4)
+then shipped **owner-scoped**: `projects.owner_id UUID NOT NULL REFERENCES
+users(id) ON DELETE CASCADE`, no `org_id` column, and no `organizations` table.
+This amendment records that deviation and why it is accepted rather than a debt.
+
+**What shipped is strictly narrower than what the constraint protects against.**
+Sync has no sharing path at all — every one of the four data-access functions in
+`db/projects.py` (`save_version`, `list_versions`, `get_version`,
+`delete_version`) takes `owner_id` as a required keyword and carries
+`owner_id = $1` in its `WHERE` clause; `db/export.py` does the same. The routes
+derive `owner_id` from the authenticated session (`sync_routes.py` →
+`_require_db_id(user)`), never from the request body, and a version belonging to
+someone else returns `404`, not `403`. Not even an `admin` can read another
+user's bundles. Nothing is visible across users, so there is no cross-tenant
+visibility question for an org scope to answer yet.
+
+**The centralisation requirement is satisfied in substance.** The original worry
+was tenant scoping threaded ad hoc through call sites. `db/projects.py` is the
+only module that queries the `projects` table, and every query there already
+routes through one explicit owner parameter. Adding an org axis later means
+editing the `WHERE` clauses in that single file plus a migration — not chasing
+scoping logic across the codebase, which is the cost the constraint existed to
+avoid.
+
+**The constraint re-arms unchanged for the first genuinely *shared* resource** —
+a team-visible project, a shared scorecard, anything one user can read because
+another put it there. That resource must land with `organizations`,
+`users.org_id`, and a single centralised "what may this user see" helper handling
+the `org_id IS NULL` individual case, exactly as decided below.
 
 ## Decisions
 

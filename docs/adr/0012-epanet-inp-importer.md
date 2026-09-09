@@ -86,10 +86,10 @@ it is what **orients** edges (see next section).
 default.** The importer previously sized each pipe from its own *simulated peak*
 velocity (`π/4·d²·min(v_peak × capacity_margin, max_velocity)`, margin 2,
 ceiling 3 m/s). A full ablation across all 8 benchmark networks
-(`experiments/aqueducts/ATTEMPTS.md` §12, paper Supp. §S2) showed that elaborate per-pipe
-capacity discovery buys **nothing measurable** over the flat 2.5 m/s constant —
-pooled critical-class F1 0.770 (uniform) vs 0.778 (drill), FMS 0.926 vs 0.921,
-with per-network wins and losses cancelling. The simpler, standard, and more
+(`experiments/aqueducts/ATTEMPTS.md` §12, paper Supp. §S5) showed that elaborate per-pipe
+capacity discovery is **not merely unnecessary but worse** than the flat 2.5 m/s
+constant — pooled critical-class F1 0.794 (uniform) vs 0.737 (drill), precision
+0.682 vs 0.599, at equal recall. The simpler, standard, and more
 defensible rule therefore became the default; this **reverses** the earlier
 "constant design velocity — rejected" note (that rejection rested on a partial
 comparison predating the full ablation). The module's fidelity comes from
@@ -143,7 +143,7 @@ priority** (2026-07-28): every measured auto-derivation either does nothing for
 FMS/level-agreement fidelity (the demand-multiplier scarcity sweep — null on
 both axes) or, worse, *downgrades* the critical-class result at import time —
 the cycle-aware contingency ranking trades precision for recall (0.68→0.63 for
-0.95→0.98; ATTEMPTS.md §13, paper Supp. §S1). Since no automatic derivation
+0.95→0.98; ATTEMPTS.md §13, paper Supp. §S5). Since no automatic derivation
 improves the shipped config, none is offered; `priority` is left an
 **expert-set per-node primitive** (``serve the hospital first''), and imports
 ship with no ordering (pure max-min fair share — the best-precision config).
@@ -200,17 +200,20 @@ number: per generated situation, (1) the identical intervention is applied to
 the real WNTR model and PDD-solved (ground truth), (2) ratios quantize
 through the engine's own `_ratio_to_level`, (3) the imported Project runs
 through the real `engine.propagation.run`, (4) demand-weighted **FMS**
-`= 1 − weighted_mean(|level_true − level_cascade|)/(N−1)`. Six scenario
-families (random break / demand surge / both / clustered / capacity-targeted
-/ per-source outage), multi-seed, CSV output; `--priority-mode
+`= 1 − weighted_mean(|level_true − level_cascade|)/(N−1)`. **Four scored
+failure families** — clustered, capacity-targeted, per-source outage, tank
+isolation (the harness can also generate random break / demand surge / both,
+dropped as uninformative — `experiments/aqueducts/benchmark-protocol.md` §5),
+multi-seed, CSV output; `--priority-mode
 sweep|contingency|none`, contingency-coverage flags mirror the importer's.
 Two ground-truth corrections are built in: EPANET non-convergence is treated
 as no-ground-truth (`_check_converged`), and demand junctions severed from
 every source are forced to ratio 0 (`_severed_junctions`) — WNTR's PDD is
 singular on severed components and silently reports arbitrary "fully served"
-circulations. Import-linter carve-out: this script (and
-`benchmark_engine.py`) may import `engine.*` because it must measure the REAL
-engine, not a reimplementation (CLAUDE.md §8a).
+circulations. Import-linter carve-out: this script — along with
+`benchmark_engine.py` and `paper_shapley_vs_centrality.py` — may import
+`engine.*` because it must measure the REAL engine, not a reimplementation
+(CLAUDE.md §8a).
 
 ## Alternatives rejected
 
@@ -218,7 +221,7 @@ One line each; measurements in `experiments/aqueducts/ATTEMPTS.md`:
 
 - Custom graph contraction — WNTR skeletonization already does it with demand awareness.
 - Priorities from elevation/distance proxies — ignores loops and pumps.
-- ~~Constant design velocity as capacity — worse than the Sweep peak.~~ **Reversed 2026-07-27**: a uniform 2.5 m/s design velocity is now the DEFAULT — the full 8-network ablation (§12) found the sweep peak buys nothing over it (F1 0.770 vs 0.778). Idle-flow velocity remains rejected.
+- ~~Constant design velocity as capacity — worse than the Sweep peak.~~ **Reversed 2026-07-27**: a uniform 2.5 m/s design velocity is now the DEFAULT — the full 8-network ablation (§12) found it beats the sweep peak (F1 0.794 vs 0.737). Idle-flow velocity remains rejected.
 - Stricter noise/dominance gates on orientation — regressed real two-source networks.
 - Proportional bidirectional splits with hedge shares — superseded by Full-Duplex.
 - Unbounded source supply by default / `supply_mode` / `supply_value` knobs — supply derives from file data, edited in the Inspector when known.

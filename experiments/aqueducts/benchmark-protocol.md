@@ -131,7 +131,7 @@ Skeletonization is **bypassed** in validation (full networks imported).
 (`ImportOptions.capacity_velocity`, a textbook water-main design speed). No
 hydraulic solve, no margin, no cap. This is the shipped method — the
 capacity ablation (`ATTEMPTS.md` §12, `run_capacity_drill_ablation.sh` →
-`final_benchmark_drill.csv`, paper Supp. §S2) found the per-pipe sweep drill
+`final_benchmark_drill.csv`, paper Supp. §S5) found the per-pipe sweep drill
 buys nothing over it (pooled F1 0.770 vs 0.778, FMS 0.926 vs 0.921).
 
 The demand sweep + contingency solves **still run** — they are what orients
@@ -281,26 +281,26 @@ deliverable → `best_of` intra-category (redundancy) → `worst_of` inter-categ
 
 ## 5. Failure families (test-scenario distribution)
 
-Generated per network by `_random_situation` (uniform over `_KINDS`), plus
-exhaustive tank situations.
+**Four scored families** — the `kind` column of every results CSV, and the four
+reported in the paper:
 
-| family   | definition                                                      | keep?                                                 |
-| -------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| break    | 1–3 random links (pipes+pumps) closed                          | text-only (see below)                                 |
-| hot      | demand surge on 15–40% of junctions ×1.2–1.8                 | **DROP** (2 criticals of 22,909; uninformative) |
-| both     | a random break + a demand surge together                        | keep                                                  |
-| cluster  | ≤6 breaks within 2 topological hops of an epicentre            | keep                                                  |
-| targeted | 3 of the top-decile-diameter pipes + pumps closed               | keep (**the win**)                              |
-| tank     | every link on a tank closed (isolate it), exhaustive over tanks | keep                                                  |
+| family   | definition                                                      |
+| -------- | --------------------------------------------------------------- |
+| cluster  | ≤6 breaks within 2 topological hops of an epicentre            |
+| targeted | 3 of the top-decile-diameter pipes + pumps closed (**the win**) |
+| source   | source combinations failed to critical                          |
+| tank     | every link on a tank closed (isolate it), exhaustive over tanks |
 
-**Decisions this session:**
+`_random_situation` can also generate three families that are **not scored**:
+`break` (1–3 random links closed), `hot` (demand surge on 15–40% of junctions
+×1.2–1.8), and `both` (a break plus a surge). They were dropped as follows:
 
-- **Drop `hot`** everywhere (already applied to the paper).
-- **Drop `break` from the results table**, keep a one-line mention: under
-  uncorrelated loss, disconnection and starvation coincide, so module ≡
-  reachability (recall 0.81 = 0.81) — the honest boundary case.
-- **LOCKED (§11): drop hot, break, AND both.** Scored families = **cluster,
-  targeted, source-failure, tank**, ~60 situations each (targeted/tank/source =
+- **`hot`** — uninformative: 2 criticals out of 22,909.
+- **`break`** — text-only, not tabled: under uncorrelated loss, disconnection and
+  starvation coincide, so module ≡ reachability (recall 0.81 = 0.81) — the honest
+  boundary case.
+- **`both`** — dropped with the two above.
+- **LOCKED (§11).** Scored families = **cluster, targeted, source, tank**, ~60 situations each (targeted/tank/source =
   10 singles + 20 pairs + 30 triplets; targeted on top-20% diameter; cluster = 60
   random). Source-failure = fail source combinations to critical (§6 reachability
   removes critical sources, making it a fair concentrated comparison).

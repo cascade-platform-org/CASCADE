@@ -1,7 +1,6 @@
 # ADR-0014 — Flow allocation strategies: tiered fair-share (default) and priority-greedy
 
-Date: 2026-07-15
-Status: accepted
+**Status:** accepted (2026-07-15)
 
 ## Context
 

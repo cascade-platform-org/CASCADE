@@ -32,6 +32,12 @@ Each role also carries an **Entitlement** (ADR-0008): `max_nodes` and `evals_per
 
 No auth. Returns `{ "status": "healthy", "version": "1.0.0" }`. The frontend pings this (5 s timeout) to decide whether to enable the Propagate button.
 
+### `GET /metrics`
+
+Prometheus exposition (request counts, latency). Deliberately **not** under
+`/api`, so Caddy never proxies it to the internet — scrape it from inside the
+Docker network. Absent from the OpenAPI schema.
+
 ---
 
 ## Propagation
@@ -182,6 +188,16 @@ Lists the caller's saved versions, newest first, as summaries (no bundle data �
 ### `GET /api/projects/{id}`
 
 Full bundle for one version, for Load. `404` (not `403`) if the id doesn't belong to the caller — existence of another user's version is never leaked.
+
+**Null-free bundle contract.** This response is serialised with
+`response_model_exclude_none=True` (`api/sync_routes.py`), so unset optional
+fields are **absent** rather than `null`. That makes the payload byte-shape-identical
+to a local file save (the frontend's `JSON.stringify` drops `undefined` keys),
+which the Zod schema requires: its `.optional()` fields accept an absent key but
+**reject `null`**. Without the flag Pydantic emits every unset `Optional` as
+explicit `null` and Load fails client-side validation with
+`expected string, received null`. Do not remove it. The same contract governs
+`POST /api/import/inp` (requirements §13.5).
 
 ### `DELETE /api/projects/{id}`
 

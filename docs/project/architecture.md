@@ -4,12 +4,12 @@
 
 CASCADE follows a **local-first** architecture. All project data — graphs, rules, configurations, canvas state — lives on the client as JSON files. The user owns their data, can work offline, and decides when (and whether) to interact with the server.
 
-The server has two core responsibilities:
+The server has exactly two responsibilities:
 
-1. **Execute the propagation engine** on submitted payloads (public now, proprietary later — ADR-0009).
+1. **Execute the propagation engine** on submitted payloads. The engine is published openly and may become proprietary in part as it is refined (ADR-0009).
 2. **Enforce identity and access control** via OAuth2/OIDC and role-based policies.
 
-By default, no project data is stored server-side. Optionally, users can enable **server-side sync** to persist and share project files across devices — stored in PostgreSQL per-user. The propagation engine operates identically in both modes.
+By default no project data is stored server-side; users may opt in to **server sync**, which stores their project versions in PostgreSQL, per user. The engine operates identically in both modes. The wire format itself is documented once, in [local-first-guide.md](local-first-guide.md).
 
 ---
 
@@ -45,7 +45,7 @@ By default, no project data is stored server-side. Optionally, users can enable 
 │  └────────────┘         ▼                 ▼           │
 │                  ┌────────────┐   ┌──────────────┐    │
 │                  │ PostgreSQL │   │ ENGINE       │    │
-│                  │ users      │   │ (private)    │    │
+│                  │ users      │   │ (package)    │    │
 │                  │ roles      │   │ propagation  │    │
 │                  │ opt: files │   │ algorithm    │    │
 │                  └────────────┘   └──────────────┘    │
@@ -64,7 +64,7 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 - **Inter-canvas edges** are regular edges in the global registry whose target node belongs to a different Canvas. Identified at render time — no special type or field in the data model (ADR-0001).
 - A node may appear in multiple Canvases. Because element IDs are globally unique, it is stored exactly once in the registry regardless of how many Canvases reference it.
 - **Propagation scope** governs the engine payload only. Local: client sends active Canvas nodes + intra-canvas edges only. Global: client sends full Project. Event application always writes to the full registry, independent of scope.
-- **Global display mode** (deferred, Slice 2): renders all Canvases in one React Flow instance. Because IDs are unique, each node appears exactly once — no deduplication step needed. Inter-canvas edges render as dashed connectors. Pure render-time operation; no data model change.
+- **Global display mode** (implemented, `components/canvas/global-view-canvas.tsx`): renders all Canvases in one read-only React Flow instance, each Canvas as its own group region. Because IDs are unique, each node appears exactly once — no deduplication step needed. Inter-canvas edges render as dashed connectors. Pure render-time operation; no data model change.
 
 ---
 
@@ -158,6 +158,8 @@ Run the bridge script whenever a Pydantic model changes (see CLAUDE.md §6).
 | `CASCADE-app/lib/schemas/api.ts` | `PropagationRequest`, `PropagationResult`, `ElementUpdate`, sync types |
 | `CASCADE-app/lib/schemas/primitives.ts` | Shared primitive schemas |
 | `CASCADE-app/lib/schemas/audit.ts` | Audit log types |
+| `CASCADE-app/lib/schemas/auth.ts` | `AuthUser`, session and permission types |
+| `CASCADE-app/lib/schemas/propagation.ts` | Propagation request/response wire types |
 | `CASCADE-app/shared/schemas/` | Generated JSON Schema bridge files (do not edit manually) |
 | `CASCADE-backend/schemas/network.py` | Pydantic equivalents: `Node`, `Edge`, `Canvas`, `Project`, `ScorecardEntry` |
 | `CASCADE-backend/schemas/config.py` | Pydantic equivalent of `ModelConfiguration` |
@@ -174,6 +176,47 @@ A georeferenced Canvas renders a MapLibre map as a **non-interactive background 
 - **`lib/geo-utils.ts`** — the **GeoAnchor projection**: exact Web Mercator (`anchorFlowToGeo`, `anchorGeoToFlow`, `computeMapTarget`). One seam converts flow ↔ geo, so `node.geo`-on-drag and the map camera can never use disagreeing projections. See CONTEXT.md → *GeoAnchor*.
 
 A node carries both `position` (flow) and `geo` (lng/lat); see CONTEXT.md → *Node Position vs Geo Coordinates*. The GeoAnchor is the single per-Canvas correspondence tying the two.
+
+### Guided tour
+
+The first-run walkthrough (requirements §8.5). Three constraints shape it, and
+each rules out an off-the-shelf tour library.
+
+**No library, because dimming is wrong here.** driver.js, shepherd and intro.js
+all dim the page and make everything outside the spotlight inert. Both behaviours
+break this tour: the user has to *read* the network while a step talks about it,
+and has to *click* real controls, several of which sit outside whatever the step
+highlights. driver.js additionally forced `pointer-events` onto every descendant
+of its spotlight, which turned React Flow's transparent overlay layers into
+click-catchers and made the canvas unselectable. So
+`components/onboarding/guided-tour.tsx` draws only a ring around the target and a
+card beside it, both in a portal, the ring `pointer-events: none`.
+
+**The ring follows its target in a `requestAnimationFrame` loop.** The
+most-highlighted target is a node the user can pan and zoom, which fires neither
+`scroll` nor `resize`.
+
+**Gates are armed when their step appears** — `waitFor` captures the state it
+found and returns a predicate, so a step cannot be satisfied by something that
+had already happened. This is load-bearing: the sample ships with the Earthquake
+applied and propagated, and an absolute check ("the latest history entry is an
+Event") skipped the step on arrival. Gates that watch history compare entry ids,
+not just types.
+
+**Steps are data** in `lib/tour/first-run-tour.ts`; **targets** are `data-tour`
+attributes on the real components, never CSS or DOM-structure selectors. A step
+whose anchor is missing renders centred rather than being dropped, and
+`missingTourAnchors()` warns in development — do not remove a `data-tour`
+attribute without removing its step. A step may add `resolve` for a target a
+`data-tour` cannot aim at ("click the Substation" rings that node, found by label
+in the canvas store), or `cardAnchor` to position its card against a different
+element while the ring stays on the target (the Temporal Jump step does, because
+Time opens its panel directly under its own button).
+
+State lives in `ui-store.activeTour`; `startTour()` closes every drawer and modal
+first so nothing covers a highlighted target. `lib/tour/start-tour.ts` is the
+single launcher, and `hooks/useFirstRun.ts` owns the one-time offer
+(`localStorage` key `cascade.tour.firstRun.offered`).
 
 ### Offline Capability
 
@@ -201,7 +244,7 @@ The fix: register the middleware via `app.add_middleware()` **before** `CORSMidd
 
 ### Engine Isolation
 
-The propagation algorithm lives in `CASCADE-backend/engine/`, a dedicated Python package. It is **published openly for now** (it ships with the paper) and becomes **proprietary later**, after refinement through company collaboration (ADR-0009). The isolation below is therefore not about secrecy today — it keeps the engine a single extractable package so future privatization is a one-step operation:
+The propagation algorithm lives in `CASCADE-backend/engine/`, a dedicated Python package. The isolation below is not about secrecy — the engine is published — but about keeping it a single extractable package, so that if part of it is privatized later (ADR-0009) the split touches one seam:
 
 - **Exposed** to clients only through `PropagationResult` — never as source in the client bundle.
 - **Imported only** by `CASCADE-backend/services/propagation_service.py` (the single seam for a future private submodule/service split — ADR-0008).
@@ -295,13 +338,14 @@ CASCADE-v2/
 │   ├── shared/
 │   │   ├── schemas/            # Generated JSON Schema bridge files (do not edit manually)
 │   │   └── rule-grammar.json   # Rule DSL grammar spec — shared seam (functions, operators, attributes, disabled prefix)
-│   └── store/                  # Zustand stores (canvas, network, config, clipboard, auth, ui)
+│   └── store/                  # Zustand stores (canvas, history, network, config,
+│                               #   scorecard, analysis, clipboard, auth, ui)
 ├── CASCADE-backend/            # FastAPI backend
 │   ├── api/                    # Route handlers
 │   ├── auth/                   # OAuth2/OIDC + RBAC
 │   ├── core/                   # Open graph/rule logic
 │   │   └── rule_grammar.py     # Python adapter: loads rule-grammar.json, exports typed constants
-│   ├── engine/                 # PRIVATE propagation algorithm
+│   ├── engine/                 # Propagation algorithm (isolated package)
 │   ├── schemas/                # Pydantic models (network, config, results, engine, auth)
 │   ├── services/               # Business logic orchestration
 │   └── db/                     # PostgreSQL schema (users/roles + opt. project files)

@@ -1,4 +1,4 @@
-# Monorepo for app + backend + docs; engine public now, private-submodule deferred; config-driven dev/prod
+# ADR-0009 — Monorepo for app + backend + docs; engine public now, private-submodule deferred; config-driven dev/prod
 
 **Status:** accepted
 

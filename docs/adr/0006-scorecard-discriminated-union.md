@@ -1,9 +1,6 @@
 # ADR-0006 — Scorecard Entry as Discriminated Union
 
-**Status:** Accepted  
-**Date:** 2026-06-17
-
----
+**Status:** accepted (2026-06-17)
 
 ## Context
 
@@ -42,4 +39,4 @@ Unchanged from the existing schema — see requirements §12.
 - Pydantic model in `CASCADE-backend/schemas/` must be updated to a union type before any backend work touches the Scorecard.
 - Zod schema in `CASCADE-app/lib/schemas/` must be updated in the same session (schema-first rule).
 - All Scorecard consumers (panel UI, export, gap detection) must handle both entry types via a type-narrowing switch on `entry.type`. Existing Propagation paths are unchanged.
-- The Scorecard ZIP export (§12.7) gains an `analysis/` directory alongside `images/` for analysis entries.
+- **Not implemented:** the Scorecard ZIP export (requirements §12.7) was to gain an `analysis/` directory alongside `images/` for analysis entries. `lib/scorecard-utils.ts::exportScorecardZip` still writes only `scorecard.md` + `images/`; analysis entries are held in `Project.scorecard` but do not reach the ZIP. Build it, or drop the intent, when analysis export is next touched.

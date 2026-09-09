@@ -12,7 +12,7 @@
 
 - **Local-first by default.** All project data (graphs, rules, configuration, canvas state) lives as JSON on the user's machine. Editing, visualization, CRUD operations, hazard application, and topological analysis happen entirely in the browser with zero server round-trips.
 - **Optional server-side sync.** Users can opt in to storing and syncing project data on the server. When disabled, behaviour is identical to local-only mode.
-- **Server-hosted engine.** The propagation algorithm runs on a dedicated server; the client sends a payload and receives results. It is published openly for now (ships with the paper) and becomes proprietary later (ADR-0009). No project **network** is ever persisted server-side unless sync is explicitly enabled — only aggregate run metadata (ADR-0007).
+- **Server-hosted engine.** The propagation algorithm runs on a dedicated server; the client sends a payload and receives results. No project **network** is ever persisted server-side unless sync is explicitly enabled — only aggregate run metadata (ADR-0007). Licensing posture: ADR-0009.
 - **100 % open-source stack.** Every dependency — frontend, backend framework, GIS renderer, auth provider — must be free and open-source.
 
 ---
@@ -63,9 +63,9 @@ In both scopes the payload excludes engine-irrelevant bookkeeping: `update_histo
 
 Event application (client-side) is always applied to the full registry regardless of scope; scope only governs what is sent to the engine.
 
-### 3.3 Global Display Mode (deferred — Slice 2)
+### 3.3 Global Display Mode *(implemented)*
 
-A display mode renders all Canvases together in a single React Flow instance. Because element IDs are globally unique (ADR-0001) and each element lives once in the registry, a node that appears in multiple Canvases is shown exactly once — no deduplication step needed. Inter-canvas edges are rendered as dashed lines connecting nodes across their respective Canvases. This is a pure render-time operation with no data model change.
+`components/canvas/global-view-canvas.tsx` renders all Canvases together in a single React Flow instance, each Canvas laid out as its own group region with nodes at their stored positions. Because element IDs are globally unique (ADR-0001) and each element lives once in the registry, a node that appears in multiple Canvases is shown exactly once — no deduplication step needed. Inter-canvas edges render as dashed connectors. The view is **read-only** (no editing, no tool interactions); it is also what the Scorecard captures as its snapshot PNGs (§12.4). Pure render-time operation, no data model change.
 
 ---
 
@@ -233,6 +233,7 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 | `type` | enum | `hazard` \| `disservice` |
 | `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
 | `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements a *hazard* flags as `direct_damage` — for a hazard that is determined by `vulnerability_levels[event.id] > 0`. (A specific rule may independently set `direct_damage` on any element — ADR-0015.) |
+| `default_repair_time` | integer (hours)? | Fallback `expected_repair_time` for affected Elements with no `direct_damage_effects` entry; hazards only. |
 | `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
 | `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
 
@@ -248,7 +249,7 @@ Multiple **scenario variants** of the same event type can be defined with differ
 
 ## 7. Propagation Engine
 
-Runs server-side. Published openly for now; becomes proprietary later (ADR-0009).
+Runs server-side (licensing posture: ADR-0009).
 
 ### 7.1 Client Payload
 
@@ -372,56 +373,26 @@ A skippable eleven-step walkthrough of the core loop — read the network, inspe
 an element's attributes, Reset, apply an Event, Propagate, read the cascade,
 advance time — pointing at the real editor UI.
 
-- **Action-gated.** A step that asks the user to do something carries a
-  `waitFor` and advances by itself the moment they do it: select a node, Reset,
-  apply an Event, propagate, jump time. While waiting it shows a `waitHint`
-  line. `waitFor` is **armed when the step appears** — it captures the state it
-  found and returns the predicate — so a step cannot be satisfied by something
-  that had already happened. That is not a detail: the sample ships with the
-  Earthquake applied and propagated, and an absolute check ("the latest history
-  entry is an Event") skipped the step on arrival. Gates that watch history compare entry
-  ids, not just types. `Next` is never removed, so a step nobody can satisfy (a
-  guest without `can_propagate`) stays skippable.
-- **Nothing is dimmed and nothing is blocked.** `components/onboarding/guided-tour.tsx`
-  draws only a ring around the current target and a card beside it, both in a
-  portal, the ring `pointer-events: none`. This is why no tour library is used:
-  driver.js, shepherd and intro.js all dim the page and make everything outside
-  the spotlight inert, and both are wrong here — the user has to *read* the
-  network while a step talks about it, and has to *click* real controls, several
-  of which sit outside whatever the step highlights. (driver.js also forced
-  `pointer-events` onto every descendant of its spotlight, which flipped React
-  Flow's transparent overlay layers into click-catchers and made the canvas
-  unselectable.) The ring follows its target in a `requestAnimationFrame` loop,
-  because the most-highlighted target is a node the user can pan and zoom, which
-  fires neither `scroll` nor `resize`.
-- **Steps** are data in `lib/tour/first-run-tour.ts`; **targets** are
-  `data-tour="…"` attributes on the real components, never CSS or
-  DOM-structure selectors. A step whose anchor is missing renders centred
-  rather than being dropped, and `missingTourAnchors()` warns in development.
-  Do not remove a `data-tour` attribute without removing its step. A step may
-  add `resolve` for a target a `data-tour` cannot aim at — "click the
-  Substation" rings that node, found by label in the canvas store, since ringing
-  the whole canvas says nothing about where to click. A step may also add
-  `cardAnchor` to position its card against a different element while the ring
-  stays on the target: the Temporal Jump step does, because Time opens its panel
-  directly under its own button, where the card would otherwise sit.
-- **It runs on `samples/public/IJDRR_example.json`** — the paper's worked
-  example, six nodes with an `Earthquake` hazard — because the copy names that
-  network. Starting the tour loads that bundle, replacing what is open, so every
-  entry point says so first. `lib/tour/start-tour.ts` is the single launcher.
-  That bundle is saved in its **post-Earthquake, post-Propagation** state — a
-  newcomer opens onto a cascade worth looking at — so the tour has the user
-  Reset first and then cause it themselves rather than read its result. The
-  saved state was produced by the engine itself, not written by hand.
-- **Entry points:** the New Project Wizard's first step (before the blank-project
-  fields — a first-timer has nothing to build yet), a one-time `TourPrompt` over
-  the canvas, and "Take the guided tour" in the User Manual drawer, available
-  forever after. The first two are suppressed once offered (`localStorage` key
-  `cascade.tour.firstRun.offered`, `hooks/useFirstRun.ts`).
-- **State:** `ui-store.activeTour`; `startTour()` closes every drawer and modal
-  first so nothing covers a highlighted target.
-- Propagation still needs the server and `can_propagate`. The tour does not
-  work around that — the step explains the button, and a guest skips past it.
+- **Action-gated.** A step that asks the user to do something advances by itself
+  the moment they do it. A gate is armed *when its step appears*, so a step can
+  never be satisfied by something that already happened. `Next` is never removed,
+  so a step nobody can satisfy (a guest without `can_propagate`) stays skippable.
+- **Nothing is dimmed and nothing is blocked.** The user must be able to read the
+  network while a step talks about it, and to click real controls outside whatever
+  the step highlights. The tour draws a ring and a card, and nothing else.
+- **It runs on `samples/public/IJDRR_example.json`** — the paper's worked example.
+  Starting the tour loads that bundle, replacing what is open, so every entry
+  point says so first. The bundle ships in its post-Earthquake, post-Propagation
+  state, so the tour has the user Reset and then cause the cascade themselves.
+- **Entry points:** the New Project Wizard's first step, a one-time prompt over
+  the canvas (both suppressed once offered), and "Take the guided tour" in the
+  User Manual drawer, available forever after.
+- Propagation still needs the server and `can_propagate`. The tour does not work
+  around that — the step explains the button, and a guest skips past it.
+
+Implementation — the step/target data model, why no tour library is used, and the
+constraints that shape the ring — is documented in
+[architecture.md → Guided tour](architecture.md).
 
 ---
 
@@ -660,7 +631,7 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.
 
-**Null-free bundle contract (Load):** the Load response (`GET /api/projects/{id}`) must serialise the bundle **without `null` keys**, via `response_model_exclude_none=True` (`api/sync_routes.py`). This makes the payload byte-shape-identical to a local file save (frontend `JSON.stringify` drops `undefined` keys), which the Zod schema requires: its `.optional()` fields accept an *absent* key but **reject `null`**. Without this flag Pydantic emits every unset `Optional` as explicit `null` and Load fails client-side Zod validation (`expected string, received null`). Do not remove the flag; if the frontend must instead accept `null`, its optional fields need `.nullish()` — but the null-free contract is the canonical one.
+**Null-free bundle contract (Load):** the Load response must serialise the bundle **without `null` keys**, so it is byte-shape-identical to a local file save. See [api-reference.md → Server Sync](api-reference.md) for the mechanism and the failure it prevents.
 
 ### 13.5 Network importers — EPANET .inp (implemented)
 

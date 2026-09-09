@@ -60,45 +60,80 @@ are fixed for v1; revisit them before scaling out.
 
 ## Environment Variables
 
+For the Docker Compose deployment (Option 1) every value below lives in one
+file, **`deploy/.env`** — start from `deploy/.env.example`. The lists here are
+the reference for what each variable does; a manual deployment (Option 2) splits
+the same values across the two `.env` files named in the headings.
+
 ### Backend (`CASCADE-backend/.env`)
 
+```bash
 # Server
-
 HOST=0.0.0.0
 PORT=8000
 ENV=production
-CORS_ORIGINS=https://your-frontend-domain.com
+CORS_ORIGINS=https://app.your-domain.com     # exact frontend origin, no wildcard
 
-# Database (users/RBAC, logs; project data only for opt-in Sync users)
-
-DATABASE_URL=postgresql://user:pass@db-host:5432/propagation_rbac
+# Database (users/RBAC, logs; project data only for opt-in Sync users).
+# Under Compose the backend builds this from POSTGRES_USER/PASSWORD/DB instead.
+DATABASE_URL=postgresql://user:pass@db-host:5432/cascade
 
 # OAuth2 / OIDC
-
-OIDC_DISCOVERY_URL=https://provider/.well-known/openid-configuration
-OIDC_CLIENT_ID=xxx
-OIDC_CLIENT_SECRET=xxx
-OIDC_REDIRECT_URI=https://your-domain.com/auth/callback
+OIDC_DISCOVERY_URL=https://id.your-domain.com/.well-known/openid-configuration
+OIDC_CLIENT_ID=<application client id>
+OIDC_CLIENT_SECRET=                          # optional — leave empty for PKCE
+OIDC_REDIRECT_URI=https://app.your-domain.com/auth/callback
 OIDC_SCOPES=openid profile email
 JWT_ALGORITHM=RS256
-JWT_AUDIENCE=your-api-audience
+JWT_AUDIENCE=<the same application client id>
+OIDC_GOOGLE_IDP_ID=                          # optional — see "Continue with Google"
 
-# Rate limiting: enforced per-user via role Entitlements — an engine-evaluation
-# token bucket (ADR-0008), not a global flag. In v1 the bucket is in-process, so
-# run a SINGLE backend instance (the default for the single-VM deployment below).
-# Implemented: auth/entitlement.py (TokenBucketLimiter) + api/propagation_routes.py
-# reject over-max_nodes with 413 and over-budget with 429 before any engine work.
+# Account erasure reaches the IdP (without these, erasure is incomplete)
+ZITADEL_MGMT_URL=https://id.your-domain.com
+ZITADEL_MGMT_TOKEN=<service-account PAT with user-delete scope>
+
+# Optional error reporting. Unset = no client initialised, nothing leaves the box.
+SENTRY_DSN=
+```
+
+Rate limiting has no env var: it is enforced per user via role Entitlements — an
+engine-evaluation token bucket (ADR-0008). `auth/entitlement.py`
+(`TokenBucketLimiter`) and `api/propagation_routes.py` reject over-`max_nodes`
+with 413 and over-budget with 429 before any engine work. The bucket is
+in-process, so **run a single backend instance** (see Scaling Notes).
 
 ### Frontend (`CASCADE-app/.env.local`)
 
+```bash
 # Base origin only — the client appends /api/... itself.
-NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+NEXT_PUBLIC_API_URL=https://api.your-domain.com
 # Public origin for absolute metadata URLs (og:image). Under Docker this comes
 # from deploy/.env's SITE_URL as a build arg, not from this file.
-NEXT_PUBLIC_SITE_URL=https://your-domain.com
-NEXT_PUBLIC_OIDC_CLIENT_ID=xxx
-NEXT_PUBLIC_OIDC_AUTHORITY=https://provider
-NEXT_PUBLIC_MAPLIBRE_STYLE=https://tiles.example.com/style.json
+NEXT_PUBLIC_SITE_URL=https://app.your-domain.com
+```
+
+These two are the **only** variables the frontend reads. It holds no OIDC client
+id and no map-tile URL: login is brokered entirely by the backend (the browser
+receives httpOnly session cookies, never a token — api-reference.md), and the
+MapLibre tile styles are the fixed OpenFreeMap set chosen in the geo canvas.
+
+### Deployment topology (`deploy/.env`, Option 1 only)
+
+```bash
+APP_DOMAIN=app.your-domain.com   # Caddy vhost for the frontend + /api
+ID_DOMAIN=id.your-domain.com     # Caddy vhost for Zitadel
+SITE_URL=https://app.your-domain.com   # baked into the frontend image at build time
+ZITADEL_VERSION=<pinned tag>     # never :latest — see the service table below
+```
+
+### Backups (`deploy/.env`, consumed by `deploy/backup.sh`)
+
+```bash
+BACKUP_DIR=backups
+BACKUP_RETENTION_DAYS=14
+BACKUP_GPG_RECIPIENT=            # optional — encrypts each dump
+BACKUP_RCLONE_REMOTE=            # optional — copies dumps off the VM
+```
 
 ---
 
@@ -302,83 +337,48 @@ Minimum checklist before the box is internet-facing:
 
 ## Option 2: Manual Deployment
 
+For a host where you supply your own process manager, reverse proxy, and
+certificates.
+
 ### Backend
 
+```bash
 cd CASCADE-backend
-
-# Create virtual environment
-
 python -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
-
 pip install -r requirements.txt
 
-# Apply database schema
-
-psql $DATABASE_URL -f db/schema.sql
-psql $DATABASE_URL -f db/seed.sql
-
-# Start the server (SINGLE worker — see note below)
-
+# SINGLE worker — see the note below
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+The database schema applies **itself** on startup (idempotent baseline plus the
+numbered migrations under `db/migrations/`, fail-closed: a failed migration
+aborts startup rather than serving a half-migrated schema). There is no manual
+`psql -f schema.sql` step in any deployment mode.
 
 > **Run exactly one worker/instance in v1.** The engine-evaluation budget
 > (ADR-0008) is an *in-process* token bucket, so each extra worker gives every
 > user another full budget — N workers = N× the intended limit. Scaling out
 > requires moving the bucket to a shared store (e.g. Redis) first.
 
-For production, place behind a reverse proxy (nginx, Caddy) with TLS termination.
+Place it behind a reverse proxy with TLS termination.
 
 ### Frontend
 
+The app is a **static-export SPA** (`output: "export"`), so `npm run build`
+writes a finished `out/` directory — there is no Node server to run and no
+separate export step.
+
+```bash
 cd CASCADE-app
+npm ci
+npm run build          # writes out/
+```
 
-# Install dependencies
-
-npm install
-
-# Build for production
-
-npm run build
-
-# Option A: Run with Node
-
-npm start
-
-# Option B: Export as static site and serve with nginx
-
-npx next export
-
-# Serve the 'out/' directory with any static file server
-
----
-
-## Option 3: Cloud Deployment
-
-### Backend on Railway / Render / Fly.io
-
-All three support Python apps with a `Procfile` or `Dockerfile`.
-
-**Procfile:** (single worker — the rate-limiter is in-process; see Scaling Notes)
-web: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
-
-Set the environment variables in the platform's dashboard. Attach a managed PostgreSQL instance for the RBAC database.
-
-### Frontend on Vercel / Netlify / Cloudflare Pages
-
-The Next.js frontend deploys to any static/SSR hosting:
-
-# Vercel
-
-vercel --prod
-
-# Netlify
-
-netlify deploy --prod --dir=out
-
-Set `NEXT_PUBLIC_API_URL` to point to your deployed backend.
+Serve `out/` with any static file server, and point `NEXT_PUBLIC_API_URL` at the
+backend origin. Because it is a single-page app, the server must fall back to
+`index.html` for unknown paths (`deploy/Caddyfile` shows the shipped rule).
 
 ---
 
@@ -407,7 +407,7 @@ Set `NEXT_PUBLIC_API_URL` to point to your deployed backend.
   ```bash
   # dry run first; then schedule the --apply form nightly
   docker compose exec backend python scripts/purge_expired.py
-  0 3 * * * cd /srv/cascade/deploy && docker compose exec -T backend \
+  0 3 * * * cd /opt/cascade/deploy && docker compose exec -T backend \
       python scripts/purge_expired.py --apply >> /var/log/cascade-purge.log 2>&1
   ```
 
@@ -432,57 +432,24 @@ numbered migration).
 
 ---
 
-## Reverse Proxy Configuration (nginx)
-
-> **Superseded for the recommended (Option 1) deployment.** Caddy in the `web`
-> service handles TLS + routing via `deploy/Caddyfile`; you do not need nginx.
-> The example below is retained only for a manual (Option 2) deployment where
-> you supply your own proxy and certificates.
-
-If co-hosting frontend and backend on the same domain:
-
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
-
-    ssl_certificate     /etc/ssl/certs/your-cert.pem;
-    ssl_certificate_key /etc/ssl/private/your-key.pem;
-
-    # Frontend
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:8000/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-
----
-
 ## Health Checks
 
-Both services expose health endpoints for monitoring:
+`GET /api/health` returns `200` with `{ "status": "healthy" }` — use it for
+uptime monitoring, load-balancer probes, or a Compose healthcheck:
 
-- **Backend:** `GET /api/health` — returns `200` with `{ "status": "healthy" }`.
-- **Frontend:** no health route exists yet. When co-hosted behind Caddy the static app is served directly; add a trivial Next.js `/api/health` route if an app-level probe is needed.
-
-Use these with your load balancer, Docker health checks, or uptime monitoring.
-
-# docker-compose.yml health check example
-
+```yaml
 backend:
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
     interval: 30s
     timeout: 5s
     retries: 3
+```
+
+The frontend has no health route: it is static files, so Caddy serving them is
+itself the signal. `deploy/Caddyfile` is the reference routing config for a
+manual proxy — it covers TLS, the `/api` reverse proxy, the SPA fallback, the
+auth-endpoint rate limits, and the 10MB request-body cap.
 
 ---
 

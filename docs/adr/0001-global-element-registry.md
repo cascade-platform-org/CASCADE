@@ -1,4 +1,6 @@
-# Global element registry with Canvas membership by reference
+# ADR-0001 — Global element registry with Canvas membership by reference
+
+**Status:** accepted
 
 Elements (nodes and edges) have globally unique IDs and live in a single authoritative registry at the Project level (`Project.nodes`, `Project.edges`). Each Canvas/Graph holds only a list of element IDs it visualises — not copies of the element data.
 

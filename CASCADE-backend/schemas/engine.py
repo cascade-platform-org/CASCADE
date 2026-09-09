@@ -6,7 +6,7 @@ These are the shapes returned by GET /api/engine/algorithms.
 The endpoint lets the frontend know which graph types and algorithms the
 engine supports, so the config UI can present valid choices without
 hardcoding any engine internals.  The actual algorithm code lives
-exclusively in engine/propagation.py (private IP).
+exclusively in engine/propagation.py.
 
 Design notes
 ------------

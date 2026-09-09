@@ -1,9 +1,9 @@
-# Roles carry Entitlements; the engine is metered in evaluations, not requests
+# ADR-0008 — Roles carry Entitlements; the engine is metered in evaluations, not requests
 
 **Status:** accepted
 
 Signup is self-service (anyone can register via the OIDC provider), so a new
-account must not be able to abuse the proprietary engine. Rather than lock the
+account must not be able to abuse the engine. Rather than lock the
 engine behind manual approval, we let every role use the full toolset —
 including model-based analysis — but bound by a per-role **Entitlement**: a
 bundle of quotas that scales up with trust.
@@ -73,7 +73,7 @@ budget size-aware.
 - Enforcement lives server-side in the propagation path, before the engine runs
   (this is also the "rate limiting" the deployment doc flags as missing).
 - RBAC grows from boolean permissions to permissions **+ Entitlement quotas**;
-  the role record gains `max_nodes` and `eval_budget_per_min` fields.
+  the role record gains `max_nodes` and `evals_per_minute` fields.
 - Accepted trade-off: a budget large enough for one model-based run also permits
   many cheap single-run probes in that minute, so **small-graph IP probing is
   possible**. This is accepted in favour of adoption; it does not weaken the

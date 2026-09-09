@@ -1,4 +1,4 @@
-# Authorization (role + entitlement) lives in the app DB, not the IdP
+# ADR-0010 — Authorization (role + entitlement) lives in the app DB, not the IdP
 
 **Status:** accepted (amended 2026-07-06: default role `viewer` → `analyst`, see below)
 

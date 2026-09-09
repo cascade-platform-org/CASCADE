@@ -190,7 +190,7 @@ A pure transformation of an external network format into a CASCADE ProjectBundle
 _Avoid_: "converter", "uploader"; treating import as sync (nothing is stored server-side)
 
 **Design Velocity**:
-The default pipe-capacity rule: `capacity = π/4·d² × capacity_velocity`, a single uniform design speed (`DEFAULT_DESIGN_VELOCITY_MS = 2.5 m/s`, exposed as `ImportOptions.capacity_velocity`) applied to every pipe — no hydraulic solve. Adopted 2026-07-27 after a full 8-network ablation showed the per-pipe Sweep capacities (the "drill") buy nothing over it (F1 0.770 vs 0.778). Set `capacity_velocity=None` to fall back to the drill. Fidelity comes from topology/orientation/priorities, not tuned capacities. Default: `map.py::DEFAULT_DESIGN_VELOCITY_MS`.
+The default pipe-capacity rule: `capacity = π/4·d² × capacity_velocity`, a single uniform design speed (`DEFAULT_DESIGN_VELOCITY_MS = 2.5 m/s`, exposed as `ImportOptions.capacity_velocity`) applied to every pipe — no hydraulic solve. Adopted 2026-07-27 after a full 8-network ablation showed it beats the per-pipe Sweep capacities (the "drill") outright — pooled critical-class F1 0.794 vs 0.737, precision 0.682 vs 0.599 (`experiments/aqueducts/ATTEMPTS.md` §12). Set `capacity_velocity=None` to fall back to the drill. Fidelity comes from topology/orientation/priorities, not tuned capacities. Default: `map.py::DEFAULT_DESIGN_VELOCITY_MS`.
 _Avoid_: "assumed velocity" (it is a validated default, not a guess); do not conflate with the Sweep's per-pipe velocities
 
 **Sweep (demand-multiplier sweep)**:

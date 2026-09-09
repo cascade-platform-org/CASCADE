@@ -7,27 +7,6 @@
     "sizeLabel": "3.7 MB"
   },
   {
-    "id": "palmanova-electric-priority",
-    "label": "Palmanova — Electric priority variant",
-    "description": "Palmanova case study with flow-control policy prioritising electricity restoration.",
-    "file": "Palmanova_Complete_electric_priority.json",
-    "sizeLabel": "3.7 MB"
-  },
-  {
-    "id": "palmanova-water-improvement",
-    "label": "Palmanova — Water improvement variant",
-    "description": "Palmanova case study with flow-control policy prioritising water restoration.",
-    "file": "Palmanova_Complete_water_improvement.json",
-    "sizeLabel": "3.7 MB"
-  },
-  {
-    "id": "updated-palmanova-new",
-    "label": "Palmanova — Updated flow-control model",
-    "description": "Hospital water demand and Civil Protection given top priority, so the engine allocates scarce supply to critical services first.",
-    "file": "Updated_Palmanova_New.json",
-    "sizeLabel": "3.9 MB"
-  },
-  {
     "id": "office-with-heat",
     "label": "Office with heat — digital/electric/thermal dependencies",
     "description": "Small office network spanning digital, electric, and heat services, used as the worked example in the Flow Allocation Module for Hydraulic Networks paper.",
@@ -37,57 +16,8 @@
   {
     "id": "ijdrr-example",
     "label": "IJDRR example",
-    "description": "Worked example network for the IJDRR submission, including Personnel elements.",
+    "description": "Worked example network for the IJDRR submission, including Personnel elements. This is also the network the guided tour runs on.",
     "file": "IJDRR_example.json",
     "sizeLabel": "40 KB"
-  },
-  {
-    "id": "base-georef",
-    "label": "Georeferenced base network",
-    "description": "Demonstrates map-anchored (georeferenced) canvases with real lat/lng node positions.",
-    "file": "base_georef.json",
-    "sizeLabel": "2.2 MB"
-  },
-  {
-    "id": "rule-specific",
-    "label": "Rule demo — element-specific",
-    "description": "Small network demonstrating a rule targeting one specific Element.",
-    "file": "rule-specific.json",
-    "sizeLabel": "5 KB"
-  },
-  {
-    "id": "rule-intracategorical",
-    "label": "Rule demo — within one category",
-    "description": "Small network demonstrating a rule applied within a single category.",
-    "file": "rule-intracategorical.json",
-    "sizeLabel": "5 KB"
-  },
-  {
-    "id": "rule-intercategorical",
-    "label": "Rule demo — across categories",
-    "description": "Small network demonstrating a rule that spans multiple categories.",
-    "file": "rule-intercategorical.json",
-    "sizeLabel": "5 KB"
-  },
-  {
-    "id": "flow-power-scarcity",
-    "label": "Flow demo — power scarcity",
-    "description": "Small network demonstrating min-cost max-flow allocation under power scarcity.",
-    "file": "flow-power-scarcity.json",
-    "sizeLabel": "5 KB"
-  },
-  {
-    "id": "dependency-guard",
-    "label": "Dependency guard demo",
-    "description": "Small network demonstrating a dependency-guard rule protecting a critical Element.",
-    "file": "dependency-guard.json",
-    "sizeLabel": "5 KB"
-  },
-  {
-    "id": "backup-defer",
-    "label": "Backup / deferred recovery demo",
-    "description": "Small network demonstrating backup-generator and deferred-recovery behaviour.",
-    "file": "backup-defer.json",
-    "sizeLabel": "5 KB"
   }
 ]

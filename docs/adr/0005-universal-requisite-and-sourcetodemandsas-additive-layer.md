@@ -1,4 +1,6 @@
-# Universal Requisite as default propagation; SourceToDemands as additive layer
+# ADR-0005 — Universal Requisite as default propagation; SourceToDemands as additive layer
+
+**Status:** accepted (supersedes ADR-0003's dependency-detection rule)
 
 Every node now runs a **Requisite logical aggregation pass** over all its incoming edges as the
 default proposal mechanism, regardless of the categories involved. `SourceToDemands` flow runs
@@ -75,7 +77,7 @@ edge-implied dependency is manually enumerated. Fragile and non-obvious.
 
 **Engine-side profile inference (rejected).** Have the engine dynamically inject synthetic
 profiles at runtime rather than reading from the project JSON. This would replicate topology
-reasoning inside the private engine and make the guard parameters invisible to the frontend,
+reasoning inside the engine package and make the guard parameters invisible to the frontend,
 breaking the schema boundary.
 
 ## Consequences

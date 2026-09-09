@@ -38,10 +38,11 @@ python3 paper_numbers.py        # Table 1, the headline figures, bootstrap CIs
 python3 aggregate_final.py      # per-family / per-network breakdown
 ```
 
-The ablations each have their own runner: `orientation_ablation.py` (Supp. S5),
-`run_capacity_drill_ablation.sh` (the capacity-method comparison),
-`priority_steering.py` (the controllability arms), `cost_benchmark.py` (Supp. S8),
-`margin_sweep.py` (the capacity-margin sensitivity).
+The ablations each have their own runner, all reported in Supp. S5 unless noted:
+`orientation_ablation.py`, `run_capacity_drill_ablation.sh` (the capacity-method
+comparison), `priority_steering.py` (the controllability arms),
+`margin_sweep.py` (the capacity-margin sensitivity, Supp. S7), and
+`cost_benchmark.py` (Supp. S8).
 
 [`ATTEMPTS.md`](../experiments/aqueducts/ATTEMPTS.md) is the running log of every
 approach tried and rejected — it is the source for the negative results in

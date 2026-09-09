@@ -4,7 +4,7 @@
 
 The platform uses **Role-Based Access Control (RBAC)** layered on top of **OAuth2/OIDC** for identity. This means:
 
-- **Authentication** (who you are) is delegated to a self-hosted, open-source OIDC provider — **Zitadel** (chosen; see ADR-0009 context) — or any OIDC-compliant service. Proprietary paid providers (Auth0, Okta, Azure AD) are excluded by the 100%-open-source rule (CLAUDE.md §1).
+- **Authentication** (who you are) is delegated to a self-hosted, open-source OIDC provider — **Zitadel** (chosen; see ADR-0010 and ADR-0011) — or any OIDC-compliant service. Proprietary paid providers (Auth0, Okta, Azure AD) are excluded by the 100%-open-source rule (CLAUDE.md §1).
 - **Authorization** (what you can do) is enforced by the backend using roles and permissions stored in PostgreSQL.
 
 The database stores identity records, role assignments, and run/audit logs; permission definitions are code-owned (`auth/rbac.py`). Project data reaches the database only for users who opt in to Server Sync (requirements.md §13.4).
@@ -41,6 +41,7 @@ Permissions are additive (union across the user's roles). Every declared permiss
 
 The RBAC data model is two tables in PostgreSQL (see `db/schema.sql` for the authoritative DDL):
 
+```sql
 -- Users: created on first OAuth2 login (default role 'analyst' — migration 005;
 -- 'viewer' is the guest-preview/demotion role)
 CREATE TABLE users (
@@ -62,6 +63,7 @@ CREATE TABLE roles (
     evals_per_minute INT,
     created_at       TIMESTAMPTZ DEFAULT now()
 );
+```
 
 The **role→permission mapping lives in code** (`auth/rbac.py`), not in a table — one source of truth the API enforces; the former `role_permissions` table was dropped in migration 004. `db/seed.sql` populates the four default roles on first deployment; migrations 002/003 seed and calibrate their Entitlements.
 

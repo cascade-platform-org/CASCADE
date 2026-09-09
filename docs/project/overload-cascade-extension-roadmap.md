@@ -71,7 +71,7 @@ There are **two** overload mechanisms, and they need different tools:
 ### Phase 4 — Validation experiment (~2–3 days)
 - Metric: **precision/recall on failed elements** (engine set vs oracle set),
   mirroring the critical-junction detection framing.
-- Run on the six networks (aqueducts, where redundant paths make overload real).
+- Run on the eight benchmark networks (aqueducts, where redundant paths make overload real).
 - **Sensitivity to `v_fail`** — same playbook as the capacity-margin sweep, since the
   threshold is the one free parameter.
 
@@ -109,11 +109,13 @@ There are **two** overload mechanisms, and they need different tools:
 5. **Convergence** — the overload loop must stay monotone (Phase 1) or the engine's
    core guarantee breaks.
 
-## 6. Physical grounding note (links to the capacity-margin work)
-Capacity in the importer is `π/4·d²·v_peak·margin`. A **max-design-velocity cap**
-(`v ≤ ~2.5–3 m/s`) both bounds the current margin physically and provides a natural
-default `v_fail` for the overload criterion — the two features share the threshold.
-See the capacity-margin sensitivity work and `experiments/margin_sweep.py`.
+## 6. Physical grounding note (links to the capacity work)
+Pipe capacity in the importer is `π/4·d² × capacity_velocity`, a uniform **Design
+Velocity** of 2.5 m/s (ADR-0012; the per-pipe `v_peak × margin` "drill" is retained
+behind `capacity_velocity=None`). That same design speed is the natural default
+`v_fail` for the overload criterion — capacity sizing and failure threshold share
+one physical constant, which is what makes the criterion defensible rather than
+tuned. See `experiments/aqueducts/margin_sweep.py` for the sensitivity harness.
 
 ## 7. Decisions to confirm before starting
 - **Scope:** A only (~2 weeks), or A + exploratory B (+1–2 weeks, high risk)?

@@ -138,7 +138,7 @@ priority machinery (`run_final_benchmark.sh` → `final_benchmark.csv`; pooled F
 ≈0.92). "Priority restores precision" held only under the drill; under uniform it
 *trades* precision for recall (0.68→0.63 P, 0.95→0.98 R), so it is reframed as an
 optional **recall lever** (`run_priority_ablation.sh` → `final_benchmark_priority.csv`,
-Supp. S2; drill arm: `run_capacity_drill_ablation.sh` → `final_benchmark_drill.csv`).
+Supp. S5; drill arm: `run_capacity_drill_ablation.sh` → `final_benchmark_drill.csv`).
 **Priority auto-derivation was removed from the product** (best precision);
 priority stays an expert-set per-node primitive.
 
@@ -179,7 +179,7 @@ not binding) — a different, still-unidentified orientation-sensitive mechanism
   against the ground truth is a category error. Evidence is EXPRESSIVE RANGE — a
   per-scenario assignment steers the outcome to a specified target (§14:
   0.04→0.90, 0.47→0.83), using each situation's WNTR-served set as a well-defined
-  target. Paper Supp. S2; the product ships none by default.
+  target. Paper Supp. S5; the product ships none by default.
 - ⚠️ An empirical **monotonicity** sweep was abandoned: under demand-scaled
   shortage `tiered_fair_share` can collapse TOTAL delivery when consumers split
   into few coarse tiers at extreme scarcity (×2 Modena: 0.71→0.01 once a district

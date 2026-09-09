@@ -1,4 +1,6 @@
-# Propagation heuristic pipeline, multi-category composition, and responsibility share
+# ADR-0003 — Propagation heuristic pipeline, multi-category composition, and responsibility share
+
+**Status:** accepted (flow-allocation default superseded by ADR-0014 — see the closing note)
 
 ## Heuristic pipeline: propose → guard → commit
 
@@ -85,7 +87,7 @@ Whenever a heuristic or Rule causes a node's Functionality to worsen, it must re
 { element_id: responsibility_share }
 ```
 
-where `0 ≤ responsibility_share ≤ 1` and all values sum to 1. The dictionary identifies which upstream Elements are the direct triggers of the degradation. A value of `0` means the Element is formally listed as a causal participant but contributed no measurable share to the degradation (e.g. a partially-delivering upstream whose shortfall was already covered by another supplier). Zero-share entries may be omitted from the dictionary — absence and zero are semantically equivalent.
+where every value is in `(0, 1]` and they sum to 1. The dictionary identifies which upstream Elements are the direct triggers of the degradation. **Zero shares are never emitted** — an Element that contributed no measurable share (e.g. a partially-delivering upstream whose shortfall was already covered by another supplier) is simply absent from the dictionary. Absence and zero are semantically equivalent, and absence is the only form on the wire.
 
 Responsibility share comes **only from the heuristic/rule that produced the final (worst) Functionality** for the node. Contributions from non-winning heuristics are discarded.
 

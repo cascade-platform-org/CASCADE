@@ -1,15 +1,11 @@
 # Local-First Guide
 
-## What "Local-First" Means
-
-In CASCADE, your project data lives on your machine as plain JSON. Editing, visualization, rule authoring, Event application, and topological analysis all happen entirely in the browser with no server involvement.
-
-The server has two purposes:
-
-1. **Run the server-hosted propagation engine** when you click Propagate.
-2. **Enforce identity and access control** (OAuth2/OIDC + RBAC).
-
-Optionally, users can enable **server-side sync** to persist and share project files across devices. When sync is disabled (the default), the server never sees or stores project data.
+Your project data lives on your machine as plain JSON; the server exists only to
+run the propagation engine and to enforce identity and access control. The
+principle and its consequences are stated once in
+[architecture.md → Design Philosophy](architecture.md); **this document is the
+canonical reference for the file format** — what is in a project file and a
+config file, field by field.
 
 ---
 
