@@ -137,28 +137,13 @@ CREATE INDEX IF NOT EXISTS idx_activity_uploads_user_id    ON activity_log_uploa
 CREATE INDEX IF NOT EXISTS idx_activity_uploads_session_id ON activity_log_uploads(session_id);
 
 -- ---------------------------------------------------------------------------
--- Batch propagation jobs
+-- No batch-propagation table.
 --
--- Tracks the lifecycle of async batch propagation requests.
--- Results are stored as JSONB keyed by caller-assigned item_id.
--- Rows are written by the background task and read by the polling/SSE
--- endpoint (GET /api/propagate/batch/{job_id}).
+-- A speculative `batch_propagation_jobs` table lived here until migration 006
+-- removed it: no endpoint was ever built, and its `results` JSONB would have
+-- persisted Propagation outputs, which ADR-0007 forbids. Any future batch
+-- feature designs its storage against that boundary from the start.
+--
+-- Every table above that carries a `user_id` must also appear in db/export.py
+-- (GDPR access) and, if it is a log, in scripts/purge_expired.py (retention).
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS batch_propagation_jobs (
-    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status       VARCHAR(20)  NOT NULL DEFAULT 'queued'
-                              CHECK (status IN ('queued', 'running', 'done', 'failed')),
-    total        INT          NOT NULL DEFAULT 0,
-    completed    INT          NOT NULL DEFAULT 0,
-    -- Keyed by item_id. Populated incrementally as items complete.
-    results      JSONB        NOT NULL DEFAULT '{}',
-    -- Keyed by item_id. Error message string for failed items.
-    errors       JSONB        NOT NULL DEFAULT '{}',
-    created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    completed_at TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_batch_jobs_user_id ON batch_propagation_jobs(user_id);
-CREATE INDEX IF NOT EXISTS idx_batch_jobs_status  ON batch_propagation_jobs(status);

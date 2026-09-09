@@ -1,0 +1,19 @@
+-- Migration 006 — drop `batch_propagation_jobs`
+--
+-- The table was created speculatively for an async batch-propagation feature
+-- that was never built: there is no endpoint, no Pydantic schema (the
+-- speculative one was removed — see api-reference.md "Not implemented"), and
+-- no code path has ever written a row.
+--
+-- It is dropped rather than left dormant because of what it declared it would
+-- store: `user_id` plus a `results` JSONB of propagation outputs. That
+-- contradicts ADR-0007's persistence boundary — Propagation results are never
+-- written to the database — and it silently widened the GDPR surface (a table
+-- keyed to a person, absent from the Art. 30 record, the retention windows,
+-- and the data export). Carrying an exception to the project's own privacy
+-- guarantee for a feature nobody is building is the wrong trade.
+--
+-- If batch propagation is built later it gets a schema designed against
+-- ADR-0007 from the start — most likely storing job status and item ids only,
+-- with results streamed to the client rather than persisted.
+DROP TABLE IF EXISTS batch_propagation_jobs;

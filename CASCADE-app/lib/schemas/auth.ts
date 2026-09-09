@@ -24,6 +24,10 @@ export type MeResponse = z.infer<typeof MeResponseSchema>;
  */
 export const AuthConfigSchema = z.object({
   auth_enabled: z.boolean(),
+  /** Whether the deployment has a Zitadel→Google federation configured, i.e.
+   *  whether to offer the "Continue with Google" shortcut. Defaults to false so
+   *  a backend predating this field still validates. */
+  google_login: z.boolean().default(false),
 });
 
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;

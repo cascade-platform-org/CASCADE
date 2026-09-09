@@ -99,25 +99,40 @@ model configuration; Propagation resolves it from the request's canvases.
 
 ### `GET /api/auth/config`
 
-**Unauthenticated.** Returns `{ auth_enabled }` so a fresh/guest browser can discover whether sign-in exists before having a token.
+**Unauthenticated.** Returns `{ auth_enabled, google_login }` so a fresh/guest browser can discover whether sign-in exists before having a token, and which shortcuts to offer. `google_login` is a **boolean** — the Zitadel IdP id behind it (`OIDC_GOOGLE_IDP_ID`) stays server-side, so a client can request the Google shortcut but cannot point a login at an arbitrary provider.
 
 ### `GET /api/auth/me`
 
 Returns the current user (`sub`, `email`, `display_name`, `roles`, `permissions`) plus `auth_enabled`, so the frontend can tell local-only mode from a real session. `permissions` is the effective (wildcard-expanded) set computed by `auth/rbac.py` — the client gates UI by membership in this list and never maps roles to permissions itself.
 
+### `GET /api/auth/me/export`
+
+Self-service GDPR **access and portability** (Art. 15 & 20): every server-side record tied to the caller — account row, synced project versions, audit entries, analysis-run metadata, activity uploads — as one JSON document, served with `Content-Disposition: attachment`. Takes no user id, so it can only ever return the caller's own data. `501` in local-only mode; `404` if the account row is missing.
+
+The gathering lives in `db/export.py`. **Any new table carrying a `user_id` must be added there** in the same session it is created, or the export silently under-reports (see [privacy-and-data-protection.md](privacy-and-data-protection.md)).
+
 ### `DELETE /api/auth/me`
 
 Self-service GDPR erasure. Deletes the identity in Zitadel **first** (via `ZITADEL_MGMT_URL`/`ZITADEL_MGMT_TOKEN`; aborts with `502` if that fails so erasure stays all-or-nothing), then removes the app record and appends an `account_delete` audit entry. `204` on success.
 
-### `GET /api/auth/login?state=…&code_challenge=…&code_challenge_method=S256`
+### `GET /api/auth/login?state=…&code_challenge=…&code_challenge_method=S256[&prompt=…][&ui_locales=…][&idp=…]`
 
 Redirects to the OIDC provider's authorization page, forwarding the client-generated `state` (anti-CSRF: the frontend stores it in `sessionStorage` and the callback page rejects a mismatch) and the PKCE (RFC 7636) `code_challenge`. `501` in local-only mode.
+
+Two optional pass-throughs shape the hosted login experience:
+
+- `prompt` — forwarded only when it is one of `create`, `login`, `select_account`, `none` (anything else is dropped, not relayed). The frontend's **"Create account"** button sends `prompt=create` so Zitadel opens its self-service registration form directly instead of the sign-in form.
+- `ui_locales` — a space-separated BCP-47 tag list (e.g. `it en-US`), validated against `^[A-Za-z0-9-]+( [A-Za-z0-9-]+)*$` before forwarding. The frontend sends `navigator.language`, so Zitadel renders its hosted pages in the same language the user sees in CASCADE.
+- `idp` — a symbolic provider name; only `google` is wired, and only when `OIDC_GOOGLE_IDP_ID` is set. It maps **server-side** to Zitadel's `urn:zitadel:iam:org:idp:id:<id>` scope, which skips Zitadel's own form and goes straight to Google. An unknown or unconfigured value falls through to the normal login form rather than erroring — a missing shortcut must never block sign-in.
 
 This app is a **public OIDC client** (no `client_secret`): PKCE proves the browser session that requests the token exchange is the one that started this authorize request, replacing a shared static secret. The frontend generates a random `code_verifier`, derives `code_challenge = BASE64URL(SHA256(code_verifier))`, stashes the verifier in `sessionStorage`, and sends only the challenge here.
 
 ### `GET /api/auth/callback?code=…&code_verifier=…`
 
-Exchanges the authorization code (sending the PKCE `code_verifier` instead of a `client_secret`), then **sets the session as httpOnly cookies** — `cascade_access` (path `/api`) and `cascade_refresh` (path `/api/auth/refresh`) — and returns `{ "ok": true }`. Tokens never appear in a response body, so page JavaScript (and any XSS running as it) cannot read them; `SameSite=Lax` keeps cross-site non-GET requests from carrying them (CSRF). Also persists the id token's `email`/`name` claims to the user row (the access token carries no profile claims). `501` in local-only mode; `403` if the id token's email is not explicitly verified (an absent `email_verified` claim is rejected too — fail closed). (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state or verifier is rejected, not accepted.)
+Exchanges the authorization code (sending the PKCE `code_verifier` instead of a `client_secret`), then **sets the session as httpOnly cookies** — `cascade_access` (path `/api`) and `cascade_refresh` (path `/api/auth/refresh`) — and returns `{ "ok": true }`. Tokens never appear in a response body, so page JavaScript (and any XSS running as it) cannot read them; `SameSite=Lax` keeps cross-site non-GET requests from carrying them (CSRF). Also persists the id token's `email`/`name` claims to the user row (the access token carries no profile claims). `501` in local-only mode; `403` on a failed id-token check, with a **structured** detail so the client branches on a stable code rather than on prose:
+
+- `{"detail": {"code": "email_not_verified", "message": …}}` — the one failure the user can act on ("check your inbox"). An *absent* `email_verified` claim is allowed; the IdP's own login policy is the primary gate (see `auth/oauth2.py::verify_id_token` and its dedicated `EmailNotVerifiedError`).
+- `{"detail": {"code": "verification_failed", "message": …}}` — everything else (bad signature, expired, misconfigured audience/issuer), deliberately opaque. Configuration errors name server internals, so they are logged and never returned to an unauthenticated caller. (The `state` round-trip is validated client-side on the callback page, which fails **closed** — a missing stored state or verifier is rejected, not accepted.)
 
 `OIDC_CLIENT_SECRET` is optional: if set (a confidential-client IdP registration), it's sent alongside `client_id` on every token-endpoint call; if unset (the default, PKCE), only `client_id` + `code_verifier`/`refresh_token` are sent.
 
@@ -188,4 +203,4 @@ Returns `{ bundle: { project, config }, warnings, original_nodes, imported_nodes
 
 ## Not implemented (by design, yet)
 
-Batch propagation (`POST /api/propagate/batch`) appears in older planning documents but has **no endpoint and no schema** — the speculative schema definition was removed. Re-derive it from Pydantic when the feature is actually built (requirements §16).
+Batch propagation (`POST /api/propagate/batch`) appears in older planning documents but has **no endpoint, no schema, and (since migration 006) no table** — the speculative `batch_propagation_jobs` table was dropped because its `results` JSONB would have persisted Propagation outputs, which ADR-0007 forbids. Re-derive the whole thing, storage included, from ADR-0007 and Pydantic when the feature is actually built (requirements §16).

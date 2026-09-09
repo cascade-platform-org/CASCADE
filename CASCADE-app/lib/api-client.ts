@@ -23,6 +23,7 @@ import type { ProjectBundle } from "@/lib/file-io";
 import {
   MeResponseSchema,
   AuthConfigSchema,
+  type AuthConfig,
   type MeResponse,
 } from "@/lib/schemas/auth";
 
@@ -95,15 +96,16 @@ async function fetchWithTimeout(
 // ---------------------------------------------------------------------------
 
 /**
- * GET /api/auth/config — UNauthenticated: whether the backend enforces auth.
- * Returns null on network error/timeout. Read this before a user has a token
- * (the token-gated /me can't reveal auth_enabled to a guest).
+ * GET /api/auth/config — UNauthenticated: whether the backend enforces auth and
+ * which sign-in shortcuts it offers. Returns null on network error/timeout.
+ * Read this before a user has a token (the token-gated /me can't reveal
+ * auth_enabled to a guest).
  */
-export async function fetchAuthConfig(): Promise<boolean | null> {
+export async function fetchAuthConfig(): Promise<AuthConfig | null> {
   try {
     const res = await fetchWithTimeout(`${API_BASE}/api/auth/config`);
     if (!res.ok) return null;
-    return AuthConfigSchema.parse(await res.json()).auth_enabled;
+    return AuthConfigSchema.parse(await res.json());
   } catch {
     return null;
   }
@@ -123,23 +125,42 @@ export async function fetchMe(): Promise<MeResponse | null> {
 /** The URL that starts the OIDC (Zitadel) login redirect. `state` is the
  *  anti-CSRF value the callback page validates when the IdP returns it.
  *  `codeChallenge` is the PKCE (RFC 7636) S256 challenge — the backend is a
- *  public client, so this replaces a client_secret at token exchange. */
-export function oidcLoginUrl(state: string, codeChallenge: string): string {
+ *  public client, so this replaces a client_secret at token exchange.
+ *
+ *  `intent` "create" asks the backend to forward `prompt=create` so Zitadel
+ *  opens its registration form instead of the sign-in form. `uiLocales` (a
+ *  BCP-47 tag such as "it" or "en-US", normally `navigator.language`) picks the
+ *  language Zitadel renders its hosted pages in. `idp` "google" asks the
+ *  backend to add the Zitadel scope that jumps straight to Google — the
+ *  provider's id lives in backend config, never here. */
+export function oidcLoginUrl(
+  state: string,
+  codeChallenge: string,
+  opts: { intent?: "login" | "create"; uiLocales?: string; idp?: "google" } = {},
+): string {
   const params = new URLSearchParams({
     state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   });
+  if (opts.intent === "create") params.set("prompt", "create");
+  if (opts.uiLocales) params.set("ui_locales", opts.uiLocales);
+  if (opts.idp) params.set("idp", opts.idp);
   return `${API_BASE}/api/auth/login?${params.toString()}`;
 }
 
 /** Exchange an OIDC authorization code via the backend, which sets the
  *  httpOnly session cookies on success (no tokens in the body — JS never sees
- *  them). `codeVerifier` is the PKCE verifier generated before the redirect. */
+ *  them). `codeVerifier` is the PKCE verifier generated before the redirect.
+ *
+ *  Returns `{ ok: true }` on success, or `{ ok: false, status, code }` so the
+ *  callback page can branch on a STABLE code rather than pattern-matching the
+ *  message prose. `code` is `"email_not_verified"` for the one failure a user
+ *  can fix; `""` when the backend sent no structured detail. */
 export async function exchangeOidcCode(
   code: string,
   codeVerifier: string,
-): Promise<boolean> {
+): Promise<{ ok: true } | { ok: false; status: number; code: string }> {
   try {
     const params = new URLSearchParams({ code, code_verifier: codeVerifier });
     const res = await fetchWithTimeout(
@@ -147,9 +168,22 @@ export async function exchangeOidcCode(
       {},
       15_000,
     );
-    return res.ok;
+    if (res.ok) return { ok: true };
+    let errorCode = "";
+    try {
+      // FastAPI wraps HTTPException(detail=…) as { detail: … }; ours is an
+      // object carrying `code`. Older/other errors send a plain string, which
+      // simply yields no code and falls through to the generic message.
+      const body = (await res.json()) as { detail?: { code?: string } | string };
+      if (body.detail && typeof body.detail === "object") {
+        errorCode = body.detail.code ?? "";
+      }
+    } catch {
+      /* not JSON — no code available */
+    }
+    return { ok: false, status: res.status, code: errorCode };
   } catch {
-    return false;
+    return { ok: false, status: 0, code: "network_error" };
   }
 }
 
@@ -179,6 +213,41 @@ export async function logoutSession(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/** GET /api/auth/me/export — download the caller's own data export (GDPR
+ *  Art. 15/20). Returns an error message, or null once the save is triggered.
+ *
+ *  Fetched through `authedFetch` rather than a plain navigation: navigating
+ *  away replaces the running app, so an expired access cookie (they last about
+ *  an hour) would land the user on a raw JSON 401 page and discard whatever
+ *  local-first work was open. Going through authedFetch means a 401 silently
+ *  rotates the session and retries, and a failure leaves the page untouched. */
+export async function downloadMyData(): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await authedFetch(`${API_BASE}/api/auth/me/export`);
+  } catch {
+    return "Export failed: network error.";
+  }
+  if (!res.ok) {
+    const detail = await res.text().catch(() => res.statusText);
+    return `Export failed (${res.status}): ${detail}`;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cascade-my-data.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    // Release the blob once the browser has taken the download.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+  return null;
 }
 
 /** DELETE /api/auth/me — self-service GDPR account erasure (app DB + IdP).

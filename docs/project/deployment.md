@@ -198,15 +198,86 @@ Do this once, after `id.<domain>` resolves and the stack is up in production.
    turn on **email verification required** and **lockout** (failed-attempt
    limits). Configure **SMTP** (Settings → Notifications) so verification mail
    is actually sent — email verification does nothing without a working sender.
+   Prefer the **verification code** (OTP) template over link-only, so the code
+   still works when the mail is opened on another device.
 5. **Copy the credentials into `deploy/.env`** and restart the backend:
    - `OIDC_DISCOVERY_URL=https://id.<domain>/.well-known/openid-configuration`
    - `OIDC_CLIENT_ID=<application client id>`
    - `OIDC_CLIENT_SECRET=<secret, if using Code auth>`
    - `OIDC_REDIRECT_URI=https://app.<domain>/auth/callback`
    - `JWT_AUDIENCE=<the application client id>` (the `aud` the tokens carry)
+   - `OIDC_GOOGLE_IDP_ID=<zitadel idp id>` — optional; enables the "Continue
+     with Google" shortcut (see below)
 
    With OIDC set and `ENV=production`, the backend enforces auth (it refuses to
    start otherwise) and reads each user's role from its own DB (ADR-0010).
+
+### Login-experience checklist (Zitadel console, click-ops)
+
+The sign-in/registration form is Zitadel's **hosted Login V2** — a separate app
+(`ghcr.io/zitadel/zitadel-login`), not CASCADE code. CASCADE only forwards
+`prompt=create` and `ui_locales` on the authorize request (api-reference.md).
+Everything else is Zitadel configuration; do this pass once so users don't feel
+they left the product:
+
+- **Branding** (Settings → Branding): upload the CASCADE logo (light + dark),
+  set the primary colour to the brand token, set the favicon, and enable
+  **"hide Zitadel watermark"**. Biggest perceived-quality win — without it users
+  bounce to a purple Zitadel-branded page mid-flow.
+- **Email as username** (Settings → Login Behavior): turn **off** the separate
+  "username must not be the email / must include org domain" requirements so
+  registration only asks for an email and users never meet a "nome di accesso"
+  field. Login already accepts email *or* username regardless.
+- **Username enumeration** (Settings → Login Behavior → "Ignore unknown
+  usernames"): for a small research deployment, leaving this **off** gives the
+  friendlier "no account found — register?" on the first step instead of a fake
+  password prompt. Turn it **on** only if enumeration is a real concern.
+- **Languages** (Settings → Languages): enable Italian and English, set the
+  instance default. Review **Settings → Login Texts** per language — the
+  machine-translated defaults read awkwardly.
+- **Passkeys / WebAuthn** (Login Policy): enable for one-tap return logins.
+- **Session lifetime** (Login Policy): set generously so users aren't
+  re-authenticating daily; the app's refresh-cookie is 30 days.
+
+### Optional: "Continue with Google"
+
+Zitadel acts as the broker — CASCADE never sees Google credentials and never
+talks to Google directly, so this stays §1-safe (no paid or proprietary
+dependency; Google is a *recipient* of sign-in data, not a component).
+
+**Before enabling it, read
+[privacy-and-data-protection.md §1](privacy-and-data-protection.md): Google
+becomes a named recipient of personal data and must appear in your privacy
+notice.** Leave `OIDC_GOOGLE_IDP_ID` unset and the button does not exist — no
+request to Google is ever made (the button's Google mark is inlined SVG, so even
+rendering the gate contacts nobody).
+
+1. **Google Cloud Console** → *APIs & Services* → *Credentials* → *Create
+   credentials* → **OAuth client ID**, type **Web application**.
+   - Authorised redirect URI: `https://id.<domain>/ui/v2/login/idp/google/callback`
+     (Zitadel's console shows the exact callback for your version — copy it from
+     there rather than trusting this line).
+   - Configure the OAuth consent screen; for anything beyond your own
+     organisation Google requires verification before the app leaves "testing".
+2. **Zitadel console** → *Settings* → *Identity Providers* → **Google**. Paste
+   the client ID and secret, scopes `openid profile email`, and tick
+   **automatic creation** + **automatic update** so a first Google sign-in
+   provisions the Zitadel user instead of dead-ending.
+3. Activate the provider on the **Login Policy** so it appears on the hosted
+   login page.
+4. Copy the provider's **id** from the Zitadel console URL (the numeric segment)
+   into `deploy/.env` and restart the backend:
+
+   ```
+   OIDC_GOOGLE_IDP_ID=<zitadel idp id>
+   ```
+
+   The app then advertises `google_login: true` on `GET /api/auth/config` and
+   the gate shows **Continue with Google**, which jumps straight past Zitadel's
+   own form. The id itself never reaches the browser.
+
+Verify: sign in with a Google account, then confirm the user appears in
+`GET /api/admin/users` with role `analyst`.
 
 ---
 
@@ -322,9 +393,28 @@ Set `NEXT_PUBLIC_API_URL` to point to your deployed backend.
   account with user-delete scope) so deletion also removes the Zitadel user —
   **without this the account can silently re-register on next login and erasure
   is incomplete.**
+- **Data export.** A user can download everything the server holds about them
+  via `GET /api/auth/me/export` ("Download my data" in the account menu) —
+  GDPR Art. 15/20.
 - **Audit trail.** Sensitive actions (`role_change`, `account_delete`) are
   appended to the `audit_logs` table with the actor's email (denormalised so the
-  trail survives the actor's own deletion). It is append-only.
+  trail survives the actor's own deletion). It is append-only within its
+  retention window.
+- **Retention.** Log tables are time-boxed (audit 730 d, analysis 365 d,
+  activity uploads 180 d). Enforce them from cron — a declared window that
+  nothing enforces is not a window:
+
+  ```bash
+  # dry run first; then schedule the --apply form nightly
+  docker compose exec backend python scripts/purge_expired.py
+  0 3 * * * cd /srv/cascade/deploy && docker compose exec -T backend \
+      python scripts/purge_expired.py --apply >> /var/log/cascade-purge.log 2>&1
+  ```
+
+- **The full picture** — processing record, lawful bases, recipients, cookies,
+  and the operator checklist (privacy notice, DPA, breach procedure) — is in
+  [privacy-and-data-protection.md](privacy-and-data-protection.md). Work through
+  its checklist before opening signup to the public.
 
 ## Engine Capacity & Entitlement Calibration
 

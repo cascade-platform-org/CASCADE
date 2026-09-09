@@ -16,6 +16,7 @@ import logging
 from typing import AsyncIterator, Optional, Union
 
 import asyncpg
+from fastapi import HTTPException, status
 
 from config import get_settings
 
@@ -96,7 +97,19 @@ async def get_connection() -> AsyncIterator[DBConn]:
         @router.get("/thing")
         async def route(conn = Depends(get_connection)):
             row = await conn.fetchrow("SELECT ...")
+
+    In local-only mode (no DATABASE_URL) there is no pool, and this raises the
+    501 that api-reference.md documents for every database-backed endpoint.
+    Doing it here rather than in each route is what makes that contract true:
+    FastAPI resolves dependencies BEFORE the route body runs, so a route's own
+    `if not auth_enabled: raise 501` guard never gets the chance — the
+    uninitialised pool would already have surfaced as an opaque 500.
     """
+    if not is_connected():
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="This endpoint requires a database (not available in local-only mode).",
+        )
     pool = get_pool()
     async with pool.acquire() as conn:
         yield conn

@@ -70,6 +70,18 @@ const STORAGE_KEY = "cascade.auth";
 export const OIDC_STATE_KEY = "cascade.oidc.state";
 /** sessionStorage key for the PKCE `code_verifier` (RFC 7636). */
 export const OIDC_VERIFIER_KEY = "cascade.oidc.verifier";
+/** sessionStorage key holding the in-app path to return to after login, so a
+ *  shared deep link survives the Zitadel round-trip instead of always landing
+ *  the user back on "/". */
+export const OIDC_RETURN_KEY = "cascade.oidc.return";
+
+/** The browser's preferred UI language as a BCP-47 tag ("it", "en-US"), or ""
+ *  when unavailable (SSR). Passed to Zitadel as `ui_locales` so its hosted
+ *  login/registration pages match the language the user sees in CASCADE. */
+function browserLocale(): string {
+  if (typeof navigator === "undefined") return "";
+  return navigator.language || (navigator.languages && navigator.languages[0]) || "";
+}
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
@@ -142,6 +154,9 @@ interface AuthState {
   initialized: boolean;
   /** Whether the backend enforces auth (has an IdP). Null until init() runs. */
   authEnabled: boolean;
+  /** Whether the deployment federates Google through Zitadel, i.e. whether to
+   *  offer the "Continue with Google" shortcut on the gate. */
+  googleLogin: boolean;
   mode: AuthMode;
   user: SessionUser | null;
   /** True when a previously signed-in session could not be restored (cookies
@@ -153,7 +168,15 @@ interface AuthState {
   init: () => Promise<void>;
   continueAsGuest: () => void;
   setLocalProfile: (displayName: string, email: string) => void;
-  loginWithOidc: () => Promise<void>;
+  /** Start the OIDC redirect. `intent` "create" opens Zitadel's registration
+   *  form; the default opens sign-in. `idp` "google" skips Zitadel's own form
+   *  and goes straight to Google. Returns an error message when the redirect
+   *  could not be started (e.g. browser storage blocked), or null when the
+   *  browser is about to navigate away. */
+  loginWithOidc: (
+    intent?: "login" | "create",
+    idp?: "google",
+  ) => Promise<string | null>;
   /** Called by the OIDC callback page after the code exchange set the session
    *  cookies. Resolves the identity via /me. */
   completeOidcLogin: () => Promise<void>;
@@ -176,6 +199,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   initialized: false,
   authEnabled: false,
+  googleLogin: false,
   mode: "unknown",
   user: null,
   sessionExpired: false,
@@ -188,7 +212,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Learn whether auth is ENFORCED from the public config endpoint — this
     // must not require a token, or a guest could never discover sign-in.
     // null (server unreachable) is treated as not-enforced (local-only).
-    const authEnabled = (await fetchAuthConfig()) ?? false;
+    const config = await fetchAuthConfig();
+    const authEnabled = config?.auth_enabled ?? false;
+    const googleLogin = config?.google_login ?? false;
 
     const restoreChoice = (expired = false): void => {
       // Restore a prior guest/local choice; otherwise show the gate.
@@ -196,6 +222,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         initialized: true,
         authEnabled,
+        googleLogin,
         mode: keep ? persisted!.mode : "unknown",
         user: keep ? persisted!.user : null,
         sessionExpired: expired && !keep,
@@ -217,6 +244,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           initialized: true,
           authEnabled: true,
+          googleLogin,
           mode: "oidc",
           user,
           sessionExpired: false,
@@ -232,6 +260,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({
             initialized: true,
             authEnabled: true,
+            googleLogin,
             mode: "oidc",
             user,
             sessionExpired: false,
@@ -266,33 +295,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ mode: "local", user, sessionExpired: false });
   },
 
-  loginWithOidc: async () => {
+  loginWithOidc: async (intent = "login", idp) => {
     // Full-page redirect to the backend, which redirects on to Zitadel.
     // A random `state` is stashed in sessionStorage; the callback page rejects
     // any response whose state does not match (login-CSRF protection). The
     // PKCE `code_verifier` is stashed alongside it — the callback sends it to
     // the backend's token exchange in place of a client_secret.
-    if (typeof window !== "undefined") {
-      const bytes = new Uint8Array(16);
-      window.crypto.getRandomValues(bytes);
-      const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-      const { verifier, challenge } = await generatePkcePair();
-      try {
-        window.sessionStorage.setItem(OIDC_STATE_KEY, state);
-        window.sessionStorage.setItem(OIDC_VERIFIER_KEY, verifier);
-      } catch {
-        // Without stored state/verifier the callback cannot complete the
-        // round-trip and will reject (fail closed). Surface that here rather
-        // than sending the user through a full redirect only to be rejected
-        // on return.
-        window.alert(
-          "Sign-in cannot proceed: browser storage is unavailable (private mode?). " +
-            "Enable site data for this page and try again.",
-        );
-        return;
+    if (typeof window === "undefined") return null;
+
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const { verifier, challenge } = await generatePkcePair();
+    try {
+      window.sessionStorage.setItem(OIDC_STATE_KEY, state);
+      window.sessionStorage.setItem(OIDC_VERIFIER_KEY, verifier);
+      // Remember where the user was so the callback can send them back there
+      // rather than to "/". The callback route itself is never a return target.
+      const here = window.location.pathname + window.location.search;
+      if (!here.startsWith("/auth/callback")) {
+        window.sessionStorage.setItem(OIDC_RETURN_KEY, here);
       }
-      window.location.href = oidcLoginUrl(state, challenge);
+    } catch {
+      // Without stored state/verifier the callback cannot complete the
+      // round-trip and will reject (fail closed). Surface that to the caller so
+      // it can show an inline message rather than sending the user through a
+      // full redirect only to be rejected on return.
+      return (
+        "Sign-in needs browser storage, which looks blocked (private-browsing " +
+        "mode, or site data turned off). Allow site data for this page and try again."
+      );
     }
+    window.location.href = oidcLoginUrl(state, challenge, {
+      intent,
+      idp,
+      uiLocales: browserLocale(),
+    });
+    return null;
   },
 
   completeOidcLogin: async () => {

@@ -104,8 +104,20 @@ export function EditorShell() {
         <AnonymousBanner
           onSignIn={() => {
             const a = useAuthStore.getState();
-            if (a.authEnabled) a.loginWithOidc();
-            else a.signOut();
+            if (!a.authEnabled) {
+              a.signOut();
+              return;
+            }
+            // loginWithOidc resolves to a message when the redirect cannot start
+            // (browser storage blocked). Dropping it made the button look dead.
+            void (async () => {
+              const err = await a.loginWithOidc();
+              if (err) {
+                useUiStore
+                  .getState()
+                  .pushToast({ message: err, variant: "error", durationMs: 8000 });
+              }
+            })();
           }}
         />
       )}

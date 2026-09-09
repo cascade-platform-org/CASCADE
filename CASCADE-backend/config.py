@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     oidc_scopes: str = "openid profile email offline_access"
     jwt_algorithm: str = "RS256"
     jwt_audience: Optional[str] = None
+    # Zitadel IdP id for the "Continue with Google" shortcut. When set, the app
+    # advertises the button (GET /api/auth/config) and GET /api/auth/login?idp=google
+    # adds the `urn:zitadel:iam:org:idp:id:<id>` scope, which makes Zitadel jump
+    # straight to Google instead of showing its own username form. The id itself
+    # never leaves the server; the client only ever sends `idp=google`.
+    # Federation is configured entirely in the Zitadel console (deployment.md) —
+    # CASCADE never sees Google credentials or talks to Google directly.
+    oidc_google_idp_id: Optional[str] = None
 
     # ---- Observability ----
     # Error tracking (Sentry or a self-hosted GlitchTip). Unset => disabled.

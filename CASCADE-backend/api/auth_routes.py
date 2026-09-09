@@ -7,18 +7,21 @@ synthetic admin user and the OIDC routes return 501.
 from __future__ import annotations
 
 import logging
+import re
 from urllib.parse import urlencode, urlsplit
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from auth.dependencies import get_current_user
 from auth.idp import IdPDeletionError, delete_idp_user
 from auth.rbac import effective_permissions
-from auth.oauth2 import fetch_oidc_config, verify_id_token
+from auth.oauth2 import EmailNotVerifiedError, fetch_oidc_config, verify_id_token
 from config import get_settings
 from db import audit as db_audit
+from db import export as db_export
 from db import users as db_users
 from db.pool import DBConn, get_connection
 from schemas.auth import AuthUser
@@ -83,14 +86,24 @@ class MeResponse(BaseModel):
 
 class AuthConfig(BaseModel):
     auth_enabled: bool
+    # Whether to offer the "Continue with Google" shortcut. A boolean, never the
+    # Zitadel IdP id itself — the client has no use for the id and it stays
+    # server-side.
+    google_login: bool = False
 
 
 @router.get("/config", response_model=AuthConfig, summary="Public auth config")
 async def auth_config() -> AuthConfig:
-    """Whether the backend enforces auth. Deliberately UNauthenticated so the
-    frontend can learn this before a user has a token (otherwise a fresh/guest
-    user could never discover that sign-in is required, nor find the login)."""
-    return AuthConfig(auth_enabled=get_settings().auth_enabled)
+    """Whether the backend enforces auth, and which sign-in shortcuts to offer.
+
+    Deliberately UNauthenticated so the frontend can learn this before a user
+    has a token (otherwise a fresh/guest user could never discover that sign-in
+    is required, nor find the login)."""
+    settings = get_settings()
+    return AuthConfig(
+        auth_enabled=settings.auth_enabled,
+        google_login=bool(settings.auth_enabled and settings.oidc_google_idp_id),
+    )
 
 
 @router.get("/me", response_model=MeResponse, summary="Current user")
@@ -103,6 +116,35 @@ async def me(user: AuthUser = Depends(get_current_user)) -> MeResponse:
         roles=user.roles,
         permissions=sorted(effective_permissions(user.roles)),
         auth_enabled=settings.auth_enabled,
+    )
+
+
+@router.get("/me/export", summary="Download everything stored about me (GDPR access)")
+async def export_me(
+    user: AuthUser = Depends(get_current_user),
+    conn: DBConn = Depends(get_connection),
+) -> Response:
+    """Right of access / portability (GDPR Art. 15 & 20) as a JSON download.
+
+    Self-service and scoped to the caller: there is no user id parameter, so
+    this endpoint cannot be pointed at somebody else's data. Served as an
+    attachment rather than an inline body because the point is for the user to
+    keep the file.
+    """
+    if not get_settings().auth_enabled:
+        raise HTTPException(status_code=501, detail="No database in local-only mode.")
+
+    db_user = await db_users.get_user_by_external_id(conn, user.sub)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    payload = await db_export.export_user_data(
+        conn, user_id=db_user.id, external_id=db_user.external_id
+    )
+    # jsonable_encoder handles the datetimes/UUIDs/JSONB the tables return.
+    return JSONResponse(
+        content=jsonable_encoder(payload),
+        headers={"Content-Disposition": 'attachment; filename="cascade-my-data.json"'},
     )
 
 
@@ -141,11 +183,27 @@ async def delete_me(
         )
 
 
+# OIDC `prompt` values we let the frontend request. `create` sends the user
+# straight to Zitadel's registration form (the "Create account" button);
+# `login` forces a fresh credential prompt even if an SSO session exists.
+# Anything else is ignored rather than forwarded blindly to the IdP.
+_ALLOWED_PROMPTS = {"create", "login", "select_account", "none"}
+
+# A conservative BCP-47 shape for `ui_locales`: space-separated language tags
+# (`it`, `en-US`), letters/digits/hyphens only. Zitadel renders its login UI in
+# the first tag it supports; a malformed value would just be echoed into the
+# redirect URL, so we validate before forwarding.
+_UI_LOCALES_RE = re.compile(r"^[A-Za-z0-9-]+( [A-Za-z0-9-]+)*$")
+
+
 @router.get("/login", summary="Redirect to OIDC provider login page")
 async def login(
     state: str = Query("", max_length=256),
     code_challenge: str = Query(..., max_length=256),
     code_challenge_method: str = Query("S256", max_length=16),
+    prompt: str = Query("", max_length=32),
+    ui_locales: str = Query("", max_length=64),
+    idp: str = Query("", max_length=32),
 ) -> RedirectResponse:
     """Redirect the browser to the IdP's authorize endpoint.
 
@@ -157,6 +215,19 @@ async def login(
     this app is registered as a public client (no client_secret); PKCE proves
     the browser session that requests the token exchange is the one that
     started this authorize request, in place of a shared static secret.
+
+    `prompt` (optional) is forwarded only when it is one of `_ALLOWED_PROMPTS` —
+    the frontend sends `create` from its "Create account" button so the user
+    lands on Zitadel's sign-up form instead of the sign-in form.
+
+    `ui_locales` (optional) is the caller's preferred language (from the
+    browser); Zitadel renders its hosted login/registration pages in it.
+
+    `idp` (optional) is a symbolic provider name — only `google` is wired, and
+    only when `OIDC_GOOGLE_IDP_ID` is configured. It maps server-side to
+    Zitadel's `urn:zitadel:iam:org:idp:id:<id>` scope, which sends the user
+    straight to Google's consent screen. The client never learns or supplies the
+    id, so this cannot be used to steer a login at an arbitrary IdP.
     """
     settings = get_settings()
     if not settings.auth_enabled:
@@ -173,6 +244,12 @@ async def login(
         raise HTTPException(status_code=503, detail="OIDC provider unavailable.")
 
     scopes = settings.oidc_scopes.replace(",", " ")
+    if idp == "google" and settings.oidc_google_idp_id:
+        # Zitadel's "jump straight to this IdP" mechanism is a scope, not a
+        # parameter. Unknown/unconfigured values fall through to the normal
+        # Zitadel login form rather than erroring — a missing shortcut must
+        # never block sign-in.
+        scopes = f"{scopes} urn:zitadel:iam:org:idp:id:{settings.oidc_google_idp_id}"
     params = {
         "response_type": "code",
         "client_id": settings.oidc_client_id or "",
@@ -183,6 +260,10 @@ async def login(
     }
     if state:
         params["state"] = state
+    if prompt in _ALLOWED_PROMPTS:
+        params["prompt"] = prompt
+    if ui_locales and _UI_LOCALES_RE.match(ui_locales):
+        params["ui_locales"] = ui_locales
     return RedirectResponse(url=f"{auth_endpoint}?{urlencode(params)}")
 
 
@@ -240,8 +321,30 @@ async def _token_exchange(
             raise HTTPException(status_code=403, detail="No id token returned; cannot verify email.")
         try:
             id_claims = await verify_id_token(id_token)
+        except EmailNotVerifiedError:
+            # The one failure the user can act on. Sent as a structured detail so
+            # the frontend can branch on a stable `code` instead of pattern-
+            # matching prose (which also matched the generic message below).
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "email_not_verified",
+                    "message": "Email address is not verified.",
+                },
+            )
         except Exception:
-            raise HTTPException(status_code=403, detail="Email address is not verified.")
+            # Everything else — bad signature, expired, and the ValueErrors that
+            # name server configuration ("No audience configured…") — collapses
+            # to one opaque message. An unauthenticated caller learns nothing
+            # about how this deployment is wired.
+            logger.warning("id token verification failed at login.", exc_info=True)
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "verification_failed",
+                    "message": "Could not verify your sign-in. Please try again.",
+                },
+            )
 
     return {
         "access_token": tokens.get("access_token"),

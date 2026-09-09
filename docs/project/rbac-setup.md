@@ -76,5 +76,7 @@ frontend's `/auth/callback` page.
 
 The full step-by-step Zitadel setup (first admin login, app creation, redirect
 URIs, SMTP + email verification, lockout, `.env` values) lives in
-[deployment.md → Identity Provider (Zitadel) Setup](deployment.md); the
-endpoint-level auth flow is documented in [api-reference.md](api-reference.md).
+[deployment.md → Identity Provider (Zitadel) Setup](deployment.md), which also
+carries the **login-experience checklist** (branding, email-as-username,
+languages, passkeys); the endpoint-level auth flow is documented in
+[api-reference.md](api-reference.md).

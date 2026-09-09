@@ -6,8 +6,9 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { User, LogOut, LogIn, Users, Trash2 } from "lucide-react";
+import { User, LogOut, LogIn, Users, Trash2, Download } from "lucide-react";
 import Link from "next/link";
+import { downloadMyData } from "@/lib/api-client";
 import { useAuthStore, type AuthMode, type SessionUser } from "@/store/auth-store";
 
 function effectiveRole(
@@ -31,7 +32,11 @@ export function UserButton() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const [open, setOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // One slot for whatever the last menu action reported — sign-in, export and
+  // delete are mutually exclusive, and a silent failure in any of them leaves
+  // the user with no idea why nothing happened.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,10 +79,19 @@ export function UserButton() {
           <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
           {authEnabled && mode !== "oidc" && (
             <button
-              onClick={() => void loginWithOidc()}
+              onClick={() => {
+                setActionError(null);
+                // loginWithOidc resolves to a message when the redirect can't
+                // start (blocked browser storage). Dropping it left the user
+                // pressing a button that silently did nothing.
+                void (async () => {
+                  const err = await loginWithOidc();
+                  if (err) setActionError(err);
+                })();
+              }}
               className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
             >
-              <LogIn size={14} /> Sign in with Zitadel
+              <LogIn size={14} /> Sign in
             </button>
           )}
           {mode === "oidc" && hasPermission("can_manage_users") && (
@@ -102,6 +116,26 @@ export function UserButton() {
             <>
               <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
               <button
+                disabled={exporting}
+                onClick={() => {
+                  // GDPR right of access (Art. 15) / portability (Art. 20).
+                  // Kept in-page (fetch + blob) so an expired session refreshes
+                  // and retries instead of navigating the app away.
+                  setActionError(null);
+                  setExporting(true);
+                  void (async () => {
+                    const err = await downloadMyData();
+                    setExporting(false);
+                    if (err) setActionError(err);
+                    else setOpen(false);
+                  })();
+                }}
+                className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <Download size={14} />{" "}
+                {exporting ? "Preparing download…" : "Download my data"}
+              </button>
+              <button
                 onClick={() => {
                   // GDPR self-service erasure — irreversible, so double-confirm.
                   if (
@@ -113,17 +147,19 @@ export function UserButton() {
                     return;
                   void (async () => {
                     const err = await deleteAccount();
-                    if (err) setDeleteError(err);
+                    if (err) setActionError(err);
                   })();
                 }}
                 className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
               >
                 <Trash2 size={14} /> Delete account
               </button>
-              {deleteError && (
-                <p className="px-3 py-1 text-xs text-red-500">{deleteError}</p>
-              )}
             </>
+          )}
+          {actionError && (
+            <p role="alert" className="px-3 py-1 text-xs text-red-500">
+              {actionError}
+            </p>
           )}
         </div>
       )}

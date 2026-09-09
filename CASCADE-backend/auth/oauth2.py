@@ -136,6 +136,18 @@ async def verify_token(token: str) -> dict[str, Any]:
     return await _decode_verified(token, audience)
 
 
+class EmailNotVerifiedError(ValueError):
+    """The id token says, explicitly, that the email is not verified.
+
+    A distinct type rather than a ValueError with a recognisable message: the
+    caller must be able to tell this ONE user-actionable case ("check your
+    inbox") apart from the configuration ValueErrors `_decode_verified` raises
+    ("No audience configured…", "…has no issuer…"). Those name server config and
+    must never reach an unauthenticated caller, nor be mistaken for a
+    verification problem.
+    """
+
+
 async def verify_id_token(id_token: str) -> dict[str, Any]:
     """Validate an OIDC id token (audience = client_id) and enforce that the
     email is verified. Called at login; the id token — unlike the access token —
@@ -151,11 +163,12 @@ async def verify_id_token(id_token: str) -> dict[str, Any]:
     by trusting the IdP policy here, but we do stop punishing config we don't
     control. The claim can arrive as a JSON boolean or the string "false"
     (Zitadel encodes it as a string), so both are caught. Raises
-    jose.JWTError / ValueError on an invalid or explicitly-unverified token.
+    EmailNotVerifiedError for that one user-actionable case, and
+    jose.JWTError / ValueError for an otherwise invalid token or missing config.
     """
     settings = get_settings()
     claims = await _decode_verified(id_token, settings.oidc_client_id)
     email_verified = claims.get("email_verified")
     if email_verified is False or str(email_verified).lower() == "false":
-        raise ValueError("Email address is not verified.")
+        raise EmailNotVerifiedError("Email address is not verified.")
     return claims

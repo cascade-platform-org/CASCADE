@@ -47,6 +47,9 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-}
+      # Optional: enables the "Continue with Google" shortcut. Unset => no
+      # button, and the app never contacts Google.
+      OIDC_GOOGLE_IDP_ID: ${OIDC_GOOGLE_IDP_ID:-}
       # Optional: lets account deletion erase the user in Zitadel too (full GDPR
       # erasure). Without it, deletion removes only the app record.
       ZITADEL_MGMT_URL: ${ZITADEL_MGMT_URL:-}
