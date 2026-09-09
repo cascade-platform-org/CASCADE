@@ -723,7 +723,7 @@ function EventButton({
   return (
     <ActionButton
       onClick={applyEvent}
-      title={`Apply: ${event.label} (Escape to clear)`}
+      title={`Apply: ${event.label} (Ctrl+R to clear)`}
       className={cn(
         "gap-1",
         event.type === "hazard"

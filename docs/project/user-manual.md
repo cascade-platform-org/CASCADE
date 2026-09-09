@@ -8,7 +8,8 @@
 2. [Rules](#2-rules) ·
 3. [Running a scenario](#3-running-a-scenario) ·
 4. [Testing an intervention](#4-testing-an-intervention) ·
-5. [Server and roles](#5-server-and-roles)
+5. [Server and roles](#5-server-and-roles) ·
+6. [Keyboard shortcuts](#6-keyboard-shortcuts)
 
 ---
 
@@ -211,3 +212,36 @@ saved from the baseline:
 and `can_propagate` — `analyst` and above. **Sync** needs `can_sync`. Everything
 else, including topological analysis, works offline. Roles also carry a node cap
 and an engine-evaluation budget per minute.
+
+## 6. Keyboard shortcuts
+
+Every shortcut the editor listens for. They are ignored while you are typing in a
+text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.
+
+### Editing
+
+| Key | Does |
+|---|---|
+| `Ctrl+Z` | Undo the last change to the network. |
+| `Ctrl+Y` or `Ctrl+Shift+Z` | Redo. |
+| `Ctrl+A` | Select every element on the current Canvas, and open the Inspector. |
+| `Ctrl+C` / `Ctrl+V` | Copy the selection, and paste it onto the active Canvas. |
+| `Delete` or `Backspace` | Delete the selected nodes and edges. |
+
+### Scenario
+
+| Key | Does |
+|---|---|
+| `Ctrl+R` | Clear the most recently applied Event, putting back exactly the fields it changed. A Propagation you ran after it stays — this undoes the Event, not the cascade. Note this takes over the browser's reload shortcut while the canvas has focus; use `F5` to reload. |
+
+### Tools
+
+Single letters, no modifier — they pick the active tool, the same as clicking it
+in the toolbar.
+
+| Key | Tool |
+|---|---|
+| `V` | Select |
+| `N` | Add node |
+| `E` | Add edge |
+| `H` | Pan |

@@ -396,7 +396,7 @@ A rule referencing a label not defined in `functionality_scale` is ignored and a
 
 ### Saving
 
-1. Open the **File** panel (or `Ctrl+S`).
+1. Open the **File** panel.
 2. Choose **Download Project** or **Download Config** (or both bundled).
 3. A browser download saves the `.json` file locally.
 

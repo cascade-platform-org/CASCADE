@@ -21,6 +21,7 @@ const SECTIONS = [
   { id: "scenario", n: 3, title: "Running a scenario" },
   { id: "intervention", n: 4, title: "Testing an intervention" },
   { id: "server", n: 5, title: "Server and roles" },
+  { id: "shortcuts", n: 6, title: "Keyboard shortcuts" },
 ] as const;
 
 function Code({ children }: { children: ReactNode }) {
@@ -641,6 +642,67 @@ then Fauglis water Source is operational`}</Block>
           works offline. Roles also carry a node cap and an engine-evaluation
           budget per minute.
         </p>
+      </Section>
+
+      <Section id="shortcuts" n={6} title="Keyboard shortcuts">
+        <p>
+          Every shortcut the editor listens for. They are ignored while you are
+          typing in a text field, so they never fight the Inspector.{" "}
+          <Code>Ctrl</Code> is <Code>⌘</Code> on macOS.
+        </p>
+
+        <Sub title="Editing">
+          <Table head={["Key", "Does"]}>
+            <tr>
+              <Td><Code>Ctrl+Z</Code></Td>
+              <Td>Undo the last change to the network.</Td>
+            </tr>
+            <tr>
+              <Td><Code>Ctrl+Y</Code> or <Code>Ctrl+Shift+Z</Code></Td>
+              <Td>Redo.</Td>
+            </tr>
+            <tr>
+              <Td><Code>Ctrl+A</Code></Td>
+              <Td>Select every element on the current Canvas, and open the Inspector.</Td>
+            </tr>
+            <tr>
+              <Td><Code>Ctrl+C</Code> / <Code>Ctrl+V</Code></Td>
+              <Td>Copy the selection, and paste it onto the active Canvas.</Td>
+            </tr>
+            <tr>
+              <Td><Code>Delete</Code> or <Code>Backspace</Code></Td>
+              <Td>Delete the selected nodes and edges.</Td>
+            </tr>
+          </Table>
+        </Sub>
+
+        <Sub title="Scenario">
+          <Table head={["Key", "Does"]}>
+            <tr>
+              <Td><Code>Ctrl+R</Code></Td>
+              <Td>
+                Clear the most recently applied Event, putting back exactly the
+                fields it changed. A Propagation you ran after it stays — this
+                undoes the Event, not the cascade. Note this takes over the
+                browser&apos;s reload shortcut while the canvas has focus; use{" "}
+                <Code>F5</Code> to reload.
+              </Td>
+            </tr>
+          </Table>
+        </Sub>
+
+        <Sub title="Tools">
+          <p>
+            Single letters, no modifier — they pick the active tool, the same as
+            clicking it in the toolbar.
+          </p>
+          <Table head={["Key", "Tool"]}>
+            <tr><Td><Code>V</Code></Td><Td>Select</Td></tr>
+            <tr><Td><Code>N</Code></Td><Td>Add node</Td></tr>
+            <tr><Td><Code>E</Code></Td><Td>Add edge</Td></tr>
+            <tr><Td><Code>H</Code></Td><Td>Pan</Td></tr>
+          </Table>
+        </Sub>
       </Section>
     </div>
   );

@@ -531,7 +531,16 @@ function FlowCanvas() {
 
       // Ctrl+R — clear most recent event (surgical field-by-field revert via mutation_reversal).
       // Escape excluded: conflicts with modal/dialog close handlers.
+      //
+      // preventDefault is REQUIRED, not decorative: Ctrl+R is the browser's
+      // reload shortcut, so without it the page reloads and the user gets the
+      // "restore last session?" recovery prompt instead of a cleared Event.
+      // The cost is that Ctrl+R no longer reloads the app while the canvas has
+      // focus — F5 and Ctrl+Shift+R still do. Always prevent, even when there is
+      // nothing to clear: a key that sometimes reloads and sometimes does not,
+      // depending on history state, is worse than one that never does.
       if (e.key === "r" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
         const cleared = useCanvasStore.getState().clearEvent();
         if (!cleared) pushToast({ message: "No event to clear", variant: "info", durationMs: 2000 });
         return;
