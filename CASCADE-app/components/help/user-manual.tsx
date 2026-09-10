@@ -591,8 +591,18 @@ then Fauglis water Source is operational`}</Block>
           A cross-sector cascade will not show up in a local run.
         </Callout>
         <p className="text-xs text-zinc-500">
-          <strong>Reset</strong> returns every element to <Code>N</Code> and ends
-          the current Situation.
+          <strong>Reset</strong> ends the current scenario and hands back a
+          working network. Every element goes to full functionality with no
+          countdown and no damage, whatever put it there — so Reset always
+          repairs the graph, even if something else has gone wrong. On top of
+          that it undoes anything Events and Propagations changed beyond
+          functionality, such as an attribute a rule wrote. Changes to the{" "}
+          <em>model</em> stay: a renamed element, a moved node, a corrected
+          capacity is your work, not the scenario&apos;s. It also ends any
+          temporal-jump run, and clears the Analysis Heatmap, whose colours
+          describe a scenario that is gone. Note that an element you authored
+          below full functionality as its <em>normal</em> state is raised to full
+          by Reset too.
         </p>
       </Section>
 
@@ -708,9 +718,12 @@ then Fauglis water Source is operational`}</Block>
             <tr>
               <Td><Code>Ctrl+R</Code></Td>
               <Td>
-                Clear the most recently applied Event, putting back exactly the
-                fields it changed. A Propagation you ran after it stays — this
-                undoes the Event, not the cascade. Note this takes over the
+                Clear the most recently applied Event. This removes the cascade
+                with it — a Propagation computed from an Event that is no longer
+                there describes nothing. Other Events stay applied but
+                un-propagated; re-run Propagation when you want the new cascade.
+                Your own edits are untouched, and <Code>Ctrl+Z</Code> brings the
+                Event and its cascade back. Note this takes over the
                 browser&apos;s reload shortcut while the canvas has focus; use{" "}
                 <Code>F5</Code> to reload.
               </Td>

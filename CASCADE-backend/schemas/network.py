@@ -340,6 +340,75 @@ class PropagationMeta(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Graph Diff (ADR-0017) — what one Any Graph Update changed
+# ---------------------------------------------------------------------------
+
+ABSENT = "__CASCADE_ABSENT__"
+"""Sentinel for a field that did not exist on one side of a Graph Diff.
+
+Shared verbatim with the frontend (`lib/event-application.ts`, `lib/graph-diff.ts`).
+Applying a diff that names ABSENT DELETES the key rather than writing `null`:
+an optional-but-not-nullable field set to `null` fails both this schema and the
+Zod mirror, and desyncs the Scorecard dedup hash from the true prior state.
+"""
+
+
+class FieldChange(BaseModel):
+    """One field's value on each side of a Graph Diff.
+
+    `key` is set only for `field="properties"`, which is diffed one level deep
+    because `ElementUpdate.properties` is MERGED onto an Element rather than
+    replaced (`lib/element-update.ts`) — a Rule adding one key to a 20-key
+    object would otherwise store the whole object on both sides.
+
+    `field` is carried as data rather than encoded into a string key: the
+    `"<elementId>.<field>"` convention used by MutationReversal has to split on
+    the last dot, and EPANET element ids contain dots (`J.12.A`).
+    """
+    field: str
+    key: Optional[str] = None
+    before: Any = None
+    after: Any = None
+
+
+class RecordDiff(BaseModel):
+    """One Element or Canvas added, removed, or changed field-by-field.
+
+    `op="update"` carries `fields`; `op="add"`/`"remove"` carry `record`, the
+    whole object — there is no shorter honest encoding of "this did not exist".
+    """
+    id: str
+    op: Literal["add", "remove", "update"]
+    fields: list[FieldChange] = Field(default_factory=list)
+    record: Optional[dict[str, Any]] = None
+
+
+class GraphDiff(BaseModel):
+    """A field-level, invertible description of what one Any Graph Update changed.
+
+    Schema-agnostic by construction: the differ enumerates the keys actually
+    present on each record rather than a known field list, so an attribute a
+    Rule gains under ADR-0015 stays undoable without anyone editing the differ.
+    Carries both directions, so it applies forwards (redo) and backwards (undo)
+    against the live graph — no snapshot is rebuilt.
+
+    Replaces the before/after GraphSnapshot pair that cost 97.6% of a project
+    file. See ADR-0017.
+    """
+    nodes: list[RecordDiff] = Field(default_factory=list)
+    edges: list[RecordDiff] = Field(default_factory=list)
+    canvases: list[RecordDiff] = Field(default_factory=list)
+    canvas_order: Optional[list[str]] = Field(
+        default=None,
+        description="Canvas order AFTER the update; set only when the order changed.",
+    )
+    canvas_order_before: Optional[list[str]] = Field(
+        default=None,
+        description="Canvas order BEFORE the update; set only when the order changed.",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Any Update history
 # ---------------------------------------------------------------------------
 
@@ -356,10 +425,16 @@ AnyUpdateType = Literal[
 
 class AnyUpdateEntry(BaseModel):
     """
-    One entry in the Any Update history: a before/after GraphSnapshot pair.
+    One entry in the Any Update history.
 
-    Created for every Any Update. CTRL+Z pops from this list.
-    Capped at 20 entries (latest first) by the store layer.
+    Created for every Any Update. CTRL+Z pops from this list. Capped by the
+    store layer at 20 entries (latest first) AND at a byte budget — a count
+    alone is the wrong bound when one bulk deletion produces a diff larger than
+    twenty ordinary ones.
+
+    Carries a `diff` (ADR-0017). `before`/`after` are legacy: entries written
+    before that ADR carry the snapshot pair instead, and are still read. Exactly
+    one of the two is present on any entry this app writes.
     """
     id: str
     timestamp: str  # ISO 8601 UTC
@@ -378,8 +453,21 @@ class AnyUpdateEntry(BaseModel):
             "been evicted from the capped history."
         ),
     )
-    before: GraphSnapshot
-    after: GraphSnapshot
+    diff: Optional[GraphDiff] = Field(
+        default=None,
+        description=(
+            "What this update changed, field by field, in both directions "
+            "(ADR-0017). Absent only on legacy entries, which carry before/after."
+        ),
+    )
+    before: Optional[GraphSnapshot] = Field(
+        default=None,
+        description="Legacy (pre-ADR-0017) whole-Scenario snapshot. Read, never written.",
+    )
+    after: Optional[GraphSnapshot] = Field(
+        default=None,
+        description="Legacy (pre-ADR-0017) whole-Scenario snapshot. Read, never written.",
+    )
     propagation_meta: Optional[PropagationMeta] = None  # set for propagation entries
     mutation_reversal: Optional[dict[str, Any]] = Field(
         default=None,

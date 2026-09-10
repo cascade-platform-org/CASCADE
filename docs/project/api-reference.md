@@ -213,6 +213,20 @@ Body `{ name, description?, data: { project, config } }` — `data` is validated
 
 Lists the caller's saved versions, newest first, as summaries (no bundle data — a version list, not a bulk download).
 
+### `PUT /api/projects/autosave`
+
+Body `{ name, data: { project, config } }`. Writes the **Working Copy** for that project name, replacing any previous one (ADR-0017). Returns `{ id, name, created_at, updated_at, data }`.
+
+A Working Copy is **not a version**: it lives in its own table, one row per (owner, name), so auto-saving can neither appear in nor evict from the version list `POST /api/projects` builds. The client sends this only for a project the user has explicitly switched on — **off by default**, per ADR-0007.
+
+### `GET /api/projects/autosave?name=…`
+
+The Working Copy for one project name, with the bundle. `404` when there is none — the normal answer for a project never opted in, not an error. Same null-free serialisation as `GET /api/projects/{id}` below.
+
+### `DELETE /api/projects/autosave?name=…`
+
+Drops the stored copy. `204` whether or not one existed. Called when the user switches auto-save off for a project: "off" has to mean the network is not on the server, not merely that writes stopped.
+
 ### `GET /api/projects/{id}`
 
 Full bundle for one version, for Load. `404` (not `403`) if the id doesn't belong to the caller — existence of another user's version is never leaked.

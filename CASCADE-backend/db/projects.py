@@ -13,7 +13,12 @@ import json
 from typing import Optional
 
 from db.pool import DBConn
-from schemas.sync import ProjectBundle, ProjectVersionDetail, ProjectVersionSummary
+from schemas.sync import (
+    ProjectBundle,
+    ProjectVersionDetail,
+    ProjectVersionSummary,
+    WorkingCopyDetail,
+)
 
 # Matches lib/file-io.ts's MAX_HISTORY for the equivalent local convention —
 # one number the user experiences consistently whether saving locally or synced.
@@ -116,5 +121,75 @@ async def delete_version(conn: DBConn, *, owner_id: str, version_id: str) -> boo
         "DELETE FROM projects WHERE id = $1::uuid AND owner_id = $2::uuid",
         version_id,
         owner_id,
+    )
+    return result != "DELETE 0"
+
+
+# ---------------------------------------------------------------------------
+# Working Copy (ADR-0017) — the auto-saved copy, which is NOT a version
+# ---------------------------------------------------------------------------
+#
+# `projects` above is append-only by design (§13.4). A Working Copy is the
+# opposite: exactly one row per (owner, name), overwritten in place. Keeping
+# them in separate tables is what stops an auto-save from ever appearing in, or
+# evicting from, the user's version list.
+
+
+def _row_to_working_copy(row) -> WorkingCopyDetail:
+    """Row → model. Untyped `row` like `_row_to_summary` above: asyncpg's Record
+    is a mapping, and typing it here would mean restating every column."""
+    return WorkingCopyDetail(
+        id=row["id"],
+        name=row["name"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+        data=ProjectBundle.model_validate(json.loads(row["data"])),
+    )
+
+
+async def upsert_working_copy(
+    conn: DBConn, *, owner_id: str, name: str, data: ProjectBundle
+) -> WorkingCopyDetail:
+    """Write the Working Copy for (owner, name), replacing any previous one."""
+    row = await conn.fetchrow(
+        """
+        INSERT INTO project_working_copies (owner_id, name, data)
+        VALUES ($1::uuid, $2, $3::jsonb)
+        ON CONFLICT (owner_id, name)
+        DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+        RETURNING id::text AS id, name, created_at, updated_at, data
+        """,
+        owner_id,
+        name,
+        data.model_dump_json(),
+    )
+    return _row_to_working_copy(row)
+
+
+async def get_working_copy(
+    conn: DBConn, *, owner_id: str, name: str
+) -> Optional[WorkingCopyDetail]:
+    """Owner-scoped fetch. None when this project name has no Working Copy."""
+    row = await conn.fetchrow(
+        """
+        SELECT id::text AS id, name, created_at, updated_at, data
+          FROM project_working_copies
+         WHERE owner_id = $1::uuid AND name = $2
+        """,
+        owner_id,
+        name,
+    )
+    if row is None:
+        return None
+    return _row_to_working_copy(row)
+
+
+async def delete_working_copy(conn: DBConn, *, owner_id: str, name: str) -> bool:
+    """Drop the Working Copy for one project name — used when the user turns
+    auto-save off for that project, so opting out actually removes the data."""
+    result = await conn.execute(
+        "DELETE FROM project_working_copies WHERE owner_id = $1::uuid AND name = $2",
+        owner_id,
+        name,
     )
     return result != "DELETE 0"

@@ -19,7 +19,7 @@ The named UI container for one Graph — display metadata plus a `graph_type` na
 _Avoid_: Layer, network layer (use Graph or Canvas by context)
 
 **Multi-canvas**:
-The set of Canvases (and inter-canvas edges) in scope for a Propagatiupdon; with every Canvas included it is the **full multi-canvas**.
+The set of Canvases (and inter-canvas edges) in scope for a Propagation; with every Canvas included it is the **full multi-canvas**.
 _Avoid_: Network of Networks, full graph, multi-canvas project
 
 **Element**:
@@ -27,8 +27,12 @@ A node or edge within a Graph — the atomic building block of an Entity.
 _Avoid_: Entity (for a node/edge), component, resource
 
 **GraphSnapshot**:
-A point-in-time serialisation of a multi-canvas (or one Canvas) — the code-level form of a Scenario, used in `update_history`.
+A point-in-time serialisation of a multi-canvas (or one Canvas) — the code-level form of a Scenario. Used by the Scorecard, which archives whole Scenarios deliberately; `update_history` stores a **Graph Diff** instead (ADR-0017), and legacy entries carrying a `before`/`after` pair are still read.
 _Avoid_: Scenario (in code); GraphSnapshot (in domain conversation — say Scenario)
+
+**Graph Diff**:
+A field-level, invertible description of what changed between two Scenarios — the form an **Any Graph Update** takes in `update_history`, replacing the pair of whole GraphSnapshots that cost 97.5% of a project file. Schema-agnostic by construction: it enumerates the keys actually present rather than a known field list, so an attribute a Rule gains under ADR-0015 stays undoable without anyone changing the differ. Keys are structured, not dot-joined (EPANET ids contain dots); `properties` is diffed one level deep because `ElementUpdate.properties` is merged, while other compound fields are replaced wholesale and stored whole. Undo applies it backwards against the live graph, so no snapshot needs rebuilding. See ADR-0017.
+_Avoid_: "patch", "delta", "changeset"; and Mutation Reversal (one Event's inverse) or Scenario Baseline (one scenario's) — a Graph Diff is one Update's, and carries both directions
 
 **Event**:
 Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). The typed repair signal and the free-form mutations are complementary, not redundant.
@@ -43,8 +47,24 @@ An Event degrading Functionality without physical damage; resolves when its upst
 _Avoid_: Outage, disruption (when the no-damage meaning is intended)
 
 **Mutation Reversal**:
-The inverse of one Event application: every field it overwrote, keyed `"<elementId>.<field>"`, holding that field's value from before. A field that did not exist beforehand is recorded as the `ABSENT` sentinel and is **deleted** on reversal, never written back as `null` — an optional field set to `null` fails the Zod/Pydantic schemas and desyncs the Scorecard dedup hash from the true prior state. Produced and consumed only by the Event-application module (`lib/event-application.ts`); stored on the history entry as `mutation_reversal`. **Empty is not the same as absent**: an Event that changed nothing records `{}` (reversing it is correctly a no-op), while a legacy entry predating the field records nothing at all and can only be reversed by restoring its whole `before` snapshot — a full rewind that discards later work, so it must never be reached for a modern Event.
-_Avoid_: "undo record", "diff", "patch" (a Mutation Reversal is one Event's inverse, not a general diff)
+The inverse of one Event application: every field it overwrote, keyed `"<elementId>.<field>"`, holding that field's value from before. A field that did not exist beforehand is recorded as the `ABSENT` sentinel and is **deleted** on reversal, never written back as `null` — an optional field set to `null` fails the Zod/Pydantic schemas and desyncs the Scorecard dedup hash from the true prior state. **No longer written**: a **Graph Diff** records the same thing in the same shape for every kind of Update, and the **Scenario Baseline** reads it. It is still read off `mutation_reversal` on entries older builds wrote, where it lets **Clear Event** revert the Event's own fields precisely instead of rewinding the whole graph. Produced and consumed only by the Event-application module (`lib/event-application.ts`).
+_Avoid_: "undo record", "diff", "patch" (a Mutation Reversal is one Event's inverse — a **Graph Diff** is one Update's, a **Scenario Baseline** the whole scenario's; all three share the representation)
+
+**Clear Event**:
+Removes the most recently applied Event from the scenario (Ctrl+R — there is no per-Event picker). Reverts that Event's own writes **and** every write the Propagation made, leaving the remaining Events standing but un-propagated: a cascade computed from an input that no longer exists is stale, and showing it is worse than showing nothing. No Propagation is re-run automatically. Hand edits survive, whatever field they touched. Pushes an `event_cleared` **Any Graph Update**, so CTRL+Z brings the Event and its cascade back. See ADR-0016.
+_Avoid_: "undo the event" (CTRL+Z walks the update history one Update at a time, whatever that Update was; Clear Event removes one Event from the scenario however much has happened since)
+
+**Scenario Field**:
+The five fields describing an Element's *condition*: `functionality`, `functionality_time`, `direct_damage`, `expected_repair_time`, `responsibility_share`. Everything else an Element carries — label, position, Node Type, Categories, capacity, `vulnerability_levels`, `properties` — is **model**. The split exists for one purpose: **Reset** forces every Scenario Field to an operational state whoever wrote it, and reverts a model field only where a machine wrote it. It is a Reset-time classification and nothing else — a Rule may still assign any attribute (ADR-0015), and no code branches on this list outside Reset.
+_Avoid_: "state field", "runtime field"; and Functionality alone (Functionality is one of the five)
+
+**Scenario Baseline**:
+Each field's value from before the current scenario touched it, keyed structurally by Element id, field and `properties` sub-key, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event — and every entry additionally carries a **source tag**: `event:<id>`, `propagation`, or `manual`, naming who wrote the field. First write wins, so the value held is the pre-scenario one. Machine writes are captured **by provenance, never by field name** (an Event's Mutation Reversal, a Propagation's `ElementUpdate`, one entry per `properties` key), so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Seeded on Project load, and re-derived after any history rewind, by folding `update_history` oldest-first back to the last `scenario_reset` (skipping Updates that themselves undo work) — so Reset works on a file that ships mid-scenario, and cannot disagree with the history. See ADR-0016.
+_Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
+
+**Reset**:
+Ends the current scenario, in two halves that do not depend on each other. **Every Element is forced operational** — full Functionality, Functionality Time 0, no `direct_damage`, `expected_repair_time` or Responsibility Share — consulting nothing; and every write an Event or a Propagation made to a *model* attribute is reverted from the **Scenario Baseline**. Half one needs no record, so Reset repairs a damaged network even where the Baseline is incomplete; the cost is that an Element authored below the scale maximum is promoted too. A hand edit to a model field survives — a label, position, capacity or Category corrected mid-scenario is authoring work. Always whole-scenario: it ignores the local/global scope toggle, because Events reach across Canvases and a half-rewound cascade is a state the model was never in. Ends the current Situation, ends any **Temporal Jump** run, clears the Analysis Heatmap, and is itself one undoable **Any Graph Update**. See ADR-0016.
+_Avoid_: "reset to N" (Reset also reverts Rule-written attributes and ends the scenario; it is not only a Functionality sweep)
 
 **Scenario**:
 A Functionality state of a multi-canvas fed to a Propagation — created by applying an Event, manual what-if edits, or restoring history.
@@ -59,7 +79,7 @@ Integer hours on an Element signalling pending timed degradation: > 0 means func
 _Avoid_: Time warning, countdown, timer
 
 **Temporal Jump**:
-An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger). Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
+An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
 **Node Type**:
@@ -127,7 +147,7 @@ A Graph modification that does NOT change Functionality (topology, attributes). 
 _Avoid_: Graph Update, structural update (in domain conversation)
 
 **Any Graph Update**:
-Superset: Model Graph Updates plus Functionality-changing operations. The undo (CTRL+Z) history operates on these.
+Superset: Model Graph Updates plus Functionality-changing operations. The undo (CTRL+Z) history operates on these; each entry holds a **Graph Diff** of what it changed.
 _Avoid_: Any Update, change (when the undo-history meaning is intended)
 
 **Responsibility Share**:
@@ -217,6 +237,10 @@ _Avoid_: "safety factor" (it removes a systematic underestimate, not adds conser
 **Full-Duplex Split**:
 A bidirectional pipe (Sweep signal both ways) imports as two directional edges **each at full physical capacity** — not proportional shares, which starve exactly the reversal direction failure-rerouting needs. Shipped: `map.py::_emit_split`.
 _Avoid_: "bidirectional edge" alone (Full-Duplex names the full-capacity-per-direction rule)
+
+**Working Copy**:
+The auto-saved server-side copy of a project — one row per (owner, project name), overwritten in place. **Not a version**: explicit Sync saves still create new, never-overwritten versions (requirements §13.4), so auto-saving cannot churn the user's version list. Written on 10 seconds of inactivity, and only when the content changed. **Opt-in per project, off by default** — ADR-0007's guarantee is that a network reaches the server only on explicit opt-in. Offered on load when newer than the newest version. See ADR-0017.
+_Avoid_: "draft", "autosave version", "latest version"
 
 **Persistence Boundary**:
 Config-level vocabulary may be persisted; anything naming or locating a real-world Element or Entity may not. Networks transit the engine in memory; disk only on explicit Sync opt-in. See ADR-0007.

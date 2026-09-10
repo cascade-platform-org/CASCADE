@@ -90,7 +90,11 @@ export function SaveScorecardDialog({
     // live canvas as `before`.
     const situation = deriveSituation(updateHistory);
     if (situation) {
-      const { before, after } = situationSnapshots(situation);
+      const { before, after } = situationSnapshots(
+        situation,
+        updateHistory,
+        useCanvasStore.getState().toGraphSnapshot(),
+      );
       return {
         initialBefore: before,
         initialAfter: after,

@@ -45,6 +45,7 @@ users who explicitly use Server Sync.
 | Email, name, credentials, verification state | Zitadel | Authenticate the user | Contract (Art. 6(1)(b)) | Until account deletion |
 | `users`: OIDC `sub`, email, name, role | App DB | Authorization (ADR-0010) | Contract | Until account deletion |
 | `projects`: synced project bundles | App DB | The user's own opt-in server copies | Contract | Until the user deletes them |
+| `project_working_copies`: auto-saved bundles | App DB | The live copy of a project the user opted into auto-save (ADR-0017) | Contract | Until the user turns auto-save off for that project, or deletes the account |
 | `audit_logs`: role changes, account deletions, actor email | App DB | Security and integrity record | Legitimate interest (Art. 6(1)(f)) | **730 days** |
 | `analysis_logs`: run shape and timing, no content | App DB | Capacity planning, entitlement calibration | Legitimate interest | **365 days** |
 | `activity_log_uploads`: client action metadata | App DB | Support and debugging, user-initiated | Consent | **180 days** |
@@ -75,7 +76,7 @@ makes it defensible under Art. 5(1)(e).
 | --- | --- |
 | Access (Art. 15) | `GET /api/auth/me/export` — "Download my data" in the account menu. JSON, every table keyed to the caller, including actions an admin took **on** their account (`audit_entries_about_me`). Those rows omit the acting admin's identity: Art. 15(4) — access must not adversely affect the rights of others. |
 | Portability (Art. 20) | Same endpoint; the export is machine-readable and self-describing (`export_format`). Project files are already the user's own JSON. |
-| Erasure (Art. 17) | `DELETE /api/auth/me` — "Delete account". Deletes the Zitadel identity **first**, then the app record. `projects` and `activity_log_uploads` are `ON DELETE CASCADE` and go with it; `analysis_logs` and `audit_logs` are `ON DELETE SET NULL`, so those rows survive **anonymised** — no `user_id`, no name, and (for analysis) never any content to begin with. They then expire on the §5 retention windows. |
+| Erasure (Art. 17) | `DELETE /api/auth/me` — "Delete account". Deletes the Zitadel identity **first**, then the app record. `projects`, `project_working_copies` and `activity_log_uploads` are `ON DELETE CASCADE` and go with it; `analysis_logs` and `audit_logs` are `ON DELETE SET NULL`, so those rows survive **anonymised** — no `user_id`, no name, and (for analysis) never any content to begin with. They then expire on the §5 retention windows. |
 | Rectification (Art. 16) | Email/name are edited in Zitadel's account page; the app re-reads them at next login. |
 | Restriction / objection (Art. 18, 21) | No automated flow — handle by hand and record it. |
 

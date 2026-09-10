@@ -259,6 +259,59 @@ export const AnyUpdateTypeSchema = z.enum([
   "temporal_jump_revert",
 ]);
 
+/**
+ * Sentinel for a field that did not exist on one side of a Graph Diff.
+ *
+ * The single frontend declaration: `lib/event-application.ts` re-exports it as
+ * `ABSENT` rather than declaring its own. It must still stay byte-identical to
+ * `ABSENT` in `schemas/network.py`, which is the same constant in the other
+ * language. Applying a diff that names ABSENT DELETES the key rather than
+ * writing `null`: an optional-but-not-nullable field set to `null` fails this
+ * schema and desyncs the Scorecard dedup hash from the true state.
+ */
+export const DIFF_ABSENT = "__CASCADE_ABSENT__";
+
+/**
+ * One field's value on each side of a Graph Diff.
+ *
+ * `field` is data, not part of a string key: MutationReversal's
+ * `"<elementId>.<field>"` convention has to split on the last dot, and EPANET
+ * element ids contain dots (`J.12.A`). `key` is set only for `properties`,
+ * which is diffed one level deep because `ElementUpdate.properties` is MERGED
+ * onto an Element rather than replaced.
+ */
+export const FieldChangeSchema = z.object({
+  field: z.string(),
+  key: z.string().optional(),
+  before: z.unknown(),
+  after: z.unknown(),
+});
+
+/** One Element or Canvas added, removed, or changed field-by-field. */
+export const RecordDiffSchema = z.object({
+  id: z.string(),
+  op: z.enum(["add", "remove", "update"]),
+  fields: z.array(FieldChangeSchema).default([]),
+  /** Whole object; set for "add" (the new one) and "remove" (the old one). */
+  record: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
+ * A field-level, invertible description of what one Any Graph Update changed
+ * (ADR-0017). Schema-agnostic: the differ enumerates keys actually present
+ * rather than a known field list, so an attribute a Rule gains under ADR-0015
+ * stays undoable without anyone editing the differ. Carries both directions,
+ * so it applies forwards (redo) and backwards (undo) against the live graph.
+ */
+export const GraphDiffSchema = z.object({
+  nodes: z.array(RecordDiffSchema).default([]),
+  edges: z.array(RecordDiffSchema).default([]),
+  canvases: z.array(RecordDiffSchema).default([]),
+  /** Canvas order after / before — both set only when the order changed. */
+  canvas_order: z.array(z.string()).optional(),
+  canvas_order_before: z.array(z.string()).optional(),
+});
+
 export const AnyUpdateEntrySchema = z.object({
   id: z.string(),
   timestamp: z.string(),
@@ -275,8 +328,15 @@ export const AnyUpdateEntrySchema = z.object({
    * been evicted from the capped history.
    */
   reverts_to_entry_id: z.string().optional(),
-  before: GraphSnapshotSchema,
-  after: GraphSnapshotSchema,
+  /**
+   * What this update changed, both directions (ADR-0017). Absent only on
+   * legacy entries, which carry the `before`/`after` snapshot pair instead.
+   * Exactly one of the two is present on any entry this app writes.
+   */
+  diff: GraphDiffSchema.optional(),
+  /** Legacy (pre-ADR-0017) whole-Scenario snapshots. Read, never written. */
+  before: GraphSnapshotSchema.optional(),
+  after: GraphSnapshotSchema.optional(),
   propagation_meta: PropagationMetaSchema.optional(),
   /**
    * Populated only on event_applied entries.
@@ -432,6 +492,9 @@ export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
 // PropagationMeta type is exported from ./propagation (via the schemas barrel).
 export type AnyUpdateType = z.infer<typeof AnyUpdateTypeSchema>;
 export type AnyUpdateEntry = z.infer<typeof AnyUpdateEntrySchema>;
+export type GraphDiff = z.infer<typeof GraphDiffSchema>;
+export type RecordDiff = z.infer<typeof RecordDiffSchema>;
+export type FieldChange = z.infer<typeof FieldChangeSchema>;
 export type PropagationScorecardEntry = z.infer<typeof PropagationScorecardEntrySchema>;
 export type AnalysisScorecardEntry = z.infer<typeof AnalysisScorecardEntrySchema>;
 export type ScorecardEntry = z.infer<typeof ScorecardEntrySchema>;

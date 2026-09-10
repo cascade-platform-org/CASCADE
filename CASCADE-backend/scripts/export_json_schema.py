@@ -46,6 +46,7 @@ from schemas.network import (                        # noqa: E402
     Graph,
     GraphSnapshot,
     AnyUpdateEntry,
+    GraphDiff,
     PropagationScorecardEntry,
     AnalysisScorecardEntry,
     Project,
@@ -95,7 +96,7 @@ def main() -> None:
 
     export(
         "network.schema.json",
-        Node, Edge, Canvas, Graph, GraphSnapshot, AnyUpdateEntry,
+        Node, Edge, Canvas, Graph, GraphSnapshot, GraphDiff, AnyUpdateEntry,
         PropagationScorecardEntry, AnalysisScorecardEntry, Project,
     )
     export(

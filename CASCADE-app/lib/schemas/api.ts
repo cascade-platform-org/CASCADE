@@ -66,6 +66,22 @@ export const ProjectVersionDetailSchema = ProjectVersionSummarySchema.extend({
   data: ProjectBundleSchema,
 });
 
+/**
+ * The auto-saved Working Copy for one project name (ADR-0017).
+ *
+ * NOT a version: one row per (owner, name), overwritten in place, so
+ * auto-saving cannot churn or evict the user's explicit saves. It carries no
+ * `description` — it is the live state of a named project, not a labelled point
+ * in its history — which is why it does not extend the version schemas.
+ */
+export const WorkingCopyDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  data: ProjectBundleSchema,
+});
+
 // ---------------------------------------------------------------------------
 // EPANET .inp import — POST /api/import/inp
 // ---------------------------------------------------------------------------
@@ -197,6 +213,7 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
 export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
+export type WorkingCopyDetail = z.infer<typeof WorkingCopyDetailSchema>;
 export type ImportInpResponse = z.infer<typeof ImportInpResponseSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
 export type BatchPropagationRequest = z.infer<typeof BatchPropagationRequestSchema>;

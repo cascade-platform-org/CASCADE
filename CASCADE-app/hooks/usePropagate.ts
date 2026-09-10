@@ -1,10 +1,9 @@
 "use client";
 
-import { nanoid } from "nanoid";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
-import { useHistoryStore } from "@/store/history-store";
+import { runWithHistory } from "@/lib/run-with-history";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { postPropagate } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
@@ -58,24 +57,19 @@ export function usePropagate() {
     }
 
     setIsPropagating(true);
-    const before = canvasState.toGraphSnapshot();
 
     try {
       const result = await postPropagate(payload);
 
-      canvasState.applyPropagationResult(result);
-
-      const after = useCanvasStore.getState().toGraphSnapshot();
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type: "propagation",
-        label: `Propagation (${scope})`,
-        scope,
-        canvas_id: activeCanvasId ?? undefined,
-        before,
-        after,
-      });
+      // Through the one seam (lib/run-with-history.ts), so the entry's Graph
+      // Diff is built the same way as every other Update's — and so the
+      // Scenario Baseline can tag these writes `propagation` and let Reset and
+      // Clear Event reach them (ADR-0016).
+      runWithHistory(
+        () => canvasState.applyPropagationResult(result),
+        `Propagation (${scope})`,
+        { updateType: "propagation", scope, canvasId: activeCanvasId ?? null },
+      );
 
       const count = result.updates.length;
       const warnings = result.warnings ?? [];

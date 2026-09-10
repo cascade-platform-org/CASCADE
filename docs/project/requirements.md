@@ -59,7 +59,7 @@ When running Propagation the user selects:
 | **Local** | Active Canvas nodes + intra-canvas edges only. Inter-canvas edges physically absent. | Engine sees one isolated subgraph. |
 | **Global** | Full Project — all nodes, all edges, all Canvases. | Engine sees the complete multi-canvas network. |
 
-In both scopes the payload excludes engine-irrelevant bookkeeping: `update_history` (each entry carries two full GraphSnapshots), `scorecard` (entries embed base64 PNGs), and `source_inp_content` on non-EPANET canvases — without this trimming a modest project exceeds the edge's 10MB request-body cap (Caddy 413). See `lib/propagation-payload.ts`.
+In both scopes the payload excludes engine-irrelevant bookkeeping: `update_history`, `scorecard` (entries embed base64 PNGs), and `source_inp_content` on non-EPANET canvases — without this trimming a modest project exceeds the edge's 10MB request-body cap (Caddy 413). See `lib/propagation-payload.ts`.
 
 Event application (client-side) is always applied to the full registry regardless of scope; scope only governs what is sent to the engine.
 
@@ -384,6 +384,9 @@ advance time — pointing at the real editor UI.
   Starting the tour loads that bundle, replacing what is open, so every entry
   point says so first. The bundle ships in its post-Earthquake, post-Propagation
   state, so the tour has the user Reset and then cause the cascade themselves.
+  Reset reaches back through the history the file ships with — the Scenario
+  Baseline is seeded from `update_history` on load (ADR-0016), without which
+  Reset on a freshly opened project would be a silent no-op.
 - **Entry points:** the New Project Wizard's first step, a one-time prompt over
   the canvas (both suppressed once offered), and "Take the guided tour" in the
   User Manual drawer, available forever after.
@@ -425,7 +428,7 @@ For each Element with `functionality_time > 0`:
 
 A Propagation immediately follows to cascade the effects of any expired Elements.
 
-**Stored in history** as an `event_applied` entry (`event_id` = the Temporal Jump's synthetic id, `type = "temporal_jump"`). Undoable with CTRL+Z. Clearable with CTRL+R (uses `mutation_reversal` like any Event).
+**Stored in history** as an `event_applied` entry (`event_id` = the Temporal Jump's synthetic id, `type = "temporal_jump"`). Undoable with CTRL+Z. Clearable with CTRL+R like any Event — which means clearing it also clears the cascade (ADR-0016), and gives back the elapsed hours the −Xh control tracks.
 
 ### 9.2a Reverting a run of jumps
 
@@ -482,7 +485,7 @@ Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
 - **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
 - **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (Monte Carlo estimate over sampled failure orders; no exact 2^N path).
 
-Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality; cleared by Reset).
+Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality). Reset clears it: the colours describe a Scenario that no longer exists, so leaving them on the canvas is a key to numbers nothing on screen has.
 
 Model-based runs evaluate their Scenarios through `POST /api/propagate/batch` — one Project, up to 50 coalitions per request, charged one engine evaluation each (ADR-0008). The estimator's interface is unchanged; batching is a transport optimisation and produces bit-identical values.
 
@@ -501,7 +504,7 @@ Each Scorecard entry stores up to three snapshots, all optional except `before_p
 | Field | Type | Description |
 |---|---|---|
 | `event_ids` | string[] | EventDefinition.id for every Event applied since the last Propagation, newest-applied first. Empty for a Manual What-If entry. A user may stack several Events before running one Propagation (§12.3a) — all of them are recorded here, not just the latest. |
-| `before_propagation` | GraphSnapshot | State just before the most recent Propagation (post-Event(s), pre-engine). Pulled automatically from `update_history` — the `before` of the most recent `propagation` entry. If no Propagation has been run, this is the current state (Manual What-If). |
+| `before_propagation` | GraphSnapshot | State just before the most recent Propagation (post-Event(s), pre-engine). Materialised from `update_history` by walking the live graph backwards through the entries above the most recent `propagation` one — entries carry a Graph Diff rather than whole Scenarios (ADR-0017). If no Propagation has been run, this is the current state (Manual What-If). |
 | `after_propagation` | GraphSnapshot? | State after the Propagation. Absent if no Propagation has been run in the current session. |
 | `after_temporal_jump` | GraphSnapshot? | State after one or more Temporal Jumps + Propagations. Populated in two ways: (a) **already computed** — the Save dialog detects a `temporal_jump` entry in history that follows the most recent `propagation` entry and loads it automatically; (b) **computed at save time** — the user enters a duration in the Save dialog and the system fires a Temporal Jump internally, runs Propagation, captures the result, then discards the side-effects (the graph state is not permanently changed). |
 | `temporal_jump_hours` | integer? | The total hours elapsed across all Temporal Jumps that produced `after_temporal_jump`. |
@@ -634,6 +637,8 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 ### 13.4 Server Sync (opt-in) — implemented
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.
+
+**Auto-save — the Working Copy (ADR-0017).** `PUT`/`GET`/`DELETE /api/projects/autosave` keep **one** row per (owner, project name), overwritten in place. A Working Copy is **not a version**: the never-overwrite rule above is untouched, and auto-saving can neither churn the version list nor evict an explicit save. It is written on the same 10-second idle tick as the local auto-save, and **only for a project the user has switched on — off by default**, because ADR-0007's guarantee is that a network reaches the server only on explicit opt-in. Switching it off deletes the stored copy rather than merely stopping the writes. On Load it is offered only when it is newer than the newest saved version.
 
 **Null-free bundle contract (Load):** the Load response must serialise the bundle **without `null` keys**, so it is byte-shape-identical to a local file save. See [api-reference.md → Server Sync](api-reference.md) for the mechanism and the failure it prevents.
 

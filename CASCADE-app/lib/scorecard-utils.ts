@@ -5,6 +5,7 @@
  * structures and can be called from any context.
  */
 
+import { materialiseAround } from "@/lib/graph-diff";
 import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnyUpdateEntry } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import JSZip from "jszip";
@@ -149,13 +150,17 @@ function wasReverted(history: AnyUpdateEntry[], index: number): boolean {
 export async function findUnsavedRuns(
   history: AnyUpdateEntry[],
   scorecard: ScorecardEntry[],
+  live: GraphSnapshot,
 ): Promise<UnsavedRun[]> {
   const propEntries = scorecard.filter(isPropagationEntry);
   const savedHashes = new Set(
     await Promise.all(propEntries.map((e) => hashSnapshot(e.before_propagation))),
   );
 
-  const runs: UnsavedRun[] = [];
+  // Collected first, hashed second: the dedup hashes are independent of each
+  // other, so they go through one Promise.all rather than blocking the scan on
+  // each in turn — the same shape as `savedHashes` above.
+  const candidates: UnsavedRun[] = [];
   for (let i = 0; i < history.length; i++) {
     const entry = history[i];
     if (entry.update_type !== "propagation") continue;
@@ -184,18 +189,23 @@ export async function findUnsavedRuns(
     const eventEntries = sessionEntries.filter((e) => e.update_type === "event_applied");
     if (eventEntries.length === 0) continue;
 
-    const hash = await hashSnapshot(entry.before);
-    if (savedHashes.has(hash)) continue;
+    // A history entry carries a Graph Diff, not whole Scenarios (ADR-0017), so
+    // the pair is rebuilt by walking the live graph back through the newer
+    // entries. `live` is passed in rather than read here so this stays a pure
+    // function over its inputs — it is the dedup hash's only anchor.
+    const { before: beforeSnapshot, after: afterSnapshot } = materialiseAround(live, history, i);
 
-    runs.push({
+    candidates.push({
       eventEntryId: entry.id,
       eventIds: eventEntries.map((e) => e.event_id).filter((id): id is string => Boolean(id)),
       eventLabel: eventEntries.map((e) => e.label.replace(/^Apply event:\s*/, "")).reverse().join(" + "),
-      beforeSnapshot: entry.before,
-      afterSnapshot: entry.after,
+      beforeSnapshot,
+      afterSnapshot,
     });
   }
-  return runs;
+
+  const hashes = await Promise.all(candidates.map((c) => hashSnapshot(c.beforeSnapshot)));
+  return candidates.filter((_, i) => !savedHashes.has(hashes[i]));
 }
 
 export interface UncoveredEvent {

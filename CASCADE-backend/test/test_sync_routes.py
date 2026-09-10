@@ -213,3 +213,78 @@ async def test_local_only_mode_returns_501(migrated_db):
             "/api/projects", json={"name": "p", "data": _minimal_bundle_json()}
         )
     assert resp.status_code == 501
+
+
+# ---------------------------------------------------------------------------
+# Working Copy (ADR-0017) — auto-save that is NOT a version
+# ---------------------------------------------------------------------------
+
+
+async def test_working_copy_upserts_instead_of_versioning(migrated_db):
+    """The whole point of the separate table: auto-saving must not churn the
+    user's version list, which §13.4 keeps append-only with a cap of 10."""
+    client, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc1", email="wc1@x")
+    async with client:
+        for _ in range(15):
+            res = await client.put("/api/projects/autosave", json={"name": "p", "data": _minimal_bundle_json("p")})
+            assert res.status_code == 200
+
+        # One working copy...
+        got = await client.get("/api/projects/autosave", params={"name": "p"})
+        assert got.status_code == 200
+        assert got.json()["name"] == "p"
+
+        # ...and not one single version created by all that auto-saving.
+        versions = await client.get("/api/projects")
+        assert versions.json() == []
+
+
+async def test_working_copy_is_per_project_name(migrated_db):
+    client, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc2", email="wc2@x")
+    async with client:
+        await client.put("/api/projects/autosave", json={"name": "a", "data": _minimal_bundle_json("a")})
+        await client.put("/api/projects/autosave", json={"name": "b", "data": _minimal_bundle_json("b")})
+        assert (await client.get("/api/projects/autosave", params={"name": "a"})).json()["data"]["project"]["meta"]["name"] == "a"
+        assert (await client.get("/api/projects/autosave", params={"name": "b"})).json()["data"]["project"]["meta"]["name"] == "b"
+
+
+async def test_missing_working_copy_is_404(migrated_db):
+    client, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc3", email="wc3@x")
+    async with client:
+        assert (await client.get("/api/projects/autosave", params={"name": "nope"})).status_code == 404
+
+
+async def test_opting_out_deletes_the_stored_copy(migrated_db):
+    """Turning auto-save off must REMOVE the network from the server, not just
+    stop writing — ADR-0007's guarantee is about what is stored, not written."""
+    client, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc4", email="wc4@x")
+    async with client:
+        await client.put("/api/projects/autosave", json={"name": "p", "data": _minimal_bundle_json("p")})
+        assert (await client.delete("/api/projects/autosave", params={"name": "p"})).status_code == 204
+        assert (await client.get("/api/projects/autosave", params={"name": "p"})).status_code == 404
+
+
+async def test_working_copy_is_owner_scoped(migrated_db):
+    a, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc5", email="wc5@x")
+    b, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc6", email="wc6@x")
+    async with a, b:
+        await a.put("/api/projects/autosave", json={"name": "shared-name", "data": _minimal_bundle_json("a")})
+        # Same project NAME, different owner: never resolves to the other's row.
+        assert (await b.get("/api/projects/autosave", params={"name": "shared-name"})).status_code == 404
+
+
+async def test_viewer_cannot_write_a_working_copy(migrated_db):
+    client, _ = await _client_as(migrated_db, ["viewer"], sub="u-wc7", email="wc7@x")
+    async with client:
+        res = await client.put("/api/projects/autosave", json={"name": "p", "data": _minimal_bundle_json("p")})
+        assert res.status_code == 403
+
+
+async def test_autosave_path_is_not_parsed_as_a_version_id(migrated_db):
+    """`/autosave` is declared before `/{version_id}`. Were it not, this GET
+    would reach the version route and fail on an invalid UUID cast."""
+    client, _ = await _client_as(migrated_db, ["analyst"], sub="u-wc8", email="wc8@x")
+    async with client:
+        res = await client.get("/api/projects/autosave", params={"name": "p"})
+        assert res.status_code == 404
+        assert "working copy" in res.json()["detail"].lower()

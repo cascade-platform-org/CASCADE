@@ -64,6 +64,17 @@ async def export_user_data(conn: DBConn, *, user_id: str, external_id: str) -> d
         user_id,
     )
 
+    # Auto-saved Working Copies (ADR-0017). A separate table from `projects`
+    # because a Working Copy is not a version — but it holds the same kind of
+    # data, so Art. 15 covers it identically.
+    working_copies = await conn.fetch(
+        """
+        SELECT id::text, name, data, created_at, updated_at
+        FROM project_working_copies WHERE owner_id = $1::uuid ORDER BY created_at
+        """,
+        user_id,
+    )
+
     # Actions this user PERFORMED.
     audit = await conn.fetch(
         """
@@ -117,11 +128,12 @@ async def export_user_data(conn: DBConn, *, user_id: str, external_id: str) -> d
         "note": (
             "Identity data (login credentials, email verification state, sign-in "
             "history) lives in the identity provider, not here — request it there. "
-            "Project graphs are local-first: only versions you explicitly synced "
-            "appear below."
+            "Project graphs are local-first: only versions you explicitly synced, "
+            "and the auto-saved working copies of projects you opted in, appear below."
         ),
         "account": dict(account) if account else None,
         "synced_projects": [_row(r, "data") for r in projects],
+        "synced_working_copies": [_row(r, "data") for r in working_copies],
         "audit_entries": [_row(r, "details") for r in audit],
         "audit_entries_about_me": [_row(r, "details") for r in audit_about],
         "analysis_runs": [dict(r) for r in analysis],

@@ -39,3 +39,23 @@ class ProjectVersionSummary(BaseModel):
 
 class ProjectVersionDetail(ProjectVersionSummary):
     data: ProjectBundle
+
+
+class SaveWorkingCopyRequest(BaseModel):
+    """One auto-save. Carries no description: a Working Copy is the live state of
+    a named project, not a labelled point in its history."""
+    name: str
+    data: ProjectBundle
+
+
+class WorkingCopyDetail(BaseModel):
+    """The Working Copy for one project name, with the bundle.
+
+    `updated_at` is what Load compares against the newest version's `created_at`
+    to decide whether to offer it (ADR-0017).
+    """
+    id: str
+    name: str
+    created_at: datetime
+    updated_at: datetime
+    data: ProjectBundle

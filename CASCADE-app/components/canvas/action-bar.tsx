@@ -93,7 +93,14 @@ export function ActionBar() {
   }
 
   function handleReset() {
-    resetFunctionality({ n, scope, globalViewActive });
+    // Reset is scope-independent (ADR-0016): it restores the Scenario Baseline,
+    // and a half-rewound cascade is a state the model was never in.
+    const affected = resetFunctionality();
+    pushToast(
+      affected > 0
+        ? { message: `Scenario reset — ${affected} element${affected !== 1 ? "s" : ""} restored.`, variant: "success", durationMs: 3000 }
+        : { message: "Nothing to reset — no Event or Propagation has changed this network.", variant: "info", durationMs: 3000 },
+    );
   }
 
   return (

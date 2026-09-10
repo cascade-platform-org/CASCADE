@@ -82,7 +82,7 @@
       "type": "object"
     },
     "AnyUpdateEntry": {
-      "description": "One entry in the Any Update history: a before/after GraphSnapshot pair.\n\nCreated for every Any Update. CTRL+Z pops from this list.\nCapped at 20 entries (latest first) by the store layer.",
+      "description": "One entry in the Any Update history.\n\nCreated for every Any Update. CTRL+Z pops from this list. Capped by the\nstore layer at 20 entries (latest first) AND at a byte budget \u2014 a count\nalone is the wrong bound when one bulk deletion produces a diff larger than\ntwenty ordinary ones.\n\nCarries a `diff` (ADR-0017). `before`/`after` are legacy: entries written\nbefore that ADR carry the snapshot pair instead, and are still read. Exactly\none of the two is present on any entry this app writes.",
       "properties": {
         "id": {
           "title": "Id",
@@ -162,11 +162,41 @@
           "description": "Set only on temporal_jump_revert entries: the id of the newest history entry at the moment the pre-jump snapshot was taken. It marks where the reverted Temporal Jumps begin, so the current Situation can be derived as the one that was live before them. Absent when that entry has already been evicted from the capped history.",
           "title": "Reverts To Entry Id"
         },
+        "diff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphDiff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What this update changed, field by field, in both directions (ADR-0017). Absent only on legacy entries, which carry before/after."
+        },
         "before": {
-          "$ref": "#/$defs/GraphSnapshot"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Legacy (pre-ADR-0017) whole-Scenario snapshot. Read, never written."
         },
         "after": {
-          "$ref": "#/$defs/GraphSnapshot"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Legacy (pre-ADR-0017) whole-Scenario snapshot. Read, never written."
         },
         "propagation_meta": {
           "anyOf": [
@@ -198,9 +228,7 @@
         "id",
         "timestamp",
         "update_type",
-        "label",
-        "before",
-        "after"
+        "label"
       ],
       "title": "AnyUpdateEntry",
       "type": "object"
@@ -896,6 +924,40 @@
       "title": "EventDefinition",
       "type": "object"
     },
+    "FieldChange": {
+      "description": "One field's value on each side of a Graph Diff.\n\n`key` is set only for `field=\"properties\"`, which is diffed one level deep\nbecause `ElementUpdate.properties` is MERGED onto an Element rather than\nreplaced (`lib/element-update.ts`) \u2014 a Rule adding one key to a 20-key\nobject would otherwise store the whole object on both sides.\n\n`field` is carried as data rather than encoded into a string key: the\n`\"<elementId>.<field>\"` convention used by MutationReversal has to split on\nthe last dot, and EPANET element ids contain dots (`J.12.A`).",
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "before": {
+          "default": null,
+          "title": "Before"
+        },
+        "after": {
+          "default": null,
+          "title": "After"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "FieldChange",
+      "type": "object"
+    },
     "FunctionalityScaleLevel": {
       "properties": {
         "level": {
@@ -1022,6 +1084,66 @@
         "graph_type"
       ],
       "title": "Graph",
+      "type": "object"
+    },
+    "GraphDiff": {
+      "description": "A field-level, invertible description of what one Any Graph Update changed.\n\nSchema-agnostic by construction: the differ enumerates the keys actually\npresent on each record rather than a known field list, so an attribute a\nRule gains under ADR-0015 stays undoable without anyone editing the differ.\nCarries both directions, so it applies forwards (redo) and backwards (undo)\nagainst the live graph \u2014 no snapshot is rebuilt.\n\nReplaces the before/after GraphSnapshot pair that cost 97.6% of a project\nfile. See ADR-0017.",
+      "properties": {
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/RecordDiff"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/RecordDiff"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "canvases": {
+          "items": {
+            "$ref": "#/$defs/RecordDiff"
+          },
+          "title": "Canvases",
+          "type": "array"
+        },
+        "canvas_order": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canvas order AFTER the update; set only when the order changed.",
+          "title": "Canvas Order"
+        },
+        "canvas_order_before": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canvas order BEFORE the update; set only when the order changed.",
+          "title": "Canvas Order Before"
+        }
+      },
+      "title": "GraphDiff",
       "type": "object"
     },
     "GraphSnapshot": {
@@ -1772,6 +1894,50 @@
         "before_propagation"
       ],
       "title": "PropagationScorecardEntry",
+      "type": "object"
+    },
+    "RecordDiff": {
+      "description": "One Element or Canvas added, removed, or changed field-by-field.\n\n`op=\"update\"` carries `fields`; `op=\"add\"`/`\"remove\"` carry `record`, the\nwhole object \u2014 there is no shorter honest encoding of \"this did not exist\".",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "add",
+            "remove",
+            "update"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/FieldChange"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record"
+        }
+      },
+      "required": [
+        "id",
+        "op"
+      ],
+      "title": "RecordDiff",
       "type": "object"
     },
     "ProjectBundle": {

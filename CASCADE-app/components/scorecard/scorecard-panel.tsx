@@ -68,7 +68,7 @@ export function ScorecardPanel() {
   useEffect(() => {
     let cancelled = false;
     setComputingGaps(true);
-    findUnsavedRuns(updateHistory, scorecard).then((runs) => {
+    findUnsavedRuns(updateHistory, scorecard, useCanvasStore.getState().toGraphSnapshot()).then((runs) => {
       if (!cancelled) { setUnsavedRuns(runs); setComputingGaps(false); }
     });
     return () => { cancelled = true; };
@@ -199,8 +199,12 @@ export function ScorecardPanel() {
               }}
               onRunEvent={(ev) => {
                 const n = config.functionality_scale.length;
-                // 1. Reset canvas (globalViewActive → always global)
-                resetFunctionality({ n, scope, globalViewActive });
+                // 1. End whatever scenario is live, so this uncovered Event is
+                //    measured against the network's own state rather than on top
+                //    of someone else's cascade. Reset is scope-independent and
+                //    reaches back through the loaded history (ADR-0016), so this
+                //    works on a project that shipped mid-scenario.
+                resetFunctionality();
                 // 2. Apply the event on the live canvas
                 const eventDef = config.events.find((e) => e.id === ev.eventId);
                 if (eventDef) {

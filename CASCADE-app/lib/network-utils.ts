@@ -5,62 +5,90 @@
  * render cycles (event handlers, async callbacks, etc.).
  */
 
-import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
-import type { PropagationScope } from "@/store/ui-store";
+import { useAnalysisStore } from "@/store/analysis-store";
+import { useConfigStore, selectN } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
+import { runWithHistory } from "@/lib/run-with-history";
+import { applyBaselineEntries, forceOperational, resetPlan } from "@/lib/scenario-baseline";
 
 // ---------------------------------------------------------------------------
-// Reset functionality
+// Reset
 // ---------------------------------------------------------------------------
 
 /**
- * Resets Functionality, direct_damage, and functionality_time to baseline on
- * either the active canvas (local) or all elements (global).
+ * End the current scenario (ADR-0016). Two independent halves:
  *
- * When `globalViewActive` is true the reset is always global regardless of scope,
- * because "All" is a full-project context.
+ * 1. **Every Element is forced operational** — full Functionality, no backup
+ *    countdown, no `direct_damage`, no `expected_repair_time`, no
+ *    `responsibility_share`. Unconditional, and it consults nothing.
+ * 2. **Machine-written model attributes are reverted** from the **Scenario
+ *    Baseline** — a `capacity` a Rule assigned, a custom `properties` key a
+ *    cascade merged (ADR-0015). Provenance finds these, so an attribute a Rule
+ *    gains later is covered without anyone listing it.
+ *
+ * Half 1 does not depend on half 2 ON PURPOSE. The Baseline is derived from the
+ * update history and can be incomplete — a rewind that crossed a Reset
+ * boundary, an entry evicted before retirement, a future bug in the fold — and a
+ * Reset that left the network damaged because its own bookkeeping was wrong is a
+ * far worse failure than one that repairs an Element it did not strictly have
+ * to. Reset is the button a user reaches for when the model is in a state they
+ * no longer understand; it has to be the one thing that always works.
+ *
+ * A hand edit to a MODEL field survives either way: a label fixed, a node moved,
+ * or a capacity corrected mid-scenario is authoring work.
+ *
+ * **No scope parameter.** Reset always covers the whole project: Events reach
+ * across Canvases, inter-canvas edges participate under global Propagation, and
+ * a half-rewound cascade is a state the model was never in.
+ *
+ * Returns the number of Elements it actually changed, so callers can report
+ * honestly when there was nothing to reset.
  */
-export function resetFunctionality({
-  n,
-  scope,
-  globalViewActive,
-}: {
-  n: number;
-  scope: PropagationScope;
-  globalViewActive: boolean;
-}): void {
-  const state = useCanvasStore.getState();
-  const activeCanvasId = state.activeCanvasId;
-  const isGlobal = globalViewActive || scope === "global";
+export function resetFunctionality(): number {
+  const historyStore = useHistoryStore.getState();
+  const n = selectN(useConfigStore.getState());
 
-  if (!isGlobal && !activeCanvasId) return;
+  const before = useCanvasStore.getState().toGraphSnapshot();
+  const restored = applyBaselineEntries(before, resetPlan(historyStore.scenarioBaseline()));
+  const after = forceOperational(restored, n);
 
-  const before = state.toGraphSnapshot();
+  // Reference identity survives both transforms for an untouched Element, so
+  // this counts what genuinely moved rather than the size of the graph.
+  const changed = [
+    ...Object.keys(after.nodes).filter((id) => after.nodes[id] !== before.nodes[id]),
+    ...Object.keys(after.edges).filter((id) => after.edges[id] !== before.edges[id]),
+  ].length;
 
-  const patch = { functionality: n, direct_damage: false, functionality_time: 0, responsibility_share: undefined } as const;
+  // A Temporal Jump run belongs to the scenario being ended. Left alone, the
+  // −Xh control goes on offering to rewind to a snapshot taken inside it, which
+  // would drop the graph back into a cascade with no Baseline behind it — the
+  // history fold stops at this Reset, so nothing would be able to undo it again.
+  useUiStore.getState().clearTemporalJumpProgress();
 
-  if (isGlobal) {
-    Object.values(state.nodes).forEach((node) => state.updateNode(node.id, patch));
-    Object.values(state.edges).forEach((edge) => state.updateEdge(edge.id, patch));
-  } else {
-    const canvas = state.canvases[activeCanvasId!];
-    if (!canvas) return;
-    canvas.graph.node_ids.forEach((id) => state.updateNode(id, patch));
-    canvas.graph.edge_ids.forEach((id) => state.updateEdge(id, patch));
-  }
+  if (changed === 0) return 0;
 
-  useHistoryStore.getState().pushUpdateEntry({
-    id: nanoid(),
-    timestamp: new Date().toISOString(),
-    // Not a plain manual edit: scenario_reset is a session boundary — it ends
-    // the current Situation (the Situation window and the Save-to-Scorecard
-    // dialog stop treating pre-reset Events as the live scenario).
-    update_type: "scenario_reset",
-    label: isGlobal ? "Reset all to Functionality N" : "Reset canvas to Functionality N",
-    scope: isGlobal ? "global" : "local",
-    canvas_id: isGlobal ? undefined : activeCanvasId ?? undefined,
-    before,
-    after: useCanvasStore.getState().toGraphSnapshot(),
-  });
+  runWithHistory(
+    () => useCanvasStore.getState().restoreSnapshot(after),
+    "Reset scenario",
+    {
+      // Not a plain manual edit: scenario_reset is a session boundary — it ends
+      // the current Situation (the Situation window and the Save-to-Scorecard
+      // dialog stop treating pre-reset Events as the live scenario), and
+      // deriveBaseline stops folding at it, so nothing older is reverted twice.
+      updateType: "scenario_reset",
+      canvasId: null,
+    },
+  );
+
+  // The scenario is over, so entries retired past the history cap go with it —
+  // otherwise a second Reset would revert to values from a session that ended.
+  historyStore.clearRetiredBaseline();
+
+  // The Analysis Heatmap colours mean scores from a Scenario that no longer
+  // exists. Leaving it on the canvas is a key to numbers nothing on screen has.
+  useAnalysisStore.getState().clearHeatmap();
+
+  return changed;
 }

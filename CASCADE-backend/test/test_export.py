@@ -135,6 +135,30 @@ async def test_export_includes_actions_taken_on_me_without_naming_the_admin(migr
     assert "admin@example.com" not in json.dumps(data, default=str)
 
 
+async def test_export_includes_the_auto_saved_working_copy(migrated_db):
+    """A Working Copy holds the same network data as a synced version, so Art. 15
+    covers it identically — and it is the copy most likely to be current."""
+    from db import projects as db_projects
+    from db.export import export_user_data
+    from db import users as db_users
+    from test_sync_routes import _minimal_bundle_json
+    from schemas.sync import ProjectBundle
+
+    async with migrated_db.acquire() as conn:
+        user = await db_users.upsert_user(conn, external_id="u-wc-export", email="wce@x", name=None)
+        await db_projects.upsert_working_copy(
+            conn,
+            owner_id=user.id,
+            name="my network",
+            data=ProjectBundle.model_validate(_minimal_bundle_json("my network")),
+        )
+        data = await export_user_data(conn, user_id=user.id, external_id="u-wc-export")
+
+    assert len(data["synced_working_copies"]) == 1
+    assert data["synced_working_copies"][0]["name"] == "my network"
+    assert data["synced_working_copies"][0]["data"]["project"]["meta"]["name"] == "my network"
+
+
 async def test_export_covers_every_user_scoped_table(migrated_db):
     """Guard against the drift db/export.py warns about: a new table carrying a
     `user_id` that nobody adds to the export. Fails loudly when the schema grows
@@ -150,7 +174,13 @@ async def test_export_covers_every_user_scoped_table(migrated_db):
             )
         }
     # users itself is the subject; the rest must each have a section in the export.
-    covered = {"projects", "audit_logs", "analysis_logs", "activity_log_uploads"}
+    covered = {
+        "projects",
+        "project_working_copies",  # ADR-0017 — same data as `projects`, not a version
+        "audit_logs",
+        "analysis_logs",
+        "activity_log_uploads",
+    }
     assert tables == covered, (
         f"tables keyed to a person changed: {tables ^ covered}. "
         "Add it to db/export.py, scripts/purge_expired.py (if a log), and the "

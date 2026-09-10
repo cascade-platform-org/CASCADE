@@ -28,8 +28,11 @@ import {
   syncSaveProject,
   syncListProjects,
   syncLoadProject,
+  syncGetWorkingCopy,
   syncDeleteProject,
 } from "@/lib/api-client";
+import { isWorkingCopyEnabled, setWorkingCopyEnabled } from "@/lib/working-copy";
+import type { WorkingCopyDetail } from "@/lib/schemas/api";
 import type { ProjectVersionSummary } from "@/lib/schemas/api";
 
 export function FileIoPanel() {
@@ -63,13 +66,28 @@ export function FileIoPanel() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncBusyId, setSyncBusyId] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  // Working Copy (ADR-0017) — opt-in per project, off by default.
+  const [autoSaveOn, setAutoSaveOn] = useState(false);
+  const [workingCopy, setWorkingCopy] = useState<WorkingCopyDetail | null>(null);
 
   const reloadSyncVersions = useCallback(async () => {
     if (!canSync || authMode !== "oidc") return;
     setSyncLoading(true);
     try {
-      setSyncVersions(await syncListProjects());
+      const versions = await syncListProjects();
+      setSyncVersions(versions);
       setSyncError(null);
+
+      // Offer the Working Copy only when it is NEWER than the newest version:
+      // otherwise the user's own explicit save is the better answer and
+      // offering an older auto-save would just be noise.
+      const name = useCanvasStore.getState().projectMeta.name;
+      setAutoSaveOn(isWorkingCopyEnabled(name));
+      const copy = await syncGetWorkingCopy(name).catch(() => null);
+      const newestVersion = versions
+        .filter((v) => v.name === name)
+        .reduce<string | null>((acc, v) => (acc && acc > v.created_at ? acc : v.created_at), null);
+      setWorkingCopy(copy && (!newestVersion || copy.updated_at > newestVersion) ? copy : null);
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Could not load synced versions.");
     } finally {
@@ -154,6 +172,34 @@ export function FileIoPanel() {
     } finally {
       setSyncBusyId(null);
     }
+  }
+
+  async function handleToggleAutoSave(next: boolean) {
+    const name = useCanvasStore.getState().projectMeta.name;
+    setAutoSaveOn(next);
+    await setWorkingCopyEnabled(name, next);
+    if (!next) setWorkingCopy(null);
+    pushToast({
+      message: next
+        ? `Auto-save on for "${name}". A working copy is kept on the server and replaced as you work.`
+        : `Auto-save off for "${name}". The server copy has been deleted.`,
+      variant: "success",
+      durationMs: 5000,
+    });
+  }
+
+  async function handleLoadWorkingCopy() {
+    if (!workingCopy) return;
+    if (
+      !window.confirm(
+        `Restore the auto-saved working copy of "${workingCopy.name}" (${new Date(workingCopy.updated_at).toLocaleString()})? Unsaved changes will be lost.`,
+      )
+    )
+      return;
+    loadProject(workingCopy.data.project);
+    loadConfig(workingCopy.data.config);
+    pushToast({ message: "Working copy restored.", variant: "success", durationMs: 4000 });
+    closeFileIoPanel();
   }
 
   async function handleSyncDelete(version: ProjectVersionSummary) {
@@ -375,6 +421,42 @@ export function FileIoPanel() {
                 <CloudUpload size={14} className="shrink-0 text-zinc-400" />
                 <span className="font-medium">Save current project to server</span>
               </button>
+              {/* Auto-save opt-in. Off by default: ADR-0007's guarantee is that
+                  a network reaches the server only when the user says so. */}
+              <label className="mb-2 flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs dark:border-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={autoSaveOn}
+                  onChange={(e) => void handleToggleAutoSave(e.target.checked)}
+                  className="mt-0.5 shrink-0"
+                />
+                <span className="min-w-0">
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    Auto-save this project to the server
+                  </span>
+                  <span className="mt-0.5 block text-zinc-400">
+                    Keeps one working copy, replaced as you work. It is not a
+                    version, so it never fills up the list below. Turning this off
+                    deletes it from the server.
+                  </span>
+                </span>
+              </label>
+
+              {workingCopy && (
+                <button
+                  onClick={() => void handleLoadWorkingCopy()}
+                  className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-left text-xs text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+                >
+                  <CloudUpload size={14} className="shrink-0 rotate-180" />
+                  <span className="min-w-0">
+                    <span className="font-medium">Restore auto-saved working copy</span>
+                    <span className="block opacity-80">
+                      Newer than your latest saved version ({new Date(workingCopy.updated_at).toLocaleString()}).
+                    </span>
+                  </span>
+                </button>
+              )}
+
               {syncError && (
                 <p className="mb-2 text-xs text-red-500 break-words">{syncError}</p>
               )}

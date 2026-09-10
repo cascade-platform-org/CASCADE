@@ -75,7 +75,7 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 All application state is managed through nine Zustand stores:
 
 - **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
-- **`history-store`** — the Any Graph Update ring buffer (`update_history`, cap 20) plus the session-only redo stack. Pure append/pop/restore data structure; zero dependency on other stores.
+- **`history-store`** — the Any Graph Update ring buffer (`update_history`) plus the session-only redo stack. Capped at 20 entries **and** at a byte budget, because entries are variable-size Graph Diffs and one bulk deletion can exceed twenty ordinary edits (ADR-0017). Evicted entries are retired into a Scenario Baseline map on the way out, so a scenario can outlive the buffer (ADR-0016).
 - **`network-store`** — UI-only selection and hover state for the active Canvas. Intentionally thin — no graph data. High-frequency updates (every pointer event) stay isolated from the registry.
 - **`config-store`** — `ModelConfiguration`: functionality scale, category definitions, Event definitions, graph-type algorithm pipelines. Owns a draft/commit lifecycle for the Config modal.
 - **`scorecard-store`** — the Scorecard entry list, serialised into `Project.scorecard` via canvas-store.
@@ -253,21 +253,25 @@ There is no top-level `inter_canvas_edges` array. Inter-canvas edges are plain e
 
 ### Any Graph Update History — Undo Stack
 
-Every user action that changes graph state pushes an `AnyUpdateEntry` to `update_history` (capped at 20). Each entry carries a `before` and `after` `GraphSnapshot`. Ctrl+Z restores `before`; the entry is popped. Entry types:
+Every user action that changes graph state pushes an `AnyUpdateEntry` to `update_history`. Each entry carries a **Graph Diff** — a field-level, invertible record of exactly what it changed, in both directions (ADR-0017). Ctrl+Z applies it backwards against the live graph, Ctrl+Y forwards; no snapshot is rebuilt, so there is no chain to replay and no checkpoint to keep. Entries written before ADR-0017 carry a `before`/`after` `GraphSnapshot` pair instead and are still read.
+
+Entries are built in exactly one place, `lib/history-entry.ts`, reached either directly (canvas-store's own actions, which already hold both snapshots) or through `lib/run-with-history.ts` (everything else, which snapshots around a mutation). Nothing else may call `pushUpdateEntry`: a call site that built its own diff could produce an entry that undoes incorrectly, and nothing would fail — undo would just leave a value behind.
+
+Entry types:
 
 | `update_type` | Trigger |
 |---|---|
 | `graph_update` | Add/remove/edit nodes or edges |
-| `event_applied` | Applying an Event (Hazard or Disservice) |
-| `event_cleared` | Clearing a previously applied Event |
+| `event_applied` | Applying an Event (Hazard or Disservice). Recorded even when the Event changed nothing — the Situation is derived by finding these |
+| `event_cleared` | Clearing a previously applied Event (Ctrl+R): reverts that Event's writes **and** every Propagation write, leaving the remaining Events un-propagated. Recorded so Ctrl+Z can bring the Event and its cascade back |
 | `propagation` | Receiving a PropagationResult from the server |
 | `manual_functionality_update` | User manually editing Functionality or Functionality Time |
-| `scenario_reset` | Reset button (Functionality restored to N). A session boundary: it ends the current Situation, so the Situation window closes and Save-to-Scorecard falls back to the live canvas |
+| `scenario_reset` | Reset button (ADR-0016). Two independent halves: every Element is forced operational (full Functionality, no countdown, no damage or blame) consulting nothing, and every machine-written *model* attribute is reverted from the **Scenario Baseline**. Hand edits to model fields survive. A session boundary: it ends the current Situation and any Temporal Jump run, so the Situation window closes and Save-to-Scorecard falls back to the live canvas |
 | `temporal_jump_revert` | Undoing every Temporal Jump of a run (the −Xh button). Carries `reverts_to_entry_id`, the newest entry at the time the pre-jump snapshot was taken: the Situation and the unsaved-run scan skip back to it, so the jumps and any Propagation run during them stop counting as the current scenario |
 
 ### Data Persistence — File I/O and Version History
 
-- **Auto-save** — continuous background save to `localStorage` (safety net). Discarded when an explicit save is made.
+- **Auto-save** — background save to `localStorage` after **10 seconds of inactivity, and only when the content changed** (ADR-0017). Discarded when an explicit save is made. `update_history` is included: it used to be stripped everywhere small, so undo was empty after a crash, and Graph Diffs made it small enough to keep. A history-free write is the fallback if the quota refuses.
 - **Explicit save** — downloads `project.json` + `config.json` (or a bundle). Up to 10 previous explicit saves retained in browser storage.
 - **Load** — Zod validation at the boundary before hydrating stores.
 

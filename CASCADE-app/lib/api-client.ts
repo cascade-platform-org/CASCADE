@@ -17,12 +17,14 @@ import {
   ImportInpResponseSchema,
   ProjectVersionSummarySchema,
   ProjectVersionDetailSchema,
+  WorkingCopyDetailSchema,
   type EngineAlgorithms,
   type ImportInpResponse,
   type BatchPropagationRequest,
   type PropagationRequest,
   type ProjectVersionSummary,
   type ProjectVersionDetail,
+  type WorkingCopyDetail,
 } from "@/lib/schemas/api";
 import type { ProjectBundle } from "@/lib/file-io";
 import {
@@ -448,6 +450,54 @@ export async function syncLoadProject(versionId: string): Promise<ProjectVersion
   const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`);
   if (!res.ok) throw new Error(`Server returned ${res.status}`);
   return ProjectVersionDetailSchema.parse(await res.json());
+}
+
+// ---------------------------------------------------------------------------
+// Working Copy — auto-save that is NOT a version (ADR-0017)
+// ---------------------------------------------------------------------------
+//
+// Opt-in per project and off by default. ADR-0007's guarantee is that a network
+// is never stored server-side unless the user opts into Sync; an auto-save that
+// uploaded silently would break that sentence rather than stretch it. These
+// three are called only for a project the user has switched on.
+
+/** PUT /api/projects/autosave — write this project's Working Copy, replacing
+ *  any previous one. Never creates a version. Throws with the server detail. */
+export async function syncPutWorkingCopy(
+  name: string,
+  data: ProjectBundle,
+): Promise<WorkingCopyDetail> {
+  const res = await authedFetch(`${API_BASE}/api/projects/autosave`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, data }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => res.statusText);
+    throw new Error(`Auto-save failed (${res.status}): ${detail}`);
+  }
+  return WorkingCopyDetailSchema.parse(await res.json());
+}
+
+/** GET /api/projects/autosave — the Working Copy for one project name, or null
+ *  when there is none (404 is the normal answer, not an error). */
+export async function syncGetWorkingCopy(name: string): Promise<WorkingCopyDetail | null> {
+  const res = await authedFetch(
+    `${API_BASE}/api/projects/autosave?name=${encodeURIComponent(name)}`,
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  return WorkingCopyDetailSchema.parse(await res.json());
+}
+
+/** DELETE /api/projects/autosave — drop the stored copy when the user opts a
+ *  project out. Opting out must REMOVE the network, not merely stop writing. */
+export async function syncDeleteWorkingCopy(name: string): Promise<void> {
+  const res = await authedFetch(
+    `${API_BASE}/api/projects/autosave?name=${encodeURIComponent(name)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok && res.status !== 404) throw new Error(`Server returned ${res.status}`);
 }
 
 // ---------------------------------------------------------------------------

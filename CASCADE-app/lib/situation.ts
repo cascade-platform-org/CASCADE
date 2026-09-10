@@ -18,6 +18,7 @@
  *   - after_propagation  = state after the Propagation (absent if none was run)
  */
 
+import { materialiseAround } from "@/lib/graph-diff";
 import type { AnyUpdateEntry } from "@/lib/schemas";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
@@ -119,13 +120,23 @@ export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | nu
  */
 export function situationSnapshots(
   situation: Situation,
+  history: readonly AnyUpdateEntry[],
+  live: GraphSnapshot,
 ): { before: GraphSnapshot; after?: GraphSnapshot } {
+  // History entries carry a Graph Diff, not whole Scenarios (ADR-0017), so a
+  // whole Scenario is rebuilt by walking the LIVE graph backwards — at most
+  // HISTORY_LIMIT steps, with no stored base to replay from. `indexOf` is by
+  // object identity: these entries came out of this same array.
+  const around = (entry: AnyUpdateEntry) =>
+    materialiseAround(live, history, history.indexOf(entry));
+
   if (situation.propEntry) {
-    return { before: situation.propEntry.before, after: situation.propEntry.after };
+    const { before, after } = around(situation.propEntry);
+    return { before, after };
   }
   // No Propagation yet — the state after the most recently applied Event (which
   // already includes every earlier stacked Event) is the scenario to save.
-  return { before: situation.eventEntries[0].after };
+  return { before: around(situation.eventEntries[0]).after };
 }
 
 /** EventDefinition ids for every Event in the Situation, newest-applied first. */

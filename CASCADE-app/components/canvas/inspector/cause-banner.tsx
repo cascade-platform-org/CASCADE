@@ -11,7 +11,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useHistoryStore } from "@/store/history-store";
-import type { Node, Edge } from "@/lib/schemas/network";
+import type { AnyUpdateEntry, Node, Edge } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
 // Helpers (internal to this module)
@@ -36,13 +36,24 @@ function resolveCauseLabel(
   return id;
 }
 
-type HistoryEntry = {
-  update_type: string;
-  event_id?: string;
-  mutation_reversal?: Record<string, unknown>;
-  before: { nodes: Record<string, { functionality?: number }>; edges: Record<string, { functionality?: number }> };
-  after: { nodes: Record<string, { functionality?: number }>; edges: Record<string, { functionality?: number }> };
-};
+/** True when this entry changed `functionality` on this Element. */
+function changedFunctionality(entry: AnyUpdateEntry, elementId: string): boolean {
+  // A Graph Diff already IS "what changed" (ADR-0017), so this consumer reads it
+  // directly instead of comparing two whole Scenarios field by field.
+  if (entry.diff) {
+    for (const group of [entry.diff.nodes, entry.diff.edges]) {
+      const record = group.find((r) => r.id === elementId);
+      if (record?.op === "update" && record.fields.some((f) => f.field === "functionality")) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Legacy entry (pre-ADR-0017): the snapshot pair is all there is.
+  const before = entry.before?.nodes[elementId] ?? entry.before?.edges[elementId];
+  const after = entry.after?.nodes[elementId] ?? entry.after?.edges[elementId];
+  return !!before && !!after && before.functionality !== after.functionality;
+}
 
 /**
  * Find the most recent history entry that changed this element's Functionality,
@@ -50,21 +61,14 @@ type HistoryEntry = {
  */
 function findDirectCause(
   elementId: string,
-  history: HistoryEntry[],
+  history: readonly AnyUpdateEntry[],
 ): { kind: "event"; eventId?: string } | { kind: "manual" } | null {
   for (const entry of history) {
-    if (
-      entry.update_type === "event_applied" &&
-      entry.mutation_reversal?.[`${elementId}.functionality`] !== undefined
-    ) {
+    if (entry.update_type === "event_applied" && changedFunctionality(entry, elementId)) {
       return { kind: "event", eventId: entry.event_id };
     }
-    if (entry.update_type === "manual_functionality_update") {
-      const before = entry.before.nodes[elementId] ?? entry.before.edges[elementId];
-      const after = entry.after.nodes[elementId] ?? entry.after.edges[elementId];
-      if (after && before && after.functionality !== before.functionality) {
-        return { kind: "manual" };
-      }
+    if (entry.update_type === "manual_functionality_update" && changedFunctionality(entry, elementId)) {
+      return { kind: "manual" };
     }
   }
   return null;
@@ -110,7 +114,7 @@ export function CauseBanner({
       </div>
     );
   } else {
-    const direct = findDirectCause(element.id, history as HistoryEntry[]);
+    const direct = findDirectCause(element.id, history);
     if (direct?.kind === "event") {
       const label = direct.eventId
         ? resolveCauseLabel(direct.eventId, allNodes, allEdges, events)

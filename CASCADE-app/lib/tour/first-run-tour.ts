@@ -2,7 +2,7 @@
  * first-run-tour.ts — step definitions for the guided tour.
  *
  * The copy walks the core loop the User Manual documents: read the network,
- * inspect an element's attributes, reset to a clean state, apply an Event,
+ * inspect an element's attributes, reset the scenario, apply an Event,
  * propagate, advance time.
  *
  * Steps that ask for an action carry a `waitFor` that is *armed when the step
@@ -141,9 +141,9 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "bottom",
     title: "Rewind it",
     body:
-      "The damage on screen is a saved result. Click Reset to put every element back to " +
-      "full functionality — then you can cause it yourself and watch it spread, rather " +
-      "than reading the outcome.",
+      "The damage on screen is a saved result — an earthquake someone already ran. Click " +
+      "Reset to put the network back to how it was before it, then cause the damage " +
+      "yourself and watch it spread, rather than reading the outcome.",
     waitHint: "Waiting for a Reset…",
     waitFor: awaitUpdate("scenario_reset"),
   },

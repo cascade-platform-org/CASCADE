@@ -30,10 +30,36 @@ import type { PropagationResult, EventDefinition } from "@/lib/schemas";
 import { assignElementUpdate } from "@/lib/element-update";
 import { pickHandles } from "@/lib/edge-routing";
 import { nanoid } from "nanoid";
-import { applyEventToSnapshot, reverseMutations } from "@/lib/event-application";
+import { applyEventToSnapshot } from "@/lib/event-application";
+import { applyGraphDiff } from "@/lib/graph-diff";
+import { clearEventReversal } from "@/lib/scenario-baseline";
+import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useNetworkStore } from "@/store/network-store";
+import { useUiStore } from "@/store/ui-store";
+
+/**
+ * Run a mutation and record it, using this store's own snapshots.
+ *
+ * The same `runWithSnapshots` every component reaches through
+ * `lib/run-with-history.ts`, bound to `get()` rather than to the store module —
+ * importing that wrapper from here would be a cycle. One implementation, two
+ * bindings, so an entry is built one way for the whole app.
+ */
+function withHistory<T>(
+  get: () => CanvasStore,
+  updateFn: () => T,
+  label: string,
+  opts: HistoryEntryOptions = {},
+): T {
+  return runWithSnapshots(
+    { snapshot: () => get().toGraphSnapshot(), activeCanvasId: () => get().activeCanvasId },
+    updateFn,
+    label,
+    opts,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -112,12 +138,13 @@ export interface CanvasActions {
    * Apply an EventDefinition to the graph:
    *   1. Captures pre-event values of all fields the event will touch.
    *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_mutations.
-   *   3. Pushes an event_applied history entry (via history-store) with mutation_reversal populated.
+   *   3. Pushes an event_applied history entry carrying a Graph Diff of what it changed.
    */
   applyEvent: (event: EventDefinition, n: number) => void;
   /**
-   * Revert the most recent event_applied entry using mutation_reversal (field-by-field).
-   * Falls back to full snapshot restore for legacy entries that predate mutation_reversal.
+   * Revert the most recent event_applied entry AND everything the Propagation
+   * wrote, via the Scenario Baseline (ADR-0016). Falls back, for entries written
+   * by older builds, to their `mutation_reversal` and then to a full rewind.
    * Returns false when no event_applied entry exists.
    */
   clearEvent: () => boolean;
@@ -416,17 +443,23 @@ export const useCanvasStore = create<CanvasStore>()(
     // Undo / Redo — coordinate registry with history-store
     // -------------------------------------------------------------------------
 
+    // A Graph Diff is applied against the LIVE graph rather than replacing it
+    // with a stored snapshot (ADR-0017): the newest entry's `after` IS the
+    // current state, so there is no chain to replay and no checkpoint to keep.
+    // Legacy entries (pre-ADR-0017) still carry snapshots and take the old path.
     undo() {
       const entry = useHistoryStore.getState().shiftToRedo();
       if (!entry) return false;
-      get().restoreSnapshot(entry.before);
+      if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "backward"));
+      else if (entry.before) get().restoreSnapshot(entry.before);
       return true;
     },
 
     redo() {
       const entry = useHistoryStore.getState().shiftFromRedo();
       if (!entry) return false;
-      get().restoreSnapshot(entry.after);
+      if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "forward"));
+      else if (entry.after) get().restoreSnapshot(entry.after);
       return true;
     },
 
@@ -435,53 +468,68 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     applyEvent(event: EventDefinition, n: number) {
-      const before = get().toGraphSnapshot();
-      const { snapshot, reversal } = applyEventToSnapshot(before, event, n);
-
-      set((draft) => {
-        draft.nodes = snapshot.nodes;
-        draft.edges = snapshot.edges;
-      });
-
-      useHistoryStore.getState().pushUpdateEntry({
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        update_type: "event_applied",
-        label: `Apply event: ${event.label}`,
-        event_id: event.id,
-        before,
-        after: snapshot,
-        mutation_reversal: reversal,
-      });
+      // `mutation_reversal` is no longer written. It was the Event's own
+      // inverse; the entry's Graph Diff records the same thing in the same shape
+      // for EVERY update type, and the Scenario Baseline reads it (ADR-0016).
+      // It is still READ off entries older builds wrote — see clearEvent.
+      const { snapshot } = applyEventToSnapshot(get().toGraphSnapshot(), event, n);
+      withHistory(
+        get,
+        () => set((draft) => {
+          draft.nodes = snapshot.nodes;
+          draft.edges = snapshot.edges;
+        }),
+        `Apply event: ${event.label}`,
+        { updateType: "event_applied", eventId: event.id, canvasId: null },
+      );
     },
 
     clearEvent() {
       const historyState = useHistoryStore.getState();
       const entry = historyState.updateHistory.find((h) => h.update_type === "event_applied");
       if (!entry) return false;
+      const eventId = entry.event_id;
 
-      // Branch on whether a Mutation Reversal was RECORDED, not on whether it is
-      // non-empty. An Event that changed nothing (nothing vulnerable to it, a
-      // Temporal Jump with nothing on backup) legitimately records `{}`, and
-      // reversing `{}` is correctly a no-op. Treating empty as "no record" sent
-      // those Events down the snapshot path below, which rewinds the WHOLE graph
-      // to the moment before the Event — discarding every Propagation, manual
-      // edit and later Event since. Clearing an Event that did nothing would
-      // silently throw away the user's subsequent work.
-      if (entry.mutation_reversal) {
-        const reverted = reverseMutations(get().toGraphSnapshot(), entry.mutation_reversal);
-        set((draft) => {
-          draft.nodes = reverted.nodes;
-          draft.edges = reverted.edges;
-        });
-      } else {
-        // Legacy entries, written before mutation_reversal existed, carry only
-        // snapshots — a full rewind is the only reversal available for them.
-        get().restoreSnapshot(entry.before);
+      // Clearing an Event reverts that Event's writes AND everything the
+      // Propagation wrote (ADR-0016): a cascade computed from an input that no
+      // longer exists is stale, and showing it is worse than showing nothing.
+      // The graph lands at "the remaining Events, un-propagated" — no
+      // Propagation is re-run, because that spends an engine evaluation against
+      // the user's Entitlement and only they can decide to.
+      //
+      // Which of the three reversal tiers applies is `clearEventReversal`'s
+      // decision, not this store's — see lib/scenario-baseline.ts.
+      const revert = clearEventReversal(entry, historyState.scenarioBaseline());
+      if (revert) {
+        withHistory(
+          get,
+          () => {
+            const reverted = revert(get().toGraphSnapshot());
+            set((draft) => {
+              draft.nodes = reverted.nodes;
+              draft.edges = reverted.edges;
+            });
+          },
+          `Clear event: ${entry.label.replace(/^Apply event: /, "")}`,
+          { updateType: "event_cleared", canvasId: null, ...(eventId ? { eventId } : {}) },
+        );
       }
 
+      // The Event itself leaves history: it is no longer part of the scenario,
+      // so the Situation and the Baseline must both stop counting it. The
+      // `event_cleared` entry pushed above is what makes CTRL+Z bring it back.
       historyState.removeUpdateEntry(entry.id);
-      historyState.clearRedoStack();
+
+      // A Temporal Jump IS an Event (`temporalJumpEvent` goes through
+      // applyEvent), so Ctrl+R can pick one. The −Xh control tracks elapsed
+      // hours separately, and left alone it would go on offering to rewind to a
+      // snapshot taken before a jump that is no longer in the scenario.
+      // The hours are read back out of the label `temporalJumpEvent` builds —
+      // change one and the other stops matching, with nothing failing.
+      if (eventId?.startsWith("tj-")) {
+        const hours = Number(/\(\+(\d+)h\)/.exec(entry.label)?.[1] ?? 0);
+        useUiStore.getState().dropTemporalElapsedHours(hours);
+      }
       return true;
     },
 
@@ -496,24 +544,20 @@ export const useCanvasStore = create<CanvasStore>()(
       const internalEdgeIds = Object.values(state.edges)
         .filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
         .map((e) => e.id);
-      const before = state.toGraphSnapshot();
-      set((draft) => {
-        const target = draft.canvases[targetCanvasId];
-        for (const id of nodeIds) {
-          if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
-        }
-        for (const id of internalEdgeIds) {
-          if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
-        }
-      });
-      useHistoryStore.getState().pushUpdateEntry({
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: `Copy ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
-        before,
-        after: get().toGraphSnapshot(),
-      });
+      withHistory(
+        get,
+        () => set((draft) => {
+          const target = draft.canvases[targetCanvasId];
+          for (const id of nodeIds) {
+            if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
+          }
+          for (const id of internalEdgeIds) {
+            if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
+          }
+        }),
+        `Copy ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
+        { updateType: "graph_update", canvasId: null },
+      );
     },
 
     moveNodesToCanvas(nodeIds, sourceCanvasId, targetCanvasId) {
@@ -524,27 +568,23 @@ export const useCanvasStore = create<CanvasStore>()(
         .filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
         .map((e) => e.id);
       const internalEdgeSet = new Set(internalEdgeIds);
-      const before = state.toGraphSnapshot();
-      set((draft) => {
-        const source = draft.canvases[sourceCanvasId];
-        const target = draft.canvases[targetCanvasId];
-        source.graph.node_ids = source.graph.node_ids.filter((id) => !nodeSet.has(id));
-        source.graph.edge_ids = source.graph.edge_ids.filter((id) => !internalEdgeSet.has(id));
-        for (const id of nodeIds) {
-          if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
-        }
-        for (const id of internalEdgeIds) {
-          if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
-        }
-      });
-      useHistoryStore.getState().pushUpdateEntry({
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: `Move ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
-        before,
-        after: get().toGraphSnapshot(),
-      });
+      withHistory(
+        get,
+        () => set((draft) => {
+          const source = draft.canvases[sourceCanvasId];
+          const target = draft.canvases[targetCanvasId];
+          source.graph.node_ids = source.graph.node_ids.filter((id) => !nodeSet.has(id));
+          source.graph.edge_ids = source.graph.edge_ids.filter((id) => !internalEdgeSet.has(id));
+          for (const id of nodeIds) {
+            if (!target.graph.node_ids.includes(id)) target.graph.node_ids.push(id);
+          }
+          for (const id of internalEdgeIds) {
+            if (!target.graph.edge_ids.includes(id)) target.graph.edge_ids.push(id);
+          }
+        }),
+        `Move ${nodeIds.length} node${nodeIds.length !== 1 ? "s" : ""} to canvas "${state.canvases[targetCanvasId]?.label ?? targetCanvasId}"`,
+        { updateType: "graph_update", canvasId: null },
+      );
     },
 
     addInterCanvasEdge({ sourceNodeId, sourceCanvasId, targetNodeId, targetCanvasId, functionality }) {
@@ -573,19 +613,16 @@ export const useCanvasStore = create<CanvasStore>()(
         targetHandle,
         functionality,
       };
-      const before = state.toGraphSnapshot();
-      state.upsertEdge(edge);
-      state.addEdgeToCanvas(edge.id, sourceCanvasId);
-      state.addEdgeToCanvas(edge.id, targetCanvasId);
-      useHistoryStore.getState().pushUpdateEntry({
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: "Add inter-canvas edge",
-        canvas_id: sourceCanvasId,
-        before,
-        after: get().toGraphSnapshot(),
-      });
+      withHistory(
+        get,
+        () => {
+          state.upsertEdge(edge);
+          state.addEdgeToCanvas(edge.id, sourceCanvasId);
+          state.addEdgeToCanvas(edge.id, targetCanvasId);
+        },
+        "Add inter-canvas edge",
+        { updateType: "graph_update", canvasId: sourceCanvasId },
+      );
     },
 
     // -------------------------------------------------------------------------
@@ -691,43 +728,37 @@ export const useCanvasStore = create<CanvasStore>()(
         ? `imp-${nanoid(6)}-${incomingCanvas.id}`
         : incomingCanvas.id;
 
-      const before = state.toGraphSnapshot();
-
-      set((draft) => {
-        for (const [oldId, node] of Object.entries(project.nodes)) {
-          const newId = remapNode(oldId);
-          draft.nodes[newId] = { ...node, id: newId };
-        }
-        for (const [oldId, edge] of Object.entries(project.edges)) {
-          const newId = remapEdge(oldId);
-          draft.edges[newId] = {
-            ...edge,
-            id: newId,
-            source: remapNode(edge.source),
-            target: remapNode(edge.target),
+      withHistory(
+        get,
+        () => set((draft) => {
+          for (const [oldId, node] of Object.entries(project.nodes)) {
+            const newId = remapNode(oldId);
+            draft.nodes[newId] = { ...node, id: newId };
+          }
+          for (const [oldId, edge] of Object.entries(project.edges)) {
+            const newId = remapEdge(oldId);
+            draft.edges[newId] = {
+              ...edge,
+              id: newId,
+              source: remapNode(edge.source),
+              target: remapNode(edge.target),
+            };
+          }
+          draft.canvases[canvasId] = {
+            ...incomingCanvas,
+            id: canvasId,
+            graph: {
+              ...incomingCanvas.graph,
+              node_ids: incomingCanvas.graph.node_ids.map(remapNode),
+              edge_ids: incomingCanvas.graph.edge_ids.map(remapEdge),
+            },
           };
-        }
-        draft.canvases[canvasId] = {
-          ...incomingCanvas,
-          id: canvasId,
-          graph: {
-            ...incomingCanvas.graph,
-            node_ids: incomingCanvas.graph.node_ids.map(remapNode),
-            edge_ids: incomingCanvas.graph.edge_ids.map(remapEdge),
-          },
-        };
-        draft.canvasOrder.push(canvasId);
-        if (draft.activeCanvasId === null) draft.activeCanvasId = canvasId;
-      });
-
-      useHistoryStore.getState().pushUpdateEntry({
-        id: nanoid(),
-        timestamp: new Date().toISOString(),
-        update_type: "graph_update",
-        label: `Import "${incomingCanvas.label ?? canvasId}" as a new canvas`,
-        before,
-        after: get().toGraphSnapshot(),
-      });
+          draft.canvasOrder.push(canvasId);
+          if (draft.activeCanvasId === null) draft.activeCanvasId = canvasId;
+        }),
+        `Import "${incomingCanvas.label ?? canvasId}" as a new canvas`,
+        { updateType: "graph_update", canvasId: null },
+      );
 
       return { nodeIdMap, edgeIdMap, canvasId };
     },

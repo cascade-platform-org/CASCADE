@@ -62,6 +62,22 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 
+-- Auto-saved Working Copy — one row per (owner, name), UPSERTed (ADR-0017).
+-- NOT a version: explicit saves above stay new-row-only (requirements §13.4),
+-- so auto-saving cannot churn or evict the user's own saved versions.
+CREATE TABLE IF NOT EXISTS project_working_copies (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id    UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(255) NOT NULL,
+    data        JSONB        NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT project_working_copies_owner_name_key UNIQUE (owner_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_working_copies_owner_id
+    ON project_working_copies(owner_id);
+
 -- ---------------------------------------------------------------------------
 -- Server-side audit log
 --

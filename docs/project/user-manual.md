@@ -191,7 +191,9 @@ Per node, per round: **propose → guard → commit.**
    by hand, *Auto-advance* jumps to the next expiry and re-propagates until
    nothing is left holding.
 
-**Reset** returns every element to `N` and ends the current Situation.
+**Reset** ends the current scenario and hands back a working network. Every element goes to full functionality with no countdown and no damage, whatever put it there — so Reset always repairs the graph, even if something else has gone wrong. On top of that it undoes anything Events and Propagations changed beyond functionality, such as an attribute a rule wrote. Changes to the *model* stay: a renamed element, a moved node, a corrected capacity is your work, not the scenario's. It also ends any temporal-jump run, and clears the Analysis Heatmap, whose colours describe a scenario that no longer exists.
+
+One consequence worth knowing: an element you deliberately authored below full functionality as its *normal* state is raised to full by Reset too. Reset guarantees a working network rather than reconstructing a past one.
 
 ## 4. Testing an intervention
 
@@ -250,7 +252,7 @@ text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.
 
 | Key | Does |
 |---|---|
-| `Ctrl+R` | Clear the most recently applied Event, putting back exactly the fields it changed. A Propagation you ran after it stays — this undoes the Event, not the cascade. Note this takes over the browser's reload shortcut while the canvas has focus; use `F5` to reload. |
+| `Ctrl+R` | Clear the most recently applied Event. This removes the cascade with it — a Propagation computed from an Event that is no longer there describes nothing, so it is cleared rather than left on screen. Other Events stay applied but un-propagated; re-run Propagation when you want the new cascade. Your own edits are untouched, and `Ctrl+Z` brings the Event and its cascade back. Note this takes over the browser's reload shortcut while the canvas has focus; use `F5` to reload. |
 
 ### Tools
 

@@ -45,24 +45,25 @@ function loadHistory(): HistoryEntry[] {
 }
 
 function pushToHistory(entry: HistoryEntry): void {
-  // Strip update_history before storing: the undo stack holds full graph
-  // snapshots for every edit and is the primary cause of QuotaExceededError.
-  // The download already captured the full data; the history entry only needs
-  // to restore the graph state, not the undo stack.
-  const slim: HistoryEntry = {
-    ...entry,
-    bundle: {
-      ...entry.bundle,
-      project: { ...entry.bundle.project, update_history: [] },
-    },
-  };
   const history = loadHistory();
-  history.unshift(slim);
+  history.unshift(entry);
   if (history.length > MAX_HISTORY) history.splice(MAX_HISTORY);
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch (err) {
-    console.warn("[CASCADE] Could not write version history to localStorage:", err);
+  } catch {
+    // The version ring is the largest thing this app puts in localStorage —
+    // ten bundles. Dropping `update_history` from every stored version is the
+    // fallback rather than the default (ADR-0017): with Graph Diffs the history
+    // is a few tens of KB, so it normally fits and undo survives a restore.
+    const slim = history.map((h) => ({
+      ...h,
+      bundle: { ...h.bundle, project: { ...h.bundle.project, update_history: [] } },
+    }));
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(slim));
+    } catch (err) {
+      console.warn("[CASCADE] Could not write version history to localStorage:", err);
+    }
   }
 }
 
@@ -234,14 +235,33 @@ export async function saveConfig(config: ModelConfiguration): Promise<void> {
 
 const AUTOSAVE_KEY = "cascade:project:autosave";
 
-/** Returns true on success, false when localStorage is full or unavailable. */
-export function autosave(bundle: ProjectBundle): boolean {
+/**
+ * Write the safety-net copy. Returns the serialised length on success, 0 when
+ * localStorage is full or unavailable.
+ *
+ * `update_history` is INCLUDED (ADR-0017). It used to be stripped from every
+ * localStorage write because a history of whole snapshots exhausted the quota,
+ * with the user-visible result that undo was empty after a crash — a workaround
+ * for a size problem, not a design decision. Graph Diffs made the history small
+ * enough to keep, so the stripped write is now only the fallback below.
+ */
+export function autosave(bundle: ProjectBundle): number {
+  const full = JSON.stringify(bundle);
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(bundle));
-    return true;
-  } catch (err) {
-    console.warn("[CASCADE] Autosave failed (localStorage quota exceeded or unavailable):", err);
-    return false;
+    localStorage.setItem(AUTOSAVE_KEY, full);
+    return full.length;
+  } catch {
+    try {
+      const slim = JSON.stringify({
+        ...bundle,
+        project: { ...bundle.project, update_history: [] },
+      });
+      localStorage.setItem(AUTOSAVE_KEY, slim);
+      return slim.length;
+    } catch (err) {
+      console.warn("[CASCADE] Autosave failed (localStorage quota exceeded or unavailable):", err);
+      return 0;
+    }
   }
 }
 

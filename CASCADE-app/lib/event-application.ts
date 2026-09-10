@@ -31,6 +31,7 @@
 
 import { nanoid } from "nanoid";
 
+import { DIFF_ABSENT } from "@/lib/schemas/network";
 import type { Node, Edge, GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 
@@ -40,8 +41,12 @@ import type { EventDefinition } from "@/lib/schemas/config";
  * deletes the key when it sees this marker rather than writing back a literal
  * `null`, which would violate the optional-but-not-nullable Zod/Pydantic field
  * schemas and desync the Scorecard dedup hash from the true prior state.
+ *
+ * Re-exported from the schema module rather than declared again: a Graph Diff
+ * and a Scenario Baseline use the same sentinel, and three hand-kept copies of
+ * one string literal is exactly the invariant that breaks silently.
  */
-export const ABSENT = "__CASCADE_ABSENT__";
+export const ABSENT = DIFF_ABSENT;
 
 /**
  * The inverse of one Event application: every field it overwrote, keyed
@@ -141,6 +146,10 @@ class ElementWriter {
 export function temporalJumpEvent(hours: number): EventDefinition {
   return {
     id: `tj-${nanoid(6)}`,
+    // The `tj-` prefix and the `(+Nh)` in this label are both READ BACK by
+    // `canvas-store.clearEvent`, which has only the history entry to work from
+    // — the synthetic EventDefinition is never persisted. Change either and
+    // clearing a Temporal Jump silently stops returning its elapsed hours.
     label: `Temporal Jump (+${hours}h)`,
     type: "temporal_jump",
     frequency_per_10y: 0,

@@ -248,6 +248,13 @@ export interface UiActions {
   saveTemporalRevertSnapshot: (snapshot: GraphSnapshot, fromEntryId: string | null) => void;
   /** Adds hours to the elapsed counter after each jump. */
   addTemporalElapsedHours: (hours: number) => void;
+  /**
+   * Give back hours from a Temporal Jump that has left the scenario — Ctrl+R can
+   * clear a jump, because a jump IS an Event (ADR-0016). Reaching zero drops the
+   * revert snapshot too: it was taken before jumps that no longer exist, so the
+   * −Xh button would otherwise offer to rewind into a dead scenario.
+   */
+  dropTemporalElapsedHours: (hours: number) => void;
   /** Clears both the revert snapshot and elapsed counter (after revert or manual reset). */
   clearTemporalJumpProgress: () => void;
 
@@ -588,6 +595,16 @@ export const useUiStore = create<UiStore>()(
 
     addTemporalElapsedHours(hours) {
       set((state) => { state.temporalJumpElapsedHours += hours; });
+    },
+
+    dropTemporalElapsedHours(hours) {
+      set((state) => {
+        state.temporalJumpElapsedHours = Math.max(0, state.temporalJumpElapsedHours - hours);
+        if (state.temporalJumpElapsedHours === 0) {
+          state.temporalJumpRevertSnapshot = null;
+          state.temporalJumpRevertFromEntryId = null;
+        }
+      });
     },
 
     clearTemporalJumpProgress() {

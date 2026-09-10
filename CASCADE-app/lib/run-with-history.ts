@@ -1,67 +1,35 @@
 /**
- * runWithHistory — the single seam for undoable mutations (Any Graph Update).
+ * runWithHistory — the component-facing seam for undoable mutations.
  *
- * Wraps a mutation in a before/after GraphSnapshot pair and pushes exactly one
- * AnyUpdateEntry to the history store. Every user-triggered change that must be
- * undoable (CTRL+Z) goes through here — components must not hand-roll the
- * snapshot → mutate → push sequence, so the "every mutation gets a history
- * entry" invariant lives in one place.
+ * A binding of `runWithSnapshots` (`lib/history-entry.ts`) to the canvas store.
+ * Every change that must be undoable goes through it: components must not
+ * hand-roll the snapshot → mutate → push sequence, so "every mutation gets a
+ * history entry that correctly describes it" is a property of one function
+ * rather than a habit at eight call sites.
  *
  * A plain function (not a hook) so store actions, event handlers, and non-React
  * code can use it. `useHistoryAction` wraps it for hook-style call sites.
  *
- * Store-internal pushes (canvas-store's applyEvent, copy/moveNodesToCanvas) are
- * the exception: they enrich entries with fields only the mutation itself can
- * compute (e.g. `mutation_reversal`) and keep that logic local to the store.
+ * canvas-store binds `runWithSnapshots` to its own `get()` instead of importing
+ * this module, which would be a cycle — same one implementation underneath.
  */
-import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
-import type { AnyUpdateEntry } from "@/lib/schemas/network";
+import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry";
 
-export interface RunWithHistoryOptions {
-  /** Defaults to "manual_functionality_update" (matches useHistoryAction). */
-  updateType?: AnyUpdateEntry["update_type"];
-  /**
-   * Canvas the change belongs to. Defaults to the active Canvas;
-   * pass `null` to omit (a change spanning canvases, e.g. in the merged view).
-   */
-  canvasId?: string | null;
-  /** Propagation scope, recorded on scoped entries (e.g. temporal-jump revert). */
-  scope?: "local" | "global";
-  /** EventId for event_applied / event_cleared entries. */
-  eventId?: string;
-  /**
-   * Only for temporal_jump_revert entries: the history entry the graph has been
-   * rewound to. See AnyUpdateEntrySchema.reverts_to_entry_id.
-   */
-  revertsToEntryId?: string | null;
-}
+export type RunWithHistoryOptions = HistoryEntryOptions;
 
 export function runWithHistory<T>(
   updateFn: () => T,
   label: string,
   opts: RunWithHistoryOptions = {},
 ): T {
-  const store = useCanvasStore.getState();
-  const before = store.toGraphSnapshot();
-  const result = updateFn();
-  // Re-read via getState() so `after` reflects the committed state, not the
-  // state captured before updateFn ran.
-  const after = useCanvasStore.getState().toGraphSnapshot();
-  const canvas_id =
-    opts.canvasId === null ? undefined : opts.canvasId ?? store.activeCanvasId ?? undefined;
-  useHistoryStore.getState().pushUpdateEntry({
-    id: nanoid(),
-    timestamp: new Date().toISOString(),
-    update_type: opts.updateType ?? "manual_functionality_update",
+  return runWithSnapshots(
+    {
+      snapshot: () => useCanvasStore.getState().toGraphSnapshot(),
+      activeCanvasId: () => useCanvasStore.getState().activeCanvasId,
+    },
+    updateFn,
     label,
-    canvas_id,
-    ...(opts.scope ? { scope: opts.scope } : {}),
-    ...(opts.eventId ? { event_id: opts.eventId } : {}),
-    ...(opts.revertsToEntryId ? { reverts_to_entry_id: opts.revertsToEntryId } : {}),
-    before,
-    after,
-  });
-  return result;
+    opts,
+  );
 }
