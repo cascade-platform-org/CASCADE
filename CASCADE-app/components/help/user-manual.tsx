@@ -20,8 +20,9 @@ const SECTIONS = [
   { id: "rules", n: 2, title: "Rules" },
   { id: "scenario", n: 3, title: "Running a scenario" },
   { id: "intervention", n: 4, title: "Testing an intervention" },
-  { id: "server", n: 5, title: "Server and roles" },
-  { id: "shortcuts", n: 6, title: "Keyboard shortcuts" },
+  { id: "analysis", n: 5, title: "Analysis results" },
+  { id: "server", n: 6, title: "Server and roles" },
+  { id: "shortcuts", n: 7, title: "Keyboard shortcuts" },
 ] as const;
 
 function Code({ children }: { children: ReactNode }) {
@@ -633,7 +634,33 @@ then Fauglis water Source is operational`}</Block>
         </Table>
       </Section>
 
-      <Section id="server" n={5} title="Server and roles">
+      <Section id="analysis" n={5} title="Analysis results">
+        <p>
+          The Analysis page scores every element. <strong>Topological</strong>{" "}
+          metrics (betweenness, reachability, communities, &hellip;) run in the
+          browser. <strong>Model-based</strong> metrics (Vitality, Shapley)
+          re-run the propagation engine once per element or coalition, so they
+          need the server and can take a while &mdash; the panel shows the call
+          count before you start, and Cancel keeps whatever it has.
+        </p>
+        <p>
+          <strong>Apply heatmap &amp; minimize</strong> paints the scores onto the
+          elements and closes the Analysis page so you can see them. The canvas
+          legend swaps its Functionality scale for the metric&rsquo;s own key,
+          because the colours no longer mean Functionality. The overlay stays
+          until you press the X in the Analysis page.
+        </p>
+        <p>
+          After a Shapley run,{" "}
+          <strong>Export Shapley values (JSON)</strong> saves the result: one
+          &phi;&#770; per element, plus the seed the run used. Keeping the seed
+          means the same estimate can be replayed later, and the file is what the
+          paper&rsquo;s centrality comparison reads, so a published number is
+          always a number the app produced.
+        </p>
+      </Section>
+
+      <Section id="server" n={6} title="Server and roles">
         <p>
           <strong>Propagate</strong> and the model-based analyses (Shapley,
           Vitality) need the server and <Code>can_propagate</Code> —{" "}
@@ -644,7 +671,7 @@ then Fauglis water Source is operational`}</Block>
         </p>
       </Section>
 
-      <Section id="shortcuts" n={6} title="Keyboard shortcuts">
+      <Section id="shortcuts" n={7} title="Keyboard shortcuts">
         <p>
           Every shortcut the editor listens for. They are ignored while you are
           typing in a text field, so they never fight the Inspector.{" "}

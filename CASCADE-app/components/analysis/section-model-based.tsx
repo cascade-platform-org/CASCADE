@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { RefreshCw, Zap, X } from "lucide-react";
+import { RefreshCw, Zap, X, Download } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -14,38 +14,137 @@ import { buildScopedGraph } from "@/lib/analysis-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
 import { buildOiWeightOptions } from "@/lib/oi-weight-attrs";
+import {
+  buildShapleyExport,
+  downloadShapleyExport,
+  type ShapleyExport,
+} from "@/lib/analysis-export";
+import {
+  computeVitality,
+  estimateShapley,
+  maxUniqueCoalitions,
+  maxUsefulSamples,
+  type ElementRef,
+  type WorstCoalition,
+} from "@/lib/model-based-analysis";
 import type { ElementScore } from "@/lib/topological-analysis";
+import type { GraphSnapshot } from "@/lib/schemas/network";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Adapters between the estimators and the app
+//
+// These sit at module scope, not in the component: none of them touches React
+// state, and keeping them out means the estimators' seam is exercised by plain
+// functions rather than by anything that needs a render to run.
 // ---------------------------------------------------------------------------
 
-/** Upper bound on unique engine calls with caching: 1 (baseline) + Σ C(N,j) for j=1..kMax. */
-function maxUniqueCoalitions(n: number, kMax: number): number {
-  let total = 1;
-  let binom = 1;
-  for (let k = 1; k <= Math.min(kMax, n); k++) {
-    binom = binom * (n - k + 1) / k;
-    total += Math.round(binom);
-    if (total > 1e9) return Math.round(total);
-  }
-  return total;
+/** The two model-based Analysis Metrics, named once for the selector and the legend. */
+const MODEL_METRICS = [
+  {
+    id: "vitality" as const,
+    label: "Vitality Centrality",
+    description:
+      "Drop in Operativity Score when each element is removed. Requires one engine call per element.",
+  },
+  {
+    id: "shapley" as const,
+    label: "Shapley Values",
+    description:
+      "Fair attribution of network value. Monte Carlo approximation — many engine calls.",
+  },
+];
+
+/** Adapter: score a Scenario with `failed` Elements driven to Functionality 1. */
+function makeCoalitionEvaluator(baseline: GraphSnapshot, weightAttr: string, n: number) {
+  return async (failed: ReadonlySet<string>): Promise<number> => {
+    const nodes = { ...baseline.nodes };
+    const edges = { ...baseline.edges };
+    for (const id of failed) {
+      if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
+      else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
+    }
+    const after = await runEphemeralPropagation({ ...baseline, nodes, edges });
+    return computeOperativityScore(after, n, weightAttr) / 100;
+  };
 }
 
-/**
- * C(N, min(⌊N/2⌋, k)) — the number of unordered subsets at the hardest size to saturate.
- * C(N,j) is maximised at j=⌊N/2⌋; for k ≤ N/2 the bottleneck is C(N,k).
- * Beyond this many samples, every new draw is very likely a full cache hit.
- */
-function maxUsefulSamples(n: number, kMax: number): number {
-  const k = Math.min(Math.floor(n / 2), kMax);
-  let binom = 1;
-  for (let i = 0; i < k; i++) {
-    binom = binom * (n - i) / (i + 1);
-    if (binom > 1e9) return Math.round(binom);
+
+/** Turn a score map into the AnalysisResult shape the shared UI renders. */
+function toAnalysisResult(
+  metric: string,
+  values: Record<string, number>,
+  nodes: Record<string, unknown>,
+) {
+  const entries = Object.entries(values).sort(([, a], [, b]) => b - a);
+  const scores = entries.map(([, v]) => v);
+  const ranked: ElementScore[] = entries.map(([id, score], i) => ({
+    id,
+    kind: id in nodes ? ("node" as const) : ("edge" as const),
+    score,
+    rank: i + 1,
+  }));
+  return {
+    metric,
+    scores: values,
+    ranked,
+    min: Math.min(...scores),
+    max: Math.max(...scores),
+    avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+  };
+}
+
+
+async function saveWorstCoalitions(
+  worstCoalitions: Record<number, WorstCoalition>,
+  baseline: GraphSnapshot,
+) {
+  const labels: Record<number, string> = {
+    1: "Neuralgic single",
+    2: "Neuralgic pair",
+    3: "Neuralgic triplet",
+  };
+
+  for (const size of [1, 2, 3]) {
+    const worst = worstCoalitions[size];
+    if (!worst) continue;
+
+    const elementNames = worst.ids.map((id) => {
+      const nd = baseline.nodes[id];
+      if (nd) return nd.label ?? id;
+      const ed = baseline.edges[id];
+      if (ed) {
+        const src = baseline.nodes[ed.source]?.label ?? ed.source;
+        const tgt = baseline.nodes[ed.target]?.label ?? ed.target;
+        return `${src}→${tgt}`;
+      }
+      return id;
+    });
+
+    const snapNodes = { ...baseline.nodes };
+    const snapEdges = { ...baseline.edges };
+    for (const fid of worst.ids) {
+      if (fid in snapNodes) snapNodes[fid] = { ...snapNodes[fid], functionality: 1 };
+      else if (fid in snapEdges) snapEdges[fid] = { ...snapEdges[fid], functionality: 1 };
+    }
+    const beforeSnap = { ...baseline, nodes: snapNodes, edges: snapEdges };
+    let afterSnap: GraphSnapshot | undefined;
+    try {
+      afterSnap = await runEphemeralPropagation(beforeSnap);
+    } catch {
+      /* the entry is still worth saving without its propagated half */
+    }
+
+    useScorecardStore.getState().addScorecardEntry({
+      type: "propagation",
+      id: nanoid(),
+      label: `${labels[size]}: ${elementNames.join(", ")}`,
+      created_at: new Date().toISOString(),
+      event_ids: [],
+      before_propagation: beforeSnap,
+      after_propagation: afterSnap,
+    });
   }
-  return Math.round(binom);
 }
 
 
@@ -122,10 +221,14 @@ export function SectionModelBased() {
   const setOiWeightAttr = useAnalysisStore((s) => s.setOiWeightAttr);
   const scope = useAnalysisStore((s) => s.scope);
   const serverReachable = useUiStore((s) => s.serverReachable);
+  const pushToast = useUiStore((s) => s.pushToast);
   const n = useConfigStore(selectN);
 
   const cancelRef = useRef(false);
   const [wallSecs, setWallSecs] = useState<number | null>(null);
+  // Held only for the Export button. Component-local because nothing else reads
+  // it, and it must not outlive the run it describes.
+  const [exportDoc, setExportDoc] = useState<ShapleyExport | null>(null);
 
   const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
 
@@ -140,62 +243,42 @@ export function SectionModelBased() {
     const weightAttr = useAnalysisStore.getState().oiWeightAttr;
     const baselineScore = computeOperativityScore(baseline, n, weightAttr) / 100;
 
-    const allIds = [
+    const elements: ElementRef[] = [
       ...Object.keys(nodes).map((id) => ({ id, kind: "node" as const })),
       ...Object.keys(edges).map((id) => ({ id, kind: "edge" as const })),
     ];
 
     const loopStart = Date.now();
-    setProgress({ total: allIds.length, completed: 0, firstCallMs: null, avgCallMs: null, startedAt: loopStart });
+    setProgress({ total: elements.length, completed: 0, firstCallMs: null, avgCallMs: null, startedAt: loopStart });
     cancelRef.current = false;
 
-    const scores: Record<string, number> = {};
-    const ranked: ElementScore[] = [];
-    let min = Infinity, max = -Infinity, sum = 0;
-
-    for (const { id, kind } of allIds) {
-      if (cancelRef.current) break;
-
-      const callStart = Date.now();
-      try {
-        // Build snapshot with this element removed
+    const { values } = await computeVitality(
+      elements,
+      baselineScore,
+      async ({ id, kind }) => {
         const snap = { ...baseline };
         if (kind === "node") {
-          const { [id]: _, ...rest } = snap.nodes;
+          const { [id]: _removed, ...rest } = snap.nodes;
           snap.nodes = rest;
         } else {
-          const { [id]: _, ...rest } = snap.edges;
+          const { [id]: _removed, ...rest } = snap.edges;
           snap.edges = rest;
         }
-        const afterSnap = await runEphemeralPropagation(snap);
-        const afterScore = computeOperativityScore(afterSnap, n, weightAttr) / 100;
-        const vitality = baselineScore - afterScore;
-        scores[id] = vitality;
-        min = Math.min(min, vitality);
-        max = Math.max(max, vitality);
-        sum += vitality;
-      } catch {
-        scores[id] = 0;
-      }
+        const after = await runEphemeralPropagation(snap);
+        return computeOperativityScore(after, n, weightAttr) / 100;
+      },
+      {
+        isCancelled: () => cancelRef.current,
+        onEvaluation: (ms) => {
+          recordCall(ms);
+          const elapsed = (Date.now() - loopStart) / 1000;
+          if (elapsed > 10) setWallSecs(elapsed);
+        },
+      },
+    );
 
-      const callMs = Date.now() - callStart;
-      recordCall(callMs);
-
-      // Show live progress after 10s
-      const elapsed = (Date.now() - loopStart) / 1000;
-      if (elapsed > 10) setWallSecs(elapsed);
-    }
-
-    if (Object.keys(scores).length === 0) return;
-
-    const avg = sum / Object.keys(scores).length;
-    const sortedEntries = Object.entries(scores).sort(([, a], [, b]) => b - a);
-    sortedEntries.forEach(([id, score], i) => {
-      const kind = id in nodes ? "node" as const : "edge" as const;
-      ranked.push({ id, kind, score, rank: i + 1 });
-    });
-
-    setResult({ metric: "vitality", scores, ranked, min, max, avg });
+    if (Object.keys(values).length === 0) return;
+    setResult(toAnalysisResult("vitality", values, nodes));
     setProgress(null);
     setWallSecs(null);
   }
@@ -205,176 +288,82 @@ export function SectionModelBased() {
     setShapleyWorst(null);
 
     const { nodes, edges } = getElements();
-    const allIds: { id: string; kind: "node" | "edge" }[] = shapleyParams.nodesOnly
+    const elements: ElementRef[] = shapleyParams.nodesOnly
       ? Object.keys(nodes).map((id) => ({ id, kind: "node" as const }))
       : [
           ...Object.keys(nodes).map((id) => ({ id, kind: "node" as const })),
           ...Object.keys(edges).map((id) => ({ id, kind: "edge" as const })),
         ];
 
-    if (allIds.length === 0) return;
+    if (elements.length === 0) return;
 
-    const effectiveK = Math.min(shapleyParams.kMax, allIds.length);
-    // Perfect estimate: we cache evaluations, so unique calls ≤ Σ C(N,k) for k=1..effectiveK.
-    const uniqueCap = maxUniqueCoalitions(allIds.length, effectiveK);
-    const upperBound = 1 + shapleyParams.samples * effectiveK;
-    const totalCalls = Math.min(upperBound, uniqueCap);
+    const effectiveK = Math.min(shapleyParams.kMax, elements.length);
+    // Coalitions are cached, so the real cost is bounded by the distinct-coalition
+    // count as well as by samples × k.
+    const totalCalls = Math.min(
+      1 + shapleyParams.samples * effectiveK,
+      maxUniqueCoalitions(elements.length, effectiveK),
+    );
 
     const startedAt = Date.now();
     setProgress({ total: totalCalls, completed: 0, firstCallMs: null, avgCallMs: null, startedAt });
     cancelRef.current = false;
     setWallSecs(null);
 
-    // φ[i] accumulates marginal contributions; normalised by actualSamples at the end.
-    const phi: Record<string, number> = {};
-    for (const { id } of allIds) phi[id] = 0;
-
-    // Coalition OI cache: key = sorted IDs joined by ','. Avoids re-running the engine
-    // for the same coalition that appears in multiple permutations.
-    const coalitionCache = new Map<string, number>();
-
-    // Track worst coalition (highest operativity loss) for sizes 1, 2, 3.
-    type WorstEntry = { ids: string[]; loss: number } | null;
-    let worst1: WorstEntry = null;
-    let worst2: WorstEntry = null;
-    let worst3: WorstEntry = null;
-
-    // Baseline: propagate from current state (may already be partially degraded).
     const baseline = useCanvasStore.getState().toGraphSnapshot();
     const weightAttr = useAnalysisStore.getState().oiWeightAttr;
-    let baselineOI: number;
-    try {
-      const baseSnap = await runEphemeralPropagation(baseline);
-      baselineOI = computeOperativityScore(baseSnap, n, weightAttr) / 100;
-    } catch {
-      baselineOI = computeOperativityScore(baseline, n, weightAttr) / 100;
-    }
-    recordCall(0);
 
-    let actualSamples = 0;
+    const shapleyResult = await estimateShapley(
+      elements,
+      makeCoalitionEvaluator(baseline, weightAttr, n),
+      {
+        samples: shapleyParams.samples,
+        kMax: shapleyParams.kMax,
+        maxTimeMs: shapleyParams.maxTimeSecs * 1000,
+      },
+      {
+        isCancelled: () => cancelRef.current,
+        onEvaluation: (ms) => {
+          recordCall(ms);
+          const elapsed = (Date.now() - startedAt) / 1000;
+          if (elapsed > 10) setWallSecs(elapsed);
+        },
+      },
+    );
 
-    for (let s = 0; s < shapleyParams.samples; s++) {
-      if (cancelRef.current) break;
-      if ((Date.now() - startedAt) / 1000 > shapleyParams.maxTimeSecs) break;
+    const { values, worstCoalitions } = shapleyResult;
 
-      actualSamples++;
-      // Draw a random ordered k-subset: shuffle all elements, take the first effectiveK.
-      const order = [...allIds].sort(() => Math.random() - 0.5);
-      const failedIds = new Set<string>();
-      let prevOI = baselineOI;
-
-      for (const { id } of order) {
-        if (cancelRef.current) break;
-        if (failedIds.size + 1 > effectiveK) break;
-
-        failedIds.add(id);
-        const cacheKey = [...failedIds].sort().join(",");
-        const callStart = Date.now();
-        let curOI: number;
-        let fromCache = false;
-
-        if (coalitionCache.has(cacheKey)) {
-          curOI = coalitionCache.get(cacheKey)!;
-          fromCache = true;
-        } else {
-          try {
-            const snapNodes = { ...baseline.nodes };
-            const snapEdges = { ...baseline.edges };
-            for (const fid of failedIds) {
-              if (fid in snapNodes) snapNodes[fid] = { ...snapNodes[fid], functionality: 1 };
-              else if (fid in snapEdges) snapEdges[fid] = { ...snapEdges[fid], functionality: 1 };
-            }
-            const afterSnap = await runEphemeralPropagation({ ...baseline, nodes: snapNodes, edges: snapEdges });
-            curOI = computeOperativityScore(afterSnap, n, weightAttr) / 100;
-            coalitionCache.set(cacheKey, curOI);
-          } catch {
-            curOI = prevOI; // treat failed call as no additional loss
-            coalitionCache.set(cacheKey, curOI);
-          }
-        }
-
-        if (!fromCache) {
-          recordCall(Date.now() - callStart);
-          if ((Date.now() - startedAt) / 1000 > 10) setWallSecs((Date.now() - startedAt) / 1000);
-        }
-
-        // Track worst coalition per size.
-        const loss = baselineOI - curOI;
-        const sz = failedIds.size;
-        if (sz === 1 && (!worst1 || loss > worst1.loss)) worst1 = { ids: [...failedIds], loss };
-        if (sz === 2 && (!worst2 || loss > worst2.loss)) worst2 = { ids: [...failedIds], loss };
-        if (sz === 3 && (!worst3 || loss > worst3.loss)) worst3 = { ids: [...failedIds], loss };
-
-        // Marginal contribution: prevOI - curOI.
-        phi[id] += prevOI - curOI;
-        prevOI = curOI;
-      }
+    if (Object.keys(values).length === 0) {
+      setProgress(null);
+      setWallSecs(null);
+      return;
     }
 
-    // Normalise by actualSamples — correct for the truncated Shapley formula.
-    // Elements that never appeared in a sampled k-chain get φ = 0 (correctly zero contribution
-    // under the k_max truncation). This matches φ̂_i = (1/T) Σ_t Δᵢᵗ from the paper.
-    const shapleyValues: Record<string, number> = {};
-    for (const { id } of allIds) {
-      shapleyValues[id] = actualSamples > 0 ? phi[id] / actualSamples : 0;
-    }
+    setResult(toAnalysisResult("shapley", values, nodes));
+    setShapleyWorst({
+      single: worstCoalitions[1] ?? null,
+      pair: worstCoalitions[2] ?? null,
+      triple: worstCoalitions[3] ?? null,
+    });
 
-    const sampledEntries = Object.entries(shapleyValues)
-      .sort(([, a], [, b]) => b - a);
-    const values = sampledEntries.map(([, v]) => v);
-    if (values.length === 0) { setProgress(null); setWallSecs(null); return; }
+    // The paper harness reads this document instead of re-implementing the
+    // estimator (docs/papers.md §4.4). Built here, where the run's real seed and
+    // sample count are still in hand.
+    setExportDoc(
+      buildShapleyExport({
+        result: shapleyResult,
+        snapshot: baseline,
+        networkName: useCanvasStore.getState().projectMeta.name,
+        samplesRequested: shapleyParams.samples,
+        kMax: shapleyParams.kMax,
+        nodesOnly: shapleyParams.nodesOnly,
+        scope,
+        oiWeightAttr: weightAttr,
+      }),
+    );
 
-    const minV = Math.min(...values);
-    const maxV = Math.max(...values);
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    const ranked: ElementScore[] = sampledEntries.map(([id, score], i) => ({
-      id, kind: id in nodes ? "node" as const : "edge" as const, score, rank: i + 1,
-    }));
-
-    setResult({ metric: "shapley", scores: shapleyValues, ranked, min: minV, max: maxV, avg });
-    setShapleyWorst({ single: worst1, pair: worst2, triple: worst3 });
-
-    // Save worst scenarios to scorecard if requested.
     if (shapleyParams.saveWorstToScorecard) {
-      const toSave = [
-        { entry: worst1, label: "Neuralgic single" },
-        { entry: worst2, label: "Neuralgic pair" },
-        { entry: worst3, label: "Neuralgic triplet" },
-      ].filter((x) => x.entry !== null) as { entry: { ids: string[]; loss: number }; label: string }[];
-
-      for (const { entry, label } of toSave) {
-        const elementNames = entry.ids.map((id) => {
-          const nd = baseline.nodes[id];
-          if (nd) return nd.label ?? id;
-          const ed = baseline.edges[id];
-          if (ed) {
-            const src = baseline.nodes[ed.source]?.label ?? ed.source;
-            const tgt = baseline.nodes[ed.target]?.label ?? ed.target;
-            return `${src}→${tgt}`;
-          }
-          return id;
-        });
-
-        const snapNodes = { ...baseline.nodes };
-        const snapEdges = { ...baseline.edges };
-        for (const fid of entry.ids) {
-          if (fid in snapNodes) snapNodes[fid] = { ...snapNodes[fid], functionality: 1 };
-          else if (fid in snapEdges) snapEdges[fid] = { ...snapEdges[fid], functionality: 1 };
-        }
-        const beforeSnap = { ...baseline, nodes: snapNodes, edges: snapEdges };
-        let afterSnap: typeof baseline | undefined;
-        try { afterSnap = await runEphemeralPropagation(beforeSnap); } catch { /* skip */ }
-
-        useScorecardStore.getState().addScorecardEntry({
-          type: "propagation",
-          id: nanoid(),
-          label: `${label}: ${elementNames.join(", ")}`,
-          created_at: new Date().toISOString(),
-          event_ids: [],
-          before_propagation: beforeSnap,
-          after_propagation: afterSnap,
-        });
-      }
+      await saveWorstCoalitions(worstCoalitions, baseline);
     }
 
     setProgress(null);
@@ -383,8 +372,21 @@ export function SectionModelBased() {
 
   async function handleCompute() {
     setResult(null);
-    if (activeMetric === "vitality") await runVitality();
-    else await runShapley();
+    setExportDoc(null);
+    try {
+      if (activeMetric === "vitality") await runVitality();
+      else await runShapley();
+    } catch (err) {
+      // An estimator only throws when it cannot establish a baseline, i.e. the
+      // engine is unreachable. Clear the progress bar rather than leaving it
+      // spinning against a run that already stopped.
+      setProgress(null);
+      setWallSecs(null);
+      pushToast({
+        message: err instanceof Error ? err.message : "Analysis failed.",
+        variant: "error",
+      });
+    }
   }
 
   const isRunning = progress !== null;
@@ -423,13 +425,10 @@ export function SectionModelBased() {
 
       {/* Metric selector */}
       <div className="space-y-1">
-        {([
-          { id: "vitality" as const, label: "Vitality Centrality", description: "Drop in Operativity Score when each element is removed. Requires one engine call per element.", recommended: ["SourceToDemands", "Requisite"] },
-          { id: "shapley" as const, label: "Shapley Values", description: "Fair attribution of network value. Monte Carlo approximation — many engine calls.", recommended: ["global"] },
-        ] as const).map((m) => (
+        {MODEL_METRICS.map((m) => (
           <button
             key={m.id}
-            onClick={() => { setActiveMetric(m.id); setResult(null); }}
+            onClick={() => { setActiveMetric(m.id); setResult(null); setExportDoc(null); }}
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id
@@ -440,7 +439,6 @@ export function SectionModelBased() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">{m.label}</span>
-                <span className="text-[9px] text-amber-500">★ {m.recommended.join(", ")}</span>
               </div>
               <div className="mt-0.5 text-[10px] text-zinc-400">{m.description}</div>
             </div>
@@ -452,43 +450,65 @@ export function SectionModelBased() {
       {activeMetric === "shapley" && (
         <div className="space-y-2 rounded-lg border border-zinc-100 p-3 dark:border-zinc-800">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Parameters</p>
-          <div className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-            <div>
-              <span>Samples (T)</span>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span>Permutations (M)</span>
+              <input
+                type="number" min={10} max={100000} step={10}
+                value={shapleyParams.samples}
+                onChange={(e) => setShapleyParams({ samples: parseInt(e.target.value) || 200 })}
+                className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
+              />
+            </div>
+            <p className="text-[10px] leading-snug text-zinc-400">
+              Random failure orders to draw. Each one fails the first k_max elements in
+              turn and credits each with the Operativity it destroyed on entry. More
+              permutations = less noise, proportionally more engine calls.
               {(() => {
                 const el = getElements();
                 const nEl = Object.keys(el.nodes).length + (shapleyParams.nodesOnly ? 0 : Object.keys(el.edges).length);
                 const maxT = maxUsefulSamples(nEl, shapleyParams.kMax);
                 return maxT <= 1e6
-                  ? <span className="ml-1 text-[10px] text-zinc-400">sat. ≈ {maxT.toLocaleString()}</span>
+                  ? <> Past ≈{maxT.toLocaleString()} nearly every draw repeats a coalition already evaluated.</>
                   : null;
               })()}
-            </div>
-            <input
-              type="number" min={10} max={100000} step={10}
-              value={shapleyParams.samples}
-              onChange={(e) => setShapleyParams({ samples: parseInt(e.target.value) || 200 })}
-              className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
-            />
+            </p>
           </div>
-          <label className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-            <span>Coalition size (k_max)</span>
-            <input
-              type="number" min={1} max={20}
-              value={shapleyParams.kMax}
-              onChange={(e) => setShapleyParams({ kMax: parseInt(e.target.value) || 5 })}
-              className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
-            />
-          </label>
-          <label className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-            <span>Max time (s)</span>
-            <input
-              type="number" min={5} max={600}
-              value={shapleyParams.maxTimeSecs}
-              onChange={(e) => setShapleyParams({ maxTimeSecs: parseInt(e.target.value) || 60 })}
-              className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
-            />
-          </label>
+
+          <div className="space-y-1">
+            <label className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span>Coalition size (k_max)</span>
+              <input
+                type="number" min={1} max={20}
+                value={shapleyParams.kMax}
+                onChange={(e) => setShapleyParams({ kMax: parseInt(e.target.value) || 5 })}
+                className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
+              />
+            </label>
+            <p className="text-[10px] leading-snug text-zinc-400">
+              How many simultaneous failures each permutation explores. Truncation is
+              what makes the analysis affordable, and it lowers every value: an element
+              is credited only when it falls within the first k_max, so scores rank
+              elements against each other rather than measuring their full share.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span>Max time (s)</span>
+              <input
+                type="number" min={5} max={600}
+                value={shapleyParams.maxTimeSecs}
+                onChange={(e) => setShapleyParams({ maxTimeSecs: parseInt(e.target.value) || 60 })}
+                className="w-20 rounded border border-zinc-200 bg-white px-2 py-0.5 text-right text-xs dark:border-zinc-700 dark:bg-zinc-800"
+              />
+            </label>
+            <p className="text-[10px] leading-snug text-zinc-400">
+              Wall-clock budget. The run stops between permutations and reports what it
+              has, averaged over the permutations actually drawn.
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
             <input type="checkbox" checked={shapleyParams.nodesOnly} onChange={(e) => setShapleyParams({ nodesOnly: e.target.checked })} />
             Nodes only (faster)
@@ -550,9 +570,23 @@ export function SectionModelBased() {
 
       {result && (
         <div className="space-y-4">
-          <HeatmapControls result={result} />
+          <HeatmapControls
+            title={MODEL_METRICS.find((m) => m.id === result.metric)?.label ?? result.metric}
+            result={result}
+          />
           <ResultsList result={result} />
         </div>
+      )}
+
+      {/* Export — the paper harness's input (docs/papers.md §4.4) */}
+      {exportDoc && (
+        <button
+          onClick={() => { void downloadShapleyExport(exportDoc); }}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <Download size={13} />
+          Export Shapley values (JSON)
+        </button>
       )}
 
       {/* Worst coalition summary — only shown after a Shapley run */}

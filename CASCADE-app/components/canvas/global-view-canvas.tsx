@@ -37,6 +37,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider } from "./zoom-slider";
+import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
@@ -305,6 +306,11 @@ function GlobalViewCanvas() {
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
         <ZoomSlider />
       </ReactFlow>
+
+      {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
+          Every canvas view needs it: an Analysis Heatmap applies to the Element
+          registry, so its colours show here as much as in the single-canvas view. */}
+      <CanvasLegend />
 
       {/* Read-only badge */}
       <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:ring-zinc-700">

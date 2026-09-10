@@ -357,8 +357,8 @@ In classical terms, a component's Shapley value represents its average marginal 
 \label{subsubsec:shapley_approx}
 Computing exact Shapley values requires evaluating every possible combination of component failures, leading to an exponential computational cost. To make this analysis computationally practical, CASCADE employs a sampling-based approximation strategy governed by three user-configurable constraints:
 \begin{itemize}
-  \item \textbf{Monte Carlo permutation sampling:} Rather than evaluating all possible failure sequences, the algorithm samples a subset of $M$ random permutations. As $M$ increases, the estimated Shapley values converge toward their exact theoretical expectations.
-  \item \textbf{Coalition size truncation:} The analysis introduces a user-defined limit ($k_{\max}$) on the maximum number of concurrent failures considered. This restricts the depth of the search space to a computationally manageable size, motivated by the practical observation that the most critical, actionable vulnerabilities typically emerge from relatively small combinations of concurrent failures.
+  \item \textbf{Monte Carlo permutation sampling:} Rather than evaluating all possible failure sequences, the algorithm samples a subset of $M$ random permutations, drawn uniformly. As $M$ increases, the estimated values converge to the expectation of the truncated game defined below.
+  \item \textbf{Coalition size truncation:} The analysis introduces a user-defined limit ($k_{\max}$) on the maximum number of concurrent failures considered. This restricts the depth of the search space to a computationally manageable size, motivated by the practical observation that the most critical, actionable vulnerabilities typically emerge from relatively small combinations of concurrent failures. Because marginal contributions arising beyond the $k_{\max}$-th failure in a permutation are treated as zero rather than omitted from the average, $\hat{\phi}_i$ is a downward-biased estimate of the untruncated Shapley value and the values do not sum to the total operativity loss unless $k_{\max}=N$. The ranking they induce, which is what the analysis is used for, is unaffected.
   \item \textbf{Wall-clock time budget:} A user-specified time limit
     terminates sampling once elapsed computation time exceeds a defined threshold, ensuring responsiveness in interactive sessions even for large networks. Shapley values are reported from however many permutations were completed within the budget.
 \end{itemize}
@@ -907,7 +907,7 @@ Finally, we compare traditional topological metrics with the proposed Shapley-ba
 We computed:
 \begin{itemize}
   \item \textbf{Eigenvector and Betweenness Centrality}, computed with NetworkX (power-iteration eigenvector centrality; shortest-path betweenness) on the directed dependency graph (39 nodes, 93 edges);
-  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations, and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop this required about a minute; the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE repository, run on the case-study model \texttt{CASCADE/samples/public/Palmanova\_Complete.json}) reproduces these exact figures by calling the propagation engine directly.}.
+  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations, and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop the $\hat{\phi}_i$ estimate required about a minute (1297 propagation-engine evaluations). The values reported here are produced by the same estimator the CASCADE application runs, exported from it, and joined against the NetworkX centralities by the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE repository, run on the case-study model \texttt{CASCADE/samples/public/Palmanova\_Complete.json}); reproduction instructions are in \texttt{docs/papers.md}.}.
 \end{itemize}
 
 \noindent\textbf{Interpretation of results.}
@@ -918,11 +918,11 @@ CASCADE's simulation explicitly encodes these distinctions through categories an
 As shown in Figure~\ref{fig:shapley_ranking}, Shapley values identify neuralgic nodes by accounting for the operational logic of the system --- flow dynamics, requisite conjunctions, and dependency levels --- whereas centrality metrics reward high connectivity (eigenvector) or topological
 bridging (betweenness) regardless of whether those structural positions translate into operational criticality.
 
-To quantify this, we computed Spearman rank correlations between $\hat{\phi}_i$ and each centrality measure across all 39 nodes (Table~\ref{tab:shapley_correlation}). Shapley and eigenvector centrality are weakly \emph{anti}-correlated, at the margin of significance ($\rho=-0.31$, $p=0.05$): eigenvector centrality is dominated by well-connected transport junctions. Shapley and betweenness centrality are instead moderately \emph{positively} correlated overall ($\rho=0.74$, $p<10^{-6}$): in this network, several genuine flow bottlenecks (distribution substations, water junctions) are simultaneously high-betweenness and high-Shapley.
+To quantify this, we computed Spearman rank correlations between $\hat{\phi}_i$ and each centrality measure across all 39 nodes (Table~\ref{tab:shapley_correlation}). Shapley and eigenvector centrality are weakly \emph{anti}-correlated ($\rho=-0.33$, $p=0.04$): eigenvector centrality is dominated by well-connected transport junctions. Shapley and betweenness centrality are instead moderately \emph{positively} correlated overall ($\rho=0.75$, $p<10^{-7}$): in this network, several genuine flow bottlenecks (distribution substations, water junctions) are simultaneously high-betweenness and high-Shapley.
 Results are summarised in Table~\ref{tab:shapley_correlation}.
 
-A representative contrast: \texttt{Electric Source} scores highest in Shapley value ($\hat{\phi}=1.38$) because its removal collapses the entire power subsystem, yet it ranks only 36th of 39 in eigenvector centrality and 6th in betweenness --- a peripheral-looking source whose criticality both topological metrics understate.
-Conversely, transport bridges such as \texttt{Sottoselva transport} and \texttt{San Marco transport} rank in the top ten of \emph{both} eigenvector and betweenness centrality --- being structurally well-connected junctions --- yet contribute comparatively low marginal Shapley value (17th and 24th respectively), because redundant routing absorbs their failure.
+A representative contrast: \texttt{Electric Source} scores highest in Shapley value ($\hat{\phi}=0.017$: averaged over the sampled failure orders, 1.7\% of system Operativity is lost at the moment this node fails) because its removal collapses the entire power subsystem, yet it ranks only 36th of 39 in eigenvector centrality and 6th in betweenness --- a peripheral-looking source whose criticality both topological metrics understate.
+Conversely, transport bridges such as \texttt{Sottoselva transport} and \texttt{San Marco transport} rank in the top ten of \emph{both} eigenvector and betweenness centrality --- being structurally well-connected junctions --- yet contribute comparatively low marginal Shapley value (18th and 24th respectively), because redundant routing absorbs their failure.
 
 \begin{table}[H]
 \centering
@@ -933,16 +933,16 @@ Conversely, transport bridges such as \texttt{Sottoselva transport} and \texttt{
 \toprule
 \textbf{Element} & \textbf{Shapley rank ($\hat{\phi}_i$)} & \textbf{Eigenvector rank} & \textbf{Betweenness rank} \\
 \midrule
-\texttt{Electric Source}        & 1 (1.38) & 36 & 6 \\
-\texttt{Fauglis water Source}   & 2 (1.00) & 28 & 3 \\
-\texttt{water Operator}         & 3 (0.71) & 30 & 14 \\
-\texttt{electric Operator}      & 4 (0.70) & 31 & 11 \\
-\texttt{San Marco water}        & 5 (0.67) & 19 & 1 \\
-\texttt{Sud electric}           & 6 (0.60) & 33 & 2 \\
+\texttt{Electric Source}        & 1 (0.0171) & 36 & 6 \\
+\texttt{electric Operator}      & 2 (0.0106) & 31 & 11 \\
+\texttt{San Marco water}        & 3 (0.0084) & 19 & 1 \\
+\texttt{Fauglis water Source}   & 4 (0.0080) & 28 & 3 \\
+\texttt{water Operator}         & 5 (0.0066) & 30 & 14 \\
+\texttt{Sud electric}           & 6 (0.0060) & 33 & 2 \\
 \midrule
-\texttt{Sottoselva transport}   & 17 (0.20) & 4 & 4 \\
-\texttt{San Marco transport}    & 24 (0.17) & 6 & 10 \\
-\texttt{Aquileia access}        & 23 (0.18) & 1 & 7 \\
+\texttt{Sottoselva transport}   & 18 (0.0021) & 4 & 4 \\
+\texttt{Aquileia access}        & 21 (0.0018) & 1 & 7 \\
+\texttt{San Marco transport}    & 24 (0.0016) & 6 & 10 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -965,7 +965,7 @@ Eigenvector centrality diverges from Shapley value systematically in this networ
     \includegraphics[width=1\linewidth]%
         {Figures/Betweenness.png}
     \caption{Betweenness centrality ranking (darker colour indicates higher value; shortest-path betweenness on unweighted directed graph).
-    Overall it agrees moderately with the Shapley ranking ($\rho=0.74$, Table~\ref{tab:shapley_correlation}), as several genuine flow bottlenecks are also topological bridges.}
+    Overall it agrees moderately with the Shapley ranking ($\rho=0.75$, Table~\ref{tab:shapley_correlation}), as several genuine flow bottlenecks are also topological bridges.}
     \label{fig:betweenness}
 \end{figure}
 

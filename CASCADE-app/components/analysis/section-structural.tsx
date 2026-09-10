@@ -16,10 +16,10 @@ import {
 import type { StructuralMetric } from "@/store/analysis-store";
 import { cn } from "@/lib/utils";
 
-const METRICS: { id: StructuralMetric; label: string; description: string; recommended: string[] }[] = [
-  { id: "articulation_points", label: "Articulation Points", description: "Nodes whose removal disconnects the graph — structural single points of failure.", recommended: ["global", "Requisite"] },
-  { id: "community", label: "Community Detection", description: "Louvain clustering: nodes grouped by connection density. Reveals hidden sub-systems.", recommended: ["global"] },
-  { id: "nofn", label: "Network-of-Networks", description: "Coupling strength, interdependency ratio, feedback loops, and meta-graph across all Canvases.", recommended: ["global"] },
+const METRICS: { id: StructuralMetric; label: string; description: string }[] = [
+  { id: "articulation_points", label: "Articulation Points", description: "Nodes whose removal disconnects the graph — structural single points of failure." },
+  { id: "community", label: "Community Detection", description: "Louvain clustering: nodes grouped by connection density. Reveals hidden sub-systems." },
+  { id: "nofn", label: "Network-of-Networks", description: "Coupling strength, interdependency ratio, feedback loops, and meta-graph across all Canvases." },
 ];
 
 export function SectionStructural() {
@@ -79,9 +79,6 @@ export function SectionStructural() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">{m.label}</span>
-                {m.recommended.length > 0 && (
-                  <span className="text-[9px] text-amber-500">★ {m.recommended.join(", ")}</span>
-                )}
               </div>
               <div className="mt-0.5 text-[10px] text-zinc-400">{m.description}</div>
             </div>
@@ -101,7 +98,10 @@ export function SectionStructural() {
       {/* Standard result (articulation points + communities) */}
       {result && (
         <div className="space-y-4">
-          <HeatmapControls result={result} />
+          <HeatmapControls
+            title={METRICS.find((m) => m.id === result.metric)?.label ?? result.metric}
+            result={result}
+          />
           <ResultsList result={result} />
         </div>
       )}

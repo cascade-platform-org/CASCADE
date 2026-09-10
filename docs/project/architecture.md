@@ -107,6 +107,90 @@ callers can diff before/after by identity to count affected Elements
 (`countChangedElements` in `components/canvas/action-bar.tsx`). A wholesale clone
 would silently report every Element as affected.
 
+### Analysis Heatmap legend
+
+An Analysis Heatmap overrides every Element's fill, so while one is applied the
+canvas legend's Functionality scale is a key to colours that are not on screen.
+`lib/analysis-legend.ts` derives the metric's own key instead — a gradient for
+score magnitudes, named swatches for categorical metrics — and the canvas legend
+swaps to it.
+
+Two properties keep the key honest. It is built at **apply** time and written to
+the store in the same action as the colours (`applyHeatmap`), so the canvas can
+never explain one Analysis Metric while displaying another's. And it takes its
+colours from `buildColorMap`'s own sources — `CATEGORY_COLORS` and
+`scoreToColor` — rather than restating them, because the two had already drifted:
+the community legend showed a grey "+N more" swatch for a palette that actually
+wraps, so overflow communities were painted like communities 1..N while the key
+claimed grey. `lib/analysis-legend.test.ts` compares the key against
+`buildColorMap` directly, which is the assertion that would have caught it.
+
+`components/analysis/legend-view.tsx` renders the key for both the Analysis page
+and the canvas overlay, so the two cannot disagree about presentation either. The
+overlay is mounted by all three canvas views — single canvas, merged "all", and
+grouped "all" — because an Analysis Heatmap colours the Element registry, so its
+colours appear wherever Elements are drawn.
+
+A gradient's two ends are labelled with the Analysis Result's own `min` and
+`max`, which is exactly what `buildColorMap`'s `(score - min) / (max - min)`
+normalisation makes them stand for; `formatScore` picks a precision per
+magnitude, since a reach count and a Shapley Value differ by two orders of
+magnitude. A result whose scores are all equal renders as one swatch rather than
+a gradient: the guarded divisor paints every Element the ramp's low end, so a
+gradient would advertise a spread that is not there.
+
+### Model-based Analysis
+
+`lib/model-based-analysis.ts` holds the two engine-side Analysis Metrics —
+Vitality Centrality and Shapley Value. Both are numerical estimators, so they
+live apart from the Analysis page and take Propagation as an **injected
+evaluator**: production passes an adapter that applies a coalition to a
+GraphSnapshot and calls `POST /api/propagate`; tests pass a pure scoring
+function. That is what lets the estimators be checked against cooperative games
+whose exact Shapley values are known, with no engine and no renderer.
+
+Shapley sampling draws **uniform** permutations (Fisher-Yates over a seeded
+PRNG) and returns the seed it used, so a reported run replays exactly. This
+matters beyond tidiness: the previous in-component implementation shuffled with
+`sort(() => Math.random() - 0.5)`, which is not uniform — measured over 200k
+draws it put the first Element in front 22% of the time against an ideal of
+12.5%, systematically inflating the Shapley rank of whichever Elements happened
+to come first in registry order. It was also unseeded, so no run could be
+reproduced.
+
+The three user-facing parameters carry the paper's names — **M** permutations,
+**k_max** coalition size, wall-clock budget — because the same three knobs are
+described in IJDRR §3.4.2 and reported in §4.4. One consequence is worth stating
+where callers can see it: with k_max < N the estimator does not converge to the
+true Shapley value however large M grows. Marginals from permutation positions
+beyond k_max are counted as zero rather than dropped, so on an additive game
+Σφ̂ = (k_max/N)·v(N) exactly, with no sampling variance — a property the test
+suite pins. Truncated values rank Elements against each other; they are not each
+Element's full share of the Operativity loss.
+
+`lib/analysis-export.ts` turns a finished Shapley run into the **Shapley
+Export**, the JSON the user downloads. It exists because the estimator used to
+have a second implementation in `CASCADE-backend/scripts/paper_shapley_vs_centrality.py`,
+so the paper's §4.4 numbers were produced by code that was not the code the
+product runs — and the two had in fact drifted (that script sampled uniformly
+while the client did not). The script now reads this document and contributes
+only what was never duplicated: networkx centralities and the Spearman
+comparison. It no longer imports `engine.*`, so it also gave up its
+import-linter carve-out. The cost is that reproducing §4.4 takes an Analysis run
+plus a command instead of one command; the return is that the published φ̂ are by
+construction the φ̂ the product computes. Because a program in another language
+parses these field names, `lib/analysis-export.test.ts` asserts them literally —
+nothing in the TypeScript build can catch a rename.
+
+`scripts/shapley-export.harness.ts` (run via `npm run harness:shapley`, config in
+`vitest.harness.config.mts`) produces that same document without a browser, for
+paper runs that need to be repeatable. It is not a third implementation: it
+imports `estimateShapley`, `computeOperativityScore`, `buildPropagationPayload`
+and `mergeUpdatesIntoSnapshot` — the modules the Analysis page uses — and
+supplies only what React and Zustand would otherwise supply, a Project read from
+disk and a `fetch` pointed at a local engine. It is deliberately outside
+`npm test`: it needs a live engine, so it must never gate a commit.
+
 ### Data Model — Global Element Registry (ADR-0001)
 
 Nodes and edges have globally unique IDs and live in a single registry at the Project level (`Project.nodes`, `Project.edges`). Each Canvas holds only `node_ids` and `edge_ids` — references, not copies. A node that participates in multiple Canvases is stored once; both Canvases reference the same ID. Propagation updates the registry once; all Canvases reflect the change automatically.

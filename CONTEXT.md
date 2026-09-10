@@ -151,11 +151,11 @@ The single flow-point ↔ geographic-coordinate correspondence (plus zoom levels
 _Avoid_: flat-earth/linear approximation; "calibration"/"registration point"
 
 **Analysis Metric**:
-A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values). Each has a recommended graph type badge in the Analysis page.
+A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values).
 _Avoid_: "analysis type", "metric type"
 
 **Analysis Heatmap**:
-The colour overlay encoding an Analysis Metric's scores on the canvas (**Analysis Mode** — colours mean scores, not Functionality). Cleared by Reset.
+The colour overlay encoding an Analysis Metric's scores on the canvas (**Analysis Mode** — colours mean scores, not Functionality). Applying one minimizes the Analysis page onto the canvas and swaps the canvas legend's Functionality scale for the metric's own key, since Functionality colours are no longer what is drawn. The key is derived once, at apply time, and stored beside the colours it explains — `lib/analysis-legend.ts`. Cleared by Reset.
 _Avoid_: "heatmap mode", "centrality overlay"
 
 **Vitality Centrality**:
@@ -163,8 +163,13 @@ Model-based metric: Operativity Score drop from removing one Element and re-prop
 _Avoid_: "vitality score" (Recovery Value is the intervention metric; Vitality is analysis)
 
 **Shapley Value**:
-Model-based metric: each Element's marginal contribution averaged over removal orderings (exact 2^N; approximate with parameters).
+Model-based metric: each Element's marginal contribution averaged over removal orderings (exact 2^N; approximate with parameters). Three parameters, named the same way in the UI, the code and the IJDRR paper: **M** (permutations — random failure ORDERS, each truncated to its first k_max entries), **k_max** (coalition-size truncation) and a wall-clock budget. Sampling draws **uniform** permutations (Fisher-Yates over a seeded PRNG) and returns the seed, so any reported run replays exactly — `lib/model-based-analysis.ts::estimateShapley`. Under truncation the values **rank** Elements rather than measuring each one's full share: marginals past position k_max count as zero, so Σφ̂ = (k_max/N)·v(N) on an additive game and efficiency holds only at k_max = N. There is exactly one implementation: the paper harness `scripts/paper_shapley_vs_centrality.py` reads a run's **Shapley Export** rather than recomputing.
+_Avoid_: calling M "samples" of k-subsets — a sample is an ordered permutation, and order is what makes a marginal contribution well defined
 _Avoid_: "Shapley centrality"
+
+**Shapley Export**:
+The JSON document a Shapley run hands back to the user — φ̂ per Element (Operativity Score fractions, 0–1), the run's real parameters including the seed, and the worst coalition per size. It is a published cross-language contract: `CASCADE-backend/scripts/paper_shapley_vs_centrality.py` parses these field names to produce the IJDRR §4.4 table — `lib/analysis-export.ts::buildShapleyExport`.
+_Avoid_: "analysis dump", "results export" (the Scorecard has its own export)
 
 **Coupling Strength**:
 Per Canvas pair: inter-canvas edges ÷ total edges. High = failures likely cascade between the two.

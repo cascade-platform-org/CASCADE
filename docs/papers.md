@@ -99,23 +99,77 @@ flood, and a digital-attack scenario.
 | §3.3 Propagation engine: universal logical pass, capacity-based (min-cost max-flow) pass          | [`CASCADE-backend/engine/propagation.py`](../CASCADE-backend/engine/propagation.py), [`logical.py`](../CASCADE-backend/engine/logical.py), [`flow.py`](../CASCADE-backend/engine/flow.py) |
 | §3.3 Heuristic pipeline: dependency-level attenuation, time-limited backup deferral, monotone commit | [`CASCADE-backend/engine/guards.py`](../CASCADE-backend/engine/guards.py)                                                                                                          |
 | §3.3 Specific-rule override (`if … then … is …`), rule parsing and the `best_of` / `worst_of` / `average_of` aggregators | [`CASCADE-backend/engine/rules_eval.py`](../CASCADE-backend/engine/rules_eval.py), [`core/rule_parser.py`](../CASCADE-backend/core/rule_parser.py), [`core/rule_grammar.py`](../CASCADE-backend/core/rule_grammar.py), [`core/aggregation.py`](../CASCADE-backend/core/aggregation.py) |
-| §3.4 Shapley-based neuralgic node analysis (Monte-Carlo truncated permutations, $k_{\max}$, wall-clock budget) | [`CASCADE-app/components/analysis/section-model-based.tsx`](../CASCADE-app/components/analysis/section-model-based.tsx) — `runShapley`                                              |
-| §4.4 Centrality vs. Shapley: the Spearman table, the ranking figures, the reproduction script      | [`CASCADE-backend/scripts/paper_shapley_vs_centrality.py`](../CASCADE-backend/scripts/paper_shapley_vs_centrality.py); production topological metrics in [`CASCADE-app/lib/topological-analysis.ts`](../CASCADE-app/lib/topological-analysis.ts) |
+| §3.4 Shapley-based neuralgic node analysis (Monte-Carlo truncated permutations, $k_{\max}$, wall-clock budget) | [`CASCADE-app/lib/model-based-analysis.ts`](../CASCADE-app/lib/model-based-analysis.ts) — `estimateShapley`; the Analysis page wires it to the engine in [`section-model-based.tsx`](../CASCADE-app/components/analysis/section-model-based.tsx) |
+| §4.4 Centrality vs. Shapley: the Spearman table, the ranking figures, the reproduction script      | [`CASCADE-backend/scripts/paper_shapley_vs_centrality.py`](../CASCADE-backend/scripts/paper_shapley_vs_centrality.py), fed by the app's Shapley export ([`CASCADE-app/lib/analysis-export.ts`](../CASCADE-app/lib/analysis-export.ts)); production topological metrics in [`CASCADE-app/lib/topological-analysis.ts`](../CASCADE-app/lib/topological-analysis.ts) |
 
 ### Reproducing the numbers
 
 The case-study model and its two strategic-update variants are git-tracked public
 samples:
 
+§4.4 is reproduced in two steps. The Shapley estimator has exactly one
+implementation — the one the product runs — so the paper's $\hat{\phi}_i$ come
+from a real Analysis run rather than from a second copy of the algorithm:
+
+1. Produce the Shapley Export. **Tick *Nodes only*** — §4.4 compares node Shapley
+   against node centrality, so the coalition game is over nodes; letting edges
+   fail as well is a different game and shifts every node's $\hat{\phi}_i$ (the
+   script warns when handed such an export). Scope `global`, samples 800,
+   k_max 3.
+
+   Either in the app — **Analysis → Model-based → Shapley Values → Compute →
+   Export Shapley values (JSON)** — or headlessly, which is how the committed
+   artifact was regenerated:
+
+   ```bash
+   # engine, from CASCADE-backend/ — a blank DATABASE_URL runs auth-free
+   DATABASE_URL= uvicorn main:app --host 127.0.0.1 --port 8123
+
+   # harness, from CASCADE-app/ — runs the app's own estimator, no browser
+   SHAPLEY_SAMPLES=800 SHAPLEY_KMAX=3 SHAPLEY_SEED=0 \
+   SHAPLEY_OUT=/tmp/shapley-palmanova.json npm run harness:shapley
+   ```
+
+2. Join it against the structural centralities:
+
 ```bash
 # from CASCADE-backend/  (same sys.path convention as scripts/benchmark_engine.py)
 python scripts/paper_shapley_vs_centrality.py \
     --network ../CASCADE-app/samples/public/Palmanova_Complete.json \
-    --samples 800 --kmax 3 --seed 0
+    --shapley /tmp/shapley-palmanova.json
 ```
 
-reproduces §4.4 (Table 3, the Shapley ranks, the Spearman correlations, and the
-$\hat{\phi}_i$ values in Figure `Shapley_uniform`). The `_water_improvement` and
+That produces §4.4 (Table 3, the Shapley ranks, the Spearman correlations, and the
+$\hat{\phi}_i$ values in Figure `Shapley_uniform`). The export records the seed the
+run used, so the Analysis page replays the same estimate on demand.
+
+**The committed `experiments/shapley_vs_centrality.json` was regenerated this way
+on 2026-09-09** (800 samples, k_max 3, seed 0, 1297 engine calls). What changed
+against the retired Python estimator, and what did not:
+
+| | Python estimator (before) | App estimator (now) |
+|---|---|---|
+| $\rho$(Shapley, Betweenness) | 0.743 (p = 6.3e-8) | **0.752** (p = 3.3e-8) |
+| $\rho$(Shapley, Eigenvector) | −0.311 (p = 0.054) | **−0.325 (p = 0.043)** |
+| $\rho$(Eigenvector, Betweenness) | −0.037 (p = 0.83) | −0.037 (p = 0.83) — pure topology, identical |
+| $\sum_i \hat{\phi}_i$ | 11.21 (0–100 scale) | 0.1164 (fraction) |
+
+Note the eigenvector correlation **crosses p = 0.05**: a claim of "not
+significant at the 5% level" no longer holds and must be reworded. The two runs
+otherwise agree as well as Monte Carlo allows — rank correlation between old and
+new $\hat{\phi}$ is $\rho = 0.93$, the scale ratio is 96.3 against an expected
+100, and 9 of the top 10 nodes are the same. The residual difference is sampling
+noise, not a change of method: Python drew permutations from Mersenne Twister and
+the app draws them from mulberry32, so the same seed cannot produce the same
+permutations across the two languages. That divergence is now retired along with
+the second implementation.
+
+Two notes on reading the file. The $\hat{\phi}_i$ are Operativity Score
+**fractions** (0–1); results recorded before 2026-09-09 are on the 0–100 scale
+and so are ~100× larger — Spearman $\rho$ is rank-based and unaffected, a plotted
+axis is not. And the script writes to `experiments/shapley_vs_centrality.json` by
+default; pass `--out` when trying it out so the git-tracked artifact is not
+overwritten. The `_water_improvement` and
 `_electric_priority` variants under the same directory are the post-intervention
 models of §4.3 (`Flood_Propagated_after_improvement`,
 `electric_propagated_prioritized`). The minimal five-node network of the "Anatomy of

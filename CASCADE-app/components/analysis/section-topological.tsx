@@ -38,7 +38,6 @@ interface MetricDef<T extends string> {
   description: string;
   /** How a higher weight value affects this metric's score. Omitted for unweighted metrics. */
   weightMeaning?: string;
-  recommended: string[];
   /** true → weight expression has no effect (purely topological) */
   unweighted?: boolean;
 }
@@ -48,41 +47,36 @@ const NODE_METRICS: MetricDef<NodeCentralityMetric>[] = [
     id: "betweenness", label: "Betweenness",
     description: "Relay nodes that mediate the most paths — bottleneck relay points.",
     weightMeaning: "Higher weight = preferred route (used as 1/weight distance). Nodes on high-weight corridors score higher.",
-    recommended: ["SourceToDemands", "global"],
   },
   {
     id: "closeness", label: "Closeness",
     description: "Nodes closest to all others on average.",
-    recommended: [], unweighted: true,
+    unweighted: true,
   },
   {
     id: "eigenvector", label: "Eigenvector",
     description: "Nodes connected to other high-scoring nodes — influence hubs.",
     weightMeaning: "Higher weight = stronger connection to influential neighbors → higher score propagated back.",
-    recommended: ["global"],
   },
   {
     id: "degree", label: "Degree",
     description: "Total connection strength — sum of all edge weights.",
     weightMeaning: "Higher weight = more counted connection strength. Use 1 for a pure hop count.",
-    recommended: [],
   },
   {
     id: "in_degree", label: "In-Degree",
     description: "Weighted in-connection strength — how heavily this node depends on its suppliers.",
     weightMeaning: "Higher weight on incoming edges = node is more heavily supplied/dependent.",
-    recommended: ["Requisite"],
   },
   {
     id: "out_degree", label: "Out-Degree",
     description: "Weighted out-connection strength — how heavily this node pushes downstream.",
     weightMeaning: "Higher weight on outgoing edges = node has stronger downstream impact.",
-    recommended: ["Requisite"],
   },
   {
     id: "k_core", label: "K-Core",
     description: "Maximum shell index — higher = more embedded in the network backbone.",
-    recommended: ["global"], unweighted: true,
+    unweighted: true,
   },
 ];
 
@@ -91,12 +85,11 @@ const EDGE_METRICS: MetricDef<EdgeCentralityMetric>[] = [
     id: "edge_betweenness", label: "Edge Betweenness",
     description: "Critical links — edges that mediate the most shortest paths.",
     weightMeaning: "Higher weight = preferred route (1/weight distance). High-weight edges appear on more paths and score higher.",
-    recommended: ["SourceToDemands"],
   },
   {
     id: "bridge_edges", label: "Bridge Edges",
     description: "Edges whose removal disconnects the graph — structural single points of failure.",
-    recommended: ["global"], unweighted: true,
+    unweighted: true,
   },
 ];
 
@@ -261,9 +254,6 @@ export function SectionTopological() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium">{m.label}</span>
-                  {m.recommended.length > 0 && (
-                    <span className="text-[9px] text-amber-500">★ {m.recommended.join(", ")}</span>
-                  )}
                   {m.unweighted && (
                     <span className="text-[9px] text-zinc-400">(topology only)</span>
                   )}
@@ -298,9 +288,6 @@ export function SectionTopological() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium">{m.label}</span>
-                  {m.recommended.length > 0 && (
-                    <span className="text-[9px] text-amber-500">★ {m.recommended.join(", ")}</span>
-                  )}
                   {m.unweighted && (
                     <span className="text-[9px] text-zinc-400">(topology only)</span>
                   )}
@@ -415,7 +402,17 @@ export function SectionTopological() {
 
       {/* ── Heatmap (merged node + edge) ── */}
       {(nodeResult || edgeResult) && (
-        <HeatmapControls result={nodeResult ?? undefined} edgeResult={edgeResult ?? undefined} />
+        <HeatmapControls
+          // Named from the metric the RESULT carries, not from the selector: the
+          // user can change the selection without recomputing, and the legend must
+          // describe the colours actually on screen.
+          title={[
+            nodeResult && (NODE_METRICS.find((m) => m.id === nodeResult.metric)?.label ?? nodeResult.metric),
+            edgeResult && (EDGE_METRICS.find((m) => m.id === edgeResult.metric)?.label ?? edgeResult.metric),
+          ].filter(Boolean).join(" · ")}
+          result={nodeResult ?? undefined}
+          edgeResult={edgeResult ?? undefined}
+        />
       )}
 
       {/* ── Results panels ── */}

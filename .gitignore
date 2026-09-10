@@ -1,5 +1,11 @@
-# IDE debug junk
+# IDE debug junk. NOTE .vscode/ itself is tracked on purpose: launch.json and
+# tasks.json are this repo's debug/run configs, and settings.json carries the
+# tuned ChkTeX rule set for docs/paper/ with its rationale.
 .vscode/.chrome-debug-profile/
+
+# Per-machine Claude Code settings (tool permissions etc.). Kept out of the repo
+# for everyone, not just whoever has it in their global git ignore.
+**/.claude/settings.local.json
 
 # Local backup artifacts from the monorepo migration
 CASCADE-app.bak/
@@ -29,6 +35,12 @@ CASCADE-backend/temp.inp
 CASCADE-backend/temp.rpt
 CASCADE-backend/temp.bin
 
+# Auto-saved recovery snapshots written by CASCADE-app/lib/file-io.ts into
+# whichever directory the user picked (File System Access API). Matched by name
+# rather than by location: one was committed into samples/ before, when the
+# chosen directory happened to be a tracked one.
+cascade-recovery-*.json
+
 # Ignore everything under docs/paper/, then re-track the three publishable
 # manuscript sources (folder + its .tex/.bib/figures). Each folder's own
 # .gitignore drops LaTeX build artifacts and any non-open-source class files
@@ -57,6 +69,21 @@ experiments/aqueducts/*.csv
 __pycache__/
 *.pyc
 
+
+# ── Root-level tool caches ───────────────────────────────────────────────────
+# Each tool writes a self-ignoring .gitignore inside these, so nothing has
+# leaked; naming them here does not depend on that behaviour continuing.
+.pytest_cache/
+.ruff_cache/
+.import_linter_cache/
+node_modules/
+coverage/
+
+# ── OS / editor junk ─────────────────────────────────────────────────────────
+# The two sub-projects carry these already; the repo root did not.
+.DS_Store
+Thumbs.db
+*.swp
 
 # Personal setup
 skills-lock.json

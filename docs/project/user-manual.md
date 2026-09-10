@@ -206,14 +206,32 @@ saved from the baseline:
 | New backup | `Has backup` + `Backup duration` |
 | More headroom | raise `Supply Capacity`, or the `Capacity` of the limiting edge |
 
-## 5. Server and roles
+## 5. Analysis results
+
+The Analysis page scores every element. **Topological** metrics (betweenness,
+reachability, communities, …) run in the browser. **Model-based** metrics
+(Vitality, Shapley) re-run the propagation engine once per element or coalition,
+so they need the server and can take a while — the panel shows the call count
+before you start, and Cancel keeps whatever it has.
+
+**Apply heatmap & minimize** paints the scores onto the elements and closes the
+Analysis page so you can see them. The canvas legend swaps its Functionality
+scale for the metric's own key, because the colours no longer mean Functionality.
+The overlay stays until you press the X in the Analysis page.
+
+After a Shapley run, **Export Shapley values (JSON)** saves the result: one φ̂ per
+element, plus the seed the run used. Keeping the seed means the same estimate can
+be replayed later, and the file is what the paper's centrality comparison reads,
+so a published number is always a number the app produced.
+
+## 6. Server and roles
 
 **Propagate** and the model-based analyses (Shapley, Vitality) need the server
 and `can_propagate` — `analyst` and above. **Sync** needs `can_sync`. Everything
 else, including topological analysis, works offline. Roles also carry a node cap
 and an engine-evaluation budget per minute.
 
-## 6. Keyboard shortcuts
+## 7. Keyboard shortcuts
 
 Every shortcut the editor listens for. They are ignored while you are typing in a
 text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.

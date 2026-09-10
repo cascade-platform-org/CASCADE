@@ -17,11 +17,11 @@ import {
 import type { ReachabilityMetric } from "@/store/analysis-store";
 import { cn } from "@/lib/utils";
 
-const METRICS: { id: ReachabilityMetric; label: string; description: string; recommended: string[] }[] = [
-  { id: "downstream_reach_count", label: "Downstream Reach (all)", description: "Per-node count of nodes reachable downstream. High = large cascade impact if this node fails.", recommended: ["Requisite", "global"] },
-  { id: "upstream_reach_count", label: "Upstream Reach (all)", description: "Per-node count of nodes that must be healthy upstream. High = many dependencies.", recommended: ["Requisite"] },
-  { id: "downstream_cone", label: "Downstream Cone", description: "Highlights all nodes reachable from a selected source — its cascade footprint.", recommended: ["Requisite", "SourceToDemands"] },
-  { id: "upstream_cone", label: "Upstream Cone", description: "Highlights all nodes that a selected target depends on — its dependency footprint.", recommended: ["Requisite"] },
+const METRICS: { id: ReachabilityMetric; label: string; description: string }[] = [
+  { id: "downstream_reach_count", label: "Downstream Reach (all)", description: "Per-node count of nodes reachable downstream. High = large cascade impact if this node fails." },
+  { id: "upstream_reach_count", label: "Upstream Reach (all)", description: "Per-node count of nodes that must be healthy upstream. High = many dependencies." },
+  { id: "downstream_cone", label: "Downstream Cone", description: "Highlights all nodes reachable from a selected source — its cascade footprint." },
+  { id: "upstream_cone", label: "Upstream Cone", description: "Highlights all nodes that a selected target depends on — its dependency footprint." },
 ];
 
 export function SectionReachability() {
@@ -83,9 +83,6 @@ export function SectionReachability() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">{m.label}</span>
-                {m.recommended.length > 0 && (
-                  <span className="text-[9px] text-amber-500">★ {m.recommended.join(", ")}</span>
-                )}
               </div>
               <div className="mt-0.5 text-[10px] text-zinc-400">{m.description}</div>
             </div>
@@ -120,7 +117,14 @@ export function SectionReachability() {
 
       {result && (
         <div className="space-y-4">
-          <HeatmapControls result={result} />
+          <HeatmapControls
+            // Not a `result.metric` lookup: the cone metrics are selected as
+            // "downstream_cone" but scored as "downstream_reachability".
+            // Switching metric clears the result (see the selector above), so
+            // the active definition always describes what is on screen.
+            title={currentDef?.label ?? result.metric}
+            result={result}
+          />
           <ResultsList result={result} />
         </div>
       )}

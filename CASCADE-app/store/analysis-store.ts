@@ -9,6 +9,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { AnalysisResult, NofNMetrics, PercolationPoint, LabelField } from "@/lib/topological-analysis";
+import type { HeatmapLegend } from "@/lib/analysis-legend";
 
 // ---------------------------------------------------------------------------
 // Section and metric types
@@ -100,6 +101,14 @@ export interface AnalysisState {
   /** True when the heatmap is applied to the live canvas. */
   heatmapActive: boolean;
 
+  /**
+   * What those colours mean, built at apply time from the Analysis Result that
+   * produced them. Written and cleared together with `heatmapColors`, so the
+   * canvas legend can never explain a different Analysis Metric than the one on
+   * screen. Null whenever no heatmap is applied.
+   */
+  heatmapLegend: HeatmapLegend | null;
+
   /** Model-based computation progress. Null = not running. */
   modelBasedProgress: ModelBasedProgress | null;
 
@@ -131,7 +140,12 @@ export interface AnalysisState {
 
   /** Shapley parameters. */
   shapleyParams: {
-    /** Number of random k-subsets to draw. Each sample evaluates one ordered k-chain. */
+    /**
+     * Permutations to draw — $M$ in the IJDRR paper. Each is a random failure
+     * ORDER over the whole Element set, truncated to its first kMax entries.
+     * Not a set of k-subsets: order is what makes a marginal contribution
+     * well defined.
+     */
     samples: number;
     /** Maximum coalition size k_max. Only coalitions |S| ≤ k_max are explored. */
     kMax: number;
@@ -165,7 +179,7 @@ export interface AnalysisActions {
   setNofNMetrics: (metrics: NofNMetrics | null) => void;
   setPercolationCurve: (curve: PercolationPoint[] | null) => void;
 
-  applyHeatmap: (colors: Record<string, string>) => void;
+  applyHeatmap: (colors: Record<string, string>, legend: HeatmapLegend) => void;
   clearHeatmap: () => void;
 
   setModelBasedProgress: (progress: ModelBasedProgress | null) => void;
@@ -198,6 +212,7 @@ const initialState: AnalysisState = {
   percolationCurve: null,
   heatmapColors: {},
   heatmapActive: false,
+  heatmapLegend: null,
   modelBasedProgress: null,
   reachabilitySourceId: null,
   labelField: "name",
@@ -265,12 +280,20 @@ export const useAnalysisStore = create<AnalysisStore>()(
       set((s) => { s.percolationCurve = curve; });
     },
 
-    applyHeatmap(colors) {
-      set((s) => { s.heatmapColors = colors; s.heatmapActive = true; });
+    applyHeatmap(colors, legend) {
+      set((s) => {
+        s.heatmapColors = colors;
+        s.heatmapLegend = legend;
+        s.heatmapActive = true;
+      });
     },
 
     clearHeatmap() {
-      set((s) => { s.heatmapColors = {}; s.heatmapActive = false; });
+      set((s) => {
+        s.heatmapColors = {};
+        s.heatmapLegend = null;
+        s.heatmapActive = false;
+      });
     },
 
     setModelBasedProgress(progress) {

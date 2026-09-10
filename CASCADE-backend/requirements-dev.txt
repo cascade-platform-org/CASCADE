@@ -24,5 +24,5 @@ detect-secrets==1.5.0        # git-history secrets baseline (no Go binary requir
 # Paper / experiment harnesses (dev-only, not shipped with the service)
 # ---------------------------------------------------------------------------
 
-scipy==1.18.0                # Spearman/Shapley statistics in scripts/paper_shapley_vs_centrality.py;
+scipy==1.18.0                # Spearman statistics in scripts/paper_shapley_vs_centrality.py;
                              # arrives transitively via wntr, declared here so deptry (DEP003) can see it

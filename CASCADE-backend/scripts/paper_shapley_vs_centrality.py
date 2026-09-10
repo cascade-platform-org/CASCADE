@@ -3,32 +3,42 @@ scripts/paper_shapley_vs_centrality.py — quantitative backing for the IJDRR
 paper's §4.4 (centrality vs. Shapley) claim that structural centrality and
 operational (Shapley) criticality diverge.
 
-Reproduces, in Python, the exact Monte Carlo truncated-permutation Shapley
-estimator implemented client-side in
-CASCADE-app/components/analysis/section-model-based.tsx (`runShapley`):
-nodes only, coalition size capped at k_max, failed nodes forced to
-functionality=1, marginal contribution accumulated along a random
-permutation restricted to its first k_max entries, normalised by the number
-of completed samples. Baseline is the network exactly as authored (no
-hazard applied), matching the paper's "static dependency graph" comparison.
+WHAT THIS SCRIPT DOES NOT DO ANY MORE. It used to carry its own Monte Carlo
+truncated-permutation Shapley estimator, a second implementation of
+`CASCADE-app/lib/model-based-analysis.ts`. Two implementations of one estimator
+drift, and they did: the client shuffled with `sort(() => Math.random() - 0.5)`
+— neither uniform nor seeded — while this script drew uniform permutations, so
+the published numbers were not the numbers the product computed and neither run
+could be replayed. The estimator now lives in ONE place, the app, and this
+script consumes its exported result. What is left here is the part that was
+never duplicated: networkx centralities, the Spearman comparison, and the
+per-node table behind §4.4.
+
+The trade is deliberate: reproducing §4.4 now takes a run of the Analysis page
+(Model-based → Shapley Values → Export Shapley values) rather than a single
+command. In exchange, the paper's φ̂ are by construction the φ̂ the product
+computes.
+
+    # 1. In the app: load the network, run Model-based → Shapley Values,
+    #    then "Export Shapley values (JSON)".
+    # 2. From CASCADE-backend/:
+    python scripts/paper_shapley_vs_centrality.py \
+        --network ../CASCADE-app/samples/public/Palmanova_Complete.json \
+        --shapley ~/Downloads/shapley-Palmanova_Complete-seed4242.json
 
 Centrality is computed with networkx on the same directed dependency graph
 (tail -> head, "provides to").
 
-    python scripts/paper_shapley_vs_centrality.py --network ../CASCADE-app/samples/public/Palmanova_Complete.json --samples 500 --kmax 3
-
 IMPORTANT: run from CASCADE-backend/ (same sys.path convention as
 scripts/benchmark_engine.py). This is a dev-only analysis harness for the
-paper, not part of the API request path — see CLAUDE.md §7/§8a and the
-import-linter carve-out this script requires.
+paper, not part of the API request path. It no longer imports `engine.*` and
+therefore no longer needs an import-linter carve-out (CLAUDE.md §7/§8a).
 """
 from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -36,71 +46,83 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import networkx as nx  # noqa: E402
 from scipy.stats import spearmanr  # noqa: E402
 
-from engine.propagation import run  # noqa: E402
-from schemas.config import ModelConfiguration  # noqa: E402
 from schemas.network import Project  # noqa: E402
-from schemas.results import PropagationRequest  # noqa: E402
+from schemas.results import PropagationResult  # noqa: E402,F401
+
+# `Project.scorecard` carries a forward reference to PropagationResult, declared
+# under TYPE_CHECKING in schemas/network.py. Importing the name and rebuilding
+# resolves it; without this, model_validate raises PydanticUserError.
+Project.model_rebuild()
+
+EXPORT_FORMAT = "cascade.shapley-export"
+EXPORT_VERSION = 1
 
 
-def load(network_path: Path) -> tuple[Project, ModelConfiguration]:
+def load_project(network_path: Path) -> Project:
     data = json.loads(network_path.read_text())
-    return Project.model_validate(data["project"]), ModelConfiguration.model_validate(data["config"])
+    return Project.model_validate(data["project"])
 
 
-def operativity_score(project: Project, config: ModelConfiguration) -> float:
-    """Ω(s) = 100 * sum(w_i f_i) / (N * sum(w_i)), uniform weight w_i=1."""
-    req = PropagationRequest(project=project, config=config, scope="global")
-    res = run(req)
-    func = {nid: n.functionality for nid, n in project.nodes.items()}
-    for u in res.updates:
-        if u.id in func:
-            func[u.id] = u.functionality
-    n_scale = len(config.functionality_scale)
-    return 100.0 * sum(func.values()) / (n_scale * len(func))
+def load_shapley(export_path: Path, project: Project) -> tuple[dict[str, float], dict]:
+    """
+    Read an app-exported Shapley document and return (phi_by_node_id, params).
 
+    Every check here guards a way the join can go quietly wrong. A document from
+    a different network, or from a run over a different Element set, would still
+    produce a Spearman number — just a meaningless one. Fail instead.
+    """
+    doc = json.loads(export_path.read_text())
 
-def with_failed(project: Project, failed_ids: set[str]) -> Project:
-    nodes = dict(project.nodes)
-    for fid in failed_ids:
-        nodes[fid] = nodes[fid].model_copy(update={"functionality": 1})
-    return project.model_copy(update={"nodes": nodes})
+    if doc.get("format") != EXPORT_FORMAT:
+        raise SystemExit(
+            f"{export_path} is not a CASCADE Shapley export "
+            f"(format={doc.get('format')!r}, expected {EXPORT_FORMAT!r})."
+        )
+    if doc.get("version") != EXPORT_VERSION:
+        raise SystemExit(
+            f"{export_path} is export version {doc.get('version')!r}; "
+            f"this script reads version {EXPORT_VERSION}."
+        )
+    if doc.get("operativity_scale") != "fraction":
+        # φ̂ from the retired Python estimator were on the 0-100 Operativity
+        # scale. Ranks would survive a rescale; the plotted values would not.
+        raise SystemExit(
+            f"{export_path} reports operativity_scale="
+            f"{doc.get('operativity_scale')!r}; expected 'fraction'."
+        )
 
+    if not doc["params"].get("nodes_only", True):
+        # §4.4 compares node Shapley against node centrality, so the coalition
+        # game must be over nodes. A run that let edges fail too is a different
+        # game and shifts every node's φ̂ — the edge entries are dropped below,
+        # but the node values they were computed alongside are not comparable.
+        print(
+            f"WARNING: {export_path} came from a run with 'Nodes only' unchecked. "
+            "Its node φ̂ are from a node+edge game, not the node game §4.4 reports.",
+            file=sys.stderr,
+        )
 
-def shapley_values(
-    project: Project, config: ModelConfiguration, k_max: int, samples: int, seed: int, max_time_secs: float
-) -> dict[str, float]:
-    node_ids = list(project.nodes.keys())
-    k_max = min(k_max, len(node_ids))
-    rng = random.Random(seed)  # nosec B311
+    phi = {e["id"]: float(e["value"]) for e in doc["shapley"] if e["kind"] == "node"}
 
-    baseline_oi = operativity_score(project, config)
-    phi = {nid: 0.0 for nid in node_ids}
-    cache: dict[tuple[str, ...], float] = {}
+    node_ids = set(project.nodes)
+    missing = node_ids - set(phi)
+    unknown = set(phi) - node_ids
+    if unknown:
+        raise SystemExit(
+            f"{export_path} scores {len(unknown)} node(s) absent from the --network project: "
+            f"{sorted(unknown)[:5]}. The export and the network are different models."
+        )
+    if missing:
+        # A scoped run (a single Canvas) legitimately covers fewer nodes than the
+        # file. Say so loudly — §4.4 compares over the whole network.
+        raise SystemExit(
+            f"{export_path} is missing φ̂ for {len(missing)} node(s), e.g. "
+            f"{sorted(missing)[:5]}. Re-run the export with scope 'global' and "
+            f"'Nodes only' unchecked."
+        )
 
-    started = time.time()
-    actual_samples = 0
-    for _ in range(samples):
-        if time.time() - started > max_time_secs:
-            break
-        actual_samples += 1
-        order = node_ids[:]
-        rng.shuffle(order)
-        failed: set[str] = set()
-        prev_oi = baseline_oi
-        for nid in order[:k_max]:
-            failed.add(nid)
-            key = tuple(sorted(failed))
-            if key in cache:
-                cur_oi = cache[key]
-            else:
-                cur_oi = operativity_score(with_failed(project, failed), config)
-                cache[key] = cur_oi
-            phi[nid] += prev_oi - cur_oi
-            prev_oi = cur_oi
+    return phi, doc["params"]
 
-    if actual_samples == 0:
-        return {nid: 0.0 for nid in node_ids}
-    return {nid: v / actual_samples for nid, v in phi.items()}
 
 
 def centrality(project: Project) -> tuple[dict[str, float], dict[str, float]]:
@@ -120,18 +142,24 @@ def centrality(project: Project) -> tuple[dict[str, float], dict[str, float]]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--network", type=Path, required=True)
-    p.add_argument("--samples", type=int, default=500)
-    p.add_argument("--kmax", type=int, default=3)
-    p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--max-time-secs", type=float, default=300.0)
+    p.add_argument(
+        "--shapley",
+        type=Path,
+        required=True,
+        help="Shapley export written by the Analysis page (Model-based -> Export).",
+    )
     p.add_argument("--top", type=int, default=15)
+    p.add_argument(
+        "--out",
+        type=Path,
+        default=Path(__file__).resolve().parents[2] / "experiments" / "shapley_vs_centrality.json",
+        help="Where to write the per-node results. Defaults to the git-tracked paper artifact, "
+             "so point this elsewhere when trying the script out.",
+    )
     args = p.parse_args()
 
-    project, config = load(args.network)
-
-    t0 = time.time()
-    phi = shapley_values(project, config, args.kmax, args.samples, args.seed, args.max_time_secs)
-    shapley_secs = time.time() - t0
+    project = load_project(args.network)
+    phi, params = load_shapley(args.shapley, project)
     eig, btw = centrality(project)
 
     labels = {nid: n.label for nid, n in project.nodes.items()}
@@ -145,15 +173,17 @@ def main() -> None:
     rho_btw, p_btw = spearmanr([phi[i] for i in node_ids], [btw[i] for i in node_ids])
     rho_eig_btw, p_eig_btw = spearmanr([eig[i] for i in node_ids], [btw[i] for i in node_ids])
 
-    print(f"Shapley computation: {shapley_secs:.1f}s, {len(node_ids)} nodes, "
-          f"k_max={args.kmax}, samples requested={args.samples}\n")
+    print(f"Shapley from {args.shapley.name}: {len(node_ids)} nodes, "
+          f"k_max={params['k_max']}, samples used={params['samples_used']}"
+          f"/{params['samples_requested']}, seed={params['seed']}, "
+          f"engine calls={params['evaluations']}\n")
 
     print(f"Spearman rho(Shapley, Eigenvector) = {rho_eig:.3f} (p={p_eig:.3g})")
     print(f"Spearman rho(Shapley, Betweenness) = {rho_btw:.3f} (p={p_btw:.3g})")
     print(f"Spearman rho(Eigenvector, Betweenness) = {rho_eig_btw:.3f} (p={p_eig_btw:.3g})\n")
 
     print(f"{'Rank':<5}{'Shapley (phi)':<30}{'Eigenvector':<30}{'Betweenness':<30}")
-    for i in range(args.top):
+    for i in range(min(args.top, len(node_ids))):
         s_id, e_id, b_id = shapley_rank[i], eig_rank[i], btw_rank[i]
         print(
             f"{i+1:<5}"
@@ -164,10 +194,16 @@ def main() -> None:
 
     out = {
         "meta": {
-            "samples_requested": args.samples,
-            "k_max": args.kmax,
-            "seed": args.seed,
-            "shapley_wall_secs": shapley_secs,
+            # φ̂ are Operativity Score FRACTIONS (0-1). Runs recorded before the
+            # estimator was consolidated into the app used the 0-100 scale and
+            # are therefore 100x larger. Spearman rho is rank-based and unaffected.
+            "operativity_scale": "fraction",
+            "shapley_source": args.shapley.name,
+            "samples_requested": params["samples_requested"],
+            "samples_used": params["samples_used"],
+            "k_max": params["k_max"],
+            "seed": params["seed"],
+            "engine_calls": params["evaluations"],
             "n_nodes": len(node_ids),
         },
         "spearman": {
@@ -189,9 +225,8 @@ def main() -> None:
             for nid in node_ids
         ],
     }
-    out_path = Path(__file__).resolve().parents[2] / "experiments" / "shapley_vs_centrality.json"
-    out_path.write_text(json.dumps(out, indent=2))
-    print(f"\nFull per-node results written to {out_path}")
+    args.out.write_text(json.dumps(out, indent=2))
+    print(f"\nFull per-node results written to {args.out}")
 
 
 if __name__ == "__main__":

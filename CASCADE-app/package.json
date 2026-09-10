@@ -16,7 +16,8 @@
     "audit:circular": "madge --circular --extensions ts,tsx --ts-config tsconfig.json .",
     "audit:deps": "npm audit --omit=dev",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "harness:shapley": "vitest run --config vitest.harness.config.mts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",

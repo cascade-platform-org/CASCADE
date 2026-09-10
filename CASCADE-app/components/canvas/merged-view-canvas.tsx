@@ -41,6 +41,7 @@ import { edgeTypes } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
 import { ZoomSlider } from "./zoom-slider";
+import { CanvasLegend } from "./canvas-legend";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
 
@@ -417,6 +418,11 @@ function MergedViewCanvas() {
           }}
         />
       </ReactFlow>
+
+      {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
+          Every canvas view needs it: an Analysis Heatmap applies to the Element
+          registry, so its colours show here as much as in the single-canvas view. */}
+      <CanvasLegend />
 
       {contextMenu && (
         <CanvasContextMenu

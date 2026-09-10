@@ -482,7 +482,9 @@ Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
 - **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
 - **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (exact 2^N or approximate).
 
-Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality; cleared by Reset). Each metric shows a recommended graph-type badge on the Analysis page.
+Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality; cleared by Reset).
+
+A completed Shapley run offers **Export Shapley values (JSON)** — the Shapley Export (see CONTEXT.md). It carries φ̂ per Element as Operativity Score fractions plus the run's real seed and sample count, and is the input the paper harness `scripts/paper_shapley_vs_centrality.py` joins against structural centralities for IJDRR §4.4, so the estimator has one implementation rather than two.
 
 ---
 

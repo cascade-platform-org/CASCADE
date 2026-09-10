@@ -99,8 +99,13 @@ export function clearProjectHistory(): void {
  * Attempt to open the browser's native Save As picker (File System Access API).
  * Falls back to the legacy <a download> trick when the API is unavailable
  * (Firefox, Safari, or non-secure contexts).
+ *
+ * Exported because every JSON the app hands back to the user should reach the
+ * disk the same way — one picker, one fallback, one remembered folder. Callers
+ * that are not saving a Project (the Shapley export, for one) use it directly
+ * and skip the history/autosave bookkeeping the save* wrappers below add.
  */
-async function saveAs(filename: string, content: string): Promise<void> {
+export async function saveAs(filename: string, content: string): Promise<void> {
   const blob = new Blob([content], { type: "application/json" });
 
   // Modern path: shows the OS file picker so the user can choose folder + name

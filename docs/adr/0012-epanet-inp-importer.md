@@ -211,9 +211,10 @@ as no-ground-truth (`_check_converged`), and demand junctions severed from
 every source are forced to ratio 0 (`_severed_junctions`) — WNTR's PDD is
 singular on severed components and silently reports arbitrary "fully served"
 circulations. Import-linter carve-out: this script — along with
-`benchmark_engine.py` and `paper_shapley_vs_centrality.py` — may import
-`engine.*` because it must measure the REAL engine, not a reimplementation
-(CLAUDE.md §8a).
+`benchmark_engine.py` — may import `engine.*` because it must measure the REAL
+engine, not a reimplementation (CLAUDE.md §8a). (`paper_shapley_vs_centrality.py`
+held the same carve-out until 2026-09-09, when its duplicate Shapley estimator
+was removed in favour of the app's exported result.)
 
 ## Alternatives rejected
 

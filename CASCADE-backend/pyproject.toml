@@ -27,7 +27,7 @@ DEP002 = ["python-dotenv", "uvicorn", "python-multipart"]
 # `scripts/` holds dev-only harnesses (benchmarks, the paper's statistics), not
 # shipped service code, so their imports belong in requirements-dev.txt. deptry
 # has no notion of a dev-only source directory, so name the package here.
-#   scipy — Spearman/Shapley statistics in scripts/paper_shapley_vs_centrality.py.
+#   scipy — Spearman statistics in scripts/paper_shapley_vs_centrality.py.
 DEP004 = ["scipy"]
 
 [tool.vulture]
@@ -62,11 +62,6 @@ ignore_imports = [
     # (engine.flow._ratio_to_level), not a reimplementation of either; a dev-
     # only validation harness, same category as benchmark_engine.py above.
     "scripts.validate_faithfulness -> engine.*",
-    # Reproduces the paper's Shapley-vs-centrality case-study numbers by
-    # calling the engine's REAL propagation directly (mirrors the client-side
-    # Monte Carlo estimator in section-model-based.tsx); a dev-only paper
-    # analysis harness, same category as the two scripts above.
-    "scripts.paper_shapley_vs_centrality -> engine.*",
 ]
 
 [tool.pyright]

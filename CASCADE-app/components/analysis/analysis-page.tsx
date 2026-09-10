@@ -194,13 +194,6 @@ export function AnalysisPage() {
                 </button>
               ))}
             </nav>
-
-            {/* Footer hint */}
-            <div className="border-t border-zinc-100 p-3 dark:border-zinc-800">
-              <p className="text-[10px] text-zinc-400">
-                ★ = recommended for current graph type
-              </p>
-            </div>
           </div>
 
           {/* Main content */}
