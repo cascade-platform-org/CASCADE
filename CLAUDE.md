@@ -117,7 +117,7 @@ The propagation algorithm lives exclusively in `CASCADE-backend/engine/`. It is 
 - **Never** expose engine internals through API responses beyond what `PropagationResult` defines.
 - **Never** replicate or approximate the engine algorithm client-side "for performance" or "for offline use".
 - `CASCADE-backend/core/` contains only open, auditable logic: graph utilities, rule parsing, analysis tools.
-- Rule **parsing and validation** is permitted on the frontend. Rule **evaluation** belongs exclusively in the engine. (No frontend rule parser exists yet — the only parser is `CASCADE-backend/core/rule_parser.py`.)
+- Rule **parsing and validation** is permitted on the frontend. Rule **evaluation** belongs exclusively in the engine. (No frontend rule parser exists yet — the only parser is `CASCADE-backend/core/rule_parser.py`. What the frontend has is grammar-aware *autocomplete*: `CASCADE-app/lib/rule-suggestions.ts` reads the shared spec `CASCADE-app/shared/rule-grammar.json`, which `core/rule_grammar.py` reads too, so a grammar change is made in that one file.)
 
 When in doubt: if removing the code would make the proprietary algorithm less complete, it belongs in `engine/`.
 

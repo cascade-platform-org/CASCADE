@@ -88,6 +88,36 @@ def filter_project_by_scope(
     )
 
 
+def with_failed_elements(project: Project, element_ids: list[str]) -> Project:
+    """Return a copy of `project` with every named Element driven to the worst
+    Functionality level (1).
+
+    This is the Scenario a model-based Analysis Metric scores: "what does the
+    multi-canvas lose if exactly these Elements are out of service". Open,
+    auditable logic — it decides which Elements start degraded, never how the
+    degradation spreads (CLAUDE.md §7).
+
+    Ids that name nothing in the registry are ignored rather than raising: a
+    coalition is built from ids the caller already read out of this Project, and
+    a stale id is a reason to score one Element as unaffected, not to fail an
+    entire batch of Scenarios. Elements untouched by the coalition keep their
+    authored state, including any Event already applied.
+    """
+    failed = set(element_ids)
+    if not failed:
+        return project
+
+    nodes = {
+        nid: (node.model_copy(update={"functionality": 1}) if nid in failed else node)
+        for nid, node in project.nodes.items()
+    }
+    edges = {
+        eid: (edge.model_copy(update={"functionality": 1}) if eid in failed else edge)
+        for eid, edge in project.edges.items()
+    }
+    return project.model_copy(update={"nodes": nodes, "edges": edges})
+
+
 def _find_canvas(canvases: list[Canvas], canvas_id: str) -> Optional[Canvas]:
     for canvas in canvases:
         if canvas.id == canvas_id:

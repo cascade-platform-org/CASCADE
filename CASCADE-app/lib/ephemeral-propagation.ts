@@ -10,7 +10,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
-import { postPropagate } from "@/lib/api-client";
+import { postPropagate, postPropagateBatch } from "@/lib/api-client";
 import { mergeUpdatesIntoSnapshot } from "@/lib/element-update";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
@@ -42,4 +42,52 @@ export async function runEphemeralPropagation(snapshot: GraphSnapshot): Promise<
 
   const result = await postPropagate(payload);
   return mergeUpdatesIntoSnapshot(snapshot, result.updates);
+}
+
+/**
+ * Send one snapshot and many coalitions in a single request; return the
+ * post-propagation snapshot for each, in order.
+ *
+ * The single-Scenario twin above builds one payload per call. Here the payload
+ * is built once and the server applies each coalition, which is the whole point
+ * — a model-based Analysis run was re-sending an unchanged Project hundreds of
+ * times. Writes nothing to any store, exactly like `runEphemeralPropagation`.
+ */
+export async function runEphemeralPropagationBatch(
+  snapshot: GraphSnapshot,
+  coalitions: string[][],
+): Promise<GraphSnapshot[]> {
+  const canvasState = useCanvasStore.getState();
+  const config = useConfigStore.getState().config;
+  const scope = useUiStore.getState().propagationScope;
+
+  const project = canvasState.toProject();
+  const single = buildPropagationPayload({
+    project: {
+      ...project,
+      nodes: snapshot.nodes,
+      edges: snapshot.edges,
+      update_history: [],
+      scorecard: [],
+    },
+    config,
+    scope,
+    activeCanvasId: canvasState.activeCanvasId,
+  });
+
+  const results = await postPropagateBatch({ ...single, coalitions });
+
+  // Each result is the propagation of `snapshot` with that coalition failed. The
+  // failed Elements themselves are re-applied here because the engine reports
+  // only what IT changed, and an Element the coalition drove to 1 that nothing
+  // cascaded into would otherwise come back at its authored Functionality.
+  return results.map((result, i) => {
+    const nodes = { ...snapshot.nodes };
+    const edges = { ...snapshot.edges };
+    for (const id of coalitions[i] ?? []) {
+      if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
+      else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
+    }
+    return mergeUpdatesIntoSnapshot({ ...snapshot, nodes, edges }, result.updates);
+  });
 }

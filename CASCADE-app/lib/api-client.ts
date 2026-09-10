@@ -7,7 +7,11 @@
  * added here and every caller gets it for free.
  */
 import { z } from "zod";
-import { PropagationResultSchema, type PropagationResult } from "@/lib/schemas/propagation";
+import {
+  BatchPropagationResultSchema,
+  PropagationResultSchema,
+  type PropagationResult,
+} from "@/lib/schemas/propagation";
 import {
   EngineAlgorithmsSchema,
   ImportInpResponseSchema,
@@ -15,6 +19,7 @@ import {
   ProjectVersionDetailSchema,
   type EngineAlgorithms,
   type ImportInpResponse,
+  type BatchPropagationRequest,
   type PropagationRequest,
   type ProjectVersionSummary,
   type ProjectVersionDetail,
@@ -310,6 +315,31 @@ export async function postPropagate(payload: PropagationRequest): Promise<Propag
   }
 
   return PropagationResultSchema.parse(await response.json());
+}
+
+/**
+ * POST /api/propagate/batch — one Project, many coalitions, one round trip.
+ *
+ * Results come back positionally aligned with `payload.coalitions`. Batching is
+ * a transport optimisation only: the server runs each coalition through the same
+ * path a single Propagation takes, so a batched result is identical to the same
+ * Scenario sent on its own.
+ */
+export async function postPropagateBatch(
+  payload: BatchPropagationRequest,
+): Promise<PropagationResult[]> {
+  const response = await authedFetch(`${API_BASE}/api/propagate/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => response.statusText);
+    throw new Error(`Server returned ${response.status}: ${detail}`);
+  }
+
+  return BatchPropagationResultSchema.parse(await response.json()).results;
 }
 
 // ---------------------------------------------------------------------------

@@ -105,6 +105,26 @@ one-step-privatization property. The import-linter contract
 split keeps `services.epanet_solve_service` outside `engine.*` entirely,
 verified by `lint-imports` passing unchanged.
 
+**Amendment 2026-09-10 — the invariant is now tested, not merely asserted.**
+Two properties carry the fair comparison, and until now both were prose:
+
+- *One rule, applied once.* `test_epanet_levels_use_the_engines_own_quantization`
+  drives a full EPANET-mode `propagate()` with the solve stubbed to known served
+  ratios and asserts every resulting Functionality level equals
+  `engine.flow._ratio_to_level(ratio, N)`. The ratios sit on both sides of each
+  level boundary, because that is where an alternative rounding rule diverges:
+  replace `ceil` with the obvious-looking `round` and only the 0.6667 case
+  fails (`ceil(2.0001) = 3`, `round(2.0001) = 2`) — verified by mutation, and
+  the sole reason the boundary values are chosen rather than mid-band ones.
+- *Nothing quantizes twice.* `test_epanet_solve_returns_ratios_not_levels`
+  asserts `solve_epanet_snapshot` returns values in [0, 1], so a level cannot
+  leak out of the service that is forbidden to compute one.
+
+The engine-import half of the split needs no test of its own: import-linter
+already fails the build if `services.epanet_solve_service` imports `engine.*`.
+What it could not catch is a *reimplementation* of the rounding rule inside this
+file, which is what the first test above pins.
+
 ## Consequences
 
 - `Canvas` gains two new optional fields (`source_inp_content`,

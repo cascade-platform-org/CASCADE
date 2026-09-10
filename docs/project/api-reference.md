@@ -70,6 +70,34 @@ Errors:
 | `504` | Engine exceeded the 30 s wall-clock cap (`ENGINE_TIMEOUT_SECONDS`). |
 | `500` | Engine failure (details only in server logs, never in the response). |
 
+### `POST /api/propagate/batch` — requires `can_propagate`
+
+One Project, many Scenarios, one round trip. Exists because the model-based
+Analysis Metrics evaluate hundreds of coalitions over an **unchanged** Project;
+sending it once per coalition dominated a run's cost (a 39-node network at the
+default settings: 1,297 requests re-sending the same ~49 KB payload, measured
+down to 26).
+
+Request body (`BatchPropagationRequest`) is `PropagationRequest` plus:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `coalitions` | `string[][]` | 1–50 lists of Element ids (nodes or edges) to drive to Functionality 1 before propagating. `[]` is the untouched baseline. Ids absent from the Project are ignored. |
+
+Response (`BatchPropagationResult`): `{ results: PropagationResult[] }`, **positionally aligned** with `coalitions` — `results[i]` is the Propagation of `coalitions[i]`. Callers index by position, so results are never reordered or deduplicated.
+
+Three properties the implementation guarantees, each with a test:
+
+- **Not a second propagation path.** Every coalition goes through the same `propagate()` a single run uses, EPANET branch and timeout included, so a batched result is identical to the same Scenario sent alone.
+- **Each coalition starts from the untouched Project.** Damage never accumulates across the batch.
+- **Charged one engine evaluation per coalition** (ADR-0008). Charging a batch as one request would turn the budget into a request limit over unbounded compute — the exact failure that ADR exists to prevent.
+
+Sequential server-side, deliberately: the engine already owns a bounded worker pool, and letting one request occupy all of it would starve other users for the length of an Analysis run. This endpoint removes transport cost, not the engine's concurrency limits.
+
+Errors are the single endpoint's, plus `422` when `coalitions` is empty or longer than 50 (the caller chunks — that cap is what keeps progress reporting and cancellation responsive).
+
+Unlike `POST /api/propagate`, this route writes **no** Analysis Log row: one user-initiated Analysis run needs hundreds of Scenarios, and logging each would bury every real entry. Its cost remains visible in the entitlement budget.
+
 #### EPANET-mode canvas (`graph.graph_type == "epanet"`, ADR-0013)
 
 When the active (local-scope) canvas's `graph_type` is the reserved value
@@ -219,4 +247,4 @@ Returns `{ bundle: { project, config }, warnings, original_nodes, imported_nodes
 
 ## Not implemented (by design, yet)
 
-Batch propagation (`POST /api/propagate/batch`) appears in older planning documents but has **no endpoint, no schema, and (since migration 006) no table** — the speculative `batch_propagation_jobs` table was dropped because its `results` JSONB would have persisted Propagation outputs, which ADR-0007 forbids. Re-derive the whole thing, storage included, from ADR-0007 and Pydantic when the feature is actually built (requirements §16).
+Nothing outstanding here. Batch propagation, listed here until 2026-09-10, now exists — see `POST /api/propagate/batch` above. It is **stateless**: no job table, no stored results. The speculative `batch_propagation_jobs` table dropped in migration 006 stays dropped, because its `results` JSONB would have persisted Propagation outputs, which ADR-0007 forbids.

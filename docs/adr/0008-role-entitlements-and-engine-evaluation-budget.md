@@ -10,18 +10,52 @@ bundle of quotas that scales up with trust.
 
 ## The metering unit is the engine evaluation
 
-A single Propagation costs **1** engine evaluation; a model-based analysis
-(e.g. Shapley Value) costs **`permutations × N`** evaluations inside a single
-API request. Metering by *request* is therefore meaningless — one request can be
-1 unit or thousands. We meter the thing actually being spent: **engine
-evaluations**, via a per-role **token bucket** that refills per minute. A request
-whose evaluation cost exceeds the remaining budget is **refused with a clear
-message**, never run silently or throttled into a long queue.
+A single Propagation costs **1** engine evaluation. We meter the thing actually
+being spent: **engine evaluations**, via a per-role **token bucket** that refills
+per minute. A request whose evaluation cost exceeds the remaining budget is
+**refused with a clear message**, never run silently or throttled into a long
+queue.
 
-This is what makes model-based analysis safe to offer to `viewer`: a 45-node
-Shapley is automatically forced down to a low-permutation Monte Carlo to fit the
-small budget — matching the existing UI behaviour (degrade to Monte Carlo and
-warn above ~30 elements).
+### How this is actually enforced (corrected 2026-09-10)
+
+The original text of this section described a model-based analysis as
+`permutations × N` evaluations **inside a single API request**, and rejected
+per-request metering on that basis. **The system was never built that way.** The
+Shapley and Vitality estimators run in the browser
+(`CASCADE-app/lib/model-based-analysis.ts`) and issue **one `POST /api/propagate`
+per coalition**. `api/propagation_routes.py` charges `cost=1` per request.
+
+So one request *is* one evaluation, and the budget is correct as shipped — but
+by a property of the client, not by anything the server enforces. Two things
+follow, and both matter:
+
+- The rejected option "rate-limit by requests per minute" and the accepted
+  design are, today, **the same thing**. The distinction only becomes real when
+  a request can carry more than one evaluation.
+- Any endpoint that batches coalitions server-side **must charge
+  `cost = len(coalitions)`**. Shipping one at `cost=1` would turn the budget
+  into a request limit over an unbounded amount of compute — the exact failure
+  this ADR was written to prevent. This is a hard requirement on the batching
+  work, not a preference.
+
+**Satisfied 2026-09-10.** `POST /api/propagate/batch` charges
+`cost=len(body.coalitions)` through the same `_enforce_entitlement` helper as the
+single route, so the node cap and the budget cannot drift apart while the costs
+differ. Two tests pin it — a batch of 3 must spend 3 units, and a batch larger
+than the remaining budget is refused before any engine work — and both fail if
+the cost is changed back to 1 (verified by mutation). The batch size is capped in
+the schema (`MAX_COALITIONS_PER_BATCH = 50`), so one token can never buy an
+unbounded amount of compute. With that endpoint live, the ADR's original premise
+finally describes the system: a request can now carry many evaluations, and the
+budget meters evaluations.
+
+Two further claims in the original text described behaviour that does not
+exist and are withdrawn: there is **no exact `2^N` Shapley path** (the estimator
+is Monte Carlo only), and there is **no automatic degradation or warning above
+~30 elements** — the user sets permutations, `k_max` and a wall-clock budget by
+hand, and the panel shows the projected call count before the run. What makes
+model-based analysis safe for `viewer` is the 45-node cap plus the budget, not
+an automatic downgrade.
 
 ## Entitlement knobs and starting defaults
 
@@ -49,7 +83,7 @@ Node caps are firm decisions; eval budgets are tunable config.
 
 **Re-run the benchmark on the actual VM and set the final numbers there.**
 
-### Known weakness / future refinement
+### Known weaknesses / future refinements
 
 The token bucket charges **1 unit per evaluation regardless of node count**, but a
 300-node eval costs ~6× a 45-node eval. So the budget is only accurate at one
@@ -58,13 +92,23 @@ over-restrictive for small graphs. A future refinement: charge
 `cost = ceil(node_count / K)` so big networks debit proportionally, making the
 budget size-aware.
 
+A second weakness, visible once the enforcement above is stated plainly: because
+the client makes one request per coalition, a Shapley run over a 39-node network
+sends ~1,300 requests carrying the same ~49 KB project each time. The budget
+bounds the compute correctly, but nothing bounds the redundant transfer and
+re-parsing. That was the case for a batch endpoint, built on 2026-09-10 under the `cost`
+rule above: the same run now sends 26 requests instead of 1,297, with
+bit-identical Shapley values.
+
 ## Considered options
 
 - *Lock the engine until an admin approves each user.* Rejected: kills the
   self-service trial that drives adoption.
-- *Rate-limit by requests per minute (e.g. "5 runs/min").* Rejected: a single
-  model-based request is thousands of evaluations, so a request-based limit does
-  not bound compute at all.
+- *Rate-limit by requests per minute (e.g. "5 runs/min").* Rejected **for a
+  server that fans out internally** — one such request would be thousands of
+  evaluations, so a request-based limit would not bound compute. See the
+  correction above: with today's client-side fan-out the two coincide, and the
+  rejection only bites again once batching lands.
 - *Model-based analysis as an analyst-only feature.* Rejected: we want viewers to
   experience the full toolset on small graphs.
 

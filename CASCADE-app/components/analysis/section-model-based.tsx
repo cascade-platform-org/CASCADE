@@ -11,7 +11,13 @@ import { useScorecardStore } from "@/store/scorecard-store";
 import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
 import { buildScopedGraph } from "@/lib/analysis-utils";
-import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { runEphemeralPropagation, runEphemeralPropagationBatch } from "@/lib/ephemeral-propagation";
+import {
+  makePrefetchedEvaluator,
+  prefetchCoalitionScores,
+  type ChunkScorer,
+} from "@/lib/coalition-batch";
+import { MAX_COALITIONS_PER_BATCH } from "@/lib/schemas/api";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
 import { buildOiWeightOptions } from "@/lib/oi-weight-attrs";
 import {
@@ -66,6 +72,21 @@ function makeCoalitionEvaluator(baseline: GraphSnapshot, weightAttr: string, n: 
     }
     const after = await runEphemeralPropagation({ ...baseline, nodes, edges });
     return computeOperativityScore(after, n, weightAttr) / 100;
+  };
+}
+
+/**
+ * Adapter: score a whole chunk of Scenarios in one request.
+ *
+ * Same arithmetic as `makeCoalitionEvaluator` above — the Operativity Score of
+ * the propagated snapshot — over `POST /api/propagate/batch` instead of one
+ * `POST /api/propagate` per coalition. The server applies the coalitions, so the
+ * Project crosses the wire once per chunk rather than once per Scenario.
+ */
+function makeChunkScorer(baseline: GraphSnapshot, weightAttr: string, n: number): ChunkScorer {
+  return async (coalitions) => {
+    const propagated = await runEphemeralPropagationBatch(baseline, coalitions);
+    return propagated.map((after) => computeOperativityScore(after, n, weightAttr) / 100);
   };
 }
 
@@ -313,21 +334,48 @@ export function SectionModelBased() {
     const baseline = useCanvasStore.getState().toGraphSnapshot();
     const weightAttr = useAnalysisStore.getState().oiWeightAttr;
 
-    const shapleyResult = await estimateShapley(
+    // The seed is chosen HERE rather than inside the estimator, because the
+    // pre-fetch has to plan the same permutations the estimator will draw.
+    const seed = Math.floor(Math.random() * 0x100000000);
+    const estimatorOptions = {
+      samples: shapleyParams.samples,
+      kMax: shapleyParams.kMax,
+      seed,
+      maxTimeMs: shapleyParams.maxTimeSecs * 1000,
+    };
+
+    const tick = (ms: number) => {
+      recordCall(ms);
+      const elapsed = (Date.now() - startedAt) / 1000;
+      if (elapsed > 10) setWallSecs(elapsed);
+    };
+
+    // Score every Scenario the run needs, MAX_COALITIONS_PER_BATCH at a time.
+    // A chunk that fails leaves its coalitions unscored and they fall back to
+    // single calls below, so a batch endpoint that is unavailable costs speed
+    // rather than the run.
+    const { scores } = await prefetchCoalitionScores(
       elements,
-      makeCoalitionEvaluator(baseline, weightAttr, n),
-      {
-        samples: shapleyParams.samples,
-        kMax: shapleyParams.kMax,
-        maxTimeMs: shapleyParams.maxTimeSecs * 1000,
-      },
+      { ...estimatorOptions, chunkSize: MAX_COALITIONS_PER_BATCH },
+      makeChunkScorer(baseline, weightAttr, n),
       {
         isCancelled: () => cancelRef.current,
-        onEvaluation: (ms) => {
-          recordCall(ms);
-          const elapsed = (Date.now() - startedAt) / 1000;
-          if (elapsed > 10) setWallSecs(elapsed);
+        onScored: (count, elapsedMs) => {
+          // Charge each coalition its share of the chunk's round trip, so the
+          // "time remaining" estimate stays honest instead of collapsing to 0.
+          const per = count > 0 ? elapsedMs / count : elapsedMs;
+          for (let i = 0; i < count; i++) tick(per);
         },
+      },
+    );
+
+    const shapleyResult = await estimateShapley(
+      elements,
+      makePrefetchedEvaluator(scores, makeCoalitionEvaluator(baseline, weightAttr, n)),
+      estimatorOptions,
+      {
+        isCancelled: () => cancelRef.current,
+        onEvaluation: tick,
       },
     );
 
@@ -556,7 +604,9 @@ export function SectionModelBased() {
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
             <div
               className="h-full rounded-full bg-indigo-500 transition-all"
-              style={{ width: `${(progress.completed / progress.total) * 100}%` }}
+              // Clamped: the estimator reports one extra evaluation for the
+              // baseline even when every Scenario was pre-fetched.
+              style={{ width: `${Math.min(100, (progress.completed / progress.total) * 100)}%` }}
             />
           </div>
           <button

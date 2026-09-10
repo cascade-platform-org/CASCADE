@@ -27,6 +27,42 @@ class PropagationRequest(BaseModel):
     )
 
 
+MAX_COALITIONS_PER_BATCH = 50
+
+
+class BatchPropagationRequest(BaseModel):
+    """
+    Body for POST /api/propagate/batch.
+
+    One Project, many Scenarios. Each coalition names the Elements to drive to
+    the worst Functionality before propagating; everything else about the run is
+    shared. This exists because the model-based Analysis Metrics evaluate
+    hundreds of coalitions over an unchanged Project, and sending that Project
+    once per coalition dominated the cost of a run.
+
+    The batch is bounded (`MAX_COALITIONS_PER_BATCH`) rather than unbounded: the
+    caller chunks, which is what keeps progress reporting and cancellation
+    working and keeps a single request from occupying an engine worker
+    indefinitely.
+    """
+    project: Project
+    config: ModelConfiguration
+    scope: Literal["local", "global"]
+    active_canvas_id: Optional[str] = Field(
+        default=None, description="Canvas to restrict propagation when scope = local."
+    )
+    coalitions: list[list[str]] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_COALITIONS_PER_BATCH,
+        description=(
+            "Element ids (nodes or edges) to fail in each Scenario. An empty "
+            "inner list is the untouched baseline. Ids not present in the "
+            "Project are ignored, exactly as they are on the single-run path."
+        ),
+    )
+
+
 class ElementUpdate(BaseModel):
     """
     Engine's update for a single Element (node or edge) after a Propagation.
@@ -63,6 +99,14 @@ class PropagationResult(BaseModel):
         default_factory=list,
         description="Non-fatal engine warnings, e.g. convergence not reached.",
     )
+
+
+class BatchPropagationResult(BaseModel):
+    """
+    Results for POST /api/propagate/batch, positionally aligned with the request's
+    `coalitions`. `results[i]` is the Propagation of `coalitions[i]`.
+    """
+    results: list[PropagationResult]
 
 
 # PropagationScorecardEntry.propagation_result references PropagationResult via

@@ -9,9 +9,9 @@ import { SectionTopological } from "./section-topological";
 import { SectionReachability } from "./section-reachability";
 import { SectionStructural } from "./section-structural";
 import { SectionModelBased } from "./section-model-based";
+import { buildAnalysisEntry } from "@/lib/analysis-entry";
 import { cn } from "@/lib/utils";
 import type { AnalysisSection } from "@/store/analysis-store";
-import type { AnalysisScorecardEntry } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
 // Save-to-Scorecard dialog
@@ -20,26 +20,24 @@ import type { AnalysisScorecardEntry } from "@/lib/schemas/network";
 function SaveDialog({ onClose }: { onClose: () => void }) {
   const [label, setLabel] = useState("");
   const result = useAnalysisStore((s) => s.result);
-  const activeMetric = useAnalysisStore((s) => s.activeMetric);
   const scope = useAnalysisStore((s) => s.scope);
   const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
   const addEntry = useScorecardStore((s) => s.addScorecardEntry);
 
   function handleSave() {
     if (!result || !label.trim()) return;
-    const snapshot = useCanvasStore.getState().toGraphSnapshot();
-    const entry: AnalysisScorecardEntry = {
-      type: "analysis",
-      id: crypto.randomUUID(),
-      label: label.trim(),
-      created_at: new Date().toISOString(),
-      metric: activeMetric,
-      scope,
-      canvas_id: scope === "local" ? (activeCanvasId ?? undefined) : undefined,
-      scores: result.scores,
-      snapshot,
-    };
-    addEntry(entry);
+    // The metric comes from the Result, never from the store's `activeMetric`
+    // — see lib/analysis-entry.ts for what that used to record.
+    addEntry(
+      buildAnalysisEntry({
+        result,
+        label,
+        scope,
+        activeCanvasId,
+        snapshot: useCanvasStore.getState().toGraphSnapshot(),
+        id: crypto.randomUUID(),
+      }),
+    );
     onClose();
   }
 

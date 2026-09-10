@@ -107,6 +107,45 @@ callers can diff before/after by identity to count affected Elements
 (`countChangedElements` in `components/canvas/action-bar.tsx`). A wholesale clone
 would silently report every Element as affected.
 
+### Saving an Analysis to the Scorecard
+
+`lib/analysis-entry.ts` builds the Scorecard entry from the Analysis Result and
+nothing else that could drift. The Save dialog previously stamped the entry with
+the analysis store's `activeMetric`, which is selector state that only three of
+the four Analysis sections write — `section-topological.tsx` keeps its selection
+in local React state — so every topological entry was labelled with whatever had
+last been selected elsewhere, defaulting to `betweenness`. The label is shown on
+the Scorecard card and persisted in the project file, so the record was wrong for
+good. A Result carries the metric that produced it, stamped by the analysis
+function itself, so taking both from one object makes the mismatch
+unrepresentable rather than merely corrected.
+
+### Batched coalition evaluation
+
+A model-based Analysis run evaluates hundreds of Scenarios over an **unchanged**
+Project. Each one used to be its own `POST /api/propagate` carrying that Project
+again: 1,297 requests and ~29 MB for a 39-node network at default settings, with
+measured per-call overhead (~19 ms) dominating the engine's actual work (~8 ms).
+
+`POST /api/propagate/batch` takes the Project once plus a list of coalitions.
+Server-side it loops over the existing `propagate()` — deliberately sequential,
+because the engine already owns a bounded worker pool and one request must not be
+able to occupy all of it. The endpoint removes transport cost; it adds no
+concurrency the engine did not have.
+
+The client side is arranged so the estimator never learns about any of it.
+`estimateShapley`'s sampling is seeded, so `planPermutations` (extracted from it,
+and still the only shuffle) yields every Scenario a run will visit before the
+first is evaluated. `lib/coalition-batch.ts` scores those in chunks of 50 and
+hands the estimator a `CoalitionEvaluator` backed by the filled map; a coalition
+missing from the map falls back to a single call, so an unavailable batch
+endpoint costs speed rather than the run. `lib/model-based-analysis.ts` keeps its
+one-coalition-at-a-time interface and its pure-function tests.
+
+Measured on the case-study network: **1,297 requests → 26**, and the resulting
+φ̂ are bit-identical to the pre-batch run at the same seed — the property that
+makes the optimisation safe to have made at all.
+
 ### Analysis Heatmap legend
 
 An Analysis Heatmap overrides every Element's fill, so while one is applied the

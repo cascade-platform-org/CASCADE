@@ -57,3 +57,9 @@ export const PropagationResultSchema = PropagationMetaSchema.extend({
 export type ElementUpdate = z.infer<typeof ElementUpdateSchema>;
 export type PropagationMeta = z.infer<typeof PropagationMetaSchema>;
 export type PropagationResult = z.infer<typeof PropagationResultSchema>;
+
+/** Response of POST /api/propagate/batch — one result per coalition, in order. */
+export const BatchPropagationResultSchema = z.object({
+  results: z.array(PropagationResultSchema),
+});
+export type BatchPropagationResult = z.infer<typeof BatchPropagationResultSchema>;

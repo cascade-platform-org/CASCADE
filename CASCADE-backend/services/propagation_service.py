@@ -26,13 +26,18 @@ from datetime import datetime, timezone
 
 from fastapi.concurrency import run_in_threadpool
 
-from core.graph import filter_project_by_scope
+from core.graph import filter_project_by_scope, with_failed_elements
 from core.importers.inp import InpParseError, load_inp
 from core.importers.inp.map import compute_junction_demands
 from engine import propagation as _engine
 from engine.flow import _ratio_to_level
 from schemas.network import Project
-from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
+from schemas.results import (
+    BatchPropagationRequest,
+    ElementUpdate,
+    PropagationRequest,
+    PropagationResult,
+)
 from services.epanet_solve_service import (
     solve_epanet_snapshot,
     translate_project_to_broken_links,
@@ -72,6 +77,35 @@ class EngineTimeoutError(RuntimeError):
 
 class EngineBusyError(RuntimeError):
     """All engine workers are occupied; the run was rejected without queueing."""
+
+
+async def propagate_batch(request: BatchPropagationRequest) -> list[PropagationResult]:
+    """Propagate one Project against many coalitions, in order.
+
+    Deliberately sequential over the existing `propagate()`, not a fan-out. Two
+    reasons: the engine already owns a bounded worker pool (`_MAX_WORKERS`), and
+    letting one request occupy all of it would starve every other user for the
+    length of a model-based Analysis run. This endpoint exists to stop re-sending
+    and re-parsing an unchanged Project hundreds of times, which is transport
+    cost — not to add concurrency the engine did not have.
+
+    Every coalition therefore goes through the identical path a single
+    Propagation takes, including the EPANET-mode branch and the timeout, so a
+    batched result cannot differ from the same Scenario run on its own.
+    """
+    results: list[PropagationResult] = []
+    for coalition in request.coalitions:
+        results.append(
+            await propagate(
+                PropagationRequest(
+                    project=with_failed_elements(request.project, coalition),
+                    config=request.config,
+                    scope=request.scope,
+                    active_canvas_id=request.active_canvas_id,
+                )
+            )
+        )
+    return results
 
 
 async def propagate(request: PropagationRequest) -> PropagationResult:

@@ -33,8 +33,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { describe, it } from "vitest";
 
 import { buildShapleyExport } from "@/lib/analysis-export";
+import {
+  makePrefetchedEvaluator,
+  prefetchCoalitionScores,
+} from "@/lib/coalition-batch";
 import { mergeUpdatesIntoSnapshot } from "@/lib/element-update";
 import { estimateShapley, type ElementRef } from "@/lib/model-based-analysis";
+import { MAX_COALITIONS_PER_BATCH } from "@/lib/schemas/api";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
 import type { ModelConfiguration } from "@/lib/schemas/config";
@@ -109,12 +114,52 @@ describe("Shapley export harness", () => {
         return computeOperativityScore(after, n, WEIGHT_ATTR) / 100;
       };
 
+      // Batched, the same way the Analysis page runs it: the Project crosses
+      // the wire once per chunk instead of once per Scenario.
+      async function propagateBatch(coalitions: string[][]): Promise<number[]> {
+        const payload = buildPropagationPayload({
+          project: { ...project, nodes: baseline.nodes, edges: baseline.edges },
+          config,
+          scope: "global",
+          activeCanvasId: null,
+        });
+        const res = await fetch(`${API}/api/propagate/batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, coalitions }),
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+        calls++;
+        const { results } = (await res.json()) as { results: { updates: unknown[] }[] };
+        return results.map((r, i) => {
+          const nodes = { ...baseline.nodes };
+          const edges = { ...baseline.edges };
+          for (const id of coalitions[i]) {
+            if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
+            else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
+          }
+          const after = mergeUpdatesIntoSnapshot(
+            { ...baseline, nodes, edges },
+            r.updates as Parameters<typeof mergeUpdatesIntoSnapshot>[1],
+          );
+          return computeOperativityScore(after, n, WEIGHT_ATTR) / 100;
+        });
+      }
+
       const startedAt = Date.now();
-      const result = await estimateShapley(elements, evaluate, {
-        samples: SAMPLES,
-        kMax: KMAX,
-        seed: SEED,
-      });
+      const options = { samples: SAMPLES, kMax: KMAX, seed: SEED };
+      const { scores, requests } = await prefetchCoalitionScores(
+        elements,
+        { ...options, chunkSize: MAX_COALITIONS_PER_BATCH },
+        propagateBatch,
+        { onScored: () => {} },
+      );
+      const result = await estimateShapley(
+        elements,
+        makePrefetchedEvaluator(scores, evaluate),
+        options,
+      );
+      process.stdout.write(`  ${requests} batch requests, ${scores.size} Scenarios\n`);
 
       const doc = buildShapleyExport({
         result,
@@ -130,7 +175,7 @@ describe("Shapley export harness", () => {
       writeFileSync(OUT, JSON.stringify(doc, null, 2));
       process.stdout.write(
         `\n${elements.length} elements, ${result.samplesUsed} samples, ` +
-          `${result.evaluations} engine calls, seed ${result.seed}, ` +
+          `${result.evaluations} Scenarios, seed ${result.seed}, ` +
           `${((Date.now() - startedAt) / 1000).toFixed(1)}s\nwrote ${OUT}\n`,
       );
     },

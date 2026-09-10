@@ -98,6 +98,30 @@ export const PropagationRequestSchema = z.object({
   active_canvas_id: z.string().optional(),
 });
 
+/**
+ * Largest batch POST /api/propagate/batch accepts. Mirrors
+ * `MAX_COALITIONS_PER_BATCH` in backend/schemas/results.py; the caller chunks to
+ * this size, which is also what keeps progress reporting and cancellation
+ * responsive during a model-based Analysis run.
+ */
+export const MAX_COALITIONS_PER_BATCH = 50;
+
+/**
+ * Sent to POST /api/propagate/batch — one Project, many Scenarios.
+ *
+ * Each coalition names the Elements to drive to the worst Functionality before
+ * propagating. It exists because the model-based Analysis Metrics evaluate
+ * hundreds of coalitions over an unchanged Project, and re-sending that Project
+ * every time dominated the cost of a run.
+ */
+export const BatchPropagationRequestSchema = z.object({
+  project: ProjectSchema,
+  config: ModelConfigurationSchema,
+  scope: z.enum(["local", "global"]),
+  active_canvas_id: z.string().optional(),
+  coalitions: z.array(z.array(z.string())).min(1).max(MAX_COALITIONS_PER_BATCH),
+});
+
 // ---------------------------------------------------------------------------
 // Engine algorithms — GET /api/engine/algorithms
 // ---------------------------------------------------------------------------
@@ -175,6 +199,7 @@ export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
 export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
 export type ImportInpResponse = z.infer<typeof ImportInpResponseSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
+export type BatchPropagationRequest = z.infer<typeof BatchPropagationRequestSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;
 export type HeuristicMeta = z.infer<typeof HeuristicMetaSchema>;
 export type GraphTypeMeta = z.infer<typeof GraphTypeMetaSchema>;

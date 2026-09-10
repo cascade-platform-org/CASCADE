@@ -134,7 +134,7 @@ class Node(BaseModel):
             "Set by the engine after each Propagation and stored in the project file."
         ),
     )
-    # Raw rule strings — parsed and validated client-side; evaluated by the engine.
+    # Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine.
     rules: Optional[list[str]] = None
     properties: Optional[dict[str, Any]] = None
 
@@ -176,7 +176,7 @@ class Edge(BaseModel):
             "never emitted (a blameless element is simply absent)."
         ),
     )
-    # Raw rule strings — parsed and validated client-side; evaluated by the engine.
+    # Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine.
     rules: Optional[list[str]] = None
     sourceHandle: Optional[str] = Field(
         default=None,

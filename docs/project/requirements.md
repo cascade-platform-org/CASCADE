@@ -480,9 +480,11 @@ Losses are distributed backwards along **transitive blame chains**: the fraction
 Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
 
 - **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
-- **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (exact 2^N or approximate).
+- **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (Monte Carlo estimate over sampled failure orders; no exact 2^N path).
 
 Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality; cleared by Reset).
+
+Model-based runs evaluate their Scenarios through `POST /api/propagate/batch` — one Project, up to 50 coalitions per request, charged one engine evaluation each (ADR-0008). The estimator's interface is unchanged; batching is a transport optimisation and produces bit-identical values.
 
 A completed Shapley run offers **Export Shapley values (JSON)** — the Shapley Export (see CONTEXT.md). It carries φ̂ per Element as Operativity Score fractions plus the run's real seed and sample count, and is the input the paper harness `scripts/paper_shapley_vs_centrality.py` joins against structural centralities for IJDRR §4.4, so the estimator has one implementation rather than two.
 

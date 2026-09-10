@@ -216,7 +216,7 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 | `category_dependency_profiles` | `{ [category]: profile }` | Per-category dependency attributes (see below). Absent on Source nodes for categories they supply. |
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Sensitivity to each defined Event. Higher = more vulnerable; 0 = immune (same as absent). |
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
-| `rules` | `string[]` | Rule strings — parsed client-side, evaluated by the engine. |
+| `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes; Event `attribute_mutations` may write here. |
 
 #### Per-category dependency profile fields
@@ -254,7 +254,7 @@ Applied only if it worsens the current `functionality`.
 | `capacity` | `number` | Maximum throughput; degrades proportionally with Functionality. Edges carry no category — the engine infers it from the endpoints. |
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Same semantics as on nodes. |
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
-| `rules` | `string[]` | Rule strings — parsed client-side, evaluated by the engine. |
+| `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes. |
 
 ---

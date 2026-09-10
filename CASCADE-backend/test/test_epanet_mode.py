@@ -10,9 +10,14 @@ imported across test modules — this repo's test/ has no __init__.py package):
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from core.importers.inp import ImportOptions, build_bundle, compute_junction_demands, load_inp
+from engine.flow import _ratio_to_level
+from schemas.results import PropagationRequest
+from services import propagation_service
 from services.epanet_solve_service import solve_epanet_snapshot, translate_project_to_broken_links
 
 _MAX_LEVEL = 3  # matches ImportOptions default n_levels
@@ -141,3 +146,78 @@ def test_solve_epanet_snapshot_closing_only_source_path_cuts_service():
     ratios = solve_epanet_snapshot(wn, demands, broken_link_ids={"P1", "B"})
     assert ratios.get("J2", 0.0) < 0.5
     assert ratios.get("J3", 0.0) < 0.5
+
+
+# --- ADR-0013 fair-comparison invariant --------------------------------------
+#
+# The whole point of EPANET mode is comparing "what CASCADE says" against "what
+# EPANET says" for the same intervention. That is only a fair comparison if both
+# paths turn a served ratio into a Functionality level with the SAME rule. ADR-0013
+# puts that rule in ONE place — `engine.flow._ratio_to_level`, applied by
+# propagation_service.py — precisely so epanet_solve_service.py can stay
+# engine-import-free (ADR-0009) while still agreeing with the flow heuristic.
+#
+# Until these tests existed the invariant was a comment. A second, "obvious"
+# rounding rule (round() instead of ceil(), or a 0-based floor) introduced here
+# would have made every published CASCADE-vs-EPANET number measure quantization
+# drift instead of hydraulics, and nothing would have failed.
+
+
+def test_epanet_solve_returns_ratios_not_levels():
+    """The split ADR-0013 depends on: this service quantizes nothing."""
+    wn = load_inp(SYNTHETIC_INP)
+    demands = compute_junction_demands(wn, "peak")
+    ratios = solve_epanet_snapshot(wn, demands, broken_link_ids={"A"})
+
+    assert ratios, "expected a converged solve to report at least one junction"
+    for jid, ratio in ratios.items():
+        assert isinstance(ratio, float), f"{jid} is not a ratio"
+        assert 0.0 <= ratio <= 1.0 + 1e-9, f"{jid}={ratio} is outside [0, 1]"
+        # An integer level would land on exactly 1.0/2.0/3.0; a ratio that
+        # happens to be 1.0 is fine, but 2.0 or 3.0 is a level leaking through.
+        assert ratio <= 1.0 + 1e-9
+
+
+@pytest.mark.parametrize(
+    "ratios",
+    [
+        {"J2": 0.0, "J3": 1.0},              # the ends
+        {"J2": 0.01, "J3": 0.99},            # just inside them
+        {"J2": 1 / 3, "J3": 2 / 3},          # exactly on the level boundaries
+        {"J2": 0.3333, "J3": 0.6667},        # just past them
+    ],
+)
+def test_epanet_levels_use_the_engines_own_quantization(monkeypatch, ratios):
+    """Every EPANET-mode level equals what the flow heuristic would have produced.
+
+    The case that bites is `ratios3`: at a served ratio of 0.6667 with N=3,
+    `ceil(0.6667 * 3) = ceil(2.0001) = 3` while `round(2.0001) = 2`. Swap the
+    engine's rule for the obvious-looking `round` and only that one fails —
+    which is exactly why the set spans both sides of each level boundary rather
+    than sampling the middle of each band.
+    """
+    wn = load_inp(SYNTHETIC_INP)
+    bundle = build_bundle(wn, name="synthetic", options=ImportOptions(n_levels=_MAX_LEVEL))
+    project, config = bundle.project, bundle.config
+
+    canvas = project.canvases[0]
+    canvas.graph.graph_type = "epanet"
+    canvas.source_inp_content = SYNTHETIC_INP
+
+    monkeypatch.setattr(propagation_service, "solve_epanet_snapshot", lambda *a, **k: ratios)
+
+    request = PropagationRequest(project=project, config=config, scope="local",
+                                 active_canvas_id=canvas.id)
+    result = asyncio.run(propagation_service.propagate(request))
+
+    n_levels = len(config.functionality_scale)
+    by_inp_id = {
+        (node.properties or {}).get("inp_id"): nid
+        for nid, node in project.nodes.items()
+        if (node.properties or {}).get("inp_id")
+    }
+    levels = {u.id: u.functionality for u in result.updates}
+
+    assert levels, "expected the EPANET path to report updates"
+    for jid, ratio in ratios.items():
+        assert levels[by_inp_id[jid]] == _ratio_to_level(ratio, n_levels)

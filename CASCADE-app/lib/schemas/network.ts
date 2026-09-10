@@ -99,7 +99,7 @@ export const NodeSchema = z.object({
    * Set by the engine after each Propagation and stored in the project file.
    */
   responsibility_share: z.record(z.string(), z.number().gt(0).lte(1)).optional(),
-  /** Raw rule strings — parsed and validated client-side; evaluated by the engine. */
+  /** Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine. */
   rules: z.array(z.string()).optional(),
   /** Free-form attributes; Event attribute_mutations may write here. */
   properties: z.record(z.string(), z.unknown()).optional(),
@@ -134,7 +134,7 @@ export const EdgeSchema = z.object({
    * Keyed by ElementId or EventId; values in (0, 1] summing to 1.
    */
   responsibility_share: z.record(z.string(), z.number().gt(0).lte(1)).optional(),
-  /** Raw rule strings — parsed and validated client-side; evaluated by the engine. */
+  /** Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine. */
   rules: z.array(z.string()).optional(),
   /**
    * React Flow handle id on the source node — records which of the six

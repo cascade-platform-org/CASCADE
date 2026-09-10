@@ -81,6 +81,14 @@ export interface AnalysisState {
   activeSection: AnalysisSection;
 
   /** Active metric within each section. */
+  /**
+   * The metric currently SELECTED in the Reachability, Structural and
+   * Model-based sections. Selector state only — `section-topological.tsx`
+   * deliberately keeps its own selection in local React state and never writes
+   * here, so this does NOT tell you what produced `result`. Read
+   * `result.metric` for that; it is stamped by the analysis function itself and
+   * cannot disagree with the scores beside it (see lib/analysis-entry.ts).
+   */
   activeMetric: AnyMetric;
 
   /** Analysis scope — mirrors propagation scope concept. */

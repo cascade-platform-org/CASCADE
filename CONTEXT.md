@@ -99,7 +99,7 @@ How a `SourceToDemands` category shares **scarce** supply — the first Graph Ty
 _Avoid_: "algorithm" bare (say allocation or allocation strategy)
 
 **Rule**:
-A logical condition on an Element determining when its Functionality degrades from other Elements' state. Kinds: **Specific** (named Element), **Intracategorical**, **Intercategorical**. Parsed/validated client-side; evaluated exclusively by the engine. Levels may be integers or scale labels (resolved at parse time; undefined labels ignored with a warning).
+A logical condition on an Element determining when its Functionality degrades from other Elements' state. Kinds: **Specific** (named Element), **Intracategorical**, **Intercategorical**. Authored client-side with grammar-aware autocomplete (`lib/rule-suggestions.ts`, driven by the shared spec `CASCADE-app/shared/rule-grammar.json` that `core/rule_grammar.py` also reads); **parsed and evaluated exclusively by the engine** — no client-side parser or validator exists, so a malformed rule is only caught at Propagation. Levels may be integers or scale labels (resolved at parse time; undefined labels ignored with a warning).
 _Avoid_: Dependency rule, condition, constraint
 
 **Category Dependency Profile**:
@@ -163,7 +163,7 @@ Model-based metric: Operativity Score drop from removing one Element and re-prop
 _Avoid_: "vitality score" (Recovery Value is the intervention metric; Vitality is analysis)
 
 **Shapley Value**:
-Model-based metric: each Element's marginal contribution averaged over removal orderings (exact 2^N; approximate with parameters). Three parameters, named the same way in the UI, the code and the IJDRR paper: **M** (permutations — random failure ORDERS, each truncated to its first k_max entries), **k_max** (coalition-size truncation) and a wall-clock budget. Sampling draws **uniform** permutations (Fisher-Yates over a seeded PRNG) and returns the seed, so any reported run replays exactly — `lib/model-based-analysis.ts::estimateShapley`. Under truncation the values **rank** Elements rather than measuring each one's full share: marginals past position k_max count as zero, so Σφ̂ = (k_max/N)·v(N) on an additive game and efficiency holds only at k_max = N. There is exactly one implementation: the paper harness `scripts/paper_shapley_vs_centrality.py` reads a run's **Shapley Export** rather than recomputing.
+Model-based metric: each Element's marginal contribution averaged over removal orderings. Estimated by Monte Carlo only — there is no exact 2^N path. Three parameters, named the same way in the UI, the code and the IJDRR paper: **M** (permutations — random failure ORDERS, each truncated to its first k_max entries), **k_max** (coalition-size truncation) and a wall-clock budget. Sampling draws **uniform** permutations (Fisher-Yates over a seeded PRNG) and returns the seed, so any reported run replays exactly — `lib/model-based-analysis.ts::estimateShapley`. Under truncation the values **rank** Elements rather than measuring each one's full share: marginals past position k_max count as zero, so Σφ̂ = (k_max/N)·v(N) on an additive game and efficiency holds only at k_max = N. There is exactly one implementation: the paper harness `scripts/paper_shapley_vs_centrality.py` reads a run's **Shapley Export** rather than recomputing.
 _Avoid_: calling M "samples" of k-subsets — a sample is an ordered permutation, and order is what makes a marginal contribution well defined
 _Avoid_: "Shapley centrality"
 

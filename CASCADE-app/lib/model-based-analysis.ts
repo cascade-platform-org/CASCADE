@@ -79,6 +79,48 @@ export function shuffleInPlace<T>(items: T[], rng: () => number): T[] {
   return items;
 }
 
+/**
+ * The cache key for a coalition: its ids, sorted, so the same set reached by two
+ * different permutations is recognised as one Scenario.
+ *
+ * Exported because anything that pre-scores coalitions on the estimator's behalf
+ * has to agree with it exactly — a second key format would miss every lookup and
+ * silently re-evaluate the whole run over the network.
+ */
+export function coalitionKey(ids: Iterable<string>): string {
+  return [...ids].sort().join(" ");
+}
+
+/**
+ * The truncated failure orders a Shapley run will draw.
+ *
+ * Split out of `estimateShapley` so a caller can know every Scenario a run needs
+ * BEFORE the first one is evaluated — which is what lets those Scenarios be
+ * fetched in batches instead of one network round trip at a time
+ * (`lib/coalition-batch.ts`). The estimator iterates this same plan, so there is
+ * one shuffle rather than a planner and an estimator kept in step by hand.
+ *
+ * Deterministic: same elements, same options, same seed → same plan.
+ */
+export function planPermutations(
+  elements: readonly ElementRef[],
+  options: { samples: number; kMax: number; seed: number },
+): string[][] {
+  const effectiveK = Math.min(options.kMax, elements.length);
+  if (elements.length === 0 || effectiveK === 0) return [];
+
+  const rng = makeRng(options.seed);
+  const plan: string[][] = [];
+  for (let s = 0; s < options.samples; s++) {
+    plan.push(
+      shuffleInPlace([...elements], rng)
+        .slice(0, effectiveK)
+        .map((element) => element.id),
+    );
+  }
+  return plan;
+}
+
 // ---------------------------------------------------------------------------
 // Vitality Centrality
 // ---------------------------------------------------------------------------
@@ -191,8 +233,13 @@ export async function estimateShapley(
 ): Promise<ShapleyResult> {
   const now = hooks.now ?? Date.now;
   const seed = options.seed ?? Math.floor(Math.random() * 0x100000000);
-  const rng = makeRng(seed);
-  const effectiveK = Math.min(options.kMax, elements.length);
+  // Every Scenario the run will visit, decided upfront. Cheap (a shuffle per
+  // sample) and it is what makes batched pre-fetching possible.
+  const plan = planPermutations(elements, {
+    samples: options.samples,
+    kMax: options.kMax,
+    seed,
+  });
 
   const phi: Record<string, number> = {};
   for (const { id } of elements) phi[id] = 0;
@@ -220,20 +267,18 @@ export async function estimateShapley(
   const startedAt = now();
   let samplesUsed = 0;
 
-  for (let s = 0; s < options.samples; s++) {
+  for (const order of plan) {
     if (hooks.isCancelled?.()) break;
     if (options.maxTimeMs !== undefined && now() - startedAt > options.maxTimeMs) break;
-    if (elements.length === 0 || effectiveK === 0) break;
 
     samplesUsed++;
-    const order = shuffleInPlace([...elements], rng).slice(0, effectiveK);
     const failed = new Set<string>();
     let prevScore = baseline;
 
-    for (const { id } of order) {
+    for (const id of order) {
       if (hooks.isCancelled?.()) break;
       failed.add(id);
-      const key = [...failed].sort().join(" ");
+      const key = coalitionKey(failed);
 
       let score: number;
       if (cache.has(key)) {

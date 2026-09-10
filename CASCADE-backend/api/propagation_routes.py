@@ -16,11 +16,17 @@ from auth.entitlement import get_limiter
 from db import analysis_log
 from schemas.auth import AuthUser
 from schemas.engine import EngineAlgorithms, GraphTypeMeta, HeuristicMeta, HeuristicParamMeta
-from schemas.results import PropagationRequest, PropagationResult
+from schemas.results import (
+    BatchPropagationRequest,
+    BatchPropagationResult,
+    PropagationRequest,
+    PropagationResult,
+)
 from services.propagation_service import (
     EngineBusyError,
     EngineTimeoutError,
     propagate,
+    propagate_batch,
 )
 
 logger = logging.getLogger(__name__)
@@ -143,6 +149,37 @@ async def get_engine_algorithms(
     return _ENGINE_ALGORITHMS
 
 
+def _enforce_entitlement(user: AuthUser, node_count: int, cost: int) -> None:
+    """ADR-0008: node cap, then engine-evaluation budget, before any engine work.
+
+    `cost` is the number of engine evaluations the request will spend — 1 for a
+    single Propagation, one per coalition for a batch. Charging a batch as 1
+    would turn the budget into a request limit over an unbounded amount of
+    compute, which is precisely the failure ADR-0008 exists to prevent.
+    """
+    ent = user.entitlement
+    if ent and ent.max_nodes is not None and node_count > ent.max_nodes:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"This network has {node_count} nodes; your role permits at most "
+                f"{ent.max_nodes}. Reduce the network size or request a higher role."
+            ),
+        )
+
+    rate = ent.evals_per_minute if ent else None
+    allowed, _remaining = get_limiter().try_consume(user.sub, rate, cost=cost)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Engine-evaluation budget exceeded for the current minute. "
+                "Wait a moment and try again."
+            ),
+            headers={"Retry-After": "5"},
+        )
+
+
 @router.post(
     "/propagate",
     response_model=PropagationResult,
@@ -157,30 +194,7 @@ async def run_propagation(
     body: PropagationRequest,
     user: AuthUser = Depends(require_permission("can_propagate")),
 ) -> PropagationResult:
-    # --- Entitlement enforcement (ADR-0008) — before any engine work ---------
-    ent = user.entitlement
-    node_count = len(body.project.nodes)
-    if ent and ent.max_nodes is not None and node_count > ent.max_nodes:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=(
-                f"This network has {node_count} nodes; your role permits at most "
-                f"{ent.max_nodes}. Reduce the network size or request a higher role."
-            ),
-        )
-
-    rate = ent.evals_per_minute if ent else None
-    allowed, _remaining = get_limiter().try_consume(user.sub, rate, cost=1)
-    if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(
-                "Engine-evaluation budget exceeded for the current minute. "
-                "Wait a moment and try again."
-            ),
-            headers={"Retry-After": "5"},
-        )
-    # -------------------------------------------------------------------------
+    _enforce_entitlement(user, len(body.project.nodes), cost=1)
 
     t0 = time.perf_counter()
     try:
@@ -227,3 +241,67 @@ async def run_propagation(
         compute_time_ms=elapsed_ms,
     )
     return result
+
+
+@router.post(
+    "/propagate/batch",
+    response_model=BatchPropagationResult,
+    response_model_exclude_none=True,
+    summary="Run many Propagations over one Project",
+    description=(
+        "Accepts one Project plus a list of coalitions and returns one "
+        "PropagationResult per coalition, in the same order. Each coalition names "
+        "the Elements to drive to the worst Functionality before propagating. "
+        "Requires can_propagate permission and charges one engine evaluation per "
+        "coalition."
+    ),
+)
+async def run_propagation_batch(
+    body: BatchPropagationRequest,
+    user: AuthUser = Depends(require_permission("can_propagate")),
+) -> BatchPropagationResult:
+    # One evaluation per coalition — ADR-0008. The batch size is capped by the
+    # schema, so this cannot request an unbounded amount of compute on one token.
+    _enforce_entitlement(user, len(body.project.nodes), cost=len(body.coalitions))
+
+    t0 = time.perf_counter()
+    try:
+        results = await propagate_batch(body)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except EngineTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        ) from exc
+    except EngineBusyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+            headers={"Retry-After": "5"},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Batch propagation failed for user %s: %s", user.email, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Propagation engine error. See server logs.",
+        ) from exc
+
+    elapsed_ms = int((time.perf_counter() - t0) * 1000)
+    logger.info(
+        "PropagateBatch user=%s scope=%s coalitions=%d elapsed_ms=%d",
+        user.email,
+        body.scope,
+        len(body.coalitions),
+        elapsed_ms,
+    )
+
+    # Deliberately NOT written to the Analysis Log (ADR-0007). That log records
+    # one row per user-initiated run for auditing; a model-based Analysis is one
+    # run that happens to need hundreds of Scenarios, so logging each would bury
+    # every real entry under machine-generated ones. The single-Propagation route
+    # still logs, and the batch's cost is visible in the entitlement budget.
+    return BatchPropagationResult(results=results)
