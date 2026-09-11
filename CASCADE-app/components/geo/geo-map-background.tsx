@@ -16,7 +16,9 @@
  */
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+// maplibre-gl 6 dropped its default export (named exports only) — a namespace
+// import keeps every `maplibregl.X` reference in this file unchanged.
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useReactFlow, useViewport } from "@xyflow/react";
 import { useCanvasStore } from "@/store/canvas-store";
