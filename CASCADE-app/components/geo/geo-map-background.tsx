@@ -25,6 +25,15 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useMapViewportSync } from "@/hooks/useMapViewportSync";
 import type { GeoAnchor } from "@/lib/schemas/network";
 
+// maplibre-gl 6 loads its tile-decoding work into a Web Worker, and under
+// Next.js the worker file has to be served as a plain same-origin asset:
+// `scripts/copy-maplibre-worker.mjs` puts it (and the shared chunk it imports)
+// under public/maplibre/ at predev/prebuild time. Without this call the map
+// mounts and reports "load", but never requests a single tile — a blank
+// background with no error. Module scope, so it runs exactly once before any
+// Map is constructed.
+maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+
 // ---------------------------------------------------------------------------
 // Ghost graph overlay — shows node/edge positions in setup mode
 // ---------------------------------------------------------------------------

@@ -5,7 +5,18 @@ import coreWebVitals from "eslint-config-next/core-web-vitals";
 import typescript from "eslint-config-next/typescript";
 
 const config = [
-  { ignores: ["node_modules/**", ".next/**", "out/**", "shared/schemas/**", "next-env.d.ts"] },
+  // public/maplibre/** is MapLibre's worker bundle copied verbatim out of
+  // node_modules by scripts/copy-maplibre-worker.mjs — vendor code, not ours.
+  {
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "shared/schemas/**",
+      "next-env.d.ts",
+      "public/maplibre/**",
+    ],
+  },
   ...coreWebVitals,
   ...typescript,
   {
