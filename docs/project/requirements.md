@@ -485,7 +485,9 @@ Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
 - **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
 - **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (Monte Carlo estimate over sampled failure orders; no exact 2^N path).
 
-Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality). Reset clears it: the colours describe a Scenario that no longer exists, so leaving them on the canvas is a key to numbers nothing on screen has.
+Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality), applied as soon as the metric finishes: the scores are why the metric was run, and the Analysis window floats, so there is nothing to move out of the way first. The overlay is repainted whenever the scores beneath it change — re-weighting a model-based run (ADR-0018) moves the colours with the numbers. Reset clears it: the colours describe a Scenario that no longer exists, so leaving them on the canvas is a key to numbers nothing on screen has. Closing the Analysis window does not clear it — the window floats over the canvas, so closing it says nothing about the overlay; the explicit **Clear heatmap** control does.
+
+A saved Analysis Scorecard entry repaints its own heatmap from the per-Element scores it stores, so its mini-graph shows the Analysis it was saved with regardless of what is painted on the live canvas.
 
 Model-based runs evaluate their Scenarios through `POST /api/propagate/batch` — one Project, up to 50 coalitions per request, charged one engine evaluation each (ADR-0008). The estimator's interface is unchanged; batching is a transport optimisation and produces bit-identical values.
 
@@ -562,10 +564,12 @@ The Scorecard UI shows all three snapshots side by side, with derived metrics fo
 ### 12.6 Operativity Score Formula
 
 ```
-O = Σ(importance_i × functionality_i) / (Σ(importance_i) × N) × 100   [%]
+O = Σ(w_i × functionality_i) / (Σ(w_i) × N) × 100   [%]
 ```
 
-Falls back to unweighted mean `Σ(functionality_i) / (nodeCount × N) × 100` when all `importance` values are 0.
+`w_i` is the node attribute the user selects as the weight — uniform, `importance`, `cost_of_disservice_per_day`, or any numeric attribute discovered in the data (`lib/oi-weight-attrs.ts`). Falls back to the unweighted mean `Σ(functionality_i) / (nodeCount × N) × 100` when the attribute is absent or every weight is 0.
+
+The weighting is a **view parameter**: it is applied when a result is read, never baked into how it was computed. The Scorecard has always worked this way — it stores snapshots and scores them at render time — and a finished model-based Analysis run does too, re-scoring from the evaluation outcomes it retained rather than re-running the engine. See ADR-0018.
 
 **Level thresholds** — the N equal intervals that divide 0–100%:
 

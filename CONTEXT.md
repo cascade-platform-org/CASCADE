@@ -139,11 +139,11 @@ A discrete integer 1..N on an Element (1 = worst, N = fully operational), on the
 _Avoid_: Status, health, service level, operativity (for a single Element)
 
 **Operativity Score**:
-Weighted average Functionality across a Canvas or the full multi-canvas, computed from any Scenario. Appears in the Scorecard.
+Weighted average Functionality across a Canvas or the full multi-canvas, computed from any Scenario. Appears in the Scorecard. The weight is a node attribute the user picks (uniform, `importance`, or any numeric attribute in the data) and is a property of how a result is *read*, never of how it was computed — both the Scorecard and a finished model-based Analysis run re-score under a new weighting without recomputing anything. See ADR-0018.
 _Avoid_: Operativity index, health score, operativity (without "Score")
 
 **Scorecard**:
-An atlas of entries the user explicitly saves — never automatic. Discriminated union on `type`: `"propagation"` (stacked `event_ids`, before/after snapshots, optional result) or `"analysis"` (metric name, scope, per-Element scores, snapshot, optional PNG). Persisted as `Project.scorecard`, separate from `update_history`. See ADR-0006, requirements §12.
+An atlas of entries the user explicitly saves — never automatic. Discriminated union on `type`: `"propagation"` (stacked `event_ids`, before/after snapshots, optional result) or `"analysis"` (metric name, scope, per-Element scores, snapshot, optional PNG). Every entry renders its snapshots as live mini-graphs of the network — an analysis entry repaints its own **Analysis Heatmap** from the scores it stores, so it keeps showing the Analysis it was saved with whatever is on the canvas now. Persisted as `Project.scorecard`, separate from `update_history`. See ADR-0006, requirements §12.
 _Avoid_: Report, dashboard; "Scorecard" for a single entry; assuming auto-generation
 
 **Model Graph Update**:
@@ -175,11 +175,11 @@ The single flow-point ↔ geographic-coordinate correspondence (plus zoom levels
 _Avoid_: flat-earth/linear approximation; "calibration"/"registration point"
 
 **Analysis Metric**:
-A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values). Each client-side metric is defined once, as one entry in `lib/analysis-metrics.ts` — label, panel, scope rule, what it needs before it can run, and how to run it — so the Analysis page can only offer a metric that is fully defined. The model-based two stay out of that registry deliberately: they are async, metered **Engine Evaluations** with sampling parameters and an export, and folding them in would make every field optional for the sake of one family.
+A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values). Each client-side metric is defined once, as one entry in `lib/analysis-metrics.ts` — label, panel, scope rule, what it needs before it can run, and how to run it — so the Analysis window can only offer a metric that is fully defined. The model-based two stay out of that registry deliberately: they are async, metered **Engine Evaluations** with sampling parameters and an export, and folding them in would make every field optional for the sake of one family.
 _Avoid_: "analysis type", "metric type"
 
 **Analysis Heatmap**:
-The colour overlay encoding an Analysis Metric's scores on the canvas (**Analysis Mode** — colours mean scores, not Functionality). Applying one minimizes the Analysis page onto the canvas and swaps the canvas legend's Functionality scale for the metric's own key, since Functionality colours are no longer what is drawn. The key is derived once, at apply time, and stored beside the colours it explains — `lib/analysis-legend.ts`. Cleared by Reset.
+The colour overlay encoding an Analysis Metric's scores on the canvas (**Analysis Mode** — colours mean scores, not Functionality). Applied automatically as soon as a metric finishes computing, and repainted whenever the scores change under it — a change of Operativity weighting re-scores a model-based run (ADR-0018) and the overlay follows. Applying one swaps the canvas legend's Functionality scale for the metric's own key, since Functionality colours are no longer what is drawn. The Analysis window floats over the canvas, so the overlay is visible without closing anything. The key is derived once, at apply time, and stored beside the colours it explains — `lib/analysis-legend.ts`. Cleared by Reset.
 _Avoid_: "heatmap mode", "centrality overlay"
 
 **Coalition**:

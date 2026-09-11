@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { RefreshCw, Zap, X, Download } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -20,6 +20,7 @@ import {
 } from "@/lib/coalition-batch";
 import { MAX_COALITIONS_PER_BATCH } from "@/lib/schemas/api";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
+import { captureOutcome, scoreOutcome, type EvaluationOutcome } from "@/lib/operativity-basis";
 import { buildOiWeightOptions } from "@/lib/oi-weight-attrs";
 import {
   buildShapleyExport,
@@ -27,6 +28,7 @@ import {
   type ShapleyExport,
 } from "@/lib/analysis-export";
 import {
+  coalitionKey,
   computeVitality,
   estimateShapley,
   maxUniqueCoalitions,
@@ -62,10 +64,23 @@ const MODEL_METRICS = [
   },
 ];
 
-/** Adapter: score a Scenario with `failed` Elements driven to Functionality 1. */
-function makeCoalitionEvaluator(baseline: GraphSnapshot, weightAttr: string, n: number) {
+/**
+ * Adapter: score a Scenario with `failed` Elements driven to Functionality 1.
+ *
+ * Each propagated Scenario is also reduced to an `EvaluationOutcome` and kept in
+ * `outcomes`, so the finished run can be re-scored under a different Operativity
+ * weighting without paying for the engine calls again — see
+ * `lib/operativity-basis.ts`.
+ */
+function makeCoalitionEvaluator(
+  baseline: GraphSnapshot,
+  weightAttr: string,
+  n: number,
+  outcomes: Record<string, EvaluationOutcome>,
+) {
   return async (failed: ReadonlySet<string>): Promise<number> => {
     const after = await runEphemeralPropagation(applyCoalition(baseline, failed));
+    outcomes[coalitionKey(failed)] = captureOutcome(baseline, after);
     return computeOperativityScore(after, n, weightAttr) / 100;
   };
 }
@@ -78,10 +93,18 @@ function makeCoalitionEvaluator(baseline: GraphSnapshot, weightAttr: string, n: 
  * `POST /api/propagate` per coalition. The server applies the coalitions, so the
  * Project crosses the wire once per chunk rather than once per Scenario.
  */
-function makeChunkScorer(baseline: GraphSnapshot, weightAttr: string, n: number): ChunkScorer {
+function makeChunkScorer(
+  baseline: GraphSnapshot,
+  weightAttr: string,
+  n: number,
+  outcomes: Record<string, EvaluationOutcome>,
+): ChunkScorer {
   return async (coalitions) => {
     const propagated = await runEphemeralPropagationBatch(baseline, coalitions);
-    return propagated.map((after) => computeOperativityScore(after, n, weightAttr) / 100);
+    return propagated.map((after, i) => {
+      outcomes[coalitionKey(coalitions[i])] = captureOutcome(baseline, after);
+      return computeOperativityScore(after, n, weightAttr) / 100;
+    });
   };
 }
 
@@ -178,6 +201,8 @@ export function SectionModelBased() {
   const setShapleyParams = useAnalysisStore((s) => s.setShapleyParams);
   const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
   const setOiWeightAttr = useAnalysisStore((s) => s.setOiWeightAttr);
+  const reweightBasis = useAnalysisStore((s) => s.reweightBasis);
+  const setReweightBasis = useAnalysisStore((s) => s.setReweightBasis);
   const scope = useAnalysisStore((s) => s.scope);
   const serverReachable = useUiStore((s) => s.serverReachable);
   const pushToast = useUiStore((s) => s.pushToast);
@@ -188,6 +213,7 @@ export function SectionModelBased() {
   // Held only for the Export button. Component-local because nothing else reads
   // it, and it must not outlive the run it describes.
   const [exportDoc, setExportDoc] = useState<ShapleyExport | null>(null);
+  const [reweighting, setReweighting] = useState(false);
 
   const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
 
@@ -207,6 +233,10 @@ export function SectionModelBased() {
       ...Object.keys(edges).map((id) => ({ id, kind: "edge" as const })),
     ];
 
+    // Filled by the evaluator below; handed to the store so a weighting change
+    // re-derives this run instead of discarding it.
+    const outcomes: Record<string, EvaluationOutcome> = {};
+
     const loopStart = Date.now();
     setProgress({ total: elements.length, completed: 0, firstCallMs: null, avgCallMs: null, startedAt: loopStart });
     cancelRef.current = false;
@@ -224,6 +254,7 @@ export function SectionModelBased() {
           snap.edges = rest;
         }
         const after = await runEphemeralPropagation(snap);
+        outcomes[id] = captureOutcome(baseline, after);
         return computeOperativityScore(after, n, weightAttr) / 100;
       },
       {
@@ -238,6 +269,7 @@ export function SectionModelBased() {
 
     if (Object.keys(values).length === 0) return;
     setResult(scoresToResult("vitality", values, (id) => (id in nodes ? "node" : "edge")));
+    setReweightBasis({ metric: "vitality", baseline, outcomes, elements });
     setProgress(null);
     setWallSecs(null);
   }
@@ -274,6 +306,8 @@ export function SectionModelBased() {
 
     // The seed is chosen HERE rather than inside the estimator, because the
     // pre-fetch has to plan the same permutations the estimator will draw.
+    const outcomes: Record<string, EvaluationOutcome> = {};
+
     const seed = Math.floor(Math.random() * 0x100000000);
     const estimatorOptions = {
       samples: shapleyParams.samples,
@@ -295,7 +329,7 @@ export function SectionModelBased() {
     const { scores } = await prefetchCoalitionScores(
       elements,
       { ...estimatorOptions, chunkSize: MAX_COALITIONS_PER_BATCH },
-      makeChunkScorer(baseline, weightAttr, n),
+      makeChunkScorer(baseline, weightAttr, n, outcomes),
       {
         isCancelled: () => cancelRef.current,
         onScored: (count, elapsedMs) => {
@@ -309,7 +343,7 @@ export function SectionModelBased() {
 
     const shapleyResult = await estimateShapley(
       elements,
-      makePrefetchedEvaluator(scores, makeCoalitionEvaluator(baseline, weightAttr, n)),
+      makePrefetchedEvaluator(scores, makeCoalitionEvaluator(baseline, weightAttr, n, outcomes)),
       estimatorOptions,
       {
         isCancelled: () => cancelRef.current,
@@ -326,6 +360,15 @@ export function SectionModelBased() {
     }
 
     setResult(scoresToResult("shapley", values, (id) => (id in nodes ? "node" : "edge")));
+    // samplesUsed, not the requested count: a run cut short by the time budget
+    // drew fewer permutations, and a replay must draw exactly those.
+    setReweightBasis({
+      metric: "shapley",
+      baseline,
+      outcomes,
+      elements,
+      shapleyOptions: { samples: shapleyResult.samplesUsed, kMax: shapleyParams.kMax, seed },
+    });
     setShapleyWorst({
       single: worstCoalitions[1] ?? null,
       pair: worstCoalitions[2] ?? null,
@@ -359,6 +402,7 @@ export function SectionModelBased() {
   async function handleCompute() {
     setResult(null);
     setExportDoc(null);
+    setReweightBasis(null);
     try {
       if (activeMetric === "vitality") await runVitality();
       else await runShapley();
@@ -374,6 +418,79 @@ export function SectionModelBased() {
       });
     }
   }
+
+  // ── Re-derive on a weighting change, instead of discarding the run ────────
+  // The Operativity weighting enters only at the final scoring step, so a
+  // finished run can be replayed against its cached outcomes. Both estimators
+  // are deterministic given their inputs — Shapley replays with the run's own
+  // seed and sample count — so the replay asks for exactly the coalitions the
+  // run already evaluated and makes zero engine calls. If any outcome is
+  // missing (a cancelled run, a partial prefetch) the standing result is left
+  // untouched rather than quietly re-scored from incomplete data.
+  const lastReweightRef = useRef<string | null>(null);
+  useEffect(() => {
+    const basis = reweightBasis;
+    if (!basis) {
+      lastReweightRef.current = null;
+      return;
+    }
+    // The run itself already scored under the weighting in force at the time.
+    const runKey = `${basis.metric}:${oiWeightAttr}`;
+    if (lastReweightRef.current === null) {
+      lastReweightRef.current = runKey;
+      return;
+    }
+    if (lastReweightRef.current === runKey) return;
+    lastReweightRef.current = runKey;
+
+    let cancelled = false;
+    (async () => {
+      setReweighting(true);
+      try {
+        let missing = false;
+        const cachedScore = (key: string, fallback: number) => {
+          const outcome = basis.outcomes[key];
+          if (!outcome) {
+            missing = true;
+            return fallback;
+          }
+          return scoreOutcome(basis.baseline, outcome, n, oiWeightAttr) / 100;
+        };
+        const baseScore = computeOperativityScore(basis.baseline, n, oiWeightAttr) / 100;
+        const isNode = new Set(basis.elements.filter((e) => e.kind === "node").map((e) => e.id));
+
+        if (basis.metric === "vitality") {
+          const { values } = await computeVitality(basis.elements, baseScore, async (el) =>
+            cachedScore(el.id, baseScore),
+          );
+          if (cancelled || missing) return;
+          setResult(scoresToResult("vitality", values, (id) => (isNode.has(id) ? "node" : "edge")));
+        } else if (basis.shapleyOptions) {
+          const replay = await estimateShapley(
+            basis.elements,
+            async (failed) => cachedScore(coalitionKey(failed), baseScore),
+            basis.shapleyOptions,
+          );
+          if (cancelled || missing) return;
+          setResult(scoresToResult("shapley", replay.values, (id) => (isNode.has(id) ? "node" : "edge")));
+          useAnalysisStore.getState().setShapleyWorst({
+            single: replay.worstCoalitions[1] ?? null,
+            pair: replay.worstCoalitions[2] ?? null,
+            triple: replay.worstCoalitions[3] ?? null,
+          });
+        }
+      } finally {
+        if (!cancelled) setReweighting(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // `n` and the store setters are stable for a given project; re-deriving is
+    // driven by the weighting and the basis alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oiWeightAttr, reweightBasis]);
 
   const isRunning = progress !== null;
   const totalCalls = activeMetric === "vitality"
@@ -395,18 +512,28 @@ export function SectionModelBased() {
 
   return (
     <div className="space-y-4">
-      {/* OI weight selector */}
+      {/* OI weight selector. Changing it re-scores the standing result from the
+          run's cached outcomes — no engine calls, so the result stays put. */}
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="text-zinc-500 shrink-0">OI node weight</span>
-        <select
-          value={oiWeightAttr}
-          onChange={(e) => setOiWeightAttr(e.target.value)}
-          className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-xs text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-        >
-          {oiWeightOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <span className="shrink-0 text-zinc-500">OI node weight</span>
+        <div className="flex items-center gap-1.5">
+          {reweighting && <RefreshCw size={11} className="animate-spin text-blue-500" />}
+          <select
+            value={oiWeightAttr}
+            onChange={(e) => setOiWeightAttr(e.target.value)}
+            disabled={isRunning}
+            title={
+              reweightBasis
+                ? "Re-scores the result already computed — no new engine calls"
+                : "Weighting used for the Operativity Index"
+            }
+            className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-xs text-zinc-700 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            {oiWeightOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Metric selector */}
@@ -418,7 +545,7 @@ export function SectionModelBased() {
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id
-                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                 : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
             )}
           >
@@ -523,7 +650,7 @@ export function SectionModelBased() {
         <button
           onClick={handleCompute}
           disabled={!serverReachable}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           <Zap size={13} />
           Compute {activeMetric === "vitality" ? "Vitality" : "Shapley Values"}
@@ -541,7 +668,7 @@ export function SectionModelBased() {
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
             <div
-              className="h-full rounded-full bg-indigo-500 transition-all"
+              className="h-full rounded-full bg-blue-500 transition-all"
               // Clamped: the estimator reports one extra evaluation for the
               // baseline even when every Scenario was pre-fetched.
               style={{ width: `${Math.min(100, (progress.completed / progress.total) * 100)}%` }}

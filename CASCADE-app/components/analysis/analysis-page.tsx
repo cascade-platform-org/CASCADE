@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Minimize2, BarChart2, BarChart3, Workflow, Network, Zap } from "lucide-react";
+import { BarChart2, BarChart3, Workflow, Network, Zap } from "lucide-react";
+import { FloatingWindow } from "@/components/ui/floating-window";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -55,7 +56,7 @@ function SaveDialog({ onClose }: { onClose: () => void }) {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") onClose(); }}
-          className="mb-4 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-indigo-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          className="mb-4 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         />
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
@@ -64,7 +65,7 @@ function SaveDialog({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSave}
             disabled={!label.trim() || !result}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             Save
           </button>
@@ -100,111 +101,84 @@ export function AnalysisPage() {
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  if (!isOpen) return null;
-
   return (
     <>
-      {/* Full-page overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950">
-        {/* Top bar */}
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <div className="flex items-center gap-2">
-            <BarChart2 size={16} className="text-indigo-600" />
-            <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Topological Analysis</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Save to Scorecard */}
-            <button
-              onClick={() => setSaveDialogOpen(true)}
-              disabled={!result}
-              className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
-            >
-              Save to Scorecard
-            </button>
-
-            {/* Minimize */}
-            <button
-              onClick={closeAnalysisPage}
-              title="Minimize — heatmap persists on canvas"
-              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <Minimize2 size={13} />
-              Minimize
-            </button>
-
-            {/* Close (clears heatmap) */}
-            <button
-              onClick={() => {
-                useAnalysisStore.getState().clearHeatmap();
-                closeAnalysisPage();
-              }}
-              title="Close and clear heatmap"
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex min-h-0 flex-1">
-          {/* Left sidebar */}
-          <div className="flex w-56 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
-            {/* Scope toggle */}
-            <div className="border-b border-zinc-100 p-3 dark:border-zinc-800">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Scope</p>
-              <div className="flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-                {(["local", "global"] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setScope(s)}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-medium transition-colors",
-                      scope === s
-                        ? "bg-indigo-600 text-white"
-                        : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800",
-                    )}
-                  >
-                    {s === "local" ? "Canvas" : "Global"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Section nav */}
-            <nav className="flex-1 overflow-y-auto p-2">
-              {SECTIONS.map((sec) => (
+      <FloatingWindow
+        open={isOpen}
+        onClose={closeAnalysisPage}
+        title="Analysis"
+        icon={<BarChart2 size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
+        storageKey="cascade.analysis.window"
+        defaultSize={{ w: 880, h: 620 }}
+        minSize={{ w: 560, h: 320 }}
+        headerActions={
+          <button
+            onClick={() => setSaveDialogOpen(true)}
+            disabled={!result}
+            title={result ? "Save this Analysis to the Scorecard" : "Run an Analysis Metric first"}
+            className="rounded-lg border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30"
+          >
+            Save to Scorecard
+          </button>
+        }
+      >
+        {/* Left sidebar */}
+        <div className="flex w-44 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
+          {/* Scope — the same local/global pair CONTEXT.md defines for
+              Propagation, and the same choice the Analyse button offers before
+              the window is even opened. Both write this one store field. */}
+          <div className="border-b border-zinc-100 p-3 dark:border-zinc-800">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Scope</p>
+            <div className="flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+              {(["local", "global"] as const).map((s) => (
                 <button
-                  key={sec.id}
-                  onClick={() => setActiveSection(sec.id)}
+                  key={s}
+                  onClick={() => setScope(s)}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                    activeSection === sec.id
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                      : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
+                    "flex-1 py-1.5 text-xs font-medium capitalize transition-colors",
+                    scope === s
+                      ? "bg-blue-600 text-white"
+                      : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800",
                   )}
                 >
-                  <span className={cn(activeSection === sec.id ? "text-indigo-600" : "text-zinc-400")}>
-                    {sec.icon}
-                  </span>
-                  {sec.label}
+                  {s}
                 </button>
               ))}
-            </nav>
-          </div>
-
-          {/* Main content */}
-          <div className="min-w-0 flex-1 overflow-y-auto p-6">
-            <div className="mx-auto max-w-2xl">
-              {activeSection === "topological" && <SectionTopological />}
-              {activeSection === "reachability" && <SectionReachability />}
-              {activeSection === "structural" && <SectionStructural />}
-              {activeSection === "model-based" && <SectionModelBased />}
             </div>
           </div>
+
+          {/* Section nav */}
+          <nav className="flex-1 overflow-y-auto p-2">
+            {SECTIONS.map((sec) => (
+              <button
+                key={sec.id}
+                onClick={() => setActiveSection(sec.id)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                  activeSection === sec.id
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
+                )}
+              >
+                <span className={cn(activeSection === sec.id ? "text-blue-600" : "text-zinc-400")}>
+                  {sec.icon}
+                </span>
+                {sec.label}
+              </button>
+            ))}
+          </nav>
         </div>
-      </div>
+
+        {/* Main content */}
+        <div className="min-w-0 flex-1 overflow-y-auto p-5">
+          <div className="mx-auto max-w-2xl">
+            {activeSection === "topological" && <SectionTopological />}
+            {activeSection === "reachability" && <SectionReachability />}
+            {activeSection === "structural" && <SectionStructural />}
+            {activeSection === "model-based" && <SectionModelBased />}
+          </div>
+        </div>
+      </FloatingWindow>
 
       {saveDialogOpen && <SaveDialog onClose={() => setSaveDialogOpen(false)} />}
     </>

@@ -56,7 +56,7 @@ export function SectionStructural() {
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id
-                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                 : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
             )}
           >
@@ -73,7 +73,7 @@ export function SectionStructural() {
       <button
         onClick={handleCompute}
         disabled={computing}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
         {computing ? <RefreshCw size={13} className="animate-spin" /> : <Network size={13} />}
         {computing ? "Computing…" : `Compute ${currentDef?.label ?? ""}`}
@@ -103,7 +103,7 @@ export function SectionStructural() {
                   <div key={canvas.id} className="flex items-center gap-2 text-xs">
                     <span className="w-32 truncate text-zinc-600 dark:text-zinc-400">{canvas.label}</span>
                     <div className="flex-1 rounded-full bg-zinc-100 dark:bg-zinc-800" style={{ height: 6 }}>
-                      <div className="rounded-full bg-indigo-500" style={{ width: `${ratio * 100}%`, height: 6 }} />
+                      <div className="rounded-full bg-blue-500" style={{ width: `${ratio * 100}%`, height: 6 }} />
                     </div>
                     <span className="w-10 text-right font-mono text-zinc-500">{(ratio * 100).toFixed(0)}%</span>
                   </div>
@@ -120,7 +120,7 @@ export function SectionStructural() {
                 {Object.entries(nofnMetrics.couplingStrength).map(([pair, strength]) => (
                   <div key={pair} className="flex items-center gap-2 text-xs">
                     <span className="flex-1 truncate font-mono text-zinc-600 dark:text-zinc-400">{pair}</span>
-                    <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{(strength * 100).toFixed(1)}%</span>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{(strength * 100).toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
@@ -156,7 +156,7 @@ export function SectionStructural() {
                     <span className="text-zinc-500">{e.source}</span>
                     <span className="text-zinc-300">→</span>
                     <span className="text-zinc-500">{e.target}</span>
-                    <span className="ml-auto rounded bg-indigo-50 px-1.5 font-mono text-[10px] text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                    <span className="ml-auto rounded bg-blue-50 px-1.5 font-mono text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                       {e.count} edge{e.count !== 1 ? "s" : ""}
                     </span>
                   </div>

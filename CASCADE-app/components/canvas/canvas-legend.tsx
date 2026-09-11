@@ -101,7 +101,7 @@ function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
               /* Analysis Heatmap key — what the overridden colours mean. */
               <div>
                 <div
-                  className="mb-1 truncate text-[9px] font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400"
+                  className="mb-1 truncate text-[9px] font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400"
                   title={heatmapLegend.title}
                 >
                   {heatmapLegend.title}

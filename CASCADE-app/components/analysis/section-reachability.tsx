@@ -61,7 +61,7 @@ export function SectionReachability() {
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id
-                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                 : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
             )}
           >
@@ -94,7 +94,7 @@ export function SectionReachability() {
       <button
         onClick={handleCompute}
         disabled={computing || (isConeMetric && !reachabilitySourceId)}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
         {computing ? <RefreshCw size={13} className="animate-spin" /> : <Workflow size={13} />}
         {computing ? "Computing…" : `Compute ${currentDef?.label ?? ""}`}

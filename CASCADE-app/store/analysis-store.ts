@@ -11,6 +11,8 @@ import { immer } from "zustand/middleware/immer";
 import type { AnalysisResult, NofNMetrics, PercolationPoint } from "@/lib/topological-analysis";
 import type { LabelField } from "@/lib/analysis-legend";
 import type { HeatmapLegend } from "@/lib/analysis-legend";
+import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { EvaluationOutcome } from "@/lib/operativity-basis";
 
 // ---------------------------------------------------------------------------
 // Section and metric types
@@ -73,6 +75,24 @@ export interface ModelBasedProgress {
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+
+/**
+ * Everything needed to replay a finished model-based run against a different
+ * Operativity weighting. The estimators are deterministic given their seed, so
+ * replaying them over the cached outcomes redraws exactly the same coalitions
+ * and makes zero engine calls.
+ */
+export interface ReweightBasis {
+  metric: "vitality" | "shapley";
+  /** The Scenario every evaluation started from. Carries the weight attributes. */
+  baseline: GraphSnapshot;
+  /** Evaluation key → outcome. Vitality keys by Element id, Shapley by coalition. */
+  outcomes: Record<string, EvaluationOutcome>;
+  /** The Elements the run scored, in the order it scored them. */
+  elements: { id: string; kind: "node" | "edge" }[];
+  /** Replayed verbatim so the same permutations are drawn. Shapley only. */
+  shapleyOptions?: { samples: number; kMax: number; seed: number };
+}
 
 export interface AnalysisState {
   /** Whether the full-page analysis layout is open. */
@@ -141,6 +161,16 @@ export interface AnalysisState {
   topologicalEdgeResult: AnalysisResult | null;
 
   /**
+   * What the last model-based run left behind so a change of Operativity
+   * weighting re-derives the result instead of discarding it. See
+   * `lib/operativity-basis.ts` — the weighting only enters at the final scoring
+   * step, so the propagated Scenarios the run already paid for can be re-scored
+   * under any weighting without touching the engine. Null when no model-based
+   * run has completed, and dropped as soon as a new run starts.
+   */
+  reweightBasis: ReweightBasis | null;
+
+  /**
    * Node attribute used as weight in the Operativity Index for model-based metrics.
    * "constant" = uniform; any other string = that numeric node attribute (falls back
    * to uniform if all values are zero or absent).
@@ -201,6 +231,7 @@ export interface AnalysisActions {
   setShapleyParams: (params: Partial<AnalysisState["shapleyParams"]>) => void;
   setShapleyWorst: (worst: AnalysisState["shapleyWorst"]) => void;
   setOiWeightAttr: (attr: string) => void;
+  setReweightBasis: (basis: ReweightBasis | null) => void;
 
   reset: () => void;
 }
@@ -227,6 +258,7 @@ const initialState: AnalysisState = {
   labelField: "name",
   weightExpression: "capacity",
   oiWeightAttr: "constant",
+  reweightBasis: null,
   topologicalEdgeResult: null,
   shapleyParams: {
     samples: 200,
@@ -349,7 +381,16 @@ export const useAnalysisStore = create<AnalysisStore>()(
     },
 
     setOiWeightAttr(attr) {
-      set((s) => { s.oiWeightAttr = attr; s.result = null; });
+      // Deliberately leaves `result` standing. The weighting used to be treated
+      // as a run parameter, and clearing the result forced a fresh — for a
+      // model-based metric, expensive — run. It is only the last scoring step,
+      // so `SectionModelBased` re-derives the standing result from
+      // `reweightBasis` instead. See lib/operativity-basis.ts.
+      set((s) => { s.oiWeightAttr = attr; });
+    },
+
+    setReweightBasis(basis) {
+      set((s) => { s.reweightBasis = basis; });
     },
 
     reset() {

@@ -31,6 +31,7 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
 import { resetFunctionality } from "@/lib/network-utils";
+import { ScopeSplitButton } from "./scope-split-button";
 
 // Shared core for both revert call-sites (bar button + panel button).
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
@@ -38,6 +39,9 @@ import { resetFunctionality } from "@/lib/network-utils";
 // snapshot-tick refresh).
 export function ActionBar() {
   const openAnalysisPage = useAnalysisStore((s) => s.openAnalysisPage);
+  const analysisScope = useAnalysisStore((s) => s.scope);
+  const setAnalysisScope = useAnalysisStore((s) => s.setScope);
+  const heatmapActive = useAnalysisStore((s) => s.heatmapActive);
   const scope = useUiStore((s) => s.propagationScope);
   const setPropagationScope = useUiStore((s) => s.setPropagationScope);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
@@ -73,25 +77,41 @@ export function ActionBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Split Propagate button */}
-      <PropagateSplitButton
+      {/* Propagate — scope chosen before the run */}
+      <ScopeSplitButton
+        dataTour="propagate"
+        tone="green"
+        icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
+        label={isPropagating ? "Running…" : "Propagate"}
+        title={
+          !serverReachable
+            ? "Server unreachable — your data is safe locally"
+            : `Run ${scope} propagation (Ctrl+Enter)`
+        }
         scope={scope}
-        onPropagate={propagate}
         onScopeChange={setPropagationScope}
+        onAction={propagate}
         disabled={!serverReachable || isPropagating || !canPropagate}
-        loading={isPropagating}
-        serverReachable={serverReachable}
       />
 
-      {/* Analyse */}
-      <ActionButton
-        onClick={openAnalysisPage}
-        title="Open Topological Analysis"
-        className="text-indigo-600 dark:text-indigo-400"
-      >
-        <BarChart2 size={13} />
-        <span>Analyse</span>
-      </ActionButton>
+      {/* Analyse — same split control, so scope is picked before opening */}
+      <ScopeSplitButton
+        tone="blue"
+        icon={
+          <span className="relative flex items-center">
+            <BarChart2 size={13} />
+            {/* A live heatmap is easy to forget once the window is closed. */}
+            {heatmapActive && (
+              <span className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
+            )}
+          </span>
+        }
+        label="Analyse"
+        title={`Open Analysis (${scope} scope)`}
+        scope={analysisScope}
+        onScopeChange={setAnalysisScope}
+        onAction={openAnalysisPage}
+      />
 
       {/* Reset */}
       <span data-tour="reset" className="flex items-center">
@@ -519,98 +539,6 @@ function TimelineSlider({
           {t >= 1000 ? `${Math.round(t / 1000)}k` : t}h
         </button>
       ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Split Propagate button
-// ---------------------------------------------------------------------------
-
-function PropagateSplitButton({
-  scope,
-  onPropagate,
-  onScopeChange,
-  disabled,
-  loading,
-  serverReachable,
-}: {
-  scope: "local" | "global";
-  onPropagate: () => void;
-  onScopeChange: (v: "local" | "global") => void;
-  disabled: boolean;
-  loading: boolean;
-  serverReachable: boolean;
-}) {
-  const [scopeOpen, setScopeOpen] = useState(false);
-
-  const title = !serverReachable
-    ? "Server unreachable — your data is safe locally"
-    : `Run ${scope} propagation (Ctrl+Enter)`;
-
-  return (
-    <div
-      data-tour="propagate"
-      className="flex items-center rounded-md border border-green-300 dark:border-green-800"
-    >
-      <button
-        onClick={disabled ? undefined : onPropagate}
-        disabled={disabled}
-        title={title}
-        className={cn(
-          "flex h-7 items-center gap-1.5 rounded-l-md px-2.5 text-xs font-medium transition-colors",
-          "text-green-700 dark:text-green-400",
-          disabled
-            ? "cursor-not-allowed opacity-40"
-            : "hover:bg-green-50 dark:hover:bg-green-900/20",
-        )}
-      >
-        <Play size={12} className={cn(loading && "animate-pulse")} />
-        <span>{loading ? "Running…" : "Propagate"}</span>
-      </button>
-
-      <div className="h-5 w-px bg-green-200 dark:bg-green-800" />
-
-      <div className="relative">
-        <button
-          onClick={() => setScopeOpen((v) => !v)}
-          title="Switch propagation scope"
-          className="flex h-7 items-center gap-1 rounded-r-md px-2 text-xs font-medium text-green-700 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
-        >
-          <span className="capitalize">{scope}</span>
-          <ChevronDown size={11} className={cn("transition-transform", scopeOpen && "rotate-180")} />
-        </button>
-
-        {scopeOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setScopeOpen(false)} />
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-[96px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-              {(["local", "global"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => { onScopeChange(v); setScopeOpen(false); }}
-                  className={cn(
-                    "flex w-full items-center px-3 py-1.5 text-xs capitalize transition-colors",
-                    v === scope
-                      ? "font-semibold text-green-700 dark:text-green-400"
-                      : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700",
-                  )}
-                >
-                  {v}
-                  {v === scope && <span className="ml-auto text-green-500">✓</span>}
-                </button>
-              ))}
-              <div className="border-t border-zinc-100 px-3 py-1.5 dark:border-zinc-700">
-                <p className="text-[10px] leading-tight text-zinc-400">
-                  {scope === "local"
-                    ? "Active canvas only — inter-canvas edges excluded"
-                    : "Full multi-canvas — all canvases sent to engine"}
-                </p>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
     </div>
   );
 }

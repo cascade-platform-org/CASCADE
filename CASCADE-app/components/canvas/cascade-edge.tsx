@@ -12,6 +12,7 @@
 import { BaseEdge, Position, type EdgeTypes, type Edge as RFEdge } from "@xyflow/react";
 import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
+import { useElementHeatmapColor } from "./snapshot-colors";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
 
 export function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean, targetCanvasLabel?: string): RFEdge {
@@ -70,7 +71,8 @@ function CascadeEdge({
 }) {
   const n = useConfigStore(selectN);
   const functionalityColorEdge = useConfigStore(selectLevelColor(data?.functionality ?? n));
-  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive && id ? (s.heatmapColors[id] ?? null) : null);
+  const liveHeatmap = useAnalysisStore((s) => s.heatmapActive && id ? (s.heatmapColors[id] ?? null) : null);
+  const heatmapOverride = useElementHeatmapColor(id, liveHeatmap);
   const levelColor = heatmapOverride ?? functionalityColorEdge;
 
   const edgePath = curvedEdgePath(sourceX, sourceY, targetX, targetY);

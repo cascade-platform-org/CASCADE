@@ -33,11 +33,15 @@ export const CANVAS_PALETTE = [
 // Analysis Heatmap palette
 // ---------------------------------------------------------------------------
 
-/** Maps a normalised value [0,1] to a light→dark indigo gradient. */
+/**
+ * Maps a normalised value [0,1] to a light→dark blue gradient (blue-100 →
+ * blue-900). Blue is the app's accent for Analysis, so the heatmap on the canvas
+ * reads as the same feature as the window that produced it.
+ */
 export function scoreToColor(normalised: number): string {
-  const r = Math.round(224 + normalised * (49 - 224));
-  const g = Math.round(231 + normalised * (46 - 231));
-  const b = Math.round(255 + normalised * (129 - 255));
+  const r = Math.round(219 + normalised * (30 - 219));
+  const g = Math.round(234 + normalised * (58 - 234));
+  const b = Math.round(254 + normalised * (138 - 254));
   return `rgb(${r},${g},${b})`;
 }
 

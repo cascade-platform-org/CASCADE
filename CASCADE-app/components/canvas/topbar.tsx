@@ -26,9 +26,14 @@ export function Topbar() {
 
   return (
     <header className="flex h-11 shrink-0 items-center border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Logo */}
+      {/* Logo. Plain <img> rather than next/image: the static export
+          (output: "export") ships no image optimizer, and keeping the mark a
+          separate document lets its own prefers-color-scheme rule re-colour it
+          for dark mode — the same signal Tailwind's `dark:` variant uses here.
+          26px because the mark's edge-trim mask muddies below ~20px. */}
       <div className="mr-3 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-        <span className="text-blue-600">≡</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="" width={26} height={26} className="shrink-0" />
         <span>CASCADE</span>
       </div>
 

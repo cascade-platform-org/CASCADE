@@ -32,6 +32,8 @@ import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
 import { SaveScorecardDialog } from "./operativity-scorecard";
 import { SnapshotFlowView } from "./snapshot-flow-view";
+import { buildColorMap } from "@/lib/analysis-legend";
+import { scoresToResult } from "@/lib/topological-analysis";
 import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry } from "@/lib/schemas/network";
 
 export function ScorecardPanel() {
@@ -465,9 +467,24 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const topEntries = Object.entries(entry.scores)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
+  const topEntries = useMemo(
+    () => Object.entries(entry.scores).sort(([, a], [, b]) => b - a).slice(0, 5),
+    [entry.scores],
+  );
+
+  // Rebuild the Analysis Heatmap this entry was saved with, from the scores the
+  // entry stores — the same two functions the Analysis window paints with, so
+  // the mini-graph shows exactly the colours the canvas showed at save time.
+  // Cheap, and it keeps the entry small: the colours are derived, not stored.
+  const heatmapColors = useMemo(
+    () =>
+      buildColorMap(
+        scoresToResult(entry.metric, entry.scores, (id) =>
+          id in entry.snapshot.nodes ? "node" : "edge",
+        ),
+      ),
+    [entry.metric, entry.scores, entry.snapshot.nodes],
+  );
 
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40">
@@ -475,7 +492,7 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{entry.label}</p>
-            <span className="shrink-0 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+            <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
               analysis
             </span>
           </div>
@@ -486,15 +503,13 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {topEntries.length > 0 && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              title={expanded ? "Collapse" : "Show top elements"}
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-            >
-              <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
-            </button>
-          )}
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? "Collapse" : "Show the network and top elements"}
+            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          >
+            <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
+          </button>
           {confirmDelete ? (
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
@@ -511,6 +526,20 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
 
       {expanded && (
         <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-700">
+          {/* The network as it stood, painted with this entry's own heatmap —
+              the same mini-graph a Propagation entry shows for its snapshots. */}
+          <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800">
+              <span className="truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Network at computation &mdash; {entry.metric}
+              </span>
+              <span className="ml-2 shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                {Object.keys(entry.scores).length} scored
+              </span>
+            </div>
+            <SnapshotFlowView snapshot={entry.snapshot} colors={heatmapColors} heightClass="h-52" />
+          </div>
+
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Top Elements by Score</p>
           <div className="space-y-1">
             {topEntries.map(([id, score], i) => {
@@ -520,7 +549,7 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
                   <span className="truncate text-zinc-600 dark:text-zinc-400">
                     {i + 1}. {node?.label ?? id}
                   </span>
-                  <span className="ml-2 font-mono text-indigo-600 dark:text-indigo-400">{score.toFixed(4)}</span>
+                  <span className="ml-2 font-mono text-blue-600 dark:text-blue-400">{score.toFixed(4)}</span>
                 </div>
               );
             })}

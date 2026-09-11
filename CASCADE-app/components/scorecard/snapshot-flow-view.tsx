@@ -22,12 +22,19 @@ import {
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "@/components/canvas/cascade-node";
 import { edgeTypes } from "@/components/canvas/cascade-edge";
+import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
 interface Props {
   snapshot: GraphSnapshot;
   /** Tailwind height class, e.g. "h-56". Defaults to h-52. */
   heightClass?: string;
+  /**
+   * Element id → colour, for a snapshot saved with an Analysis Heatmap. Omit to
+   * render Functionality colours. Either way the view ignores the heatmap that
+   * happens to be live on the canvas right now — see `snapshot-colors.tsx`.
+   */
+  colors?: Record<string, string>;
 }
 
 function SnapshotFlow({ snapshot }: Props) {
@@ -94,12 +101,18 @@ function SnapshotFlow({ snapshot }: Props) {
   );
 }
 
-export function SnapshotFlowView({ snapshot, heightClass = "h-52" }: Props) {
+export function SnapshotFlowView({ snapshot, heightClass = "h-52", colors }: Props) {
+  // EMPTY_COLORS keeps the provider value referentially stable when no heatmap
+  // is supplied, so the subtree does not re-render on every parent render.
   return (
     <div className={`w-full ${heightClass}`}>
-      <ReactFlowProvider>
-        <SnapshotFlow snapshot={snapshot} />
-      </ReactFlowProvider>
+      <SnapshotColorsProvider value={colors ?? EMPTY_COLORS}>
+        <ReactFlowProvider>
+          <SnapshotFlow snapshot={snapshot} />
+        </ReactFlowProvider>
+      </SnapshotColorsProvider>
     </div>
   );
 }
+
+const EMPTY_COLORS: Record<string, string> = {};

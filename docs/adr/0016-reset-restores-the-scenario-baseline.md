@@ -396,11 +396,18 @@ checkbox is the shape to copy, and the copy should default off.
   `components/help/user-manual.tsx` — whose Reset line says "returns every element
   to `N`" and whose Ctrl+R line promises the exact opposite of §5: *"A Propagation
   you ran after it stays — this undoes the Event, not the cascade."*
-- **Pre-existing false claim, now inherited.** `requirements.md` §11 says the
+- ~~**Pre-existing false claim, now inherited.** `requirements.md` §11 says the
   Analysis Heatmap is "cleared by Reset". No Reset path calls `clearHeatmap` —
   its only callers are the Analysis page's close button and `heatmap-controls`.
   Either Reset clears it or the sentence goes; this ADR does not decide which, and
-  `CONTEXT.md` deliberately no longer repeats the claim.
+  `CONTEXT.md` deliberately no longer repeats the claim.~~
+  **Resolved (2026-09-11):** it was resolved the first way. `resetFunctionality`
+  calls `clearHeatmap` (`lib/network-utils.ts`), so `requirements.md` §11 and
+  `CONTEXT.md` are both correct as written. The other half of the sentence is
+  also out of date: the Analysis window's close button no longer clears the
+  heatmap, because the window floats over the canvas and closing it says nothing
+  about the overlay. Clearing is the explicit **Clear heatmap** control, or
+  Reset. See ADR-0018.
 - The Baseline gives the update history an anchor that survives eviction. It is
   the same object `deriveSituation` needs to stop returning `null` when a
   `reverts_to_entry_id` boundary ages out; that follow-up is not part of this ADR.

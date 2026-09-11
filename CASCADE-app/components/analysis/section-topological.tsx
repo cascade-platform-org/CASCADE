@@ -149,7 +149,7 @@ export function SectionTopological() {
               className={cn(
                 "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
                 activeNodeMetric === m.id
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                   : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
               )}
             >
@@ -162,7 +162,7 @@ export function SectionTopological() {
                 </div>
                 <div className="mt-0.5 text-[10px] text-zinc-400">{m.description}</div>
                 {activeNodeMetric === m.id && m.weightMeaning && (
-                  <div className="mt-1 text-[10px] italic text-indigo-400 dark:text-indigo-500">
+                  <div className="mt-1 text-[10px] italic text-blue-400 dark:text-blue-500">
                     Weight: {m.weightMeaning}
                   </div>
                 )}
@@ -183,7 +183,7 @@ export function SectionTopological() {
               className={cn(
                 "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
                 activeEdgeMetric === m.id
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                   : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800",
               )}
             >
@@ -196,7 +196,7 @@ export function SectionTopological() {
                 </div>
                 <div className="mt-0.5 text-[10px] text-zinc-400">{m.description}</div>
                 {activeEdgeMetric === m.id && m.weightMeaning && (
-                  <div className="mt-1 text-[10px] italic text-indigo-400 dark:text-indigo-500">
+                  <div className="mt-1 text-[10px] italic text-blue-400 dark:text-blue-500">
                     Weight: {m.weightMeaning}
                   </div>
                 )}
@@ -223,7 +223,7 @@ export function SectionTopological() {
             onBlur={commitExpr}
             onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
             placeholder="e.g. capacity * n_importance"
-            className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-mono text-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+            className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-mono text-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
           />
           {exprPreview !== null && (
             <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 dark:bg-zinc-800">
@@ -240,7 +240,7 @@ export function SectionTopological() {
                 <span className="text-[10px] text-zinc-400 self-center">edge:</span>
                 {attrCtx.edgeAttrs.map((a) => (
                   <button key={a} onClick={() => insertToken(a)}
-                    className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600 hover:bg-indigo-50 hover:text-indigo-700 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-indigo-900/30">
+                    className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600 hover:bg-blue-50 hover:text-blue-700 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-blue-900/30">
                     {a}
                   </button>
                 ))}
@@ -279,7 +279,7 @@ export function SectionTopological() {
         <button
           onClick={handleComputeNode}
           disabled={computingNode}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
         >
           {computingNode ? <RefreshCw size={12} className="animate-spin" /> : <BarChart3 size={12} />}
           {computingNode ? "…" : "Node"}
@@ -287,7 +287,7 @@ export function SectionTopological() {
         <button
           onClick={handleComputeEdge}
           disabled={computingEdge}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
         >
           {computingEdge ? <RefreshCw size={12} className="animate-spin" /> : <BarChart3 size={12} />}
           {computingEdge ? "…" : "Edge"}
@@ -295,7 +295,7 @@ export function SectionTopological() {
         <button
           onClick={handleComputeBoth}
           disabled={computing}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-2 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-2 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {computing ? <RefreshCw size={12} className="animate-spin" /> : <Layers size={12} />}
           {computing ? "…" : "Both"}

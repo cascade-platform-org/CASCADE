@@ -60,7 +60,7 @@ export interface HeatmapLegend {
 const MAX_LISTED_COMMUNITIES = CATEGORY_COLORS.length;
 
 /**
- * The ends of the indigo ramp, taken from the function that paints it rather
+ * The ends of the blue ramp, taken from the function that paints it rather
  * than written out again — `scoreToColor` is what `buildColorMap` calls.
  */
 export const GRADIENT_LOW = scoreToColor(0);
@@ -119,7 +119,7 @@ export function buildLegend(result: AnalysisResult): Legend {
         type: "swatches",
         items: [
           { color: "#4338ca", label: "Source" },
-          { color: "#818cf8", label: "In downstream cone" },
+          { color: "#60a5fa", label: "In downstream cone" },
           { color: "#e2e8f0", label: "Outside cone" },
         ],
       };
@@ -128,7 +128,7 @@ export function buildLegend(result: AnalysisResult): Legend {
         type: "swatches",
         items: [
           { color: "#4338ca", label: "Target" },
-          { color: "#818cf8", label: "In upstream cone" },
+          { color: "#60a5fa", label: "In upstream cone" },
           { color: "#e2e8f0", label: "Outside cone" },
         ],
       };
@@ -239,7 +239,7 @@ function buildCategoricalColorMap(result: AnalysisResult): Record<string, string
   } else if (metric === "downstream_reachability" || metric === "upstream_reachability") {
     for (const [id, score] of Object.entries(scores)) {
       if (score === 2) map[id] = "#4338ca";
-      else if (score === 1) map[id] = "#818cf8";
+      else if (score === 1) map[id] = "#60a5fa";
       else map[id] = "#e2e8f0";
     }
   } else if (metric === "k_core") {
@@ -252,7 +252,7 @@ function buildCategoricalColorMap(result: AnalysisResult): Record<string, string
   return map;
 }
 
-/** Build a colour map. Categorical metrics use discrete palettes; others use the indigo gradient. */
+/** Build a colour map. Categorical metrics use discrete palettes; others use the blue gradient. */
 export function buildColorMap(result: AnalysisResult): Record<string, string> {
   if (CATEGORICAL_METRICS.has(result.metric)) return buildCategoricalColorMap(result);
   const { min, max, scores } = result;

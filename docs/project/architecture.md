@@ -215,7 +215,20 @@ wraps, so overflow communities were painted like communities 1..N while the key
 claimed grey. `lib/analysis-legend.test.ts` compares the key against
 `buildColorMap` directly, which is the assertion that would have caught it.
 
-`components/analysis/legend-view.tsx` renders the key for both the Analysis page
+### Operativity re-weighting
+
+- **`lib/operativity-basis.ts`** — the delta an Engine Evaluation leaves behind (`captureOutcome`, `rebuildSnapshot`, `scoreOutcome`) so a finished model-based run re-scores under a different Operativity weighting with zero engine calls. The weighting is a view parameter, not a run parameter — ADR-0018.
+- **`components/analysis/heatmap-controls.tsx`** — the single seam through which every Analysis section publishes its Analysis Heatmap. It repaints once per Result rather than once per render, which is what makes the overlay both automatic (a finished metric appears on the canvas unasked) and self-correcting (a re-weighted run moves its colours with its numbers) without a Result the user cleared coming back on the next re-render.
+- **`components/canvas/snapshot-colors.tsx`** — a context that marks a React Flow subtree as a *snapshot* view. Inside one, `cascade-node`/`cascade-edge` take their heatmap colours from the context and ignore the live Analysis Heatmap, so a Scorecard mini-graph shows the Analysis it was saved with rather than the one currently painted on the canvas.
+
+### Floating windows
+
+- **`components/ui/floating-window.tsx`** — the window shell: drag, eight-way resize, collapse-to-title-bar, maximize/restore, viewport clamping, Escape-to-close, and geometry remembered in `localStorage`, all behind one interface (title, header actions, body). During a pointer gesture it writes geometry straight to the DOM and leaves React state alone until pointer-up, so an arbitrarily heavy body costs nothing per pointer-move.
+- **`lib/window-geometry.ts`** — the pure maths that decides where the window lands (`clampToViewport`, `resizeGeometry`, `centredGeometry`). Kept out of the component so the arithmetic is unit-testable without a DOM; `lib/window-geometry.test.ts` covers the edge cases that are awkward to reach by hand (dragged off each edge, a viewport smaller than the window, a minimum-size drag pinning the opposite corner).
+
+The Analysis surface uses it. It was a full-bleed `fixed inset-0` overlay, which hid the very canvas the **Analysis Heatmap** paints — hence the old "Apply heatmap & minimize" button, which closed the page as part of applying. A floating window removes the conflict at its source: the overlay lands on a canvas the user can already see.
+
+`components/analysis/legend-view.tsx` renders the key for both the Analysis window
 and the canvas overlay, so the two cannot disagree about presentation either. The
 overlay is mounted by all three canvas views — single canvas, merged "all", and
 grouped "all" — because an Analysis Heatmap colours the Element registry, so its
@@ -233,7 +246,7 @@ gradient would advertise a spread that is not there.
 
 `lib/model-based-analysis.ts` holds the two engine-side Analysis Metrics —
 Vitality Centrality and Shapley Value. Both are numerical estimators, so they
-live apart from the Analysis page and take Propagation as an **injected
+live apart from the Analysis window and take Propagation as an **injected
 evaluator**: production passes an adapter that applies a coalition to a
 GraphSnapshot and calls `POST /api/propagate`; tests pass a pure scoring
 function. That is what lets the estimators be checked against cooperative games
@@ -276,7 +289,7 @@ nothing in the TypeScript build can catch a rename.
 `vitest.harness.config.mts`) produces that same document without a browser, for
 paper runs that need to be repeatable. It is not a third implementation: it
 imports `estimateShapley`, `computeOperativityScore`, `buildPropagationPayload`
-and `mergeUpdatesIntoSnapshot` — the modules the Analysis page uses — and
+and `mergeUpdatesIntoSnapshot` — the modules the Analysis window uses — and
 supplies only what React and Zustand would otherwise supply, a Project read from
 disk and a `fetch` pointed at a local engine. It is deliberately outside
 `npm test`: it needs a live engine, so it must never gate a commit.
@@ -531,7 +544,8 @@ CASCADE-v2/
 │   │   ├── help/               # User Manual drawer (mirrors docs/project/user-manual.md)
 │   │   ├── onboarding/         # New Project Wizard, guided tour, first-run prompt
 │   │   ├── rules/              # Rule editor, autocomplete, active rules panel
-│   │   └── scorecard/          # Scorecard panels
+│   │   ├── scorecard/          # Scorecard panels
+│   │   └── ui/                 # Cross-domain shells (floating-window)
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useHistoryAction.ts # Snapshot-wrap-push hook for undoable mutations
 │   ├── lib/

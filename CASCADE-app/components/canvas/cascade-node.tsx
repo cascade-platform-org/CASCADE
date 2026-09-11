@@ -21,6 +21,7 @@ import { memo, useEffect, useReducer } from "react";
 import { categoryToIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { useConfigStore, selectLevelColor } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
+import { useElementHeatmapColor } from "./snapshot-colors";
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode } from "@/lib/schemas/network";
 
@@ -240,7 +241,8 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
 
   const size = nodeSize(data.importance);
   const functionalityColor = useConfigStore(selectLevelColor(data.functionality));
-  const heatmapOverride = useAnalysisStore((s) => s.heatmapActive ? (s.heatmapColors[data.id] ?? null) : null);
+  const liveHeatmap = useAnalysisStore((s) => s.heatmapActive ? (s.heatmapColors[data.id] ?? null) : null);
+  const heatmapOverride = useElementHeatmapColor(data.id, liveHeatmap);
   const levelColor = heatmapOverride ?? functionalityColor;
   const configCategories = useConfigStore((s) => s.config.categories);
   const activeTool = useUiStore((s) => s.activeTool);

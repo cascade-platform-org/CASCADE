@@ -43,7 +43,7 @@ export function PercolationChart({ curve, title = "Percolation Robustness" }: Pe
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{title}</span>
-        <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-mono text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+        <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-mono text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
           R = {R.toFixed(3)}
         </span>
       </div>

@@ -210,16 +210,27 @@ saved from the baseline:
 
 ## 5. Analysis results
 
-The Analysis page scores every element. **Topological** metrics (betweenness,
+The Analysis window scores every element. It floats over the canvas — drag its
+title bar to move it, its edges to resize it, and the − button to roll it up to
+the title bar when you want the canvas back. **Topological** metrics (betweenness,
 reachability, communities, …) run in the browser. **Model-based** metrics
 (Vitality, Shapley) re-run the propagation engine once per element or coalition,
 so they need the server and can take a while — the panel shows the call count
 before you start, and Cancel keeps whatever it has.
 
-**Apply heatmap & minimize** paints the scores onto the elements and closes the
-Analysis page so you can see them. The canvas legend swaps its Functionality
-scale for the metric's own key, because the colours no longer mean Functionality.
-The overlay stays until you press the X in the Analysis page.
+**OI node weight** decides which node attribute weights the Operativity Score.
+Changing it re-scores the result you already have — no new engine calls, and
+nothing is lost — so it is safe to try several weightings on one expensive run.
+
+The scores are painted onto the elements as soon as the metric finishes — no
+button to press. The canvas legend swaps its Functionality scale for the
+metric's own key, because the colours no longer mean Functionality. Change the
+OI node weight and the colours follow the new numbers.
+
+The overlay stays until you press **Clear heatmap** or Reset the scenario —
+closing the Analysis window leaves it alone, and the Analyse button carries a
+dot while a heatmap is live. **Apply heatmap to canvas** puts it back after a
+Clear.
 
 After a Shapley run, **Export Shapley values (JSON)** saves the result: one φ̂ per
 element, plus the seed the run used. Keeping the seed means the same estimate can

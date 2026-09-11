@@ -648,17 +648,29 @@ then Fauglis water Source is operational`}</Block>
         <p>
           The Analysis page scores every element. <strong>Topological</strong>{" "}
           metrics (betweenness, reachability, communities, &hellip;) run in the
-          browser. <strong>Model-based</strong> metrics (Vitality, Shapley)
+          browser. The Analysis window floats over the canvas: drag its title bar
+          to move it, its edges to resize it, and the &minus; button to roll it
+          up to the title bar when you want the canvas back. <strong>Model-based</strong> metrics (Vitality, Shapley)
           re-run the propagation engine once per element or coalition, so they
           need the server and can take a while &mdash; the panel shows the call
           count before you start, and Cancel keeps whatever it has.
         </p>
         <p>
-          <strong>Apply heatmap &amp; minimize</strong> paints the scores onto the
-          elements and closes the Analysis page so you can see them. The canvas
-          legend swaps its Functionality scale for the metric&rsquo;s own key,
-          because the colours no longer mean Functionality. The overlay stays
-          until you press the X in the Analysis page.
+          <strong>OI node weight</strong> decides which node attribute weights
+          the Operativity Score. Changing it re-scores the result you already
+          have &mdash; no new engine calls, and nothing is lost &mdash; so it is
+          safe to try several weightings on one expensive run.
+        </p>
+        <p>
+          The scores are painted onto the elements as soon as the metric
+          finishes &mdash; no button to press. The canvas legend swaps its
+          Functionality scale for the metric&rsquo;s own key, because the colours
+          no longer mean Functionality. Change the OI node weight and the colours
+          follow the new numbers. The overlay stays until you press{" "}
+          <strong>Clear heatmap</strong> or Reset the scenario &mdash; closing
+          the Analysis window leaves it alone, and the Analyse button carries a
+          dot while a heatmap is live. <strong>Apply heatmap to canvas</strong>
+          {" "}puts it back after a Clear.
         </p>
         <p>
           After a Shapley run,{" "}
