@@ -259,6 +259,16 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
       // Keep the last rendered frame in the WebGL buffer so html-to-image can
       // read it when the user exports PNG/SVG on a georeferenced canvas.
       canvasContextAttributes: { preserveDrawingBuffer: true },
+      // maplibre-gl 6 added its own ResizeObserver on `container` — the same
+      // element useMapViewportSync CSS-transforms every frame for the zoom
+      // sync, and already watches with its own ResizeObserver (which calls
+      // resize() explicitly at every point that matters: on load, on tile
+      // style change, on a real layout resize). A second, redundant resize
+      // path racing against the per-frame `transform: scale()` sync is what
+      // made zooming visibly stretch the canvas instead of just scaling it —
+      // disabling maplibre's own tracking removes that race outright, rather
+      // than papering over its symptom.
+      trackResize: false,
     });
 
     map.on("load", () => { setMapReady(true); map.resize(); });
