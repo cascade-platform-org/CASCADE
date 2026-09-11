@@ -374,6 +374,7 @@ A georeferenced Canvas renders a MapLibre map as a **non-interactive background 
 
 - **`components/geo/geo-map-background.tsx`** — owns the MapLibre lifecycle (init, tile-style swap, interaction toggle, resize) and the setup/synced UI (style picker, "Set anchor", crosshair, debug overlay). In *setup* mode the map is fully interactive so the user can navigate and drop a **GeoAnchor**; in *synced* mode interaction is disabled and the map follows the viewport.
 - **`hooks/useMapViewportSync.ts`** — the viewport-sync seam. Mirrors React Flow's transform onto the map container every frame (GPU compositor, zero lag) and reloads sharp tiles via `map.jumpTo()` only when a gesture ends. Returns `invalidate()` for style swaps.
+- **`scripts/copy-maplibre-worker.mjs`** — copies MapLibre's tile-decoding worker (and the shared chunk it imports by relative path) from `node_modules` into `public/maplibre/` on `predev`/`prebuild`, so `setWorkerUrl` can point at a same-origin asset. MapLibre 6 is ESM-only, and Next.js emits the worker as a lone hashed asset without its sibling — the map then mounts and fires `load` but never requests a tile, showing a blank background with no error. This is the bundler setup upstream documents for Turbopack/Next.js.
 - **`lib/geo-utils.ts`** — the **GeoAnchor projection**: exact Web Mercator (`anchorFlowToGeo`, `anchorGeoToFlow`, `computeMapTarget`). One seam converts flow ↔ geo, so `node.geo`-on-drag and the map camera can never use disagreeing projections. See CONTEXT.md → *GeoAnchor*.
 
 A node carries both `position` (flow) and `geo` (lng/lat); see CONTEXT.md → *Node Position vs Geo Coordinates*. The GeoAnchor is the single per-Canvas correspondence tying the two.
@@ -566,7 +567,7 @@ CASCADE-v2/
 | State | Zustand + Immer | 5 / 11 | Lightweight, immutable stores |
 | Styling | Tailwind CSS | 4 | Utility-first design system |
 | Validation | Zod | 4 | Runtime schema validation, type inference |
-| Maps | MapLibre GL JS | 5 | Open-source map background for georeferenced Canvases |
+| Maps | MapLibre GL JS | 6 | Open-source map background for georeferenced Canvases |
 | API Server | FastAPI | — | High-performance async Python API |
 | Backend validation | Pydantic v2 | — | Request/response schema enforcement |
 | Auth | OAuth2/OIDC (provider-agnostic) | — | Identity, JWT validation |

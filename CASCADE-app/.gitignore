@@ -32,3 +32,6 @@ samples/private/
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Generated from node_modules by scripts/copy-maplibre-worker.mjs ──────────
+public/maplibre/
