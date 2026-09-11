@@ -1,0 +1,50 @@
+name: Dependabot auto-merge
+
+# Handles the part Dependabot's security updates don't do on their own: once it
+# has opened a PR for a vulnerability fixable by a version bump, someone still
+# has to click merge. This does that — but only for the safe case.
+#
+# Scope, deliberately narrow:
+#   - patch or minor semver bumps only. A major bump (e.g. a mapping library
+#     5.x -> 6.x) can break the app in ways CI's type-check and build catch but
+#     a human should still read — see PR #5 (maplibre-gl), which this workflow
+#     would correctly leave alone.
+#   - every job in ci.yml (.github/workflows/ci.yml) must already be green —
+#     this workflow ENABLES auto-merge, it does not bypass CI. GitHub merges
+#     the PR itself only once the existing checks finish passing.
+#   - Dependabot PRs only (`github.actor == 'dependabot[bot]'`) — this workflow
+#     grants no privilege to anyone else's PR.
+#
+# Requires the repo's "Allow auto-merge" setting (Settings -> General -> Pull
+# Requests). It was off when this workflow was added and could not be flipped
+# via the API (likely an org-level restriction) — turn it on by hand once, or
+# `gh pr merge --auto` below will fail with a clear message naming the setting.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Approve and enable auto-merge (patch/minor only)
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: |
+          gh pr review "$PR_URL" --approve -b "Auto-approved: ${{ steps.metadata.outputs.update-type }} bump of ${{ steps.metadata.outputs.dependency-names }}."
+          gh pr merge "$PR_URL" --auto --squash
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
