@@ -8,7 +8,8 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AnalysisResult, NofNMetrics, PercolationPoint, LabelField } from "@/lib/topological-analysis";
+import type { AnalysisResult, NofNMetrics, PercolationPoint } from "@/lib/topological-analysis";
+import type { LabelField } from "@/lib/analysis-legend";
 import type { HeatmapLegend } from "@/lib/analysis-legend";
 
 // ---------------------------------------------------------------------------

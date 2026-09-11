@@ -9,6 +9,7 @@
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
+import { applyCoalition } from "@/lib/coalition";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { postPropagate, postPropagateBatch } from "@/lib/api-client";
 import { mergeUpdatesIntoSnapshot } from "@/lib/element-update";
@@ -81,13 +82,7 @@ export async function runEphemeralPropagationBatch(
   // failed Elements themselves are re-applied here because the engine reports
   // only what IT changed, and an Element the coalition drove to 1 that nothing
   // cascaded into would otherwise come back at its authored Functionality.
-  return results.map((result, i) => {
-    const nodes = { ...snapshot.nodes };
-    const edges = { ...snapshot.edges };
-    for (const id of coalitions[i] ?? []) {
-      if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
-      else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
-    }
-    return mergeUpdatesIntoSnapshot({ ...snapshot, nodes, edges }, result.updates);
-  });
+  return results.map((result, i) =>
+    mergeUpdatesIntoSnapshot(applyCoalition(snapshot, coalitions[i] ?? []), result.updates),
+  );
 }

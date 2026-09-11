@@ -19,6 +19,7 @@
  */
 
 import { materialiseAround } from "@/lib/graph-diff";
+import { liveUpdatesInScenario } from "@/lib/scenario-history";
 import type { AnyUpdateEntry } from "@/lib/schemas";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 
@@ -41,69 +42,66 @@ export interface Situation {
  * Build the current Situation from history. Returns null when no Event has been
  * applied (a purely manual what-if — no Situation to summarise).
  *
- * `updateHistory` is newest-first, so the first match is always the most recent.
+ * Walks `liveUpdatesInScenario` — so the Reset boundary and reverted Temporal
+ * Jump runs are already gone from the list, and this function only has to find
+ * the Propagation/Event structure inside what is left.
+ *
+ * The walk has to be ONE pass, not "find the newest Event anywhere, then find
+ * the newest Propagation and compare indices": two Propagation entries can sit
+ * back-to-back (e.g. the user re-runs Propagation with no new Event in between)
+ * while an older, already-superseded Event still exists further back in history.
+ * Scanning for "the newest Event anywhere" would find that stale one and report
+ * a non-null Situation, while the boundary-respecting collection loop below
+ * would (correctly) stop at the nearer Propagation and collect nothing — a
+ * non-null Situation with an empty `eventEntries`, which crashed
+ * situation-window.tsx's `situation.eventEntries[0].id` read.
+ *
+ * `event_cleared` needs the same care. Clear Event does not remove the
+ * `propagation` entry it invalidates — it reverts that Propagation's writes and
+ * leaves the entry itself sitting in history (only the cleared `event_applied`
+ * is removed), so a plain walk finds that stale Propagation and misattributes
+ * it to whichever Events still stand. `clearEventPlan` (scenario-baseline.ts)
+ * always reverts every currently-outstanding cascade write regardless of which
+ * specific run produced it, so from the walk's perspective one `event_cleared`
+ * cancels exactly one Propagation — the nearest one still older than it that
+ * hasn't already been cancelled by an earlier clear. `outstandingClears` counts
+ * clears not yet paired with the Propagation they invalidated; every Propagation
+ * this walk meets is skipped (treated as if absent) while the count is positive.
  */
 export function deriveSituation(updateHistory: AnyUpdateEntry[]): Situation | null {
+  const live = liveUpdatesInScenario(updateHistory);
+  let outstandingClears = 0;
+
   // Walk from the top past anything that isn't an Event. The first Propagation
-  // encountered before any Event is the one that was run for this session (if
-  // any) — entries above it, like a manual graph edit, don't change that.
-  //
-  // This has to be ONE walk, not "find the newest Event anywhere, then find the
-  // newest Propagation and compare indices": two Propagation entries can sit
-  // back-to-back (e.g. the user re-runs Propagation with no new Event in
-  // between) while an older, already-superseded Event still exists further
-  // back in history. Scanning for "the newest Event anywhere" would find that
-  // stale one and report a non-null Situation, while the boundary-respecting
-  // collection loop below would (correctly) stop at the nearer Propagation and
-  // collect nothing — a non-null Situation with an empty `eventEntries`, which
-  // crashed situation-window.tsx's `situation.eventEntries[0].id` read.
+  // encountered before any Event — and not itself cancelled by a clear — is the
+  // one that was run for this session (if any); entries above it, like a manual
+  // graph edit, don't change that.
   let i = 0;
   let propEntry: AnyUpdateEntry | null = null;
-  for (; i < updateHistory.length; i++) {
-    const entry = updateHistory[i];
-    if (entry.update_type === "event_applied") break;
-    // A Reset ends the scenario: everything older belongs to a dead session,
-    // and nothing newer was an Event (we would have broken at it above).
-    if (entry.update_type === "scenario_reset") return null;
-    // Temporal Jumps were undone. The graph is back to its pre-jump state, so
-    // the Situation is whatever was live *before* those jumps — the jumps
-    // themselves are Events (temporal_jump synthetic ones) and would otherwise
-    // still be reported, along with a Propagation that no longer describes the
-    // graph. Skipping to the recorded boundary rewinds the whole run at once,
-    // however many jumps and Propagations it contained.
-    if (entry.update_type === "temporal_jump_revert") {
-      const boundary = entry.reverts_to_entry_id;
-      const at = boundary ? updateHistory.findIndex((e) => e.id === boundary) : -1;
-      // No boundary recorded, or it has aged out of the capped history: the
-      // pre-jump scenario cannot be reconstructed, and reporting the reverted
-      // one would be worse than reporting none.
-      if (at === -1) return null;
-      i = at - 1; // -1 because the loop's i++ moves onto the boundary entry
-      continue;
-    }
-    if (entry.update_type === "propagation") {
-      propEntry = entry;
+  for (; i < live.length; i++) {
+    const type = live[i].update_type;
+    if (type === "event_cleared") { outstandingClears++; continue; }
+    if (type === "propagation") {
+      if (outstandingClears > 0) { outstandingClears--; continue; }
+      propEntry = live[i];
       i++;
       break;
     }
+    if (type === "event_applied") break;
   }
 
   // From here, collect every Event applied in this session — walk older until
-  // hitting another Propagation or a Reset, both of which mark the boundary of
-  // a prior session.
+  // hitting another (live) Propagation, which marks the boundary of a prior
+  // session.
   const eventEntries: AnyUpdateEntry[] = [];
-  for (; i < updateHistory.length; i++) {
-    const entry = updateHistory[i];
-    if (entry.update_type === "propagation" || entry.update_type === "scenario_reset") break;
-    // Same rewind as above: the jumps it undid are not part of this Situation.
-    if (entry.update_type === "temporal_jump_revert") {
-      const boundary = entry.reverts_to_entry_id;
-      const at = boundary ? updateHistory.findIndex((e) => e.id === boundary) : -1;
-      if (at === -1) break;
-      i = at - 1;
-      continue;
+  for (; i < live.length; i++) {
+    const type = live[i].update_type;
+    if (type === "event_cleared") { outstandingClears++; continue; }
+    if (type === "propagation") {
+      if (outstandingClears > 0) { outstandingClears--; continue; }
+      break;
     }
-    if (entry.update_type === "event_applied") eventEntries.push(entry);
+    if (type === "event_applied") eventEntries.push(live[i]);
   }
 
   // No Event in the current session (e.g. two Propagations back-to-back) —

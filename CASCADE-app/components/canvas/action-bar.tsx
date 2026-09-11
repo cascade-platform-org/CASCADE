@@ -15,7 +15,6 @@ import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
-import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -25,10 +24,9 @@ import {
   selectOverflowEvents,
   selectN,
 } from "@/store/config-store";
-import { temporalJumpEvent } from "@/lib/event-application";
 import { useCanvasStore } from "@/store/canvas-store";
-import { useHistoryStore } from "@/store/history-store";
-import { runWithHistory } from "@/lib/run-with-history";
+import { countChangedElements } from "@/lib/graph-diff";
+import { extendRun, nextJumpHours, remainingJumpHours, revertRun } from "@/lib/temporal-jump-run";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
@@ -38,33 +36,6 @@ import { resetFunctionality } from "@/lib/network-utils";
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
 // state. Callers are responsible for their own trailing side effects (toast,
 // snapshot-tick refresh).
-function executeRevert({
-  revertSnapshot,
-  elapsedHours,
-  scope,
-  clearTemporalJumpProgress,
-}: {
-  revertSnapshot: GraphSnapshot;
-  elapsedHours: number;
-  scope: "local" | "global";
-  clearTemporalJumpProgress: () => void;
-}) {
-  // `temporal_jump_revert`, not a plain manual edit: the Situation track has to
-  // recognise it and rewind to the scenario that was live before the jumps —
-  // otherwise the canvas shows the pre-jump state while the Situation window
-  // still reports the jumps and their Propagation.
-  runWithHistory(
-    () => useCanvasStore.getState().restoreSnapshot(revertSnapshot),
-    `Revert temporal jumps (−${elapsedHours}h)`,
-    {
-      scope,
-      updateType: "temporal_jump_revert",
-      revertsToEntryId: useUiStore.getState().temporalJumpRevertFromEntryId,
-    },
-  );
-  clearTemporalJumpProgress();
-}
-
 export function ActionBar() {
   const openAnalysisPage = useAnalysisStore((s) => s.openAnalysisPage);
   const scope = useUiStore((s) => s.propagationScope);
@@ -73,12 +44,9 @@ export function ActionBar() {
   const pushToast = useUiStore((s) => s.pushToast);
   const revertSnapshot = useUiStore((s) => s.temporalJumpRevertSnapshot);
   const elapsedHours = useUiStore((s) => s.temporalJumpElapsedHours);
-  const clearTemporalJumpProgress = useUiStore((s) => s.clearTemporalJumpProgress);
-  const globalViewActive = useUiStore((s) => s.globalViewActive);
 
   const actionBarEvents = useConfigStore(useShallow(selectActionBarEvents));
   const overflowEvents = useConfigStore(useShallow(selectOverflowEvents));
-  const n = useConfigStore(selectN);
 
   const { undo, redo, canUndo, canRedo } = useNetworkHistory();
   const { propagate, isPropagating, serverReachable } = usePropagate();
@@ -87,9 +55,9 @@ export function ActionBar() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   function handleRevertFromBar() {
-    if (!revertSnapshot || elapsedHours === 0) return;
-    executeRevert({ revertSnapshot, elapsedHours, scope, clearTemporalJumpProgress });
-    pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
+    const reverted = revertRun(scope);
+    if (reverted === 0) return;
+    pushToast({ message: `Reverted −${reverted}h of temporal jumps.`, variant: "success", durationMs: 3000 });
   }
 
   function handleReset() {
@@ -235,24 +203,10 @@ function TemporalJumpControls({
   const setAutoPropagate = useUiStore((s) => s.setTemporalAutoPropagate);
   const revertSnapshot = useUiStore((s) => s.temporalJumpRevertSnapshot);
   const elapsedHours = useUiStore((s) => s.temporalJumpElapsedHours);
-  const saveTemporalRevertSnapshot = useUiStore((s) => s.saveTemporalRevertSnapshot);
-  const addTemporalElapsedHours = useUiStore((s) => s.addTemporalElapsedHours);
-  const clearTemporalJumpProgress = useUiStore((s) => s.clearTemporalJumpProgress);
   const pushToast = useUiStore((s) => s.pushToast);
 
-  // Live ft values from the store — used to build ticks when the popover opens.
-  const liveTicks = useCanvasStore(useShallow((s) => {
-    const seen = new Set<number>();
-    for (const node of Object.values(s.nodes)) {
-      const ft = node.functionality_time ?? 0;
-      if (ft > 0) seen.add(ft);
-    }
-    for (const edge of Object.values(s.edges)) {
-      const ft = edge.functionality_time ?? 0;
-      if (ft > 0) seen.add(ft);
-    }
-    return Array.from(seen).sort((a, b) => a - b);
-  }));
+  // Live Functionality Times from the store — the ticks the slider draws.
+  const liveTicks = useCanvasStore(useShallow(remainingJumpHours));
 
   const [open, setOpen] = useState(false);
   const [manualHours, setManualHours] = useState("");
@@ -269,16 +223,7 @@ function TemporalJumpControls({
       setManualHours("");
       if (revertSnapshot) {
         // Derive ticks from the pre-jump state so the full original range is visible.
-        const seen = new Set<number>();
-        for (const node of Object.values(revertSnapshot.nodes)) {
-          const ft = node.functionality_time ?? 0;
-          if (ft > 0) seen.add(ft);
-        }
-        for (const edge of Object.values(revertSnapshot.edges)) {
-          const ft = edge.functionality_time ?? 0;
-          if (ft > 0) seen.add(ft);
-        }
-        setSnapshotTicks(Array.from(seen).sort((a, b) => a - b));
+        setSnapshotTicks(remainingJumpHours(revertSnapshot));
       } else {
         setSnapshotTicks(liveTicks);
       }
@@ -293,32 +238,11 @@ function TemporalJumpControls({
   const maxHours = displayTicks[displayTicks.length - 1] ?? 0;
 
   function getMinFt(): number | null {
-    const state = useCanvasStore.getState();
-    const allFt = [
-      ...Object.values(state.nodes).map((node) => node.functionality_time ?? 0),
-      ...Object.values(state.edges).map((edge) => edge.functionality_time ?? 0),
-    ].filter((ft) => ft > 0);
-    if (allFt.length === 0) return null;
-    return Math.min(...allFt);
+    return nextJumpHours(useCanvasStore.getState());
   }
 
   async function applyJump(hours: number) {
-    const event = temporalJumpEvent(hours);
-    const canvasState = useCanvasStore.getState();
-    // Save pre-jump state on the very first jump so revert can restore it.
-    if (revertSnapshot === null) {
-      // The newest entry now is where the jumps start — the revert records it
-      // so the Situation can be rewound to what was live before them.
-      saveTemporalRevertSnapshot(
-        canvasState.toGraphSnapshot(),
-        useHistoryStore.getState().updateHistory[0]?.id ?? null,
-      );
-    }
-    // applyEvent pushes its own event_applied entry (with mutation_reversal) —
-    // pushing a second one here would double the undo stack per jump and let
-    // clearEvent find the reversal-less duplicate first.
-    canvasState.applyEvent(event, n);
-    addTemporalElapsedHours(hours);
+    extendRun(hours, n);
     if (autoPropagate) {
       await propagate();
     }
@@ -371,9 +295,9 @@ function TemporalJumpControls({
   }
 
   function handleRevert() {
-    if (!revertSnapshot || elapsedHours === 0) return;
-    executeRevert({ revertSnapshot, elapsedHours, scope, clearTemporalJumpProgress });
-    pushToast({ message: `Reverted −${elapsedHours}h of temporal jumps.`, variant: "success", durationMs: 3000 });
+    const reverted = revertRun(scope);
+    if (reverted === 0) return;
+    pushToast({ message: `Reverted −${reverted}h of temporal jumps.`, variant: "success", durationMs: 3000 });
   }
 
   const manualValid =
@@ -742,26 +666,6 @@ function EventButton({
       <span className="max-w-[80px] truncate">{event.label}</span>
     </ActionButton>
   );
-}
-
-function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): number {
-  // The store is Immer-backed (canvas-store.ts): applying an event `set`s a
-  // fresh object reference only for the nodes/edges it actually touches,
-  // untouched ones keep their old reference. So a plain reference check
-  // catches ANY mutated field (functionality_time, category_dependency_profiles,
-  // direct_damage, ...), not just `functionality` — a Disservice like
-  // "Demand Surge" or "Tank Reserve" changes fields other than functionality
-  // by design (the element stays fully functional until its own countdown/
-  // condition triggers), so checking functionality alone always reported
-  // "no elements matched" for those events even though the mutation landed.
-  let count = 0;
-  for (const id of Object.keys(after.nodes)) {
-    if (before.nodes[id] !== after.nodes[id]) count++;
-  }
-  for (const id of Object.keys(after.edges)) {
-    if (before.edges[id] !== after.edges[id]) count++;
-  }
-  return count;
 }
 
 function EventIcon({ type, icon, size }: { type: "hazard" | "disservice" | "temporal_jump"; icon?: string; size: number }) {

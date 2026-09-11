@@ -7,22 +7,11 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
 import { buildScopedGraph } from "@/lib/analysis-utils";
-import {
-  computeDownstreamReachabilityAll,
-  computeUpstreamReachabilityAll,
-  computeDownstreamReachability,
-  computeUpstreamReachability,
-  type AnalysisGraph,
-} from "@/lib/topological-analysis";
+import { canRun, metricById, metricsForSection } from "@/lib/analysis-metrics";
 import type { ReachabilityMetric } from "@/store/analysis-store";
 import { cn } from "@/lib/utils";
 
-const METRICS: { id: ReachabilityMetric; label: string; description: string }[] = [
-  { id: "downstream_reach_count", label: "Downstream Reach (all)", description: "Per-node count of nodes reachable downstream. High = large cascade impact if this node fails." },
-  { id: "upstream_reach_count", label: "Upstream Reach (all)", description: "Per-node count of nodes that must be healthy upstream. High = many dependencies." },
-  { id: "downstream_cone", label: "Downstream Cone", description: "Highlights all nodes reachable from a selected source — its cascade footprint." },
-  { id: "upstream_cone", label: "Upstream Cone", description: "Highlights all nodes that a selected target depends on — its dependency footprint." },
-];
+const METRICS = metricsForSection("reachability");
 
 export function SectionReachability() {
   const activeMetric = useAnalysisStore((s) => s.activeMetric) as ReachabilityMetric;
@@ -38,32 +27,28 @@ export function SectionReachability() {
   const allNodes = useCanvasStore((s) => s.nodes);
   const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
 
-  const isConeMetric = activeMetric === "downstream_cone" || activeMetric === "upstream_cone";
-
-  function buildGraph(): AnalysisGraph {
-    return buildScopedGraph(scope, activeCanvasId);
-  }
+  const activeDef = metricById(activeMetric);
+  // "Needs an Element picked first" is a property of the metric, not a list of
+  // ids this component has to keep in step with the registry.
+  const isConeMetric = activeDef?.kind === "scored" && Boolean(activeDef.needsSourceId);
 
   async function handleCompute() {
-    if (isConeMetric && !reachabilitySourceId) return;
+    if (activeDef?.kind !== "scored" || !canRun(activeDef, reachabilitySourceId)) return;
     setComputing(true);
     setResult(null);
     try {
-      const graph = buildGraph();
-      let r;
-      switch (activeMetric) {
-        case "downstream_reach_count": r = computeDownstreamReachabilityAll(graph); break;
-        case "upstream_reach_count": r = computeUpstreamReachabilityAll(graph); break;
-        case "downstream_cone": r = computeDownstreamReachability(graph, reachabilitySourceId!); break;
-        case "upstream_cone": r = computeUpstreamReachability(graph, reachabilitySourceId!); break;
-      }
-      setResult(r);
+      setResult(
+        activeDef.run({
+          graph: buildScopedGraph(scope, activeCanvasId),
+          sourceId: reachabilitySourceId,
+        }),
+      );
     } finally {
       setComputing(false);
     }
   }
 
-  const currentDef = METRICS.find((m) => m.id === activeMetric);
+  const currentDef = activeDef;
   const nodeList = Object.entries(allNodes).slice(0, 200);
 
   return (
@@ -72,7 +57,7 @@ export function SectionReachability() {
         {METRICS.map((m) => (
           <button
             key={m.id}
-            onClick={() => { setActiveMetric(m.id); setResult(null); }}
+            onClick={() => { setActiveMetric(m.id as ReachabilityMetric); setResult(null); }}
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id

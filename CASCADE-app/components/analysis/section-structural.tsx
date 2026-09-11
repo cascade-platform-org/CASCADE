@@ -7,20 +7,11 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
 import { buildScopedGraph } from "@/lib/analysis-utils";
-import {
-  computeArticulationPoints,
-  computeCommunities,
-  computeNofNMetrics,
-  type AnalysisGraph,
-} from "@/lib/topological-analysis";
+import { effectiveScope, metricById, metricsForSection } from "@/lib/analysis-metrics";
 import type { StructuralMetric } from "@/store/analysis-store";
 import { cn } from "@/lib/utils";
 
-const METRICS: { id: StructuralMetric; label: string; description: string }[] = [
-  { id: "articulation_points", label: "Articulation Points", description: "Nodes whose removal disconnects the graph — structural single points of failure." },
-  { id: "community", label: "Community Detection", description: "Louvain clustering: nodes grouped by connection density. Reveals hidden sub-systems." },
-  { id: "nofn", label: "Network-of-Networks", description: "Coupling strength, interdependency ratio, feedback loops, and meta-graph across all Canvases." },
-];
+const METRICS = metricsForSection("structural");
 
 export function SectionStructural() {
   const activeMetric = useAnalysisStore((s) => s.activeMetric) as StructuralMetric;
@@ -35,31 +26,24 @@ export function SectionStructural() {
   const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
   const canvases = useCanvasStore((s) => s.canvases);
 
-  function buildGraph(): AnalysisGraph {
-    // NofN always needs the global view to compare inter-canvas edges
-    const effectiveScope = activeMetric === "nofn" ? "global" : scope;
-    return buildScopedGraph(effectiveScope, activeCanvasId);
-  }
+  const currentDef = metricById(activeMetric);
 
   async function handleCompute() {
+    if (!currentDef) return;
     setComputing(true);
     setResult(null);
     setNofNMetrics(null);
     try {
-      const graph = buildGraph();
-      if (activeMetric === "articulation_points") {
-        setResult(computeArticulationPoints(graph));
-      } else if (activeMetric === "community") {
-        setResult(computeCommunities(graph));
-      } else {
-        setNofNMetrics(computeNofNMetrics(graph));
-      }
+      // Network-of-Networks insists on the full multi-canvas; the rest follow
+      // the user's scope toggle. The registry decides, not this component.
+      const graph = buildScopedGraph(effectiveScope(currentDef, scope), activeCanvasId);
+      if (currentDef.kind === "structure") setNofNMetrics(currentDef.run({ graph }));
+      else setResult(currentDef.run({ graph }));
     } finally {
       setComputing(false);
     }
   }
 
-  const currentDef = METRICS.find((m) => m.id === activeMetric);
   const canvasList = Object.values(canvases);
 
   return (
@@ -68,7 +52,7 @@ export function SectionStructural() {
         {METRICS.map((m) => (
           <button
             key={m.id}
-            onClick={() => { setActiveMetric(m.id); setResult(null); setNofNMetrics(null); }}
+            onClick={() => { setActiveMetric(m.id as StructuralMetric); setResult(null); setNofNMetrics(null); }}
             className={cn(
               "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
               activeMetric === m.id

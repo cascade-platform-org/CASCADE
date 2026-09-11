@@ -44,8 +44,6 @@ export function ScorecardPanel() {
   const updateHistory = useHistoryStore((s) => s.updateHistory);
   const pushToast = useUiStore((s) => s.pushToast);
   const serverReachable = useUiStore((s) => s.serverReachable);
-  const scope = useUiStore((s) => s.propagationScope);
-  const globalViewActive = useUiStore((s) => s.globalViewActive);
   // Operativity weighting — shared app-wide with the model-based analysis so a
   // single choice drives every Operativity Score in the app.
   const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);

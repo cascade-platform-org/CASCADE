@@ -251,73 +251,6 @@ export function computeEdgeWeight(
 // Categorical colour
 // ---------------------------------------------------------------------------
 
-/** Metrics that produce discrete values — use categorical/binary colour maps. */
-export const CATEGORICAL_METRICS = new Set([
-  "community",
-  "articulation_points",
-  "bridge_edges",
-  "downstream_reachability",
-  "upstream_reachability",
-  "k_core",
-]);
-
-/** Exported so `analysis-legend.ts` names these colours instead of copying them. */
-export const CATEGORY_COLORS = [
-  "#6366f1", "#ec4899", "#f59e0b", "#10b981",
-  "#3b82f6", "#ef4444", "#8b5cf6", "#14b8a6",
-  "#f97316", "#84cc16",
-];
-
-/** Maps a normalised value [0,1] to a light→dark indigo gradient. */
-export function scoreToColor(normalised: number): string {
-  const r = Math.round(224 + normalised * (49 - 224));
-  const g = Math.round(231 + normalised * (46 - 231));
-  const b = Math.round(255 + normalised * (129 - 255));
-  return `rgb(${r},${g},${b})`;
-}
-
-function buildCategoricalColorMap(result: AnalysisResult): Record<string, string> {
-  const map: Record<string, string> = {};
-  const { scores, metric } = result;
-
-  if (metric === "community") {
-    const uniqueVals = [...new Set(Object.values(scores))].sort((a, b) => a - b);
-    for (const [id, score] of Object.entries(scores)) {
-      const idx = uniqueVals.indexOf(score);
-      map[id] = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
-    }
-  } else if (metric === "articulation_points" || metric === "bridge_edges") {
-    for (const [id, score] of Object.entries(scores)) {
-      map[id] = score === 1 ? "#ef4444" : "#94a3b8";
-    }
-  } else if (metric === "downstream_reachability" || metric === "upstream_reachability") {
-    for (const [id, score] of Object.entries(scores)) {
-      if (score === 2) map[id] = "#4338ca";
-      else if (score === 1) map[id] = "#818cf8";
-      else map[id] = "#e2e8f0";
-    }
-  } else if (metric === "k_core") {
-    const vals = Object.values(scores);
-    const maxK = Math.max(...vals, 1);
-    for (const [id, score] of Object.entries(scores)) {
-      map[id] = scoreToColor(score / maxK);
-    }
-  }
-  return map;
-}
-
-/** Build a colour map. Categorical metrics use discrete palettes; others use the indigo gradient. */
-export function buildColorMap(result: AnalysisResult): Record<string, string> {
-  if (CATEGORICAL_METRICS.has(result.metric)) return buildCategoricalColorMap(result);
-  const { min, max, scores } = result;
-  const range = max - min || 1;
-  const map: Record<string, string> = {};
-  for (const [id, score] of Object.entries(scores)) {
-    map[id] = scoreToColor((score - min) / range);
-  }
-  return map;
-}
-
 // ---------------------------------------------------------------------------
 // Graph builders
 // ---------------------------------------------------------------------------
@@ -376,33 +309,46 @@ function buildUndirectedGraph(
 // Post-processing helpers
 // ---------------------------------------------------------------------------
 
-function toResult(metric: string, rawScores: Record<string, number>): AnalysisResult {
+/**
+ * Turn a bare `{id: score}` map into the AnalysisResult every part of the
+ * Analysis page renders: sorted, ranked, with min/max/avg for the legend.
+ *
+ * `kindOf` says whether each id is a node or an edge. It is a callback rather
+ * than a constant because the model-based metrics score nodes and edges in ONE
+ * map (an Element is an Element to Vitality Centrality), while every metric here
+ * scores one kind at a time — three near-identical copies of this function, two
+ * of them in this file and one in section-model-based.tsx, is what that cost.
+ *
+ * An empty score map returns a zeroed result rather than `min: Infinity`, which
+ * is what `Math.min()` of nothing gives.
+ */
+export function scoresToResult(
+  metric: string,
+  rawScores: Record<string, number>,
+  kindOf: (id: string) => "node" | "edge",
+): AnalysisResult {
   const entries = Object.entries(rawScores);
   if (entries.length === 0) return { metric, scores: {}, ranked: [], min: 0, max: 0, avg: 0 };
   const values = entries.map(([, v]) => v);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const ranked = entries
-    .map(([id, score]) => ({ id, kind: "node" as const, score, rank: 0 }))
+  const ranked: ElementScore[] = entries
+    .map(([id, score]) => ({ id, kind: kindOf(id), score, rank: 0 }))
     .sort((a, b) => b.score - a.score);
   ranked.forEach((r, i) => (r.rank = i + 1));
-  return { metric, scores: rawScores, ranked, min, max, avg };
+  return {
+    metric,
+    scores: rawScores,
+    ranked,
+    min: Math.min(...values),
+    max: Math.max(...values),
+    avg: values.reduce((a, b) => a + b, 0) / values.length,
+  };
 }
 
-function edgeScoresToResult(metric: string, rawScores: Record<string, number>): AnalysisResult {
-  const entries = Object.entries(rawScores);
-  if (entries.length === 0) return { metric, scores: {}, ranked: [], min: 0, max: 0, avg: 0 };
-  const values = entries.map(([, v]) => v);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const ranked = entries
-    .map(([id, score]) => ({ id, kind: "edge" as const, score, rank: 0 }))
-    .sort((a, b) => b.score - a.score);
-  ranked.forEach((r, i) => (r.rank = i + 1));
-  return { metric, scores: rawScores, ranked, min, max, avg };
-}
+/** Every metric in this file scores one kind at a time; these name which. */
+const toResult = (metric: string, rawScores: Record<string, number>) =>
+  scoresToResult(metric, rawScores, () => "node");
+const edgeScoresToResult = (metric: string, rawScores: Record<string, number>) =>
+  scoresToResult(metric, rawScores, () => "edge");
 
 // ---------------------------------------------------------------------------
 // Node centrality metrics
@@ -909,34 +855,3 @@ export function computeNofNMetrics(data: AnalysisGraph): NofNMetrics {
 // ---------------------------------------------------------------------------
 // Label field computation (for results list)
 // ---------------------------------------------------------------------------
-
-export type LabelField = "name" | "importance" | "cost" | "weighted_loss" | "functionality";
-
-export function getElementLabel(
-  id: string,
-  kind: "node" | "edge",
-  nodes: Record<string, Node>,
-  edges: Record<string, Edge>,
-  field: LabelField,
-  n: number,
-): string {
-  if (kind === "edge") {
-    const edge = edges[id];
-    if (!edge) return id;
-    return `${edge.source} → ${edge.target}`;
-  }
-  const node = nodes[id];
-  if (!node) return id;
-  switch (field) {
-    case "name": return node.label || id;
-    case "importance": return node.importance != null ? `importance: ${node.importance}` : "—";
-    case "cost": return node.cost_of_disservice_per_day != null ? `cost: ${node.cost_of_disservice_per_day}/day` : "—";
-    case "weighted_loss": {
-      const imp = node.importance ?? 1;
-      const loss = imp * ((n - node.functionality) / Math.max(n - 1, 1));
-      return `loss: ${loss.toFixed(2)}`;
-    }
-    case "functionality": return `func: ${node.functionality}/${n}`;
-    default: return node.label || id;
-  }
-}

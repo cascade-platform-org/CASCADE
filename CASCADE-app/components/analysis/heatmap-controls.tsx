@@ -3,7 +3,7 @@
 import React from "react";
 import { Palette, X } from "lucide-react";
 import { useAnalysisStore } from "@/store/analysis-store";
-import { buildColorMap } from "@/lib/topological-analysis";
+import { buildColorMap } from "@/lib/analysis-legend";
 import { buildHeatmapLegend } from "@/lib/analysis-legend";
 import { LegendView } from "./legend-view";
 import type { AnalysisResult } from "@/lib/topological-analysis";

@@ -165,6 +165,32 @@ export function isEmptyDiff(diff: GraphDiff): boolean {
   );
 }
 
+/**
+ * How many Elements differ between two Scenarios, by reference.
+ *
+ * Every producer of a Scenario in this app is copy-on-write per Element — the
+ * Immer-backed store, `applyBaselineEntries`, `forceOperational`,
+ * `applyEventToSnapshot` — so an Element that was not written keeps its old
+ * object identity. A reference check therefore catches a change to ANY field,
+ * including ones no caller thought to look at: a Disservice like "Demand Surge"
+ * leaves `functionality` alone and moves `functionality_time`, and counting only
+ * `functionality` reported "no Elements matched" for those Events even though
+ * the mutation had landed.
+ *
+ * Cheaper than `diffGraph` when only the count is wanted, and it answers the
+ * question every "n Elements affected" toast asks.
+ */
+export function countChangedElements(before: GraphSnapshot, after: GraphSnapshot): number {
+  let count = 0;
+  for (const id of Object.keys(after.nodes)) {
+    if (before.nodes[id] !== after.nodes[id]) count++;
+  }
+  for (const id of Object.keys(after.edges)) {
+    if (before.edges[id] !== after.edges[id]) count++;
+  }
+  return count;
+}
+
 /** Serialised size in bytes — the unit ADR-0017's history byte budget counts in. */
 export function diffByteSize(diff: GraphDiff): number {
   return JSON.stringify(diff).length;

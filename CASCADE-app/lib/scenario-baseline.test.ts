@@ -99,6 +99,25 @@ describe("deriveBaseline", () => {
     expect(b.get(baselineKey("n1", "functionality"))?.value).toBe(3);
   });
 
+  it("ignores retired entries when a scenario_reset survives in the buffer", () => {
+    // A retired entry is always older than everything in the buffer (eviction is
+    // oldest-first). If the buffer still holds a Reset, that retired write is
+    // from before it — a dead session — and must not enter the Baseline. Only
+    // n2 is touched in the live scenario; n1 belongs entirely to the dead one.
+    const a = snap([node("n1", { functionality: 3 }), node("n2", { functionality: 3 })]);
+    const b = snap([node("n1", { functionality: 3 }), node("n2", { functionality: 1 })]);
+    const retired: BaselineEntry[] = [
+      { id: "n1", field: "functionality", value: 3, source: "event:old" },
+    ];
+    const history = [
+      entry("event_applied", a, b, { event_id: "quake" }),
+      entry("scenario_reset", a, a),
+    ];
+    const baseline = deriveBaseline(history, retired);
+    expect(baseline.has(baselineKey("n1", "functionality"))).toBe(false);
+    expect(baseline.get(baselineKey("n2", "functionality"))?.value).toBe(3);
+  });
+
   it("ignores an Update that UNDOES work, so Reset cannot restore into a cleared cascade", () => {
     // Regression. An event_cleared entry's `before` side is the cascaded state.
     // Folding it recorded functionality 1 as "the pre-scenario value", so

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import contextmanager
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -149,6 +150,42 @@ async def get_engine_algorithms(
     return _ENGINE_ALGORITHMS
 
 
+@contextmanager
+def _engine_errors(what: str, user: AuthUser):
+    """Translate what the engine seam raises into the HTTP status it means.
+
+    Both routes below need the identical four-way translation, and it was
+    written out twice — thirty lines each, differing only in the log line. A
+    fifth failure mode added to `services/propagation_service.py` would have had
+    to be remembered in both places.
+    """
+    try:
+        yield
+    except ValueError as exc:
+        # A Project the engine cannot make sense of: the client's to fix.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except EngineTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc)
+        ) from exc
+    except EngineBusyError as exc:
+        # Every worker is taken. Retryable, and the client is told how long.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+            headers={"Retry-After": "5"},
+        ) from exc
+    except Exception as exc:
+        # Never leak an engine traceback to the client (CLAUDE.md §7): the
+        # detail is deliberately generic and the real cause goes to the log.
+        logger.exception("%s failed for user %s: %s", what, user.email, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Propagation engine error. See server logs.",
+        ) from exc
+
 def _enforce_entitlement(user: AuthUser, node_count: int, cost: int) -> None:
     """ADR-0008: node cap, then engine-evaluation budget, before any engine work.
 
@@ -197,30 +234,8 @@ async def run_propagation(
     _enforce_entitlement(user, len(body.project.nodes), cost=1)
 
     t0 = time.perf_counter()
-    try:
+    with _engine_errors("Propagation", user):
         result = await propagate(body)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
-    except EngineTimeoutError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=str(exc),
-        ) from exc
-    except EngineBusyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-            headers={"Retry-After": "5"},
-        ) from exc
-    except Exception as exc:
-        logger.exception("Propagation failed for user %s: %s", user.email, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Propagation engine error. See server logs.",
-        ) from exc
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     logger.info(
@@ -265,30 +280,8 @@ async def run_propagation_batch(
     _enforce_entitlement(user, len(body.project.nodes), cost=len(body.coalitions))
 
     t0 = time.perf_counter()
-    try:
+    with _engine_errors("Batch propagation", user):
         results = await propagate_batch(body)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
-    except EngineTimeoutError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=str(exc),
-        ) from exc
-    except EngineBusyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-            headers={"Retry-After": "5"},
-        ) from exc
-    except Exception as exc:
-        logger.exception("Batch propagation failed for user %s: %s", user.email, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Propagation engine error. See server logs.",
-        ) from exc
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     logger.info(

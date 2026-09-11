@@ -58,6 +58,10 @@ _Avoid_: "undo the event" (CTRL+Z walks the update history one Update at a time,
 The five fields describing an Element's *condition*: `functionality`, `functionality_time`, `direct_damage`, `expected_repair_time`, `responsibility_share`. Everything else an Element carries — label, position, Node Type, Categories, capacity, `vulnerability_levels`, `properties` — is **model**. The split exists for one purpose: **Reset** forces every Scenario Field to an operational state whoever wrote it, and reverts a model field only where a machine wrote it. It is a Reset-time classification and nothing else — a Rule may still assign any attribute (ADR-0015), and no code branches on this list outside Reset.
 _Avoid_: "state field", "runtime field"; and Functionality alone (Functionality is one of the five)
 
+**Scenario History**:
+The span of `update_history` belonging to the **current** scenario: newest-first, stopping at the newest `scenario_reset`, with a reverted **Temporal Jump** run skipped whole via the revert's `reverts_to_entry_id`. Two readings, because the **Scenario Baseline** and the **Situation** want opposite answers about a reverted run — the Baseline still folds its pre-scenario values, the Situation must not describe jumps the canvas has rewound out of. One walk defines both, so the two can no longer disagree about where the scenario begins. `lib/scenario-history.ts`.
+_Avoid_: "session", "undo stack" (the undo stack is positional over ALL history; a Scenario History stops at the Reset)
+
 **Scenario Baseline**:
 Each field's value from before the current scenario touched it, keyed structurally by Element id, field and `properties` sub-key, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event — and every entry additionally carries a **source tag**: `event:<id>`, `propagation`, or `manual`, naming who wrote the field. First write wins, so the value held is the pre-scenario one. Machine writes are captured **by provenance, never by field name** (an Event's Mutation Reversal, a Propagation's `ElementUpdate`, one entry per `properties` key), so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Seeded on Project load, and re-derived after any history rewind, by folding `update_history` oldest-first back to the last `scenario_reset` (skipping Updates that themselves undo work) — so Reset works on a file that ships mid-scenario, and cannot disagree with the history. See ADR-0016.
 _Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
@@ -171,12 +175,16 @@ The single flow-point ↔ geographic-coordinate correspondence (plus zoom levels
 _Avoid_: flat-earth/linear approximation; "calibration"/"registration point"
 
 **Analysis Metric**:
-A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values).
+A named per-Element scoring of a Graph. Two families: **topological** (client-side graphology: degree, betweenness, closeness, eigenvector, reachability, community, articulation, percolation) and **model-based** (engine-side: Vitality Centrality, Shapley Values). Each client-side metric is defined once, as one entry in `lib/analysis-metrics.ts` — label, panel, scope rule, what it needs before it can run, and how to run it — so the Analysis page can only offer a metric that is fully defined. The model-based two stay out of that registry deliberately: they are async, metered **Engine Evaluations** with sampling parameters and an export, and folding them in would make every field optional for the sake of one family.
 _Avoid_: "analysis type", "metric type"
 
 **Analysis Heatmap**:
 The colour overlay encoding an Analysis Metric's scores on the canvas (**Analysis Mode** — colours mean scores, not Functionality). Applying one minimizes the Analysis page onto the canvas and swaps the canvas legend's Functionality scale for the metric's own key, since Functionality colours are no longer what is drawn. The key is derived once, at apply time, and stored beside the colours it explains — `lib/analysis-legend.ts`. Cleared by Reset.
 _Avoid_: "heatmap mode", "centrality overlay"
+
+**Coalition**:
+A set of Elements failed together — driven to Functionality 1 — and the unit both model-based **Analysis Metrics** are defined over: **Vitality Centrality** fails one Element, a **Shapley Value** averages over Coalitions up to `k_max`. Applying one to a Scenario is `lib/coalition.ts::applyCoalition`, which is also where an Element gets the name the results panels and the **Shapley Export** print.
+_Avoid_: "failure set", "removal set"; "scenario" (a Coalition is the input, the Scenario is the result of applying it)
 
 **Vitality Centrality**:
 Model-based metric: Operativity Score drop from removing one Element and re-propagating. One engine call per Element; ranks nodes and edges.
@@ -192,7 +200,7 @@ The JSON document a Shapley run hands back to the user — φ̂ per Element (Ope
 _Avoid_: "analysis dump", "results export" (the Scorecard has its own export)
 
 **Coupling Strength**:
-Per Canvas pair: inter-canvas edges ÷ total edges. High = failures likely cascade between the two.
+Per Canvas pair: how much of the two Canvases' connectivity crosses between them. Pooled and two-sided — a crossing edge counts once for each Canvas it touches, over the edges incident to either — so a pair whose every edge crosses scores 1 and a pair sharing one edge out of many scores near 0. High = failures likely cascade between the two. `lib/topological-analysis.ts::computeNofNMetrics`, pinned in `lib/topological-analysis.test.ts`.
 _Avoid_: "interdependency ratio" (reserved for the per-Canvas measure)
 
 **Interdependency Ratio**:

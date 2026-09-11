@@ -14,8 +14,8 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useUiStore } from "@/store/ui-store";
-import { temporalJumpEvent } from "@/lib/event-application";
 import { resetFunctionality } from "@/lib/network-utils";
+import { endRun, extendRun, revertRun } from "@/lib/temporal-jump-run";
 import { runWithHistory } from "@/lib/run-with-history";
 import type { EventDefinition } from "@/lib/schemas/config";
 import type { Project } from "@/lib/schemas/network";
@@ -283,34 +283,14 @@ describe("clearEvent on entries older builds wrote", () => {
 });
 
 describe("Reset and Temporal Jumps", () => {
-  /** What `action-bar.tsx`'s applyJump does: save the pre-jump snapshot on the
-   *  first jump, apply the jump as an Event, and count the hours. */
-  function applyJump(hours: number) {
-    const ui = useUiStore.getState();
-    if (ui.temporalJumpRevertSnapshot === null) {
-      ui.saveTemporalRevertSnapshot(
-        useCanvasStore.getState().toGraphSnapshot(),
-        useHistoryStore.getState().updateHistory[0]?.id ?? null,
-      );
-    }
-    useCanvasStore.getState().applyEvent(temporalJumpEvent(hours), N);
-    useUiStore.getState().addTemporalElapsedHours(hours);
-  }
-
-  /** What the −Xh button does. */
-  function revertJumps() {
-    const ui = useUiStore.getState();
-    const snapshot = ui.temporalJumpRevertSnapshot!;
-    runWithHistory(
-      () => useCanvasStore.getState().restoreSnapshot(snapshot),
-      `Revert temporal jumps (−${ui.temporalJumpElapsedHours}h)`,
-      { updateType: "temporal_jump_revert", revertsToEntryId: ui.temporalJumpRevertFromEntryId },
-    );
-    useUiStore.getState().clearTemporalJumpProgress();
-  }
+  // `extendRun` and `revertRun` are the SHIPPED operations (lib/temporal-jump-run.ts).
+  // They used to live in action-bar.tsx, so this file re-implemented both — which
+  // meant these tests verified the copy rather than the code the −Xh button runs.
+  const applyJump = (hours: number) => extendRun(hours, N);
+  const revertJumps = () => revertRun("global");
 
   beforeEach(() => {
-    useUiStore.getState().clearTemporalJumpProgress();
+    endRun();
     // n1 holds a 4h backup, so a jump has something to spend.
     useCanvasStore.setState((st) => ({
       nodes: { ...st.nodes, n1: { ...st.nodes.n1, functionality_time: 4 } },

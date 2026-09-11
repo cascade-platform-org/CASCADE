@@ -108,4 +108,28 @@ describe("eviction", () => {
     expect(state.retiredBaseline).toEqual([]); // the previous project's, discarded
     expect(state.scenarioBaseline().get(baselineKey("n1", "functionality"))?.value).toBe(3);
   });
+
+  it("does not retire pre-Reset writes when an over-long loaded history is evicted", () => {
+    // A hand-authored or externally-produced file with more than a bufferful of
+    // Updates and its scenario_reset NOT among the oldest few. Eviction retires
+    // the oldest tail — which here is a dead pre-Reset scenario. Left folded,
+    // Reset would restore its degraded values onto the live graph.
+    const preReset = entry("event_applied", snap([node("n1", 3)]), snap([node("n1", 1)]), { event_id: "old" });
+    const filler = Array.from({ length: HISTORY_LIMIT }, (_, i) =>
+      entry("graph_update", snap([node("n2", 3, { label: `a${i}` })]), snap([node("n2", 3, { label: `b${i}` })])),
+    );
+    // loadHistory takes newest-first: filler on top, then the Reset, then the
+    // dead scenario at the tail — 22 entries, so eviction drops the last two.
+    useHistoryStore.getState().loadHistory([
+      ...filler,
+      entry("scenario_reset", snap([node("n1", 1)]), snap([node("n1", 1)])),
+      entry("graph_update", snap([node("n1", 1)]), snap([node("n1", 1, { label: "dead" })])),
+      preReset,
+    ]);
+    const baseline = useHistoryStore.getState().scenarioBaseline();
+    // n1 was only ever touched before the Reset. Nothing in the current
+    // scenario changed it, so it must not be in the Baseline at all.
+    expect(baseline.has(baselineKey("n1", "functionality"))).toBe(false);
+    expect(resetPlan(baseline).some((e) => e.id === "n1")).toBe(false);
+  });
 });

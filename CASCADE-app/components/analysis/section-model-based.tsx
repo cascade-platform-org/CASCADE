@@ -10,6 +10,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
+import { applyCoalition, elementLabel } from "@/lib/coalition";
 import { buildScopedGraph } from "@/lib/analysis-utils";
 import { runEphemeralPropagation, runEphemeralPropagationBatch } from "@/lib/ephemeral-propagation";
 import {
@@ -33,7 +34,7 @@ import {
   type ElementRef,
   type WorstCoalition,
 } from "@/lib/model-based-analysis";
-import type { ElementScore } from "@/lib/topological-analysis";
+import { scoresToResult } from "@/lib/topological-analysis";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { cn } from "@/lib/utils";
 
@@ -64,13 +65,7 @@ const MODEL_METRICS = [
 /** Adapter: score a Scenario with `failed` Elements driven to Functionality 1. */
 function makeCoalitionEvaluator(baseline: GraphSnapshot, weightAttr: string, n: number) {
   return async (failed: ReadonlySet<string>): Promise<number> => {
-    const nodes = { ...baseline.nodes };
-    const edges = { ...baseline.edges };
-    for (const id of failed) {
-      if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
-      else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
-    }
-    const after = await runEphemeralPropagation({ ...baseline, nodes, edges });
+    const after = await runEphemeralPropagation(applyCoalition(baseline, failed));
     return computeOperativityScore(after, n, weightAttr) / 100;
   };
 }
@@ -91,31 +86,6 @@ function makeChunkScorer(baseline: GraphSnapshot, weightAttr: string, n: number)
 }
 
 
-/** Turn a score map into the AnalysisResult shape the shared UI renders. */
-function toAnalysisResult(
-  metric: string,
-  values: Record<string, number>,
-  nodes: Record<string, unknown>,
-) {
-  const entries = Object.entries(values).sort(([, a], [, b]) => b - a);
-  const scores = entries.map(([, v]) => v);
-  const ranked: ElementScore[] = entries.map(([id, score], i) => ({
-    id,
-    kind: id in nodes ? ("node" as const) : ("edge" as const),
-    score,
-    rank: i + 1,
-  }));
-  return {
-    metric,
-    scores: values,
-    ranked,
-    min: Math.min(...scores),
-    max: Math.max(...scores),
-    avg: scores.reduce((a, b) => a + b, 0) / scores.length,
-  };
-}
-
-
 async function saveWorstCoalitions(
   worstCoalitions: Record<number, WorstCoalition>,
   baseline: GraphSnapshot,
@@ -130,25 +100,8 @@ async function saveWorstCoalitions(
     const worst = worstCoalitions[size];
     if (!worst) continue;
 
-    const elementNames = worst.ids.map((id) => {
-      const nd = baseline.nodes[id];
-      if (nd) return nd.label ?? id;
-      const ed = baseline.edges[id];
-      if (ed) {
-        const src = baseline.nodes[ed.source]?.label ?? ed.source;
-        const tgt = baseline.nodes[ed.target]?.label ?? ed.target;
-        return `${src}→${tgt}`;
-      }
-      return id;
-    });
-
-    const snapNodes = { ...baseline.nodes };
-    const snapEdges = { ...baseline.edges };
-    for (const fid of worst.ids) {
-      if (fid in snapNodes) snapNodes[fid] = { ...snapNodes[fid], functionality: 1 };
-      else if (fid in snapEdges) snapEdges[fid] = { ...snapEdges[fid], functionality: 1 };
-    }
-    const beforeSnap = { ...baseline, nodes: snapNodes, edges: snapEdges };
+    const elementNames = worst.ids.map((id) => elementLabel(baseline, id));
+    const beforeSnap = applyCoalition(baseline, worst.ids);
     let afterSnap: GraphSnapshot | undefined;
     try {
       afterSnap = await runEphemeralPropagation(beforeSnap);
@@ -173,32 +126,17 @@ async function saveWorstCoalitions(
 // Worst-coalition display
 // ---------------------------------------------------------------------------
 
-function elementLabel(
-  id: string,
-  nodes: Record<string, { label?: string }>,
-  edges: Record<string, { source: string; target: string }>,
-  allNodes: Record<string, { label?: string }>,
-): string {
-  if (nodes[id]) return nodes[id].label ?? id;
-  const e = edges[id];
-  if (e) {
-    const src = allNodes[e.source]?.label ?? e.source;
-    const tgt = allNodes[e.target]?.label ?? e.target;
-    return `${src} → ${tgt}`;
-  }
-  return id;
-}
-
 function WorstCoalitionsPanel({
   worst,
-  nodes,
   edges,
 }: {
   worst: { single: { ids: string[]; loss: number } | null; pair: { ids: string[]; loss: number } | null; triple: { ids: string[]; loss: number } | null };
-  nodes: Record<string, { label?: string }>;
   edges: Record<string, { source: string; target: string }>;
 }) {
+  // The full node registry, not the scoped one: an inter-canvas edge's far
+  // endpoint is outside the scope but still has to be named.
   const allNodes = useCanvasStore((s) => s.nodes);
+  const naming = { nodes: allNodes, edges };
   const rows = [
     { label: "Worst single", entry: worst.single },
     { label: "Worst pair",   entry: worst.pair },
@@ -216,7 +154,7 @@ function WorstCoalitionsPanel({
         <div key={label} className="space-y-0.5">
           <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
           <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200">
-            {entry.ids.map((id) => elementLabel(id, nodes, edges, allNodes)).join(", ")}
+            {entry.ids.map((id) => elementLabel(naming, id, " → ")).join(", ")}
           </p>
           <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
             OI loss: {(entry.loss * 100).toFixed(1)}%
@@ -299,7 +237,7 @@ export function SectionModelBased() {
     );
 
     if (Object.keys(values).length === 0) return;
-    setResult(toAnalysisResult("vitality", values, nodes));
+    setResult(scoresToResult("vitality", values, (id) => (id in nodes ? "node" : "edge")));
     setProgress(null);
     setWallSecs(null);
   }
@@ -387,7 +325,7 @@ export function SectionModelBased() {
       return;
     }
 
-    setResult(toAnalysisResult("shapley", values, nodes));
+    setResult(scoresToResult("shapley", values, (id) => (id in nodes ? "node" : "edge")));
     setShapleyWorst({
       single: worstCoalitions[1] ?? null,
       pair: worstCoalitions[2] ?? null,
@@ -641,7 +579,7 @@ export function SectionModelBased() {
 
       {/* Worst coalition summary — only shown after a Shapley run */}
       {activeMetric === "shapley" && shapleyWorst && (
-        <WorstCoalitionsPanel worst={shapleyWorst} nodes={getElements().nodes} edges={getElements().edges} />
+        <WorstCoalitionsPanel worst={shapleyWorst} edges={getElements().edges} />
       )}
     </div>
   );

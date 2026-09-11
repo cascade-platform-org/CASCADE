@@ -13,11 +13,12 @@ import { describe, it, expect } from "vitest";
 import {
   GRADIENT_HIGH,
   GRADIENT_LOW,
+  buildColorMap,
   buildHeatmapLegend,
   buildLegend,
   formatScore,
 } from "@/lib/analysis-legend";
-import { CATEGORY_COLORS, buildColorMap, scoreToColor } from "@/lib/topological-analysis";
+import { CATEGORY_COLORS, scoreToColor } from "@/lib/colors";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 
 /** Mirrors `toResult` in topological-analysis.ts: min/max over the scores only. */

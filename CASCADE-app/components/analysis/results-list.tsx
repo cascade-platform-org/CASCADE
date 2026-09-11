@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, selectN } from "@/store/config-store";
-import { getElementLabel, scoreToColor, type LabelField } from "@/lib/topological-analysis";
+import { getElementLabel, type LabelField } from "@/lib/analysis-legend";
+import { scoreToColor } from "@/lib/colors";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 
 const LABEL_OPTIONS: { value: LabelField; label: string }[] = [

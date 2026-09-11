@@ -107,9 +107,14 @@ const emptyState: HistoryState = {
  *
  * Eviction takes from the TAIL (oldest), and the Baseline folds oldest-first, so
  * a retired entry's values are older than anything left in the buffer and win
- * under first-write-wins. An evicted `scenario_reset` needs no special case:
- * Reset already emptied the retired map when it ran, so nothing older than it
- * can be in there.
+ * under first-write-wins.
+ *
+ * During normal operation an evicted `scenario_reset` needs no special case:
+ * Reset empties the retired map when it runs, so nothing older than it is ever
+ * in there. But a project can be LOADED with an over-long history (`loadHistory`
+ * evicts one on the way in), and there the accumulator is built from scratch —
+ * so if a `scenario_reset` passes through eviction, everything retired before it
+ * is a dead scenario and is dropped as the Reset goes by.
  */
 function evict(state: HistoryState): void {
   // The retired map is built ONCE per call, not once per evicted entry: a single
@@ -120,6 +125,14 @@ function evict(state: HistoryState): void {
   let retiredChanged = false;
 
   const retire = (entry: AnyUpdateEntry) => {
+    if (entry.update_type === "scenario_reset") {
+      // Eviction is oldest-first, so everything folded so far predates this
+      // Reset — a scenario it ended. Discard it and keep going: entries newer
+      // than the Reset but still evicted DO belong to the live scenario.
+      retired.clear();
+      retiredChanged = true;
+      return;
+    }
     if (!entry.diff) return; // legacy entry: no field-level record to retire
     foldDiff(retired, entry.diff, sourceOf(entry));
     retiredChanged = true;

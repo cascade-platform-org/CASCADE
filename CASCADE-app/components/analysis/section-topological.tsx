@@ -9,120 +9,19 @@ import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
 import { PercolationChart } from "./percolation-chart";
 import { buildScopedGraph } from "@/lib/analysis-utils";
+import { scoredMetricById, scoredMetricsFor } from "@/lib/analysis-metrics";
 import {
-  computeNodeBetweenness,
-  computeEdgeBetweenness,
-  computeCloseness,
-  computeEigenvector,
-  computeDegree,
-  computeInDegree,
-  computeOutDegree,
-  computeKCore,
-  computeBridgeEdges,
   computePercolationCurve,
   detectAttributes,
   computeEdgeWeight,
-  type AnalysisGraph,
-  type AnalysisResult,
 } from "@/lib/topological-analysis";
 import type { NodeCentralityMetric, EdgeCentralityMetric } from "@/store/analysis-store";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Metric definitions
-// ---------------------------------------------------------------------------
-
-interface MetricDef<T extends string> {
-  id: T;
-  label: string;
-  description: string;
-  /** How a higher weight value affects this metric's score. Omitted for unweighted metrics. */
-  weightMeaning?: string;
-  /** true → weight expression has no effect (purely topological) */
-  unweighted?: boolean;
-}
-
-const NODE_METRICS: MetricDef<NodeCentralityMetric>[] = [
-  {
-    id: "betweenness", label: "Betweenness",
-    description: "Relay nodes that mediate the most paths — bottleneck relay points.",
-    weightMeaning: "Higher weight = preferred route (used as 1/weight distance). Nodes on high-weight corridors score higher.",
-  },
-  {
-    id: "closeness", label: "Closeness",
-    description: "Nodes closest to all others on average.",
-    unweighted: true,
-  },
-  {
-    id: "eigenvector", label: "Eigenvector",
-    description: "Nodes connected to other high-scoring nodes — influence hubs.",
-    weightMeaning: "Higher weight = stronger connection to influential neighbors → higher score propagated back.",
-  },
-  {
-    id: "degree", label: "Degree",
-    description: "Total connection strength — sum of all edge weights.",
-    weightMeaning: "Higher weight = more counted connection strength. Use 1 for a pure hop count.",
-  },
-  {
-    id: "in_degree", label: "In-Degree",
-    description: "Weighted in-connection strength — how heavily this node depends on its suppliers.",
-    weightMeaning: "Higher weight on incoming edges = node is more heavily supplied/dependent.",
-  },
-  {
-    id: "out_degree", label: "Out-Degree",
-    description: "Weighted out-connection strength — how heavily this node pushes downstream.",
-    weightMeaning: "Higher weight on outgoing edges = node has stronger downstream impact.",
-  },
-  {
-    id: "k_core", label: "K-Core",
-    description: "Maximum shell index — higher = more embedded in the network backbone.",
-    unweighted: true,
-  },
-];
-
-const EDGE_METRICS: MetricDef<EdgeCentralityMetric>[] = [
-  {
-    id: "edge_betweenness", label: "Edge Betweenness",
-    description: "Critical links — edges that mediate the most shortest paths.",
-    weightMeaning: "Higher weight = preferred route (1/weight distance). High-weight edges appear on more paths and score higher.",
-  },
-  {
-    id: "bridge_edges", label: "Bridge Edges",
-    description: "Edges whose removal disconnects the graph — structural single points of failure.",
-    unweighted: true,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Compute dispatchers
-// ---------------------------------------------------------------------------
-
-function computeNodeMetric(
-  metric: NodeCentralityMetric,
-  graph: AnalysisGraph,
-  weightExpr: string,
-  n: number,
-): AnalysisResult {
-  switch (metric) {
-    case "betweenness": return computeNodeBetweenness(graph, weightExpr, n);
-    case "closeness":   return computeCloseness(graph, weightExpr, n);
-    case "eigenvector": return computeEigenvector(graph, weightExpr, n);
-    case "degree":      return computeDegree(graph, weightExpr, n);
-    case "in_degree":   return computeInDegree(graph, weightExpr, n);
-    case "out_degree":  return computeOutDegree(graph, weightExpr, n);
-    case "k_core":      return computeKCore(graph);
-  }
-}
-
-function computeEdgeMetric(
-  metric: EdgeCentralityMetric,
-  graph: AnalysisGraph,
-): AnalysisResult {
-  switch (metric) {
-    case "edge_betweenness": return computeEdgeBetweenness(graph);
-    case "bridge_edges":     return computeBridgeEdges(graph);
-  }
-}
+// Both selectors read the one registry, so a metric offered here is a metric
+// that is fully defined — label, description, weight behaviour and all.
+const NODE_METRICS = scoredMetricsFor("topological", "node");
+const EDGE_METRICS = scoredMetricsFor("topological", "edge");
 
 // ---------------------------------------------------------------------------
 // Section component
@@ -149,6 +48,10 @@ export function SectionTopological() {
   const [computingNode, setComputingNode] = useState(false);
   const [computingEdge, setComputingEdge] = useState(false);
   const [exprInput, setExprInput] = useState(weightExpr);
+
+  // Resolved once; the compute handlers close over them.
+  const activeNodeDef = scoredMetricById(activeNodeMetric);
+  const activeEdgeDef = scoredMetricById(activeEdgeMetric);
 
   // Attribute picker: detect available attrs from the live graph
   const attrCtx = useMemo(() => {
@@ -182,12 +85,13 @@ export function SectionTopological() {
   }
 
   async function handleComputeNode() {
+    if (!activeNodeDef) return;
     setComputingNode(true);
     setNodeResult(null);
     setPercolationCurve(null);
     try {
       const graph = buildScopedGraph(scope, activeCanvasId);
-      const r = computeNodeMetric(activeNodeMetric, graph, weightExpr, n);
+      const r = activeNodeDef.run({ graph, weightExpr, n });
       setNodeResult(r);
       const orderedIds = r.ranked.filter((e) => e.kind === "node").map((e) => e.id);
       setPercolationCurve(computePercolationCurve(graph, orderedIds));
@@ -197,17 +101,19 @@ export function SectionTopological() {
   }
 
   async function handleComputeEdge() {
+    if (!activeEdgeDef) return;
     setComputingEdge(true);
     setEdgeResult(null);
     try {
       const graph = buildScopedGraph(scope, activeCanvasId);
-      setEdgeResult(computeEdgeMetric(activeEdgeMetric, graph));
+      setEdgeResult(activeEdgeDef.run({ graph, weightExpr, n }));
     } finally {
       setComputingEdge(false);
     }
   }
 
   async function handleComputeBoth() {
+    if (!activeNodeDef || !activeEdgeDef) return;
     setComputingNode(true);
     setComputingEdge(true);
     setNodeResult(null);
@@ -215,10 +121,8 @@ export function SectionTopological() {
     setPercolationCurve(null);
     try {
       const graph = buildScopedGraph(scope, activeCanvasId);
-      const [nr, er] = [
-        computeNodeMetric(activeNodeMetric, graph, weightExpr, n),
-        computeEdgeMetric(activeEdgeMetric, graph),
-      ];
+      const nr = activeNodeDef.run({ graph, weightExpr, n });
+      const er = activeEdgeDef.run({ graph, weightExpr, n });
       setNodeResult(nr);
       setEdgeResult(er);
       const orderedIds = nr.ranked.filter((e) => e.kind === "node").map((e) => e.id);
@@ -229,8 +133,6 @@ export function SectionTopological() {
     }
   }
 
-  const activeNodeDef = NODE_METRICS.find((m) => m.id === activeNodeMetric);
-  const activeEdgeDef = EDGE_METRICS.find((m) => m.id === activeEdgeMetric);
   const activeNodeUnweighted = activeNodeDef?.unweighted ?? false;
   const computing = computingNode || computingEdge;
 
@@ -243,7 +145,7 @@ export function SectionTopological() {
           {NODE_METRICS.map((m) => (
             <button
               key={m.id}
-              onClick={() => setActiveNodeMetric(m.id)}
+              onClick={() => setActiveNodeMetric(m.id as NodeCentralityMetric)}
               className={cn(
                 "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
                 activeNodeMetric === m.id
@@ -277,7 +179,7 @@ export function SectionTopological() {
           {EDGE_METRICS.map((m) => (
             <button
               key={m.id}
-              onClick={() => setActiveEdgeMetric(m.id)}
+              onClick={() => setActiveEdgeMetric(m.id as EdgeCentralityMetric)}
               className={cn(
                 "flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors",
                 activeEdgeMetric === m.id

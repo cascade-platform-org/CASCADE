@@ -21,6 +21,7 @@
  * states which convention a document uses so a reader never has to guess.
  */
 
+import { elementLabel } from "@/lib/coalition";
 import { saveAs } from "@/lib/file-io";
 import type { ShapleyResult, WorstCoalition } from "@/lib/model-based-analysis";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -84,23 +85,6 @@ export interface ShapleyExportInput {
   now?: () => Date;
 }
 
-/**
- * Label an Element the way the Analysis page shows it: a node's own label, an
- * edge as "source→target" using its endpoints' labels. Falls back to the id, so
- * a partially-labelled network still joins.
- */
-function labelOf(id: string, snapshot: GraphSnapshot): string {
-  const node = snapshot.nodes[id];
-  if (node) return node.label ?? id;
-  const edge = snapshot.edges[id];
-  if (edge) {
-    const src = snapshot.nodes[edge.source]?.label ?? edge.source;
-    const tgt = snapshot.nodes[edge.target]?.label ?? edge.target;
-    return `${src}→${tgt}`;
-  }
-  return id;
-}
-
 /** Build the export document. Pure — no clock, no DOM, no store. */
 export function buildShapleyExport(input: ShapleyExportInput): ShapleyExport {
   const { result, snapshot, now = () => new Date() } = input;
@@ -109,7 +93,7 @@ export function buildShapleyExport(input: ShapleyExportInput): ShapleyExport {
     .map(([id, value]) => ({
       id,
       kind: (id in snapshot.nodes ? "node" : "edge") as "node" | "edge",
-      label: labelOf(id, snapshot),
+      label: elementLabel(snapshot, id),
       value,
     }))
     .sort((a, b) => b.value - a.value);
@@ -121,7 +105,7 @@ export function buildShapleyExport(input: ShapleyExportInput): ShapleyExport {
   ][]) {
     worst_coalitions[size] = {
       ids: coalition.ids,
-      labels: coalition.ids.map((id) => labelOf(id, snapshot)),
+      labels: coalition.ids.map((id) => elementLabel(snapshot, id)),
       loss: coalition.loss,
     };
   }

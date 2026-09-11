@@ -22,6 +22,7 @@
 
 import { reverseMutations } from "@/lib/event-application";
 import { writeFieldValue } from "@/lib/graph-diff";
+import { updatesInScenario } from "@/lib/scenario-history";
 import type { AnyUpdateEntry, GraphDiff, GraphSnapshot } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -158,24 +159,34 @@ export function foldDiff(baseline: ScenarioBaseline, diff: GraphDiff, source: Ba
  * history; they are older than anything still in `history`, so they fold first
  * and win under first-write-wins.
  *
- * `history` is newest-first as stored, and is walked **oldest-first** back to
- * the newest `scenario_reset` — a Reset ends the scenario, so nothing older
- * belongs to it. A legacy entry with no diff contributes nothing: it predates
- * ADR-0017 and there is no field-level record of what it changed.
+ * The retired fold is skipped entirely when a `scenario_reset` survives in
+ * `history`: everything retired is older than that Reset — eviction takes the
+ * oldest first — so it belongs to a scenario the Reset already ended. Folding it
+ * would let Reset restore values from a dead session. (When the Reset itself was
+ * evicted, `history-store`'s `evict` drops the retired accumulator as it goes
+ * past it, so this case only has to guard the Reset-still-in-buffer one.)
+ *
+ * Which entries are in the scenario at all is `scenario-history.ts`'s question,
+ * not this module's; they come back newest-first and are folded **oldest-first**
+ * so first-write-wins keeps the pre-scenario value. A legacy entry with no diff
+ * contributes nothing: it predates ADR-0017 and there is no field-level record
+ * of what it changed.
  */
 export function deriveBaseline(
   history: readonly AnyUpdateEntry[],
   retired: readonly BaselineEntry[] = [],
 ): ScenarioBaseline {
   const baseline: ScenarioBaseline = new Map();
-  for (const entry of retired) {
-    if (!baseline.has(baselineKey(entry.id, entry.field, entry.key))) {
-      baseline.set(baselineKey(entry.id, entry.field, entry.key), entry);
+  const resetInBuffer = history.some((e) => e.update_type === "scenario_reset");
+  if (!resetInBuffer) {
+    for (const entry of retired) {
+      if (!baseline.has(baselineKey(entry.id, entry.field, entry.key))) {
+        baseline.set(baselineKey(entry.id, entry.field, entry.key), entry);
+      }
     }
   }
 
-  const resetAt = history.findIndex((e) => e.update_type === "scenario_reset");
-  const inScenario = resetAt === -1 ? history : history.slice(0, resetAt);
+  const inScenario = updatesInScenario(history);
 
   for (let i = inScenario.length - 1; i >= 0; i--) {
     const entry = inScenario[i];

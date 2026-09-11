@@ -146,6 +146,57 @@ Measured on the case-study network: **1,297 requests → 26**, and the resulting
 φ̂ are bit-identical to the pre-batch run at the same seed — the property that
 makes the optimisation safe to have made at all.
 
+### The Temporal Jump run
+
+A **Temporal Jump** writes to the graph like any Event. A *run* is the state that
+lives outside it for as long as the user keeps jumping: the pre-jump Scenario the
+`−Xh` control restores, the hours elapsed, and the history entry the run started
+from.
+
+That state had no owner. It sat as three fields on `ui-store` and its four
+operations were spread across three layers — starting and extending a run in
+`action-bar.tsx`, reverting one in a helper beside it, ending one because the
+scenario ended in `network-utils.ts`, partially unwinding one in `canvas-store`'s
+`clearEvent`. Nothing could answer "is a run active, and what ends it" in one
+place, which is how **Reset** came to end the scenario without ending the run,
+leaving `−Xh` offering to rewind into a scenario that was over.
+
+`lib/temporal-jump-run.ts` owns the lifecycle: `extendRun` (start or continue),
+`revertRun` (rewind the whole run and end it), `endRun` (discard the run, keep
+the jumps — what Reset calls), plus the pure `remainingJumpHours` /
+`nextJumpHours` that read a Scenario's pending Functionality Times. Those two
+replaced three hand-rolled copies of the same loop inside one component, and are
+what the slider's ticks and auto-advance's step size both come from.
+
+The one operation that stays out is `clearEvent`'s give-back of a cleared jump's
+hours: `canvas-store` cannot import this module (it already depends on
+`canvas-store`, so the reverse edge is a cycle), and it writes `ui-store`
+directly, which it does for its sibling stores anyway.
+
+### The Analysis Metric registry
+
+A client-side Analysis Metric used to have no single definition: adding one meant
+editing an id union in `analysis-store.ts`, a `METRICS` array inside whichever
+section component owned it, a `switch` dispatching that id to a compute function,
+`buildLegend`'s own switch, and `CATEGORICAL_METRICS` — five places nothing
+connected, so a metric half-added failed at runtime or rendered with the wrong
+key. The four section components each carried their own copy of the same run
+cycle around it.
+
+`lib/analysis-metrics.ts` makes a metric one object — label, description, panel,
+forced scope, whether it needs an Element picked first, and how to run it — and
+the sections read the registry instead of carrying lists. Two rules that used to
+be per-component branches are now properties of the metric:
+`effectiveScope` (Network-of-Networks insists on the full multi-canvas) and
+`canRun` (the cone metrics need a source). `lib/analysis-metrics.test.ts` then
+asserts what nothing could assert before: every registered metric runs, and every
+scored result both colours and explains itself.
+
+`lib/topological-analysis.ts` is left as graph algorithms only. Its colour ramp
+and categorical palette moved to `lib/colors.ts`, and `buildColorMap`,
+`CATEGORICAL_METRICS` and `getElementLabel` to `lib/analysis-legend.ts` — a
+metric module had no business knowing what any of it looks like on screen.
+
 ### Analysis Heatmap legend
 
 An Analysis Heatmap overrides every Element's fill, so while one is applied the
@@ -256,6 +307,8 @@ There is no top-level `inter_canvas_edges` array. Inter-canvas edges are plain e
 Every user action that changes graph state pushes an `AnyUpdateEntry` to `update_history`. Each entry carries a **Graph Diff** — a field-level, invertible record of exactly what it changed, in both directions (ADR-0017). Ctrl+Z applies it backwards against the live graph, Ctrl+Y forwards; no snapshot is rebuilt, so there is no chain to replay and no checkpoint to keep. Entries written before ADR-0017 carry a `before`/`after` `GraphSnapshot` pair instead and are still read.
 
 Entries are built in exactly one place, `lib/history-entry.ts`, reached either directly (canvas-store's own actions, which already hold both snapshots) or through `lib/run-with-history.ts` (everything else, which snapshots around a mutation). Nothing else may call `pushUpdateEntry`: a call site that built its own diff could produce an entry that undoes incorrectly, and nothing would fail — undo would just leave a value behind.
+
+Two things then *read* that history to answer questions about the current scenario: the **Scenario Baseline** (`lib/scenario-baseline.ts`, what Reset and Clear Event put back) and the **Situation** (`lib/situation.ts`, what scenario is set up right now). Both first have to find where the current scenario begins, and both used to do it themselves — two copies of "a `scenario_reset` ends the scenario" and "a `temporal_jump_revert` skips back to `reverts_to_entry_id`", able to disagree about what the live scenario even is with nothing failing. `lib/scenario-history.ts` is now the only place either rule is written, exported as two named readings: `updatesInScenario` keeps a reverted Temporal Jump run (the Baseline still wants its pre-scenario values) and `liveUpdatesInScenario` drops it whole (the Situation must not describe jumps the canvas has rewound out of).
 
 Entry types:
 

@@ -9,7 +9,8 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useConfigStore, selectN } from "@/store/config-store";
-import { useUiStore } from "@/store/ui-store";
+import { endRun } from "@/lib/temporal-jump-run";
+import { countChangedElements } from "@/lib/graph-diff";
 import { runWithHistory } from "@/lib/run-with-history";
 import { applyBaselineEntries, forceOperational, resetPlan } from "@/lib/scenario-baseline";
 
@@ -56,16 +57,10 @@ export function resetFunctionality(): number {
 
   // Reference identity survives both transforms for an untouched Element, so
   // this counts what genuinely moved rather than the size of the graph.
-  const changed = [
-    ...Object.keys(after.nodes).filter((id) => after.nodes[id] !== before.nodes[id]),
-    ...Object.keys(after.edges).filter((id) => after.edges[id] !== before.edges[id]),
-  ].length;
+  const changed = countChangedElements(before, after);
 
-  // A Temporal Jump run belongs to the scenario being ended. Left alone, the
-  // −Xh control goes on offering to rewind to a snapshot taken inside it, which
-  // would drop the graph back into a cascade with no Baseline behind it — the
-  // history fold stops at this Reset, so nothing would be able to undo it again.
-  useUiStore.getState().clearTemporalJumpProgress();
+  // A Temporal Jump run belongs to the scenario being ended — see `endRun`.
+  endRun();
 
   if (changed === 0) return 0;
 

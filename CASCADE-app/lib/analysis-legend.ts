@@ -1,5 +1,5 @@
 /**
- * analysis-legend.ts — what an Analysis Heatmap's colours mean.
+ * analysis-legend.ts — an Analysis Metric's scores, made presentable.
  *
  * The Analysis Heatmap (CONTEXT.md) repaints Elements by Analysis Metric score,
  * which overrides the Functionality colours the canvas normally shows. Two
@@ -13,10 +13,18 @@
  * (`analysis-store.ts`), so the canvas cannot show a legend for one Analysis
  * Metric while displaying another's colours — the two are written together or
  * not at all.
+ *
+ * Choosing the colours belongs with explaining them, so `buildColorMap` and the
+ * set of metrics that need a discrete palette live here too, as does
+ * `getElementLabel` — how one result row is named. All three used to sit inside
+ * `topological-analysis.ts`, which is a graph-algorithm module and had no
+ * business knowing what any of this looks like on screen.
  */
 
-import { CATEGORY_COLORS, scoreToColor } from "@/lib/topological-analysis";
+import { elementLabel } from "@/lib/coalition";
+import { CATEGORY_COLORS, scoreToColor } from "@/lib/colors";
 import type { AnalysisResult } from "@/lib/topological-analysis";
+import type { Edge, Node } from "@/lib/schemas/network";
 
 /** Not exported: consumers reach it through `Legend`, the shape they render. */
 type LegendItem = { color: string; label: string };
@@ -198,4 +206,101 @@ export function buildHeatmapLegend({
     ...(result ? { nodes: buildLegend(result) } : {}),
     ...(edgeResult ? { edges: buildLegend(edgeResult) } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Colouring the scores
+// ---------------------------------------------------------------------------
+
+/** Metrics that produce discrete values — use categorical/binary colour maps. */
+const CATEGORICAL_METRICS = new Set([
+  "community",
+  "articulation_points",
+  "bridge_edges",
+  "downstream_reachability",
+  "upstream_reachability",
+  "k_core",
+]);
+
+function buildCategoricalColorMap(result: AnalysisResult): Record<string, string> {
+  const map: Record<string, string> = {};
+  const { scores, metric } = result;
+
+  if (metric === "community") {
+    const uniqueVals = [...new Set(Object.values(scores))].sort((a, b) => a - b);
+    for (const [id, score] of Object.entries(scores)) {
+      const idx = uniqueVals.indexOf(score);
+      map[id] = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+    }
+  } else if (metric === "articulation_points" || metric === "bridge_edges") {
+    for (const [id, score] of Object.entries(scores)) {
+      map[id] = score === 1 ? "#ef4444" : "#94a3b8";
+    }
+  } else if (metric === "downstream_reachability" || metric === "upstream_reachability") {
+    for (const [id, score] of Object.entries(scores)) {
+      if (score === 2) map[id] = "#4338ca";
+      else if (score === 1) map[id] = "#818cf8";
+      else map[id] = "#e2e8f0";
+    }
+  } else if (metric === "k_core") {
+    const vals = Object.values(scores);
+    const maxK = Math.max(...vals, 1);
+    for (const [id, score] of Object.entries(scores)) {
+      map[id] = scoreToColor(score / maxK);
+    }
+  }
+  return map;
+}
+
+/** Build a colour map. Categorical metrics use discrete palettes; others use the indigo gradient. */
+export function buildColorMap(result: AnalysisResult): Record<string, string> {
+  if (CATEGORICAL_METRICS.has(result.metric)) return buildCategoricalColorMap(result);
+  const { min, max, scores } = result;
+  const range = max - min || 1;
+  const map: Record<string, string> = {};
+  for (const [id, score] of Object.entries(scores)) {
+    map[id] = scoreToColor((score - min) / range);
+  }
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Naming one result row
+// ---------------------------------------------------------------------------
+
+export type LabelField = "name" | "importance" | "cost" | "weighted_loss" | "functionality";
+
+/**
+ * How one row of the results list is named: an edge by its endpoints, a node by
+ * whichever attribute the user picked from the label selector.
+ *
+ * The edge case defers to `elementLabel`, which is what every other surface
+ * names an Element with. This row used to interpolate the raw endpoint **ids**,
+ * so the same list showed node labels next to edge ids.
+ */
+export function getElementLabel(
+  id: string,
+  kind: "node" | "edge",
+  nodes: Record<string, Node>,
+  edges: Record<string, Edge>,
+  field: LabelField,
+  n: number,
+): string {
+  if (kind === "edge") {
+    return edges[id] ? elementLabel({ nodes, edges }, id, " → ") : id;
+  }
+  const node = nodes[id];
+  if (!node) return id;
+  switch (field) {
+    case "name": return node.label || id;
+    case "importance": return node.importance != null ? `importance: ${node.importance}` : "—";
+    case "cost": return node.cost_of_disservice_per_day != null ? `cost: ${node.cost_of_disservice_per_day}/day` : "—";
+    case "weighted_loss": {
+      const imp = node.importance ?? 1;
+      const loss = imp * ((n - node.functionality) / Math.max(n - 1, 1));
+      return `loss: ${loss.toFixed(2)}`;
+    }
+    case "functionality": return `func: ${node.functionality}/${n}`;
+    default: return node.label || id;
+  }
 }
