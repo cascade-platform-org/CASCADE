@@ -26,7 +26,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import type { RefObject } from "react";
-import type maplibregl from "maplibre-gl";
+// maplibre-gl 6 dropped its default export — see geo-map-background.tsx.
+import type * as maplibregl from "maplibre-gl";
 import { useOnViewportChange, useReactFlow, useViewport } from "@xyflow/react";
 import { computeMapTarget } from "@/lib/geo-utils";
 import type { GeoAnchor } from "@/lib/schemas/network";
