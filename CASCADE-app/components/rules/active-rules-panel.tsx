@@ -1,9 +1,13 @@
 "use client";
 
 /**
- * Active Rules Panel (F8) — list of all rules in the active Canvas (or all
- * Canvases when the global view is active) with add / edit / delete / toggle
- * support.
+ * Active Rules Panel (F8) — the rules on one Canvas, or on all of them, with
+ * add / edit / delete / toggle support.
+ *
+ * The Canvas is chosen in the header and starts on the one the user is looking
+ * at (all of them, in the Global view). It is panel-local: reading another
+ * Canvas's rules should not move the editor — following a rule to the
+ * Inspector does, because that element has to be on screen to be inspected.
  *
  * Guidance: while typing a rule the textarea shows a context-aware suggestion
  * popup that mirrors the backend grammar (lib/rule-suggestions.ts). Context
@@ -18,14 +22,10 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import type { CSSProperties } from "react";
 import { X, BookOpen, Plus, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import {
-  useCanvasStore,
-  selectActiveCanvas,
-  selectActiveNodes,
-  selectActiveEdges,
-} from "@/store/canvas-store";
+import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 import {
@@ -35,6 +35,7 @@ import {
   selectN,
 } from "@/store/config-store";
 import { cn } from "@/lib/utils";
+import { RULES_ANCHOR_ID } from "@/lib/ui-anchors";
 import {
   isRuleDisabled,
   ruleBody,
@@ -66,6 +67,8 @@ type RuleEntry = {
   elementLabel: string;
   elementType: "node" | "edge";
   canvasLabel?: string;
+  /** Which Canvas the element sits on — so "show in Inspector" can switch to it. */
+  canvasId?: string;
   rule: string;
   index: number;
 };
@@ -225,6 +228,16 @@ function RuleTextArea({
   );
 }
 
+/** Flight duration. Matches the CSS transition on the card below. */
+const CLOSE_MS = 260;
+
+/** Canvas-scope sentinel: show the rules on every Canvas at once. */
+const ALL_CANVASES = "__all__";
+
+/** An element plus the Canvas it was reached through. */
+type ScopedNode = Node & { _canvasLabel?: string; _canvasId?: string };
+type ScopedEdge = Edge & { _canvasLabel?: string; _canvasId?: string };
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -233,10 +246,6 @@ export function ActiveRulesPanel() {
   const closeActiveRulesPanel = useUiStore((s) => s.closeActiveRulesPanel);
   const toggleRulesManualPanel = useUiStore((s) => s.toggleRulesManualPanel);
   const globalViewActive = useUiStore((s) => s.globalViewActive);
-
-  const activeCanvas = useCanvasStore(selectActiveCanvas);
-  const activeNodes = useCanvasStore(useShallow(selectActiveNodes));
-  const activeEdges = useCanvasStore(useShallow(selectActiveEdges));
 
   const allCanvasesMap = useCanvasStore((s) => s.canvases);
   const allNodesMap = useCanvasStore((s) => s.nodes);
@@ -249,6 +258,7 @@ export function ActiveRulesPanel() {
   const functionalityN = useConfigStore(selectN);
 
   const updateNode = useCanvasStore((s) => s.updateNode);
+  const setActiveCanvas = useCanvasStore((s) => s.setActiveCanvas);
   const updateEdge = useCanvasStore((s) => s.updateEdge);
   const selectNode = useNetworkStore((s) => s.selectNode);
   const selectEdge = useNetworkStore((s) => s.selectEdge);
@@ -256,13 +266,52 @@ export function ActiveRulesPanel() {
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
 
+  // ── Closing choreography ──────────────────────────────────────────────────
+  // The panel flies back into the Status Bar control that reopens it, instead
+  // of blinking out. A modal that vanishes leaves the user hunting for the way
+  // back; one that visibly returns somewhere teaches the location once.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [flight, setFlight] = useState<CSSProperties | null>(null);
+
+  const beginClose = useCallback(() => {
+    if (flight) return; // already on its way out
+    const card = cardRef.current;
+    const anchorEl = document.getElementById(RULES_ANCHOR_ID);
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    // No anchor on screen, or the user asked for less motion: just close.
+    if (!card || !anchorEl || reducedMotion) {
+      closeActiveRulesPanel();
+      return;
+    }
+
+    const c = card.getBoundingClientRect();
+    const a = anchorEl.getBoundingClientRect();
+    setFlight({
+      transform:
+        `translate(${a.left + a.width / 2 - (c.left + c.width / 2)}px, ` +
+        `${a.top + a.height / 2 - (c.top + c.height / 2)}px) ` +
+        `scale(${Math.max(0.04, a.width / c.width)})`,
+      opacity: 0,
+    });
+    window.setTimeout(closeActiveRulesPanel, CLOSE_MS);
+  }, [flight, closeActiveRulesPanel]);
+
   // ── Inline-edit state ──────────────────────────────────────────────────────
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Add-rule form state ────────────────────────────────────────────────────
-  const [addingRule, setAddingRule] = useState(false);
+  // Opened straight into the compose form when the Inspector's "Add rule" sent
+  // us here. Read once, at mount, rather than in an effect: the panel is
+  // unmounted while closed, so mount IS the moment the request arrives, and an
+  // effect would just re-render to reach the same first paint.
+  const [addingRule, setAddingRule] = useState(
+    () => useUiStore.getState().rulesComposeRequested,
+  );
   const [newRuleText, setNewRuleText] = useState("");
   const [targetId, setTargetId] = useState<string>("");
   // When true the user has explicitly overridden auto-detection via the dropdown;
@@ -270,57 +319,70 @@ export function ActiveRulesPanel() {
   const [targetManuallySet, setTargetManuallySet] = useState(false);
   const addTextRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Resolve nodes / edges depending on view mode ──────────────────────────
-  const { nodes, edges } = (() => {
-    if (!globalViewActive) {
-      return { nodes: activeNodes, edges: activeEdges };
-    }
+  // ── Canvas scope ──────────────────────────────────────────────────────────
+  // Which Canvas's rules this panel is showing. Defaults to the one the user is
+  // looking at, and to every Canvas when the Global view is active — the two
+  // cases the panel used to infer and offer no way out of. Panel-local on
+  // purpose: reading another Canvas's rules should not move the editor.
+  const [scopeCanvasId, setScopeCanvasId] = useState<string>(() =>
+    globalViewActive ? ALL_CANVASES : (useCanvasStore.getState().activeCanvasId ?? ALL_CANVASES),
+  );
+  // A Canvas deleted while the panel is open would otherwise leave it scoped to
+  // nothing, with no visible reason why the list is empty.
+  const scopeValid = scopeCanvasId === ALL_CANVASES || !!allCanvasesMap[scopeCanvasId];
+  const scope = scopeValid ? scopeCanvasId : ALL_CANVASES;
+
+  // ── Resolve nodes / edges for the chosen scope ────────────────────────────
+  const { nodes, edges } = useMemo(() => {
+    const ids = scope === ALL_CANVASES ? canvasOrder : [scope];
+    const multi = ids.length > 1;
     const seenNodes = new Set<string>();
     const seenEdges = new Set<string>();
-    const nodes: (Node & { _canvasLabel?: string })[] = [];
-    const edges: (Edge & { _canvasLabel?: string })[] = [];
-    for (const canvasId of canvasOrder) {
+    const nodes: ScopedNode[] = [];
+    const edges: ScopedEdge[] = [];
+    for (const canvasId of ids) {
       const canvas = allCanvasesMap[canvasId];
       if (!canvas) continue;
-      const canvasLabel = canvas.label ?? canvasId;
+      // The label only earns its place when more than one Canvas is listed.
+      const canvasLabel = multi ? (canvas.label ?? canvasId) : undefined;
       for (const nid of canvas.graph.node_ids) {
         if (!seenNodes.has(nid) && allNodesMap[nid]) {
           seenNodes.add(nid);
-          nodes.push({ ...allNodesMap[nid], _canvasLabel: canvasLabel });
+          nodes.push({ ...allNodesMap[nid], _canvasLabel: canvasLabel, _canvasId: canvasId });
         }
       }
       for (const eid of canvas.graph.edge_ids) {
         if (!seenEdges.has(eid) && allEdgesMap[eid]) {
           seenEdges.add(eid);
-          edges.push({ ...allEdgesMap[eid], _canvasLabel: canvasLabel });
+          edges.push({ ...allEdgesMap[eid], _canvasLabel: canvasLabel, _canvasId: canvasId });
         }
       }
     }
     return { nodes, edges };
-  })();
+  }, [scope, canvasOrder, allCanvasesMap, allNodesMap, allEdgesMap]);
 
   // ── Build rule entries ─────────────────────────────────────────────────────
   const ruleEntries: RuleEntry[] = [
-    ...(nodes as (Node & { _canvasLabel?: string })[]).flatMap((n) =>
+    ...nodes.flatMap((n) =>
       (n.rules ?? []).map((rule, index) => ({
         elementId: n.id,
         elementLabel: n.label ?? n.id,
         elementType: "node" as const,
         canvasLabel: n._canvasLabel,
+        canvasId: n._canvasId,
         rule,
         index,
       })),
     ),
-    ...(edges as (Edge & { _canvasLabel?: string })[]).flatMap((e) => {
-      const srcLabel =
-        (nodes as Node[]).find((n) => n.id === e.source)?.label ?? e.source;
-      const tgtLabel =
-        (nodes as Node[]).find((n) => n.id === e.target)?.label ?? e.target;
+    ...edges.flatMap((e) => {
+      const srcLabel = nodes.find((n) => n.id === e.source)?.label ?? e.source;
+      const tgtLabel = nodes.find((n) => n.id === e.target)?.label ?? e.target;
       return (e.rules ?? []).map((rule, index) => ({
         elementId: e.id,
         elementLabel: `${srcLabel} → ${tgtLabel}`,
         elementType: "edge" as const,
-        canvasLabel: (e as Edge & { _canvasLabel?: string })._canvasLabel,
+        canvasLabel: e._canvasLabel,
+        canvasId: e._canvasId,
         rule,
         index,
       }));
@@ -329,29 +391,27 @@ export function ActiveRulesPanel() {
 
   // ── Element options for the target picker ─────────────────────────────────
   const elementOptions: ElementOption[] = useMemo(() => [
-    ...(nodes as (Node & { _canvasLabel?: string })[]).map((n) => ({
+    ...nodes.map((n) => ({
       id: n.id,
       label: n.label ?? n.id,
       kind: "node" as const,
       canvasLabel: n._canvasLabel,
     })),
-    ...(edges as (Edge & { _canvasLabel?: string })[]).map((e) => {
-      const srcLabel =
-        (nodes as Node[]).find((n) => n.id === e.source)?.label ?? e.source;
-      const tgtLabel =
-        (nodes as Node[]).find((n) => n.id === e.target)?.label ?? e.target;
+    ...edges.map((e) => {
+      const srcLabel = nodes.find((n) => n.id === e.source)?.label ?? e.source;
+      const tgtLabel = nodes.find((n) => n.id === e.target)?.label ?? e.target;
       return {
         id: e.id,
         label: `${srcLabel} → ${tgtLabel}`,
         kind: "edge" as const,
-        canvasLabel: (e as Edge & { _canvasLabel?: string })._canvasLabel,
+        canvasLabel: e._canvasLabel,
       };
     }),
   ], [nodes, edges]);
 
   // ── Suggestion context (stable reference) ─────────────────────────────────
   const suggestionCtx: RuleSuggestionCtx = {
-    elementLabels: (nodes as Node[]).map((n) => n.label ?? n.id),
+    elementLabels: nodes.map((n) => n.label ?? n.id),
     categoryNames: categories.map((c) => c.name),
     functionalityLabels: scaleLevels.map((l) => l.label),
     functionalityN,
@@ -410,6 +470,14 @@ export function ActiveRulesPanel() {
     setTargetManuallySet(false);
     setTargetId(selectionTargetId);
   }
+
+  // The request is one-shot: clear it so reopening the panel normally just
+  // lists the rules. The target is left to the auto-detection effect above,
+  // which already falls back to the canvas selection — the element whose
+  // Inspector the user pressed "Add rule" in.
+  useEffect(() => {
+    useUiStore.getState().clearRulesComposeRequest();
+  }, []);
 
   useEffect(() => {
     if (addingRule) addTextRef.current?.focus();
@@ -473,10 +541,16 @@ export function ActiveRulesPanel() {
   }
 
   function showInInspector(entry: RuleEntry) {
+    // The panel can be scoped to a Canvas the editor is not showing, so follow
+    // the element there first — otherwise the Inspector fills with an element
+    // that is nowhere on screen.
+    if (entry.canvasId && entry.canvasId !== useCanvasStore.getState().activeCanvasId) {
+      setActiveCanvas(entry.canvasId);
+    }
     if (entry.elementType === "node") selectNode(entry.elementId);
     else selectEdge(entry.elementId);
     setInspectorOpen(true);
-    closeActiveRulesPanel();
+    beginClose();
   }
 
   const targetOption = elementOptions.find((o) => o.id === targetId);
@@ -490,9 +564,10 @@ export function ActiveRulesPanel() {
           ? "selection"
           : null
     : null;
-  const scopeLabel = globalViewActive
-    ? "all canvases"
-    : (activeCanvas?.label ?? "this canvas");
+  const scopeLabel =
+    scope === ALL_CANVASES
+      ? "all canvases"
+      : (allCanvasesMap[scope]?.label ?? "this canvas");
 
   // ---------------------------------------------------------------------------
   // Render
@@ -500,23 +575,55 @@ export function ActiveRulesPanel() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-sm"
+      className={cn(
+        "fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-sm",
+        "transition-opacity duration-200",
+        flight && "pointer-events-none opacity-0",
+      )}
       onClick={(e) => {
-        if (e.target === e.currentTarget) closeActiveRulesPanel();
+        if (e.target === e.currentTarget) beginClose();
       }}
     >
-      <div className="mt-10 flex max-h-[58vh] w-[640px] max-w-[95vw] flex-col rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+      <div
+        ref={cardRef}
+        style={flight ?? undefined}
+        className={cn(
+          "mt-10 flex max-h-[58vh] w-[640px] max-w-[95vw] flex-col rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
+          "origin-center transition-[transform,opacity] duration-[260ms] ease-in",
+        )}
+      >
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
               Active Rules
             </h2>
-            <p className="text-xs text-zinc-400">
-              {ruleEntries.length} rule{ruleEntries.length !== 1 ? "s" : ""} in{" "}
-              <span className="font-medium">{scopeLabel}</span>
-            </p>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
+              {/* Which Canvas's rules to list. Starts on the one you are
+                  looking at; the panel used to infer this and give no way to
+                  look anywhere else. */}
+              <select
+                value={scope}
+                onChange={(e) => setScopeCanvasId(e.target.value)}
+                title="Which canvas's rules to show"
+                className="rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                {canvasOrder.map((id) => {
+                  const canvas = allCanvasesMap[id];
+                  if (!canvas) return null;
+                  return (
+                    <option key={id} value={id}>
+                      {canvas.label ?? id}
+                    </option>
+                  );
+                })}
+                <option value={ALL_CANVASES}>All canvases</option>
+              </select>
+              <span>
+                {ruleEntries.length} rule{ruleEntries.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -528,7 +635,8 @@ export function ActiveRulesPanel() {
               Manual
             </button>
             <button
-              onClick={closeActiveRulesPanel}
+              onClick={beginClose}
+              title="Close — it goes back to the Rules counter in the status bar"
               className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
             >
               <X size={16} />
@@ -587,7 +695,7 @@ export function ActiveRulesPanel() {
                         <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
                           {entry.elementLabel}
                         </span>
-                        {globalViewActive && entry.canvasLabel && (
+                        {entry.canvasLabel && (
                           <span className="ml-auto shrink-0 rounded bg-zinc-50 px-1 py-0.5 text-[10px] text-zinc-400 dark:bg-zinc-800">
                             {entry.canvasLabel}
                           </span>
@@ -723,7 +831,7 @@ export function ActiveRulesPanel() {
                     className="flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <option value="">— pick a node or edge —</option>
-                    {globalViewActive
+                    {scope === ALL_CANVASES
                       ? canvasOrder.map((cid) => {
                           const canvas = allCanvasesMap[cid];
                           if (!canvas) return null;

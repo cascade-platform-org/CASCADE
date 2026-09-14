@@ -12,25 +12,77 @@ Assets live in [`docs/assets/`](assets/); the app copies are under
 
 ## Palette
 
+The whole palette is **five hue angles**. Everything else — every shade of
+every colour in the platform — is generated from them.
+
+```css
+/* CASCADE-app/app/globals.css */
+--hue-neutral: 258;   /* surfaces, text, borders */
+--hue-danger:   25;   /* errors, destructive actions, Functionality level 1 */
+--hue-warning:  70;   /* warnings */
+--hue-success: 149;   /* confirmations */
+--hue-accent:  263;   /* interactive, selection, Analysis */
+```
+
+Change a number there and the platform repaints: buttons, toasts, warning
+banners, panel borders, the Analysis heatmap, the canvas. Nothing else to edit.
+
+### How it propagates
+
+Tailwind's colour ramps are **redefined** rather than sat next to. `red-500`,
+`zinc-400` and `amber-600` are not Tailwind's red, grey and amber in this app —
+they are brand-critical, brand-neutral and brand-warning at those steps. So
+there is no off-brand colour left to reach for, and the ~2900 colour classes
+already in the codebase were correct the moment the ramps changed.
+
+Each ramp keeps Tailwind's own lightness and chroma ladder and swaps only the
+hue, so contrast — and therefore legibility and accessibility — behaves exactly
+as stock Tailwind.
+
+| Write this | You get |
+|---|---|
+| `bg-danger`, `text-warning`, `border-accent` | The semantic name. **Preferred in new code** — it says what the colour means. |
+| `bg-red-600`, `text-zinc-400`, … | The same brand ramps, by step. Fine, and what most of the app still uses. |
+| `bg-slate-*`, `gray-*`, `sky-*`, `indigo-*`, `rose-*`, `emerald-*`, `orange-*` | Aliased onto the ramp above, so a stray class can't smuggle in a different colour. |
+| `violet-*`, `purple-*` | Left alone on purpose — they only ever mark *categories*, where being distinguishable is the entire job. |
+
+### Canvas and chart colour
+
+The canvas paints with inline styles, and `lib/` is unit-tested with no DOM, so
+those colours can't read CSS. [`lib/brand.ts`](../CASCADE-app/lib/brand.ts)
+mirrors the same five hues and derives hexes with the same OKLCH maths;
+[`lib/colors.ts`](../CASCADE-app/lib/colors.ts) builds the heatmap ramp, the
+Canvas palette and the category palette from it. No hex literals.
+
+`lib/brand.test.ts` reads `globals.css` and **fails the build** if a hue there
+disagrees with `lib/brand.ts`, or if any ramp step hard-codes a hue instead of
+referencing the variable. "Change the hue in globals.css" therefore stays a
+complete instruction.
+
+### Brand marks
+
+These are fixed hexes, not ramp steps: they must match the committed logo
+assets in [`docs/assets/`](assets/) byte for byte.
+
 | Token | Hex | Use |
 |---|---|---|
-| `brand-ink` | `#0f172a` | Mark and wordmark on light; primary text |
+| `brand-ink` | `#0f172a` | Mark and wordmark on light |
 | `brand-paper` | `#f8fafc` | Mark and wordmark on dark |
 | `brand-slate` | `#5b6675` | Middle tonal step of the mark |
-| `brand-mist` | `#94a3b8` | Lightest tonal step; muted text |
-| `brand-abyss` | `#0b1220` | Dark surfaces, OG card background |
+| `brand-mist` | `#94a3b8` | Lightest tonal step |
+| `brand-abyss` | `#0b1220` | OG card background |
 | `brand-critical` | `#ef4444` | The cascade stream and basin node |
 | `brand-critical-soft` | `#f87171` | The same accent on dark backgrounds |
 
 `brand-critical` is intentionally the same red as `functionality_scale` level 1
-(`critical`) in [`local-first-guide.md`](project/local-first-guide.md) — the logo
-speaks the same colour language as the canvas.
+(`critical`) in [`local-first-guide.md`](project/local-first-guide.md) — the
+logo speaks the same colour language as the canvas. The neutral ramp is hued to
+match `brand-slate` / `brand-mist`, so the greys carry the mark's slate cast
+instead of reading as flat grey.
 
-**Tokens are defined once** in
-[`CASCADE-app/app/globals.css`](../CASCADE-app/app/globals.css): a Tailwind
-`@theme` block (`bg-brand-ink`, `text-brand-critical`, …) plus matching
-`--brand-*` CSS variables for non-Tailwind consumers (canvas, charts, inline
-styles). Change them there, not in component code.
+Functionality-scale colours themselves are **user data**, stored per project in
+the Model Configuration. The defaults follow the brand; a user is free to
+change them for their own model.
 
 ---
 

@@ -129,7 +129,7 @@ Additional **node-only** attributes:
 |---|---|---|
 | `node_type` | enum | One of the four types above |
 | `node_categories` | list\<string\> | References to categories defined in config |
-| `importance` | numeric | Weight for scorecard |
+| `importance` | numeric | Weight for scorecard. Optional; **0.5** when unset, which is also the size a node is drawn at. |
 | `cost_of_disservice_per_day` | numeric | Economic impact metric |
 
 ### 5.3 Capacity Attributes
@@ -620,6 +620,18 @@ When the user clicks "Run" on an uncovered event, the system applies the event *
 ---
 
 ## 13. Persistence, File I/O, and Version History
+
+The File panel (F9) is four tabs — **Local** (§13.1–13.3), **Cloud** (§13.4),
+**Import** (§13.5) and **New**. Where a save lives is the thing that decides
+whether it survives clearing the browser, whether another device can see it,
+and what a delete destroys, so it selects the tab instead of being explained
+inside one. **New** re-opens the setup wizard mid-session via `ui-store`'s
+`newProjectRequested`, consumed by `app/page.tsx` (which owns the
+editor/wizard app-state transition the panel cannot reach); nothing is written
+until a wizard step completes, so cancelling returns to the untouched project.
+The Local tab shows the browser's own storage quota
+(`navigator.storage.estimate()` via `lib/file-io.ts`'s `getStorageEstimate`),
+since that quota — not an app-defined number — is the real storage limit.
 
 ### 13.1 Explicit Save
 

@@ -13,6 +13,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/store/ui-store";
 import { isRuleDisabled, ruleBody, toggleRuleDisabled, setRuleBody } from "@/lib/rule-status";
 
 // ---------------------------------------------------------------------------
@@ -94,8 +95,14 @@ export function RulesEditor({
           </div>
         );
       })}
+      {/* Writing a rule belongs in the Active Rules panel, which has the
+          grammar-aware suggestions (lib/rule-suggestions.ts) and validates as
+          you type. This used to append an empty string and hand the user a
+          bare textarea — the same grammar, with none of the help. The panel
+          targets the current canvas selection, which is this element. */}
       <button
-        onClick={() => onChange([...rules, ""])}
+        onClick={() => useUiStore.getState().openRuleComposer()}
+        title="Write a rule with suggestions in the Active Rules panel"
         className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
       >
         <Plus size={10} /> Add rule

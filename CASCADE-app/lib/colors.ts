@@ -5,15 +5,20 @@
  * Canvas palette, and holds the Analysis Heatmap's own palette, so canvases,
  * panels, and search results can never drift apart on colour.
  *
+ * Everything here is derived from `lib/brand.ts`, which mirrors the hues in
+ * `app/globals.css`. Nothing in this file is a literal hex, so changing a hue
+ * in the stylesheet repaints the canvas as well as the chrome.
+ *
  * The Analysis Heatmap's colours live here rather than in
  * `topological-analysis.ts`, where they used to sit among the graph algorithms:
  * a metric computing scores and a renderer painting them are two jobs, and only
  * the second one is about colour.
  */
+import { brandColor, brandRampColor, oklchToHex, BRAND_HUE } from "@/lib/brand";
 import type { FunctionalityScaleLevel } from "@/lib/schemas/config";
 
-/** Neutral gray for levels missing from the scale (and unset canvas colours). */
-export const FALLBACK_LEVEL_COLOR = "#94a3b8";
+/** Neutral for levels missing from the scale (and unset canvas colours). */
+export const FALLBACK_LEVEL_COLOR = brandColor("neutral", 400);
 
 /** Colour for a Functionality integer level, from the Model Configuration scale. */
 export function levelColor(
@@ -23,31 +28,45 @@ export function levelColor(
   return scale.find((l) => l.level === level)?.color ?? FALLBACK_LEVEL_COLOR;
 }
 
+// ---------------------------------------------------------------------------
+// Distinguishable palettes
+// ---------------------------------------------------------------------------
+
+/**
+ * Colours whose job is to be told apart — Canvases, and metrics whose scores
+ * are categories rather than magnitudes.
+ *
+ * These deliberately do NOT collapse onto the brand's few hues: a palette where
+ * two categories look alike has failed at the only thing it does. What they
+ * take from the brand instead is the ramp — one lightness and chroma for all of
+ * them, starting at the accent hue and stepping evenly around the wheel — so
+ * they sit at the same visual weight as everything else on screen.
+ */
+function evenHues(count: number, lightness: number, chroma: number): string[] {
+  return Array.from({ length: count }, (_, i) =>
+    oklchToHex(lightness, chroma, (BRAND_HUE.accent + (360 / count) * i) % 360),
+  );
+}
+
 /** Default colour choices offered for a Canvas (inspector + topbar pickers). */
-export const CANVAS_PALETTE = [
-  "#3b82f6", "#22c55e", "#eab308", "#f97316",
-  "#ef4444", "#a855f7", "#06b6d4", "#ec4899",
-] as const;
+export const CANVAS_PALETTE = evenHues(8, 0.62, 0.19) as readonly string[];
+
+/** Discrete palette for metrics whose scores are categories, not magnitudes. */
+export const CATEGORY_COLORS = evenHues(10, 0.62, 0.19);
 
 // ---------------------------------------------------------------------------
 // Analysis Heatmap palette
 // ---------------------------------------------------------------------------
 
 /**
- * Maps a normalised value [0,1] to a light→dark blue gradient (blue-100 →
- * blue-900). Blue is the app's accent for Analysis, so the heatmap on the canvas
- * reads as the same feature as the window that produced it.
+ * Maps a normalised value [0,1] onto the accent ramp, light → dark. Blue is the
+ * app's accent for Analysis, so the heatmap on the canvas reads as the same
+ * feature as the window that produced it.
+ *
+ * Interpolated in OKLCH rather than sRGB: a straight RGB blend between a pale
+ * and a dark blue passes through a washed-out grey in the middle, which reads as
+ * "no data" exactly where the mid-scoring Elements are.
  */
 export function scoreToColor(normalised: number): string {
-  const r = Math.round(219 + normalised * (30 - 219));
-  const g = Math.round(234 + normalised * (58 - 234));
-  const b = Math.round(254 + normalised * (138 - 254));
-  return `rgb(${r},${g},${b})`;
+  return brandRampColor("accent", 100, 900, normalised);
 }
-
-/** Discrete palette for metrics whose scores are categories, not magnitudes. */
-export const CATEGORY_COLORS = [
-  "#6366f1", "#ec4899", "#f59e0b", "#10b981",
-  "#3b82f6", "#ef4444", "#8b5cf6", "#14b8a6",
-  "#f97316", "#84cc16",
-];

@@ -10,16 +10,38 @@ import { loadRecoveryDir } from "@/lib/recovery-dir";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useUiStore } from "@/store/ui-store";
 
 type AppState = "wizard" | "restore-prompt" | "editor";
+/**
+ * Where a "wizard" appState came from, because the wizard's Cancel means two
+ * different things depending on it. At startup there is no project yet, so
+ * Cancel backs out to the identity gate. Reached mid-session via "New
+ * Project", there IS one — the wizard writes nothing until a step actually
+ * finishes (see new-project-wizard.tsx), so Cancel is safe to just return to
+ * the untouched editor rather than discarding it via the gate.
+ */
+type WizardOrigin = "startup" | "editor";
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>("wizard");
+  const [wizardOrigin, setWizardOrigin] = useState<WizardOrigin>("startup");
   const [pendingSave, setPendingSave] = useState<BeforeUnloadSave | null>(null);
   const [pathCopied, setPathCopied] = useState(false);
 
   const authInitialized = useAuthStore((s) => s.initialized);
   const authMode = useAuthStore((s) => s.mode);
+  const newProjectRequested = useUiStore((s) => s.newProjectRequested);
+
+  // The File panel's "New Project" button sets this; it lives above the panel
+  // because starting over means leaving the editor's app-state branch
+  // entirely, not just something inside it.
+  useEffect(() => {
+    if (!newProjectRequested) return;
+    setWizardOrigin("editor");
+    setAppState("wizard");
+    useUiStore.getState().clearNewProjectRequest();
+  }, [newProjectRequested]);
 
   // Learn auth mode + restore any saved session on first load.
   useEffect(() => {
@@ -141,12 +163,16 @@ export default function Home() {
   if (appState === "wizard") {
     return (
       <NewProjectWizard
-        onComplete={() => setAppState("editor")}
-        // Cancel = back to the identity gate ("Welcome to CASCADE"), so the
-        // user can switch identity or sign in. Sessions are untouched —
-        // showGate only re-opens the chooser (authMode "unknown" re-renders
-        // this component into <AuthGate/> above).
-        onCancel={() => useAuthStore.getState().showGate()}
+        onComplete={() => { setWizardOrigin("startup"); setAppState("editor"); }}
+        // Cancel means different things by origin (see WizardOrigin above):
+        // reached from "New Project" mid-session, the current project was
+        // never touched, so just go back to it. At startup there is no
+        // project to go back to — showGate re-opens the identity chooser
+        // (authMode "unknown" re-renders this component into <AuthGate/>
+        // above); sessions are untouched either way.
+        onCancel={() =>
+          wizardOrigin === "editor" ? setAppState("editor") : useAuthStore.getState().showGate()
+        }
       />
     );
   }

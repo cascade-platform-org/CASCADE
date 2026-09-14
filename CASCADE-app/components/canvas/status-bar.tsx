@@ -8,7 +8,10 @@
  * In per-canvas view: counts for the active canvas only.
  */
 
+import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { cn } from "@/lib/utils";
+import { RULES_ANCHOR_ID } from "@/lib/ui-anchors";
 import { useCanvasStore, selectActiveCanvas, selectActiveNodes, selectActiveEdges } from "@/store/canvas-store";
 import { useUiStore } from "@/store/ui-store";
 
@@ -25,6 +28,17 @@ export function StatusBar() {
   const scope = useUiStore((s) => s.propagationScope);
   const propagationWarnings = useUiStore((s) => s.propagationWarnings);
   const toggleActiveRulesPanel = useUiStore((s) => s.toggleActiveRulesPanel);
+  const rulesAnchorFlash = useUiStore((s) => s.rulesAnchorFlash);
+
+  // The Active Rules panel animates back into this control when it closes.
+  // The flash is the end of that sentence: the eye follows the panel here,
+  // and then this lights up, so the way to reopen it is learned once rather
+  // than hunted for.
+  useEffect(() => {
+    if (!rulesAnchorFlash) return;
+    const t = setTimeout(() => useUiStore.getState().clearRulesAnchorFlash(), 1400);
+    return () => clearTimeout(t);
+  }, [rulesAnchorFlash]);
 
   const displayNodes = globalViewActive ? allNodes : nodes;
   const displayEdges = globalViewActive ? allEdges : edges;
@@ -49,8 +63,13 @@ export function StatusBar() {
       )}
 
       <button
+        id={RULES_ANCHOR_ID}
         onClick={toggleActiveRulesPanel}
-        className="hover:text-zinc-600 dark:hover:text-zinc-300"
+        className={cn(
+          "rounded px-1 transition-colors duration-300 hover:text-zinc-600 dark:hover:text-zinc-300",
+          rulesAnchorFlash &&
+            "bg-blue-100 text-blue-700 ring-2 ring-blue-400 dark:bg-blue-900/40 dark:text-blue-300",
+        )}
       >
         Rules: {ruleCount} active ↗
       </button>

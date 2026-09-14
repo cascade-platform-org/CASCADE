@@ -11,6 +11,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
@@ -162,8 +163,17 @@ function CategoriesEditor({
   configCats: string[];
   onChange: (cats: string[]) => void;
 }) {
+  const openConfigModal = useUiStore((s) => s.openConfigModal);
+  // A Category is defined once, in the Model Configuration: a name, a Category
+  // Type and a colour. The engine branches on the *type*, so a name invented
+  // here would be one it cannot resolve — this editor therefore only assigns
+  // Categories that already exist, and sends the user to the Categories tab to
+  // define a new one. (It used to push an empty string onto the node instead,
+  // which is a Category with no name and no type.)
+  const available = configCats.filter((c) => !cats.includes(c));
+
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {cats.map((cat, i) => (
         <span
           key={i}
@@ -178,7 +188,7 @@ function CategoriesEditor({
           </button>
         </span>
       ))}
-      {configCats.length > 0 ? (
+      {available.length > 0 && (
         <select
           value=""
           onChange={(e) => {
@@ -187,20 +197,20 @@ function CategoriesEditor({
           className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-xs text-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
         >
           <option value="">+ add</option>
-          {configCats.map((name) => (
+          {available.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>
           ))}
         </select>
-      ) : (
-        <button
-          onClick={() => onChange([...cats, ""])}
-          className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
-        >
-          <Plus size={10} /> Add category
-        </button>
       )}
+      <button
+        onClick={() => openConfigModal("categories")}
+        title="Define a new Category in the Model Configuration"
+        className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
+      >
+        <Plus size={10} /> New category
+      </button>
     </div>
   );
 }
@@ -344,7 +354,9 @@ export function NodeInspector({ node }: { node: Node }) {
       </Section>
 
       {/* 3. Supply Capacity */}
-      {(node.node_type === "Source" || node.node_categories?.length) && (
+      {/* `?.length` is a NUMBER: on a node with no Categories it is 0, and
+          `0 && …` renders a literal "0" into the panel rather than nothing. */}
+      {(node.node_type === "Source" || (node.node_categories?.length ?? 0) > 0) && (
         <Section title="Supply Capacity">
           <SupplyCapacityEditor
             supply={node.supply_capacity ?? {}}
@@ -357,9 +369,10 @@ export function NodeInspector({ node }: { node: Node }) {
 
       {/* 4. Socioeconomic Values */}
       <Section title="Socioeconomic Values">
-        <Field label="Importance (0–1)">
+        <Field label="Importance (0–1)" hint="Default 0.5. Also sets the node's size on the canvas.">
           <NumberInput
             value={node.importance}
+            placeholder="0.5"
             min={0}
             max={1}
             step={0.05}

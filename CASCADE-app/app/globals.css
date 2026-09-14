@@ -1,38 +1,214 @@
 @import "tailwindcss";
 
-/* ------------------------------------------------------------------ *
- * CASCADE brand tokens — single source of truth for the palette.
- * Mirrors docs/brand.md. `brand-critical` is deliberately the same
- * red as functionality_scale level 1 (see local-first-guide.md).
- * ------------------------------------------------------------------ */
+/* ==================================================================== *
+ * CASCADE palette — the single source of truth for colour.
+ *
+ * HOW TO CHANGE A COLOUR: edit one hue number in the block below. Every
+ * `text-zinc-*`, `bg-red-*`, `border-amber-*` … in the app is generated
+ * from these, so a hue change repaints the whole platform — warnings,
+ * errors, panels, borders and all — without touching a component.
+ *
+ * WHY THE RAMPS ARE REDEFINED RATHER THAN REPLACED: the app has ~2900
+ * colour classes across ~150 files. Renaming them all to semantic tokens
+ * would be a huge diff for zero visual change, and would still leave the
+ * next contributor free to type `text-red-500` and get off-brand red.
+ * Overriding the ramps themselves means there is no off-brand red to
+ * reach for: `red-*` IS brand-critical, at every step.
+ *
+ * Each ramp keeps Tailwind's own lightness/chroma ladder and swaps only
+ * the hue, so contrast relationships (and therefore legibility) are
+ * unchanged from stock Tailwind, while the colour is the brand's.
+ *
+ * Mirrored in `lib/brand.ts` for canvas/inline-style consumers that
+ * cannot read CSS. `lib/brand.test.ts` fails the build if the two drift.
+ * Documented in docs/brand.md.
+ * ==================================================================== */
+
 @theme {
-  --color-brand-ink: #0f172a;      /* primary mark / text on light      */
-  --color-brand-paper: #f8fafc;    /* mark / text on dark               */
-  --color-brand-slate: #5b6675;    /* mid tonal step                    */
-  --color-brand-mist: #94a3b8;     /* light tonal step / muted text     */
-  --color-brand-abyss: #0b1220;    /* dark surfaces, OG background      */
-  --color-brand-critical: #ef4444; /* the cascade / failure accent      */
+  /* ── THE FIVE NUMBERS ─────────────────────────────────────────────
+   * Hue angles in OKLCH degrees. This is the whole palette.
+   * neutral 258  — brand-slate (256.2) / brand-mist (256.8)
+   * danger   25  — brand-critical #ef4444, also functionality level 1
+   * warning  70  — amber
+   * success 149  — green
+   * accent  263  — the platform's interactive blue
+   * ----------------------------------------------------------------- */
+  --hue-neutral: 258;
+  --hue-danger: 25;
+  --hue-warning: 70;
+  --hue-success: 149;
+  --hue-accent: 263;
+
+  /* ── Brand marks ──────────────────────────────────────────────────
+   * Fixed hexes, not ramp steps: these are the logo's colours and must
+   * match the committed SVG/PNG assets byte for byte (docs/assets/).
+   * ----------------------------------------------------------------- */
+  --color-brand-ink: #0f172a;
+  --color-brand-paper: #f8fafc;
+  --color-brand-slate: #5b6675;
+  --color-brand-mist: #94a3b8;
+  --color-brand-abyss: #0b1220;
+  --color-brand-critical: #ef4444;
   --color-brand-critical-soft: #f87171;
+
+  /* ── Semantic roles ───────────────────────────────────────────────
+   * Preferred in new code: `bg-danger`, `text-warning`, `border-accent`.
+   * They say what a colour MEANS, so a reader does not have to know
+   * that amber is the warning colour here.
+   * ----------------------------------------------------------------- */
+  --color-accent: var(--color-blue-600);
+  --color-accent-soft: var(--color-blue-50);
+  --color-danger: var(--color-red-600);
+  --color-danger-soft: var(--color-red-50);
+  --color-warning: var(--color-amber-500);
+  --color-warning-soft: var(--color-amber-50);
+  --color-success: var(--color-green-600);
+  --color-success-soft: var(--color-green-50);
+
+  /* ── Neutral ramp (zinc) — surfaces, text, borders ─────────────────
+   * Chroma is raised above stock zinc so the greys carry the mark's
+   * slate cast instead of reading as flat grey. 400 lands on
+   * brand-mist; 500/600 straddle brand-slate.
+   * ----------------------------------------------------------------- */
+  --color-zinc-50: oklch(98.5% 0.003 var(--hue-neutral));
+  --color-zinc-100: oklch(96.7% 0.006 var(--hue-neutral));
+  --color-zinc-200: oklch(92% 0.012 var(--hue-neutral));
+  --color-zinc-300: oklch(87.1% 0.019 var(--hue-neutral));
+  --color-zinc-400: oklch(70.5% 0.035 var(--hue-neutral));
+  --color-zinc-500: oklch(55.2% 0.033 var(--hue-neutral));
+  --color-zinc-600: oklch(44.2% 0.03 var(--hue-neutral));
+  --color-zinc-700: oklch(37% 0.03 var(--hue-neutral));
+  --color-zinc-800: oklch(27.4% 0.032 var(--hue-neutral));
+  --color-zinc-900: oklch(21% 0.036 var(--hue-neutral));
+  --color-zinc-950: oklch(14.1% 0.03 var(--hue-neutral));
+
+  /* Aliases: the same ramp under Tailwind's other neutral names, so a
+     stray `slate-`/`gray-`/`neutral-` class cannot smuggle in a
+     different grey. */
+  --color-slate-50: var(--color-zinc-50);
+  --color-slate-100: var(--color-zinc-100);
+  --color-slate-200: var(--color-zinc-200);
+  --color-slate-300: var(--color-zinc-300);
+  --color-slate-400: var(--color-zinc-400);
+  --color-slate-500: var(--color-zinc-500);
+  --color-slate-600: var(--color-zinc-600);
+  --color-slate-700: var(--color-zinc-700);
+  --color-slate-800: var(--color-zinc-800);
+  --color-slate-900: var(--color-zinc-900);
+  --color-slate-950: var(--color-zinc-950);
+  --color-gray-50: var(--color-zinc-50);
+  --color-gray-100: var(--color-zinc-100);
+  --color-gray-200: var(--color-zinc-200);
+  --color-gray-300: var(--color-zinc-300);
+  --color-gray-400: var(--color-zinc-400);
+  --color-gray-500: var(--color-zinc-500);
+  --color-gray-600: var(--color-zinc-600);
+  --color-gray-700: var(--color-zinc-700);
+  --color-gray-800: var(--color-zinc-800);
+  --color-gray-900: var(--color-zinc-900);
+  --color-gray-950: var(--color-zinc-950);
+
+  /* ── Danger ramp (red) — errors, destructive actions, level 1 ──── */
+  --color-red-50: oklch(97.1% 0.013 var(--hue-danger));
+  --color-red-100: oklch(93.6% 0.032 var(--hue-danger));
+  --color-red-200: oklch(88.5% 0.062 var(--hue-danger));
+  --color-red-300: oklch(80.8% 0.114 var(--hue-danger));
+  --color-red-400: oklch(70.4% 0.191 var(--hue-danger));
+  --color-red-500: oklch(63.7% 0.237 var(--hue-danger));
+  --color-red-600: oklch(57.7% 0.245 var(--hue-danger));
+  --color-red-700: oklch(50.5% 0.213 var(--hue-danger));
+  --color-red-800: oklch(44.4% 0.177 var(--hue-danger));
+  --color-red-900: oklch(39.6% 0.141 var(--hue-danger));
+  --color-red-950: oklch(25.8% 0.092 var(--hue-danger));
+  --color-rose-50: var(--color-red-50);
+  --color-rose-500: var(--color-red-500);
+  --color-rose-600: var(--color-red-600);
+
+  /* ── Warning ramp (amber) ─────────────────────────────────────── */
+  --color-amber-50: oklch(98.7% 0.022 var(--hue-warning));
+  --color-amber-100: oklch(96.2% 0.059 var(--hue-warning));
+  --color-amber-200: oklch(92.4% 0.12 var(--hue-warning));
+  --color-amber-300: oklch(87.9% 0.169 var(--hue-warning));
+  --color-amber-400: oklch(82.8% 0.189 var(--hue-warning));
+  --color-amber-500: oklch(76.9% 0.188 var(--hue-warning));
+  --color-amber-600: oklch(66.6% 0.179 var(--hue-warning));
+  --color-amber-700: oklch(55.5% 0.163 var(--hue-warning));
+  --color-amber-800: oklch(47.3% 0.137 var(--hue-warning));
+  --color-amber-900: oklch(41.4% 0.112 var(--hue-warning));
+  --color-amber-950: oklch(27.9% 0.077 var(--hue-warning));
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-orange-50: var(--color-amber-50);
+  --color-orange-200: var(--color-amber-200);
+  --color-orange-400: var(--color-amber-400);
+  --color-orange-500: var(--color-amber-500);
+  --color-orange-600: var(--color-amber-600);
+  --color-orange-700: var(--color-amber-700);
+  --color-orange-900: var(--color-amber-900);
+
+  /* ── Success ramp (green) ─────────────────────────────────────── */
+  --color-green-50: oklch(98.2% 0.018 var(--hue-success));
+  --color-green-100: oklch(96.2% 0.044 var(--hue-success));
+  --color-green-200: oklch(92.5% 0.084 var(--hue-success));
+  --color-green-300: oklch(87.1% 0.15 var(--hue-success));
+  --color-green-400: oklch(79.2% 0.209 var(--hue-success));
+  --color-green-500: oklch(72.3% 0.219 var(--hue-success));
+  --color-green-600: oklch(62.7% 0.194 var(--hue-success));
+  --color-green-700: oklch(52.7% 0.154 var(--hue-success));
+  --color-green-800: oklch(44.8% 0.119 var(--hue-success));
+  --color-green-900: oklch(39.3% 0.095 var(--hue-success));
+  --color-green-950: oklch(26.6% 0.065 var(--hue-success));
+  --color-emerald-50: var(--color-green-50);
+  --color-emerald-100: var(--color-green-100);
+  --color-emerald-400: var(--color-green-400);
+  --color-emerald-500: var(--color-green-500);
+  --color-emerald-600: var(--color-green-600);
+  --color-emerald-700: var(--color-green-700);
+
+  /* ── Accent ramp (blue) — interactive, selection, Analysis ─────── */
+  --color-blue-50: oklch(97% 0.014 var(--hue-accent));
+  --color-blue-100: oklch(93.2% 0.032 var(--hue-accent));
+  --color-blue-200: oklch(88.2% 0.059 var(--hue-accent));
+  --color-blue-300: oklch(80.9% 0.105 var(--hue-accent));
+  --color-blue-400: oklch(70.7% 0.165 var(--hue-accent));
+  --color-blue-500: oklch(62.3% 0.214 var(--hue-accent));
+  --color-blue-600: oklch(54.6% 0.245 var(--hue-accent));
+  --color-blue-700: oklch(48.8% 0.243 var(--hue-accent));
+  --color-blue-800: oklch(42.4% 0.199 var(--hue-accent));
+  --color-blue-900: oklch(37.9% 0.146 var(--hue-accent));
+  --color-blue-950: oklch(28.2% 0.091 var(--hue-accent));
+  --color-sky-50: var(--color-blue-50);
+  --color-sky-100: var(--color-blue-100);
+  --color-sky-400: var(--color-blue-400);
+  --color-sky-500: var(--color-blue-500);
+  --color-sky-600: var(--color-blue-600);
+  --color-indigo-50: var(--color-blue-50);
+  --color-indigo-400: var(--color-blue-400);
+  --color-indigo-500: var(--color-blue-500);
+  --color-indigo-600: var(--color-blue-600);
+  --color-indigo-700: var(--color-blue-700);
+  /* Violet/purple stay distinct — they only ever mark *categories*,
+     where telling two categories apart is the entire job. */
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-zinc-50);
+  --foreground: var(--color-zinc-900);
 
   /* non-Tailwind consumers (inline styles, canvas, charts) */
-  --brand-ink: #0f172a;
-  --brand-paper: #f8fafc;
-  --brand-slate: #5b6675;
-  --brand-mist: #94a3b8;
-  --brand-abyss: #0b1220;
-  --brand-critical: #ef4444;
-  --brand-critical-soft: #f87171;
+  --brand-ink: var(--color-brand-ink);
+  --brand-paper: var(--color-brand-paper);
+  --brand-slate: var(--color-brand-slate);
+  --brand-mist: var(--color-brand-mist);
+  --brand-abyss: var(--color-brand-abyss);
+  --brand-critical: var(--color-brand-critical);
+  --brand-critical-soft: var(--color-brand-critical-soft);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-zinc-950);
+    --foreground: var(--color-zinc-100);
   }
 }
 

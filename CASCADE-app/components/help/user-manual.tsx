@@ -21,8 +21,9 @@ const SECTIONS = [
   { id: "scenario", n: 3, title: "Running a scenario" },
   { id: "intervention", n: 4, title: "Testing an intervention" },
   { id: "analysis", n: 5, title: "Analysis results" },
-  { id: "server", n: 6, title: "Server and roles" },
-  { id: "shortcuts", n: 7, title: "Keyboard shortcuts" },
+  { id: "files", n: 6, title: "Saving and loading" },
+  { id: "server", n: 7, title: "Server and roles" },
+  { id: "shortcuts", n: 8, title: "Keyboard shortcuts" },
 ] as const;
 
 function Code({ children }: { children: ReactNode }) {
@@ -319,11 +320,13 @@ export function UserManual({
               <Td>
                 <strong>Importance</strong> <Code>0–1</Code>
               </Td>
-              <Td>How much this node counts.</Td>
               <Td>
-                No effect on propagation. It weights the Operativity Score, and
-                through it decides which elements the Shapley analysis calls
-                neuralgic.
+                How much this node counts. Defaults to <Code>0.5</Code>.
+              </Td>
+              <Td>
+                No effect on propagation. It sets the size the node is drawn at,
+                weights the Operativity Score, and through it decides which
+                elements the Shapley analysis calls neuralgic.
               </Td>
             </tr>
             <tr>
@@ -399,6 +402,16 @@ export function UserManual({
           ) : (
             <>; the grammar reference is the Rules Manual panel.</>
           )}
+        </p>
+        <p>
+          Write them in the <strong>Active Rules</strong> panel &mdash; the
+          Inspector&rsquo;s <em>Add rule</em> opens it, and so does the Rules
+          counter in the status bar. It suggests names, operators and levels as
+          you type, and aims at whatever element is selected. The dropdown in its
+          header picks which canvas&rsquo;s rules you are looking at, starting
+          on the one you are on; <em>All canvases</em> shows every rule in the
+          project. Closing it animates back into that status-bar counter, which
+          is where you reopen it.
         </p>
 
         <Sub title="When you need one">
@@ -682,7 +695,61 @@ then Fauglis water Source is operational`}</Block>
         </p>
       </Section>
 
-      <Section id="server" n={6} title="Server and roles">
+      <Section id="files" n={6} title="Saving and loading">
+        <p className="text-xs text-zinc-500">
+          The <strong>File</strong> button in the Topbar opens four tabs.
+        </p>
+        <Table head={["Tab", "What it does"]}>
+          <tr>
+            <Td>
+              <strong>Local</strong>
+            </Td>
+            <Td>
+              Save to your computer, open a <Code>.json</Code> file, and the last
+              10 saves kept in this browser. Plus a backup folder, written to
+              every time you close the tab.
+            </Td>
+          </tr>
+          <tr>
+            <Td>
+              <strong>Cloud</strong>
+            </Td>
+            <Td>
+              Save to your account and open it on any device. Last 10 kept. Needs
+              sign-in with Sync.
+            </Td>
+          </tr>
+          <tr>
+            <Td>
+              <strong>Import</strong>
+            </Td>
+            <Td>
+              Build a project from an EPANET <Code>.inp</Code> file.
+            </Td>
+          </tr>
+          <tr>
+            <Td>
+              <strong>New</strong>
+            </Td>
+            <Td>
+              Start a fresh project. Your current one stays open until you finish
+              the setup, so Cancel costs nothing.
+            </Td>
+          </tr>
+        </Table>
+        <p>
+          Local and cloud saves are independent: clearing your browser does not
+          touch your cloud saves, and deleting a cloud save does not touch your
+          computer.
+        </p>
+        <p>
+          <strong>Auto-save</strong> (Cloud tab) keeps one spare copy that
+          updates as you work. It never replaces one of your 10 cloud saves.
+          Switching it off deletes it.
+        </p>
+      </Section>
+
+      <Section id="server" n={7} title="Server and roles">
         <p>
           <strong>Propagate</strong> and the model-based analyses (Shapley,
           Vitality) need the server and <Code>can_propagate</Code> —{" "}
@@ -693,7 +760,7 @@ then Fauglis water Source is operational`}</Block>
         </p>
       </Section>
 
-      <Section id="shortcuts" n={7} title="Keyboard shortcuts">
+      <Section id="shortcuts" n={8} title="Keyboard shortcuts">
         <p>
           Every shortcut the editor listens for. They are ignored while you are
           typing in a text field, so they never fight the Inspector.{" "}

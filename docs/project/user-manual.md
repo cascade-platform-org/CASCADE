@@ -8,8 +8,10 @@
 2. [Rules](#2-rules) ·
 3. [Running a scenario](#3-running-a-scenario) ·
 4. [Testing an intervention](#4-testing-an-intervention) ·
-5. [Server and roles](#5-server-and-roles) ·
-6. [Keyboard shortcuts](#6-keyboard-shortcuts)
+5. [Analysis results](#5-analysis-results) ·
+6. [Saving and loading](#6-saving-and-loading) ·
+7. [Server and roles](#7-server-and-roles) ·
+8. [Keyboard shortcuts](#8-keyboard-shortcuts)
 
 ---
 
@@ -70,7 +72,7 @@ puts it on the repair list.
 
 | Field | Meaning | Consequence |
 |---|---|---|
-| **Importance** `0–1` | How much this node counts. | No effect on propagation. It weights the Operativity Score, and through it decides which elements the Shapley analysis calls neuralgic. |
+| **Importance** `0–1` | How much this node counts. Defaults to **0.5**. | No effect on propagation. It sets the size the node is drawn at, weights the Operativity Score, and through it decides which elements the Shapley analysis calls neuralgic. |
 | **Cost of disservice / day** | Money lost per day while degraded. | Same: scoring and the repair ranking, never the cascade itself. Takes precedence over Importance where both are set. |
 
 ### Edges
@@ -87,6 +89,13 @@ An edge `a → b` means **a supplies b**. Drawn the other way, nothing propagate
 
 Rules cover what the graph alone cannot express. The grammar reference is the
 **Rules Manual** panel in the app; this is about when and why.
+
+Write them in the **Active Rules** panel — the Inspector's *Add rule* opens it,
+and so does the Rules counter in the status bar. It suggests names, operators
+and levels as you type, and aims at whatever element is selected. The dropdown
+in its header picks which canvas's rules you are looking at, starting on the
+one you are on; *All canvases* shows every rule in the project. Closing it
+animates back into that status-bar counter, which is where you reopen it.
 
 ### 2.1 When you need one
 
@@ -237,14 +246,31 @@ element, plus the seed the run used. Keeping the seed means the same estimate ca
 be replayed later, and the file is what the paper's centrality comparison reads,
 so a published number is always a number the app produced.
 
-## 6. Server and roles
+## 6. Saving and loading
+
+The **File** button in the Topbar opens four tabs.
+
+| Tab | What it does |
+|---|---|
+| **Local** | Save to your computer, open a `.json` file, and the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
+| **Cloud** | Save to your account and open it on any device. Last 10 kept. Needs sign-in with Sync. |
+| **Import** | Build a project from an EPANET `.inp` file. |
+| **New** | Start a fresh project. Your current one stays open until you finish the setup, so Cancel costs nothing. |
+
+Local and cloud saves are independent: clearing your browser does not touch
+your cloud saves, and deleting a cloud save does not touch your computer.
+
+**Auto-save** (Cloud tab) keeps one spare copy that updates as you work. It
+never replaces one of your 10 cloud saves. Switching it off deletes it.
+
+## 7. Server and roles
 
 **Propagate** and the model-based analyses (Shapley, Vitality) need the server
 and `can_propagate` — `analyst` and above. **Sync** needs `can_sync`. Everything
 else, including topological analysis, works offline. Roles also carry a node cap
 and an engine-evaluation budget per minute.
 
-## 7. Keyboard shortcuts
+## 8. Keyboard shortcuts
 
 Every shortcut the editor listens for. They are ignored while you are typing in a
 text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.

@@ -53,6 +53,16 @@ export interface UiState {
   // --- File I/O panel ---
   fileIoPanelOpen: boolean;
 
+  /**
+   * Set by the File panel's "New Project" button; cleared by `app/page.tsx`
+   * once it has acted on it. A page-level app-state transition (editor ↔
+   * wizard) lives above every store, so this is the one-shot signal that
+   * crosses that boundary — the File panel cannot call `setAppState` directly,
+   * and threading the setter down through props would tie `EditorShell` to a
+   * transition that is really `app/page.tsx`'s to own.
+   */
+  newProjectRequested: boolean;
+
   // --- Inter-canvas edge dialog ---
   interCanvasEdgeDialogOpen: boolean;
   /** Source node id pre-selected when the dialog opens. Null = user picks source. */
@@ -60,6 +70,19 @@ export interface UiState {
 
   // --- Active Rules panel ---
   activeRulesPanelOpen: boolean;
+  /**
+   * Set when the panel is opened by something that means "I want to write a
+   * rule" (the Inspector's Add rule), rather than "show me the rules". The
+   * panel consumes it once on mount to open its compose form pre-targeted at
+   * the selection, then clears it.
+   */
+  rulesComposeRequested: boolean;
+  /**
+   * True for a moment after the panel closes, so the Status Bar control it
+   * flew back into can flash. The animation says where the panel went; this
+   * says "and here is the thing that brings it back".
+   */
+  rulesAnchorFlash: boolean;
 
   // --- Rules Manual panel ---
   rulesManualPanelOpen: boolean;
@@ -188,6 +211,8 @@ export interface UiActions {
   // --- File I/O panel ---
   toggleFileIoPanel: () => void;
   closeFileIoPanel: () => void;
+  requestNewProject: () => void;
+  clearNewProjectRequest: () => void;
 
   // --- Inter-canvas edge dialog ---
   openInterCanvasEdgeDialog: (sourceNodeId?: string) => void;
@@ -196,6 +221,10 @@ export interface UiActions {
   // --- Active Rules panel ---
   toggleActiveRulesPanel: () => void;
   closeActiveRulesPanel: () => void;
+  /** Open the panel straight into its compose form (Inspector → "Add rule"). */
+  openRuleComposer: () => void;
+  clearRulesComposeRequest: () => void;
+  clearRulesAnchorFlash: () => void;
 
   // --- Rules Manual panel ---
   toggleRulesManualPanel: () => void;
@@ -285,9 +314,12 @@ const initialState: UiState = {
   configModalOpen: false,
   configModalTab: "functionality-scale",
   fileIoPanelOpen: false,
+  newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
   activeRulesPanelOpen: false,
+  rulesComposeRequested: false,
+  rulesAnchorFlash: false,
   rulesManualPanelOpen: false,
   userManualPanelOpen: false,
   activeTour: null,
@@ -390,6 +422,14 @@ export const useUiStore = create<UiStore>()(
       set((state) => { state.fileIoPanelOpen = false; });
     },
 
+    requestNewProject() {
+      set((state) => { state.newProjectRequested = true; state.fileIoPanelOpen = false; });
+    },
+
+    clearNewProjectRequest() {
+      set((state) => { state.newProjectRequested = false; });
+    },
+
     // -------------------------------------------------------------------------
     // Inter-canvas edge dialog
     // -------------------------------------------------------------------------
@@ -417,7 +457,28 @@ export const useUiStore = create<UiStore>()(
     },
 
     closeActiveRulesPanel() {
-      set((state) => { state.activeRulesPanelOpen = false; });
+      // The flash is set on the way out, not by the closer: every close path
+      // (X, backdrop, Escape) should point at the way back in.
+      set((state) => {
+        state.activeRulesPanelOpen = false;
+        state.rulesComposeRequested = false;
+        state.rulesAnchorFlash = true;
+      });
+    },
+
+    openRuleComposer() {
+      set((state) => {
+        state.activeRulesPanelOpen = true;
+        state.rulesComposeRequested = true;
+      });
+    },
+
+    clearRulesComposeRequest() {
+      set((state) => { state.rulesComposeRequested = false; });
+    },
+
+    clearRulesAnchorFlash() {
+      set((state) => { state.rulesAnchorFlash = false; });
     },
 
     // -------------------------------------------------------------------------

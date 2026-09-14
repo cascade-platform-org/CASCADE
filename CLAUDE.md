@@ -93,6 +93,7 @@ Additional practices:
 - Use TypeScript strictly: no `any`, no suppressed type errors.
 - Validate at system boundaries (user input, API responses) using Zod (frontend) and Pydantic (backend). Trust internal types after validation.
 - Package versions: **never hardcode versions from memory**. Use `npm install <pkg>` to resolve current stable versions. Commit `package-lock.json` to pin them.
+- Colour: **never write a hex literal or pick a colour by eye.** The palette is five hue angles in `CASCADE-app/app/globals.css`, and Tailwind's ramps are redefined from them — so `text-red-600` and `bg-zinc-200` already *are* brand colours, and semantic names (`bg-danger`, `text-warning`, `border-accent`) are preferred in new code. Canvas/inline colours come from `lib/brand.ts`, never from a hex. `lib/brand.test.ts` fails the build if the two sources drift. See `docs/brand.md`.
 
 ---
 

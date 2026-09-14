@@ -89,6 +89,68 @@ export function clearProjectHistory(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Local storage footprint (answers "is there a memory limit?")
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a byte count the way a person reads it: "340 B", "12.4 KB", "1.2 MB".
+ * Pure, so it's the one piece of this file worth a unit test — everything else
+ * here needs a real browser API (localStorage, IndexedDB, showSaveFilePicker)
+ * to exercise, which is why this file has no DOM-environment tests at all
+ * (see vitest.config.mts).
+ */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "0 B";
+  if (bytes < 1000) return `${Math.round(bytes)} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = bytes / 1000;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+}
+
+/**
+ * Bytes the local Version history (`HISTORY_KEY`) is currently using. This is
+ * the one `localStorage` entry a user can grow without limit on their own —
+ * every explicit save appends to it, capped at MAX_HISTORY — so it is the
+ * number worth showing next to "how much storage do I have".
+ */
+export function historyStorageBytes(): number {
+  try {
+    return localStorage.getItem(HISTORY_KEY)?.length ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export interface StorageEstimate {
+  usageBytes: number;
+  quotaBytes: number;
+}
+
+/**
+ * The browser's own answer to "is there a memory limit?" — the Storage API's
+ * per-origin quota and how much of it is used (covers localStorage AND
+ * IndexedDB, i.e. the version history, the recovery-folder handle and
+ * everything else CASCADE keeps client-side). Not available on every browser
+ * (older Safari, some private-browsing modes) or outside a secure context —
+ * null there, and the File panel just omits the line rather than guessing.
+ */
+export async function getStorageEstimate(): Promise<StorageEstimate | null> {
+  try {
+    if (typeof navigator === "undefined" || !navigator.storage?.estimate) return null;
+    const { usage, quota } = await navigator.storage.estimate();
+    if (usage === undefined || quota === undefined) return null;
+    return { usageBytes: usage, quotaBytes: quota };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Save (explicit — triggers browser download + history entry)
 // ---------------------------------------------------------------------------
 

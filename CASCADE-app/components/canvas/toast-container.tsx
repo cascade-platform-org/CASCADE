@@ -10,11 +10,14 @@ import type { Toast } from "@/store/ui-store";
 // Single toast
 // ---------------------------------------------------------------------------
 
+// Semantic palette names (app/globals.css). `bg-warning` says what the colour
+// means; which hue that is today is the stylesheet's business, and changing it
+// there repaints this without touching the component.
 const VARIANT_STYLES: Record<NonNullable<Toast["variant"]>, string> = {
   info:    "bg-zinc-800 text-zinc-100 dark:bg-zinc-700",
-  success: "bg-green-700 text-white",
-  warning: "bg-amber-500 text-white",
-  error:   "bg-red-600 text-white",
+  success: "bg-success text-white",
+  warning: "bg-warning text-white",
+  error:   "bg-danger text-white",
 };
 
 const VARIANT_ICONS: Record<NonNullable<Toast["variant"]>, React.ReactNode> = {

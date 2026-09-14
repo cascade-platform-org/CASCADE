@@ -6,10 +6,11 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { User, LogOut, LogIn, Users, Trash2, Download } from "lucide-react";
+import { User, LogOut, LogIn, Users, Trash2, Download, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { downloadMyData } from "@/lib/api-client";
 import { useAuthStore, type AuthMode, type SessionUser } from "@/store/auth-store";
+import { useUiStore } from "@/store/ui-store";
 
 function effectiveRole(
   mode: AuthMode,
@@ -77,6 +78,17 @@ export function UserButton() {
             </span>
           </div>
           <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+          {/* File management (save/load, recovery folder, Auto-save opt-in,
+              Version history) lives in the File panel, not here — but this is
+              the account menu people look for settings in, so it gets a
+              shortcut regardless of mode: even a guest has local files to
+              manage, sync or not. */}
+          <button
+            onClick={() => { setOpen(false); useUiStore.getState().toggleFileIoPanel(); }}
+            className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <FolderOpen size={14} /> File &amp; sync
+          </button>
           {authEnabled && mode !== "oidc" && (
             <button
               onClick={() => {

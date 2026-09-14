@@ -41,15 +41,19 @@ export function Section({
 
 export function Field({
   label,
+  hint,
   children,
 }: {
   label: string;
+  /** One short line under the input — the default, or what the value drives. */
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-2">
       <label className="mb-0.5 block text-xs text-zinc-500 dark:text-zinc-400">{label}</label>
       {children}
+      {hint && <p className="mt-0.5 text-[11px] text-zinc-400">{hint}</p>}
     </div>
   );
 }
@@ -84,17 +88,21 @@ export function NumberInput({
   min,
   max,
   step,
+  placeholder,
 }: {
   value: number | undefined;
   onChange: (v: number) => void;
   min?: number;
   max?: number;
   step?: number;
+  /** Shown while the field is empty — use it for the value that applies then. */
+  placeholder?: string;
 }) {
   return (
     <input
       type="number"
       value={value ?? ""}
+      placeholder={placeholder}
       min={min}
       max={max}
       step={step ?? 1}

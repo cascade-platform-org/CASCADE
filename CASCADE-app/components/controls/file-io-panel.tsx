@@ -1,15 +1,35 @@
 "use client";
 
 /**
- * File I/O Panel (F9) — save, load, and version history.
+ * File I/O Panel (F9) — four tabs: Local, Cloud, Import, New.
+ *
+ * The tabs ARE the explanation. Where a save lives decides whether it survives
+ * clearing your browser, whether another device can see it, and what a delete
+ * destroys — so it picks the tab rather than needing a paragraph inside one.
+ * Copy here is deliberately minimal: a label says what, a short line says only
+ * what the label cannot.
  */
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { X, Download, Upload, History, RotateCcw, AlertTriangle, FolderOpen, Cloud, CloudUpload, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  X,
+  Download,
+  Upload,
+  RotateCcw,
+  AlertTriangle,
+  FolderOpen,
+  Cloud,
+  Trash2,
+  HardDrive,
+  FilePlus2,
+  Import,
+} from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useAuthStore } from "@/store/auth-store";
+import { cn } from "@/lib/utils";
 import {
   saveBundle,
   saveProject,
@@ -19,7 +39,11 @@ import {
   loadProjectFile,
   loadConfigFile,
   loadBundleFile,
+  formatBytes,
+  historyStorageBytes,
+  getStorageEstimate,
   type ProjectBundle,
+  type StorageEstimate,
 } from "@/lib/file-io";
 import { validateBundle, type ValidationIssue } from "@/lib/project-validation";
 import { ImportInpSection } from "./import-inp-section";
@@ -35,10 +59,73 @@ import { isWorkingCopyEnabled, setWorkingCopyEnabled } from "@/lib/working-copy"
 import type { WorkingCopyDetail } from "@/lib/schemas/api";
 import type { ProjectVersionSummary } from "@/lib/schemas/api";
 
+type Tab = "local" | "cloud" | "import" | "new";
+
+const TABS = [
+  { id: "local", label: "Local", icon: HardDrive },
+  { id: "cloud", label: "Cloud", icon: Cloud },
+  { id: "import", label: "Import", icon: Import },
+  { id: "new", label: "New", icon: FilePlus2 },
+] as const;
+
+/** Small uppercase label above a group of controls. */
+function Label({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+      {children}
+    </p>
+  );
+}
+
+/** One saved version: name, date, and its actions. */
+function VersionRow({
+  name,
+  at,
+  onRestore,
+  onDelete,
+  busy,
+}: {
+  name: string;
+  at: string;
+  onRestore: () => void;
+  onDelete?: () => void;
+  busy?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800">
+      <div className="min-w-0">
+        <div className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">{name}</div>
+        <div className="text-xs text-zinc-400">{new Date(at).toLocaleString()}</div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          onClick={onRestore}
+          disabled={busy}
+          title="Restore"
+          className="rounded p-1 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-40 dark:hover:bg-zinc-800"
+        >
+          <RotateCcw size={13} />
+        </button>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            disabled={busy}
+            title="Delete"
+            className="rounded p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-40 dark:hover:bg-red-950/40"
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FileIoPanel() {
   const closeFileIoPanel = useUiStore((s) => s.closeFileIoPanel);
   const pushToast = useUiStore((s) => s.pushToast);
   const markSaved = useUiStore((s) => s.markSaved);
+  const hasUnsavedChanges = useUiStore((s) => s.hasUnsavedChanges);
 
   const toProject = useCanvasStore((s) => s.toProject);
   const loadProject = useCanvasStore((s) => s.loadProject);
@@ -54,8 +141,12 @@ export function FileIoPanel() {
 
   const canSync = useAuthStore((s) => s.hasPermission("can_sync"));
   const authMode = useAuthStore((s) => s.mode);
+  const cloudReady = canSync && authMode === "oidc";
 
+  const [tab, setTab] = useState<Tab>("local");
   const [history, setHistory] = useState<ReturnType<typeof getProjectHistory>>([]);
+  const [historyBytes, setHistoryBytes] = useState(0);
+  const [storageEstimate, setStorageEstimate] = useState<StorageEstimate | null>(null);
   const [recoveryDirName, setRecoveryDirName] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
@@ -69,6 +160,13 @@ export function FileIoPanel() {
   // Working Copy (ADR-0017) — opt-in per project, off by default.
   const [autoSaveOn, setAutoSaveOn] = useState(false);
   const [workingCopy, setWorkingCopy] = useState<WorkingCopyDetail | null>(null);
+
+  // Re-reads the local version list AND its storage footprint together —
+  // every call site that changes one changes the other.
+  const refreshHistory = useCallback(() => {
+    setHistory(getProjectHistory());
+    setHistoryBytes(historyStorageBytes());
+  }, []);
 
   const reloadSyncVersions = useCallback(async () => {
     if (!canSync || authMode !== "oidc") return;
@@ -89,7 +187,7 @@ export function FileIoPanel() {
         .reduce<string | null>((acc, v) => (acc && acc > v.created_at ? acc : v.created_at), null);
       setWorkingCopy(copy && (!newestVersion || copy.updated_at > newestVersion) ? copy : null);
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Could not load synced versions.");
+      setSyncError(err instanceof Error ? err.message : "Could not load cloud saves.");
     } finally {
       setSyncLoading(false);
     }
@@ -97,25 +195,26 @@ export function FileIoPanel() {
 
   useEffect(() => {
     loadRecoveryDir().then((dir) => setRecoveryDirName(dir?.name ?? null));
-    setHistory(getProjectHistory());
+    refreshHistory();
+    void getStorageEstimate().then(setStorageEstimate);
     // Re-read history every 30 s so automatic snapshots appear without reopening the panel.
-    const interval = setInterval(() => setHistory(getProjectHistory()), 30_000);
+    const interval = setInterval(refreshHistory, 30_000);
     void reloadSyncVersions();
     return () => clearInterval(interval);
-  }, [reloadSyncVersions]);
+  }, [refreshHistory, reloadSyncVersions]);
 
   function currentBundle(): ProjectBundle {
     return { project: toProject(), config };
   }
 
-  // ---- Save ----
+  // ---- Local ----
 
   async function handleSave() {
     try {
       if (saveProject_ && saveConfig_) {
         await saveBundle(currentBundle());
-        pushToast({ message: "Bundle saved.", variant: "success", durationMs: 3000 });
-        setHistory(getProjectHistory());
+        pushToast({ message: "Saved.", variant: "success", durationMs: 3000 });
+        refreshHistory();
       } else if (saveProject_) {
         await saveProject(toProject());
         pushToast({ message: "project.json saved.", variant: "success", durationMs: 3000 });
@@ -123,7 +222,7 @@ export function FileIoPanel() {
         await saveConfig(config);
         pushToast({ message: "config.json saved.", variant: "success", durationMs: 3000 });
       } else {
-        pushToast({ message: "Nothing selected to save.", variant: "info", durationMs: 2000 });
+        pushToast({ message: "Nothing selected.", variant: "info", durationMs: 2000 });
         return;
       }
       markSaved();
@@ -133,35 +232,40 @@ export function FileIoPanel() {
     }
   }
 
-  // ---- Server Sync (requirements.md §13.4) ----
+  function handleRestoreHistory(idx: number) {
+    const entry = history[idx];
+    if (!entry) return;
+    if (!window.confirm("Restore this local save? Unsaved changes will be lost.")) return;
+    loadProject(entry.bundle.project);
+    loadConfig(entry.bundle.config);
+    pushToast({ message: "Restored.", variant: "success", durationMs: 3000 });
+    closeFileIoPanel();
+  }
+
+  // ---- Cloud (requirements.md §13.4) ----
 
   async function handleSyncSave() {
     const bundle = currentBundle();
     setSyncError(null);
     try {
       await syncSaveProject(bundle.project.meta.name, bundle.project.meta.description ?? null, bundle);
-      pushToast({ message: "Saved to server.", variant: "success", durationMs: 3000 });
+      pushToast({ message: "Saved to cloud.", variant: "success", durationMs: 3000 });
       await reloadSyncVersions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Sync save failed.";
+      const message = err instanceof Error ? err.message : "Cloud save failed.";
       setSyncError(message);
-      pushToast({ message: "Sync save failed.", variant: "error", durationMs: 4000 });
+      pushToast({ message: "Cloud save failed.", variant: "error", durationMs: 4000 });
     }
   }
 
   async function handleSyncLoad(version: ProjectVersionSummary) {
-    if (
-      !window.confirm(
-        `Load "${version.name}" (saved ${new Date(version.created_at).toLocaleString()})? Unsaved changes will be lost.`,
-      )
-    )
-      return;
+    if (!window.confirm("Load this cloud save? Unsaved changes will be lost.")) return;
     setSyncBusyId(version.id);
     try {
       const detail = await syncLoadProject(version.id);
       loadProject(detail.data.project);
       loadConfig(detail.data.config);
-      pushToast({ message: `Loaded "${version.name}" from server.`, variant: "success", durationMs: 4000 });
+      pushToast({ message: "Loaded from cloud.", variant: "success", durationMs: 4000 });
       closeFileIoPanel();
     } catch (err) {
       pushToast({
@@ -180,30 +284,23 @@ export function FileIoPanel() {
     await setWorkingCopyEnabled(name, next);
     if (!next) setWorkingCopy(null);
     pushToast({
-      message: next
-        ? `Auto-save on for "${name}". A working copy is kept on the server and replaced as you work.`
-        : `Auto-save off for "${name}". The server copy has been deleted.`,
+      message: next ? "Auto-save on." : "Auto-save off. The spare copy was deleted.",
       variant: "success",
-      durationMs: 5000,
+      durationMs: 4000,
     });
   }
 
   async function handleLoadWorkingCopy() {
     if (!workingCopy) return;
-    if (
-      !window.confirm(
-        `Restore the auto-saved working copy of "${workingCopy.name}" (${new Date(workingCopy.updated_at).toLocaleString()})? Unsaved changes will be lost.`,
-      )
-    )
-      return;
+    if (!window.confirm("Restore the auto-saved copy? Unsaved changes will be lost.")) return;
     loadProject(workingCopy.data.project);
     loadConfig(workingCopy.data.config);
-    pushToast({ message: "Working copy restored.", variant: "success", durationMs: 4000 });
+    pushToast({ message: "Restored.", variant: "success", durationMs: 4000 });
     closeFileIoPanel();
   }
 
   async function handleSyncDelete(version: ProjectVersionSummary) {
-    if (!window.confirm(`Delete "${version.name}" (server copy only) permanently?`)) return;
+    if (!window.confirm("Delete this cloud save? This cannot be undone.")) return;
     setSyncBusyId(version.id);
     try {
       const err = await syncDeleteProject(version.id);
@@ -217,7 +314,7 @@ export function FileIoPanel() {
     }
   }
 
-  // ---- Load (auto-detect) ----
+  // ---- Load a file (auto-detect) ----
 
   async function handleFileSelected(file: File) {
     setLoadError(null);
@@ -245,13 +342,13 @@ export function FileIoPanel() {
       loadConfig(bundleResult.data.config);
       const issues = validateBundle(bundleResult.data);
       if (issues.length === 0) {
-        pushToast({ message: `Loaded bundle — project + config from "${file.name}".`, variant: "success", durationMs: 4000 });
+        pushToast({ message: `Loaded "${file.name}".`, variant: "success", durationMs: 4000 });
         closeFileIoPanel();
       } else {
         const errCount = issues.filter((i) => i.severity === "error").length;
         const warnCount = issues.filter((i) => i.severity === "warning").length;
         const summary = [errCount && `${errCount} error${errCount > 1 ? "s" : ""}`, warnCount && `${warnCount} warning${warnCount > 1 ? "s" : ""}`].filter(Boolean).join(", ");
-        pushToast({ message: `Loaded "${file.name}" — ${summary} found. Review below.`, variant: "error", durationMs: 6000 });
+        pushToast({ message: `Loaded "${file.name}" — ${summary} found.`, variant: "error", durationMs: 6000 });
         setValidationIssues(issues);
       }
       return;
@@ -261,7 +358,7 @@ export function FileIoPanel() {
     const projectResult = await loadProjectFile(new File([text], file.name, { type: "application/json" }));
     if (projectResult.ok) {
       loadProject(projectResult.data);
-      pushToast({ message: `Loaded project from "${file.name}".`, variant: "success", durationMs: 4000 });
+      pushToast({ message: `Loaded "${file.name}".`, variant: "success", durationMs: 4000 });
       closeFileIoPanel();
       return;
     }
@@ -277,17 +374,7 @@ export function FileIoPanel() {
 
     // Nothing matched — show most specific error
     void raw; // suppress unused warning
-    setLoadError(`"${file.name}" is not a recognised CASCADE file (bundle, project, or config).`);
-  }
-
-  function handleRestoreHistory(idx: number) {
-    const entry = history[idx];
-    if (!entry) return;
-    if (!window.confirm(`Restore "${entry.name}" from ${new Date(entry.saved_at).toLocaleString()}? Unsaved changes will be lost.`)) return;
-    loadProject(entry.bundle.project);
-    loadConfig(entry.bundle.config);
-    pushToast({ message: "Version restored.", variant: "success", durationMs: 3000 });
-    closeFileIoPanel();
+    setLoadError(`"${file.name}" is not a CASCADE file.`);
   }
 
   async function handleSetRecoveryFolder() {
@@ -297,10 +384,10 @@ export function FileIoPanel() {
       }).showDirectoryPicker({ mode: "readwrite" });
       await saveRecoveryDir(dir);
       setRecoveryDirName(dir.name);
-      pushToast({ message: `Recovery folder set to "${dir.name}".`, variant: "success", durationMs: 3000 });
+      pushToast({ message: `Backups go to "${dir.name}".`, variant: "success", durationMs: 3000 });
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
-        pushToast({ message: "Could not set recovery folder.", variant: "error", durationMs: 3000 });
+        pushToast({ message: "Could not set the folder.", variant: "error", durationMs: 3000 });
       }
     }
   }
@@ -330,6 +417,25 @@ export function FileIoPanel() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex shrink-0 border-b border-zinc-100 px-2 dark:border-zinc-800">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-0.5 border-b-2 px-1 py-2 text-[11px] font-medium transition-colors",
+                tab === id
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300",
+              )}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Persistent load-error banner */}
         {loadError && (
           <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/40">
@@ -357,7 +463,7 @@ export function FileIoPanel() {
                 onClick={() => { setValidationIssues([]); closeFileIoPanel(); }}
                 className="text-xs text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"
               >
-                Dismiss &amp; close
+                Dismiss
               </button>
             </div>
             <ul className="max-h-64 overflow-y-auto divide-y divide-amber-100 dark:divide-amber-900/40">
@@ -375,229 +481,209 @@ export function FileIoPanel() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {/* Save */}
-          <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              <Download size={12} /> Save
-            </h3>
-            <div className="mb-2 flex gap-4">
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                <input type="checkbox" checked={saveProject_} onChange={(e) => setSaveProject_(e.target.checked)} className="h-3 w-3" />
-                Project
-              </label>
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                <input type="checkbox" checked={saveConfig_} onChange={(e) => setSaveConfig_(e.target.checked)} className="h-3 w-3" />
-                Config
-              </label>
-            </div>
-            <button
-              onClick={handleSave}
-              disabled={!saveProject_ && !saveConfig_}
-              className="w-full rounded-md border border-zinc-200 px-3 py-2 text-left text-xs text-zinc-700 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-blue-900/20"
-            >
-              <div className="font-medium">
-                {saveProject_ && saveConfig_ ? "Download bundle (project + config)" : saveProject_ ? "Download project.json" : "Download config.json"}
-              </div>
-            </button>
-          </section>
-
-          {/* Server Sync (requirements.md §13.4) — only meaningful when signed
-              in with can_sync; a guest/local session has nowhere to sync to. */}
-          {canSync && authMode === "oidc" && (
-            <section>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-                  <Cloud size={12} /> Server sync
-                </h3>
-                {syncVersions.length > 0 && (
-                  <span className="text-xs text-zinc-400">{syncVersions.length} saved</span>
-                )}
-              </div>
-              <button
-                onClick={() => void handleSyncSave()}
-                className="mb-2 flex w-full items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-left text-xs text-zinc-700 hover:border-blue-300 hover:bg-blue-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-blue-900/20"
-              >
-                <CloudUpload size={14} className="shrink-0 text-zinc-400" />
-                <span className="font-medium">Save current project to server</span>
-              </button>
-              {/* Auto-save opt-in. Off by default: ADR-0007's guarantee is that
-                  a network reaches the server only when the user says so. */}
-              <label className="mb-2 flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs dark:border-zinc-700">
-                <input
-                  type="checkbox"
-                  checked={autoSaveOn}
-                  onChange={(e) => void handleToggleAutoSave(e.target.checked)}
-                  className="mt-0.5 shrink-0"
-                />
-                <span className="min-w-0">
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    Auto-save this project to the server
-                  </span>
-                  <span className="mt-0.5 block text-zinc-400">
-                    Keeps one working copy, replaced as you work. It is not a
-                    version, so it never fills up the list below. Turning this off
-                    deletes it from the server.
-                  </span>
-                </span>
-              </label>
-
-              {workingCopy && (
-                <button
-                  onClick={() => void handleLoadWorkingCopy()}
-                  className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-left text-xs text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
-                >
-                  <CloudUpload size={14} className="shrink-0 rotate-180" />
-                  <span className="min-w-0">
-                    <span className="font-medium">Restore auto-saved working copy</span>
-                    <span className="block opacity-80">
-                      Newer than your latest saved version ({new Date(workingCopy.updated_at).toLocaleString()}).
-                    </span>
-                  </span>
-                </button>
-              )}
-
-              {syncError && (
-                <p className="mb-2 text-xs text-red-500 break-words">{syncError}</p>
-              )}
-              {syncLoading ? (
-                <p className="text-xs text-zinc-400 italic">Loading…</p>
-              ) : syncVersions.length === 0 ? (
-                <p className="text-xs text-zinc-400 italic">
-                  No synced versions yet. Up to 10 kept per project name — older
-                  ones are pruned automatically.
-                </p>
-              ) : (
-                <div className="max-h-48 space-y-1 overflow-y-auto">
-                  {syncVersions.map((v) => (
-                    <div
-                      key={v.id}
-                      className="flex items-center justify-between rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                          {v.name}
-                        </div>
-                        <div className="text-xs text-zinc-400">
-                          {new Date(v.created_at).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={() => void handleSyncLoad(v)}
-                          disabled={syncBusyId === v.id}
-                          title="Load this version"
-                          className="rounded p-1 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-40 dark:hover:bg-zinc-800"
-                        >
-                          <RotateCcw size={13} />
-                        </button>
-                        <button
-                          onClick={() => void handleSyncDelete(v)}
-                          disabled={syncBusyId === v.id}
-                          title="Delete this version"
-                          className="rounded p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-40 dark:hover:bg-red-950/40"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* ── Local ─────────────────────────────────────────────────── */}
+          {tab === "local" && (
+            <div className="space-y-5">
+              <div>
+                <Label>Save to this computer</Label>
+                <div className="mb-2 flex gap-4">
+                  <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    <input type="checkbox" checked={saveProject_} onChange={(e) => setSaveProject_(e.target.checked)} className="h-3 w-3" />
+                    Project
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    <input type="checkbox" checked={saveConfig_} onChange={(e) => setSaveConfig_(e.target.checked)} className="h-3 w-3" />
+                    Config
+                  </label>
                 </div>
-              )}
-            </section>
+                <button
+                  onClick={handleSave}
+                  disabled={!saveProject_ && !saveConfig_}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+                >
+                  <Download size={14} /> Save
+                </button>
+              </div>
+
+              <div>
+                <Label>Open a file</Label>
+                <button
+                  onClick={() => uploadInputRef.current?.click()}
+                  className="w-full rounded-md border border-dashed border-zinc-300 px-3 py-3 text-center text-xs text-zinc-500 hover:border-blue-400 hover:bg-blue-50 dark:border-zinc-600 dark:hover:bg-blue-900/20"
+                >
+                  <Upload size={14} className="mx-auto mb-1 text-zinc-400" />
+                  Choose a .json file
+                </button>
+                <input ref={uploadInputRef} type="file" accept=".json" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); e.target.value = ""; }} />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label>Recent saves ({history.length}/10)</Label>
+                  {history.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (!window.confirm("Delete all local saves?")) return;
+                        clearProjectHistory();
+                        refreshHistory();
+                      }}
+                      className="mb-1.5 text-xs text-zinc-400 hover:text-red-500"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {history.length === 0 ? (
+                  <p className="text-xs text-zinc-400 italic">Nothing saved yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {history.map((entry, idx) => (
+                      <VersionRow
+                        key={idx}
+                        name={entry.name}
+                        at={entry.saved_at}
+                        onRestore={() => handleRestoreHistory(idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-zinc-400">
+                  Kept in this browser only.
+                  {storageEstimate
+                    ? ` ${formatBytes(historyBytes)} of ${formatBytes(storageEstimate.quotaBytes)} free space used.`
+                    : ` ${formatBytes(historyBytes)} used.`}
+                </p>
+              </div>
+
+              <div>
+                <Label>Backup folder</Label>
+                {recoveryDirName ? (
+                  <div className="flex items-center gap-2 rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800">
+                    <FolderOpen size={13} className="shrink-0 text-zinc-400" />
+                    <span className="flex-1 truncate text-xs text-zinc-700 dark:text-zinc-300">{recoveryDirName}/</span>
+                    <button onClick={handleClearRecoveryFolder} className="text-xs text-zinc-400 hover:text-red-500">Remove</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSetRecoveryFolder}
+                    className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    <FolderOpen size={12} /> Choose a folder…
+                  </button>
+                )}
+                <p className="mt-1.5 text-[11px] text-zinc-400">
+                  A copy is written here every time you close the tab.
+                </p>
+              </div>
+            </div>
           )}
 
-          {/* Load */}
-          <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              <Upload size={12} /> Load
-            </h3>
-            <button
-              onClick={() => uploadInputRef.current?.click()}
-              className="w-full rounded-md border border-dashed border-zinc-300 px-3 py-3 text-center text-xs text-zinc-500 hover:border-blue-400 hover:bg-blue-50 dark:border-zinc-600 dark:hover:bg-blue-900/20"
-            >
-              <Upload size={14} className="mx-auto mb-1 text-zinc-400" />
-              Choose a JSON file — bundle, project, or config automatically detected
-            </button>
-            <input ref={uploadInputRef} type="file" accept=".json" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); e.target.value = ""; }} />
-          </section>
+          {/* ── Cloud ─────────────────────────────────────────────────── */}
+          {tab === "cloud" && (
+            <div className="space-y-5">
+              {!cloudReady ? (
+                <p className="text-xs text-zinc-400">
+                  Sign in to save to the cloud and open your projects on any device.
+                </p>
+              ) : (
+                <>
+                  <button
+                    onClick={() => void handleSyncSave()}
+                    className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                  >
+                    <Cloud size={14} /> Save to cloud
+                  </button>
 
-          {/* EPANET .inp import */}
-          <ImportInpSection />
+                  {/* Auto-save opt-in. Off by default: ADR-0007's guarantee is
+                      that a network reaches the server only when asked. */}
+                  <label className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs dark:border-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={autoSaveOn}
+                      onChange={(e) => void handleToggleAutoSave(e.target.checked)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">Auto-save</span>
+                      <span className="mt-0.5 block text-zinc-400">
+                        Keeps one spare copy, updated as you work. Never replaces a save below.
+                      </span>
+                    </span>
+                  </label>
 
-          {/* Recovery folder */}
-          <section>
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              <FolderOpen size={12} /> Recovery folder
-            </h3>
-            <p className="mb-2 text-xs text-zinc-400">
-              When set, cascade saves a recovery file here on tab close or refresh.
-            </p>
-            {recoveryDirName ? (
-              <div className="flex items-center gap-2 rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800">
-                <FolderOpen size={13} className="shrink-0 text-zinc-400" />
-                <span className="flex-1 truncate text-xs text-zinc-700 dark:text-zinc-300">{recoveryDirName}/</span>
-                <button onClick={handleClearRecoveryFolder} className="text-xs text-zinc-400 hover:text-red-500">Remove</button>
-              </div>
-            ) : (
-              <button
-                onClick={handleSetRecoveryFolder}
-                className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700"
-              >
-                <FolderOpen size={12} /> Choose folder…
-              </button>
-            )}
-          </section>
+                  {workingCopy && (
+                    <button
+                      onClick={() => void handleLoadWorkingCopy()}
+                      className="flex w-full items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-left text-xs text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+                    >
+                      <RotateCcw size={14} className="shrink-0" />
+                      <span className="min-w-0">
+                        <span className="font-medium">Restore auto-saved copy</span>
+                        <span className="block opacity-80">
+                          Newer than everything below ({new Date(workingCopy.updated_at).toLocaleString()}).
+                        </span>
+                      </span>
+                    </button>
+                  )}
 
-          {/* Version history */}
-          <section>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-                <History size={12} /> Version history
-              </h3>
-              {history.length > 0 && (
-                <button
-                  onClick={() => {
-                    if (!window.confirm("Clear all version history? This cannot be undone.")) return;
-                    clearProjectHistory();
-                    setHistory([]);
-                  }}
-                  className="text-xs text-zinc-400 hover:text-red-500"
-                >
-                  Clear all
-                </button>
+                  <div>
+                    <Label>Cloud saves ({syncVersions.length}/10)</Label>
+                    {syncError && <p className="mb-2 text-xs text-red-500 break-words">{syncError}</p>}
+                    {syncLoading ? (
+                      <p className="text-xs text-zinc-400 italic">Loading…</p>
+                    ) : syncVersions.length === 0 ? (
+                      <p className="text-xs text-zinc-400 italic">Nothing saved yet.</p>
+                    ) : (
+                      <div className="max-h-64 space-y-1 overflow-y-auto">
+                        {syncVersions.map((v) => (
+                          <VersionRow
+                            key={v.id}
+                            name={v.name}
+                            at={v.created_at}
+                            busy={syncBusyId === v.id}
+                            onRestore={() => void handleSyncLoad(v)}
+                            onDelete={() => void handleSyncDelete(v)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-2 text-[11px] text-zinc-400">
+                      Available on any device you sign in from. The oldest is dropped after 10.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
-            {history.length === 0 ? (
-              <p className="text-xs text-zinc-400 italic">No saved versions yet. Download a bundle to create one.</p>
-            ) : (
-              <div className="space-y-1">
-                {history.map((entry, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-md border border-zinc-100 px-3 py-2 dark:border-zinc-800"
-                  >
-                    <div>
-                      <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                        {entry.name}
-                      </div>
-                      <div className="text-xs text-zinc-400">
-                        {new Date(entry.saved_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRestoreHistory(idx)}
-                      title="Restore this version"
-                      className="rounded p-1 text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-                    >
-                      <RotateCcw size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          )}
+
+          {/* ── Import ────────────────────────────────────────────────── */}
+          {tab === "import" && <ImportInpSection />}
+
+          {/* ── New ───────────────────────────────────────────────────── */}
+          {tab === "new" && (
+            <div className="space-y-3">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Set up a fresh project from scratch, a template, or a file.
+              </p>
+              {hasUnsavedChanges && (
+                <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                  You have unsaved changes. Save them first from the Local or Cloud tab.
+                </p>
+              )}
+              <button
+                onClick={() => useUiStore.getState().requestNewProject()}
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+              >
+                <FilePlus2 size={14} /> New project
+              </button>
+              <p className="text-[11px] text-zinc-400">
+                Your current project stays open until you finish the setup.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

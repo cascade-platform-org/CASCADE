@@ -337,13 +337,29 @@ Entry types:
 
 ### Data Persistence — File I/O and Version History
 
+`components/controls/file-io-panel.tsx` presents this as four tabs — Local, Cloud, Import, New — so where a save lives is a selection rather than a paragraph. requirements.md §13 has the rationale.
+
 - **Auto-save** — background save to `localStorage` after **10 seconds of inactivity, and only when the content changed** (ADR-0017). Discarded when an explicit save is made. `update_history` is included: it used to be stripped everywhere small, so undo was empty after a crash, and Graph Diffs made it small enough to keep. A history-free write is the fallback if the quota refuses.
-- **Explicit save** — downloads `project.json` + `config.json` (or a bundle). Up to 10 previous explicit saves retained in browser storage.
+- **Explicit save** — downloads `project.json` + `config.json` (or a bundle; only a full bundle also adds a local Version). Up to 10 previous explicit saves retained in browser storage.
 - **Load** — Zod validation at the boundary before hydrating stores.
+- **New Project** (mid-session) — the File panel's `requestNewProject()` sets `ui-store`'s `newProjectRequested`, the one signal crossing from inside `EditorShell` up to `app/page.tsx`'s editor/wizard `AppState`. The wizard writes nothing until a step finishes, so `app/page.tsx` tracks a `WizardOrigin` ("startup" vs "editor") purely to route Cancel: startup → identity gate (nothing to return to), mid-session → back to the untouched editor.
+- **Storage footprint** — `getStorageEstimate()` wraps `navigator.storage.estimate()` (the browser's per-origin quota over `localStorage` + IndexedDB) and `historyStorageBytes()` sizes the local save list; the Local tab shows both, since that quota is the real storage limit.
 
 ### Server Sync (opt-in)
 
 When enabled, explicit saves are also pushed to `POST /api/projects` (each save is a new version, never an overwrite). The version list is accessible across devices via `GET /api/projects`; load/delete one version via `GET`/`DELETE /api/projects/{id}`. Requires the `can_sync` RBAC permission. See api-reference.md.
+
+### Panels that remember where they live
+
+`components/rules/active-rules-panel.tsx` is the pattern. Closing it does not unmount straight away: it measures the Status Bar control that reopens it (`lib/ui-anchors.ts`'s `RULES_ANCHOR_ID`), transforms the card toward that point, and closes when the flight ends — then the control flashes (`ui-store`'s `rulesAnchorFlash`). A modal that blinks out leaves the user hunting for the way back; one that visibly returns somewhere teaches the location once. `prefers-reduced-motion`, or a missing anchor, closes immediately instead.
+
+The Inspector's *Add rule* opens the same panel through `openRuleComposer()` rather than editing rule text inline, so rules are always written against the grammar-aware suggestions (`lib/rule-suggestions.ts`). `rulesComposeRequested` is a one-shot flag read at mount — the panel is unmounted while closed, so mount is the moment the request arrives.
+
+### Colour
+
+The palette is five OKLCH hue angles in `CASCADE-app/app/globals.css`. Tailwind's own ramps (`zinc`, `red`, `amber`, `green`, `blue`, plus aliases) are **redefined** from them rather than living alongside them, so every one of the ~2900 colour classes already in the codebase is brand-driven and there is no off-brand colour left to type. Each ramp keeps Tailwind's lightness/chroma ladder and swaps only the hue, so contrast is unchanged from stock. Semantic aliases (`--color-danger`, `--color-warning`, `--color-success`, `--color-accent`) are the preferred API for new code.
+
+`lib/brand.ts` mirrors the same hues for consumers that cannot read CSS — the canvas paints with inline styles, and `lib/` is tested in a DOM-less Node environment — and derives hexes with the same OKLCH maths; `lib/colors.ts` builds the heatmap, Canvas and category palettes from it with no hex literals. `lib/brand.test.ts` parses `globals.css` and fails if a hue disagrees or a ramp step hard-codes a hue. Full rationale in [brand.md](../brand.md).
 
 ### Schema Layer
 
