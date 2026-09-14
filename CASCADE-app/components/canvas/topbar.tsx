@@ -12,6 +12,7 @@ import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 import type { Canvas } from "@/lib/schemas/network";
 import { CANVAS_PALETTE } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Canvas colors for + Canvas popover
@@ -65,6 +66,7 @@ export function Topbar() {
 
         <TopbarIconButton
           label="Config"
+          dataTour="config"
           onClick={() => useUiStore.getState().openConfigModal()}
         >
           <Settings size={15} />
@@ -72,6 +74,7 @@ export function Topbar() {
 
         <TopbarIconButton
           label="Scorecard"
+          dataTour="scorecard"
           onClick={() => useUiStore.getState().toggleScorecardPanel()}
         >
           <BookMarked size={15} />
@@ -79,6 +82,7 @@ export function Topbar() {
 
         <TopbarIconButton
           label="Repair"
+          dataTour="repair"
           onClick={() => useUiStore.getState().toggleInterventionPanel()}
         >
           <Wrench size={15} />
@@ -86,6 +90,7 @@ export function Topbar() {
 
         <TopbarIconButton
           label="File"
+          dataTour="file"
           onClick={() => useUiStore.getState().toggleFileIoPanel()}
         >
           <div className="relative">
@@ -184,6 +189,7 @@ function GlobalViewTab() {
   return (
     <div className="relative">
       <button
+        data-tour="global-view"
         onClick={activate}
         onContextMenu={handleContextMenu}
         title="Global view — all canvases together (right-click for options)"
@@ -340,7 +346,7 @@ function CanvasTab({ canvas, active, onActivate, onDragStart, onDrop }: CanvasTa
         {/* Color dot */}
         <span
           className="h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: canvas.color ?? "#94a3b8" }}
+          style={{ backgroundColor: canvas.color ?? brandColor("neutral", 400) }}
         />
 
         {/* Label */}
@@ -401,16 +407,17 @@ function CanvasTab({ canvas, active, onActivate, onDragStart, onDrop }: CanvasTa
 // Canvas context menu
 // ---------------------------------------------------------------------------
 
-const CONTEXT_COLORS = [
-  { label: "Blue", value: "#3b82f6" },
-  { label: "Green", value: "#22c55e" },
-  { label: "Yellow", value: "#eab308" },
-  { label: "Orange", value: "#f97316" },
-  { label: "Red", value: "#ef4444" },
-  { label: "Purple", value: "#a855f7" },
-  { label: "Cyan", value: "#06b6d4" },
-  { label: "Pink", value: "#ec4899" },
-];
+/**
+ * Canvas tab colours. `CANVAS_PALETTE` is eight evenly-spaced hues at one fixed
+ * lightness and chroma, generated in lib/colors.ts — so the swatches stay
+ * distinguishable from each other without any of them being off-palette, and a
+ * hue change in globals.css moves them with everything else. Positions, not
+ * colour names: "Yellow" stops being true the moment the palette shifts.
+ */
+const CONTEXT_COLORS = CANVAS_PALETTE.map((value, i) => ({
+  label: `Colour ${i + 1}`,
+  value,
+}));
 
 interface CanvasContextMenuProps {
   x: number;
@@ -534,7 +541,7 @@ function MenuItem({
 function AddCanvasButton() {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
-  const [color, setColor] = useState("#3b82f6");
+  const [color, setColor] = useState(brandColor("accent", 500));
   const [graphType, setGraphType] = useState("");
   const [georeferenced, setGeoreferenced] = useState(false);
   const addCanvas = useCanvasStore((s) => s.addCanvas);
@@ -544,7 +551,7 @@ function AddCanvasButton() {
 
   function reset() {
     setLabel("");
-    setColor("#3b82f6");
+    setColor(brandColor("accent", 500));
     setGraphType("");
     setGeoreferenced(false);
   }

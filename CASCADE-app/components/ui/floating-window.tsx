@@ -21,6 +21,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { X, Minus, Square, Copy, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,6 +39,14 @@ interface FloatingWindowProps {
   /** Sits in the title bar, left of the window controls. */
   headerActions?: React.ReactNode;
   onClose: () => void;
+  /**
+   * DOM id of the control that reopens this window. When given, closing flies
+   * the window back into it instead of blinking out — a window that vanishes
+   * leaves the user hunting for the way back, one that visibly returns
+   * somewhere teaches the location once. Ignored when the element is not on
+   * screen, or when the user prefers reduced motion.
+   */
+  flyToOnClose?: string;
   /** localStorage key for remembered geometry. Omit to never persist. */
   storageKey?: string;
   defaultSize: { w: number; h: number };
@@ -46,6 +55,9 @@ interface FloatingWindowProps {
 }
 
 const HEADER_H = 40;
+
+/** Fly-back duration. Drives both the CSS transition and the close timeout. */
+const FLIGHT_MS = 260;
 
 // Eight grab zones: four edges, four corners. `dir` drives the resize maths
 // below — a letter present means that edge moves.
@@ -83,6 +95,7 @@ export function FloatingWindow({
   icon,
   headerActions,
   onClose,
+  flyToOnClose,
   storageKey,
   defaultSize,
   minSize = { w: 420, h: 260 },
@@ -101,6 +114,8 @@ export function FloatingWindow({
   const geomRef = useRef<Geometry | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [maximized, setMaximized] = useState(false);
+  /** Non-null while the window is flying back into its anchor. */
+  const [flight, setFlight] = useState<CSSProperties | null>(null);
 
   const commit = useCallback(
     (g: Geometry) => {
@@ -133,14 +148,49 @@ export function FloatingWindow({
     return () => window.removeEventListener("resize", onResize);
   }, [open, commit]);
 
+  /**
+   * Close, flying the window back into `flyToOnClose` when that control is on
+   * screen. The animation is presentation only: `onClose` runs either way, and
+   * immediately when there is nothing to fly to.
+   */
+  const requestClose = useCallback(() => {
+    if (flight) return; // already on its way out
+    const el = shellRef.current;
+    const anchorEl = flyToOnClose ? document.getElementById(flyToOnClose) : null;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    if (!el || !anchorEl || reducedMotion) {
+      onClose();
+      return;
+    }
+
+    const c = el.getBoundingClientRect();
+    const a = anchorEl.getBoundingClientRect();
+    setFlight({
+      transform:
+        `translate(${a.left + a.width / 2 - (c.left + c.width / 2)}px, ` +
+        `${a.top + a.height / 2 - (c.top + c.height / 2)}px) ` +
+        `scale(${Math.max(0.04, a.width / c.width)})`,
+      opacity: 0,
+    });
+    window.setTimeout(onClose, FLIGHT_MS);
+  }, [flight, flyToOnClose, onClose]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // A window can host editors — a rule textarea, a label field — whose own
+      // Escape cancels the edit or dismisses a suggestion popup. Closing the
+      // whole window out from under that would discard work the user was
+      // trying to abandon one step of.
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input,textarea,select,[contenteditable='true']")) return;
+      requestClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, requestClose]);
 
   /**
    * One pointer session, shared by dragging and resizing. `dir` is null for a
@@ -197,8 +247,12 @@ export function FloatingWindow({
       ref={shellRef}
       role="dialog"
       aria-label={title}
-      style={frame}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+      style={{ ...frame, ...flight, transitionDuration: `${FLIGHT_MS}ms` }}
+      className={cn(
+        "fixed z-50 flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
+        "origin-center transition-[transform,opacity] ease-in",
+        flight && "pointer-events-none",
+      )}
     >
       {/* Title bar — the drag handle. Double-click toggles maximize, the same
           gesture every desktop window manager uses. */}
@@ -244,7 +298,7 @@ export function FloatingWindow({
             {maximized ? <Copy size={12} /> : <Square size={12} />}
           </WindowButton>
 
-          <WindowButton label="Close" onClick={onClose} danger>
+          <WindowButton label="Close" onClick={requestClose} danger>
             <X size={14} />
           </WindowButton>
         </div>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { brandColor } from "@/lib/brand";
 
 const description =
   "Multi-canvas infrastructure failure propagation platform — model interdependent services and analyse how failures cascade across their Elements.";
@@ -35,8 +36,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+    { media: "(prefers-color-scheme: light)", color: brandColor("neutral", 50) },
+    { media: "(prefers-color-scheme: dark)", color: brandColor("neutral", 950) },
   ],
 };
 

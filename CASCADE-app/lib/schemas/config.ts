@@ -17,7 +17,7 @@ export const FunctionalityScaleLevelSchema = z.object({
   /** Integer level, 1 = worst (critical), N = best (operational). */
   level: z.number().int().min(1),
   label: z.string(),
-  /** Hex colour string, e.g. "#ef4444". */
+  /** Hex colour string — written by the app from `lib/brand.ts`, never by hand. */
   color: z.string(),
 });
 

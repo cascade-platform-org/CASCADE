@@ -17,11 +17,11 @@
  * `app/globals.css` — enforced by `brand.test.ts`.
  */
 export const BRAND_HUE = {
-  neutral: 258,
-  danger: 25,
+  neutral: 92,
+  danger: 28,
   warning: 70,
-  success: 149,
-  accent: 263,
+  success: 150,
+  accent: 210,
 } as const;
 
 export type BrandRole = keyof typeof BRAND_HUE;
@@ -64,42 +64,31 @@ export function oklchToHex(l: number, c: number, h: number): string {
 
 /**
  * One step of a brand ramp, matching the `--color-<family>-<step>` value the
- * stylesheet generates. The lightness/chroma ladders are Tailwind's own; only
- * the hue is ours, which is why contrast behaves exactly as stock Tailwind.
+ * stylesheet generates.
+ *
+ * The lightness ladder is Tailwind's, so contrast behaves as it does there; the
+ * chroma is damped to roughly 0.6× and capped at what sRGB can actually hold at
+ * that lightness and hue — which is the whole "muted, not alarm-coloured" look,
+ * and is also why the petrol ramp is flatter than the others (a dark cyan is
+ * the most gamut-limited colour here). Contrast on white at step 600 stays at
+ * or above WCAG AA for every role; `brand.test.ts` asserts it.
  */
 const RAMPS: Record<BrandRole, Record<number, [number, number]>> = {
-  neutral: {
-    50: [0.985, 0.003], 100: [0.967, 0.006], 200: [0.92, 0.012], 300: [0.871, 0.019],
-    400: [0.705, 0.035], 500: [0.552, 0.033], 600: [0.442, 0.03], 700: [0.37, 0.03],
-    800: [0.274, 0.032], 900: [0.21, 0.036], 950: [0.141, 0.03],
-  },
-  danger: {
-    50: [0.971, 0.013], 100: [0.936, 0.032], 200: [0.885, 0.062], 300: [0.808, 0.114],
-    400: [0.704, 0.191], 500: [0.637, 0.237], 600: [0.577, 0.245], 700: [0.505, 0.213],
-    800: [0.444, 0.177], 900: [0.396, 0.141], 950: [0.258, 0.092],
-  },
-  warning: {
-    50: [0.987, 0.022], 100: [0.962, 0.059], 200: [0.924, 0.12], 300: [0.879, 0.169],
-    400: [0.828, 0.189], 500: [0.769, 0.188], 600: [0.666, 0.179], 700: [0.555, 0.163],
-    800: [0.473, 0.137], 900: [0.414, 0.112], 950: [0.279, 0.077],
-  },
-  success: {
-    50: [0.982, 0.018], 100: [0.962, 0.044], 200: [0.925, 0.084], 300: [0.871, 0.15],
-    400: [0.792, 0.209], 500: [0.723, 0.219], 600: [0.627, 0.194], 700: [0.527, 0.154],
-    800: [0.448, 0.119], 900: [0.393, 0.095], 950: [0.266, 0.065],
-  },
-  accent: {
-    50: [0.97, 0.014], 100: [0.932, 0.032], 200: [0.882, 0.059], 300: [0.809, 0.105],
-    400: [0.707, 0.165], 500: [0.623, 0.214], 600: [0.546, 0.245], 700: [0.488, 0.243],
-    800: [0.424, 0.199], 900: [0.379, 0.146], 950: [0.282, 0.091],
-  },
+  // Achromatic: true greys, so surfaces never read as tinted.
+neutral: { 50: [0.985, 0.0], 100: [0.967, 0.0], 200: [0.92, 0.0], 300: [0.871, 0.0], 400: [0.705, 0.0], 500: [0.552, 0.0], 600: [0.442, 0.0], 700: [0.37, 0.0], 800: [0.274, 0.0], 900: [0.21, 0.0], 950: [0.141, 0.0] },
+  danger: { 50: [0.971, 0.009], 100: [0.936, 0.022], 200: [0.885, 0.042], 300: [0.808, 0.078], 400: [0.704, 0.149], 500: [0.637, 0.185], 600: [0.577, 0.191], 700: [0.505, 0.166], 800: [0.444, 0.138], 900: [0.396, 0.11], 950: [0.258, 0.072] },
+  warning: { 50: [0.987, 0.008], 100: [0.962, 0.024], 200: [0.924, 0.053], 300: [0.879, 0.086], 400: [0.828, 0.128], 500: [0.769, 0.147], 600: [0.666, 0.135], 700: [0.555, 0.113], 800: [0.473, 0.096], 900: [0.414, 0.085], 950: [0.279, 0.06] },
+  success: { 50: [0.982, 0.012], 100: [0.962, 0.03], 200: [0.925, 0.057], 300: [0.871, 0.102], 400: [0.792, 0.163], 500: [0.723, 0.171], 600: [0.627, 0.151], 700: [0.527, 0.12], 800: [0.448, 0.093], 900: [0.393, 0.074], 950: [0.266, 0.051] },
+  accent: { 50: [0.97, 0.01], 100: [0.932, 0.022], 200: [0.882, 0.04], 300: [0.809, 0.071], 400: [0.707, 0.115], 500: [0.623, 0.102], 600: [0.546, 0.088], 700: [0.488, 0.079], 800: [0.424, 0.07], 900: [0.379, 0.062], 950: [0.282, 0.047] },
 };
 
-/**
- * The hex for one step of one brand ramp — the TypeScript equivalent of a
- * `text-blue-600` class. `brandColor("accent", 600)` and `bg-blue-600` are the
- * same colour, and both move when `--hue-accent` moves.
- */
+/** The raw `[lightness, chroma]` of one ramp step — what the stylesheet emits. */
+export function rampStep(role: BrandRole, step: number): [number, number] {
+  const entry = RAMPS[role][step];
+  if (!entry) throw new Error(`No step ${step} in the "${role}" ramp`);
+  return entry;
+}
+
 export function brandColor(role: BrandRole, step: number): string {
   const ramp = RAMPS[role];
   const entry = ramp[step];

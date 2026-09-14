@@ -80,6 +80,7 @@ A user-editable JSON/YAML config is the single source of truth for system-wide p
 - **Default (N = 3):** level 1 = `critical` (red), level 2 = `operational_warning` (orange), level 3 = `operational` (green).
 - Applies uniformly to both nodes and edges.
 - **Functionality Time** (`functionality_time > 0`) is an orthogonal timed-degradation state (see §9); it does not occupy a slot in the 1..N scale.
+- **Reordering** *(implemented)*: the Functionality Scale tab moves a level up or down the scale. The level *numbers* are identity — every Element stores one of them as its `functionality`, `N` is the list's length, and an Event imposes `N − vulnerability` — so they stay 1..N and contiguous, and what moves between them is the label and colour. An Element sitting at 2 therefore keeps 2 and takes whatever label now sits there; no Element is renumbered. `reorderScaleLevels` refuses an order that does not name every level, since dropping one would shift `N` and with it the meaning of every stored Functionality.
 
 ### 4.2 Category Definitions
 
@@ -367,7 +368,11 @@ the other (`toggleUserManualPanel` / `toggleRulesManualPanel` / `openRulesManual
 app; the Rules Manual has no `.md` twin. Change a component and its mirror
 together. The rule grammar additionally tracks `CASCADE-backend/core/rule_parser.py`.
 
-### 8.5 Guided tour *(implemented)*
+### 8.5 Guided tours *(implemented)*
+
+Four walkthroughs share one runner, and the split is the point: **First run** teaches how a finished model behaves, **Build a model** teaches how to author one, **Customize the Propagation** teaches how to change what the engine computes, and **Analyse and decide** teaches what the platform does with the result.
+
+#### First run
 
 A skippable eleven-step walkthrough of the core loop — read the network, inspect
 an element's attributes, Reset, apply an Event, Propagate, read the cascade,
@@ -387,11 +392,108 @@ advance time — pointing at the real editor UI.
   Reset reaches back through the history the file ships with — the Scenario
   Baseline is seeded from `update_history` on load (ADR-0016), without which
   Reset on a freshly opened project would be a silent no-op.
-- **Entry points:** the New Project Wizard's first step, a one-time prompt over
-  the canvas (both suppressed once offered), and "Take the guided tour" in the
-  User Manual drawer, available forever after.
+- **Entry points:** the New Project screen, a one-time prompt over the canvas
+  (both suppressed once offered), and "Take the guided tour" in the User Manual
+  drawer, available forever after.
 - Propagation still needs the server and `can_propagate`. The tour does not work
   around that — the step explains the button, and a guest skips past it.
+
+#### Build a model
+
+A hands-on walkthrough of nine actions that **starts its own empty project**
+(`lib/new-project.ts`, the same blank slate the New Project screen's "Create
+project" button makes) and loads no sample.
+
+Starting from empty is not cosmetic: the early steps gate on the *shape* of the
+stores — a Category exists, a second node exists, an edge exists — so on a
+populated project they are satisfied on arrival and the tour skips itself, and
+on a half-built one the user cannot tell their own work from what the step asked
+for. Because it therefore discards what is open, both entry points say so: the
+New Project screen creates the project anyway, and the User Manual drawer — the
+one reachable over real work — asks for confirmation first, as it now does for
+the first-run tour too. It exists because the first-run tour
+covers reading and running a model and nothing covered authoring one — and the
+four mistakes that stop a hand-built model working are all invisible, in that
+the network looks correct and the cascade simply does nothing:
+
+1. nothing exists until it is in the Model Configuration — with no Category there
+   is nothing to supply, and with no Event nothing to fear;
+2. Node Type does not make a node supply or consume — `supply_capacity` and
+   `category_dependency_profiles[c].demand` do;
+3. an edge `a → b` means *a supplies b*, so a reversed arrow carries nothing;
+4. an Event with no `vulnerability_levels` entry anywhere is a no-op.
+
+The order of the steps is dictated by the Inspector rather than by taste. Only
+the **provider** is tagged with a Category: that tag is what makes its Supply
+Capacity section appear, and — once the edge is drawn — what makes the
+consumer's Category Dependency Profile section appear by itself
+(`inboundCategories` in `node-inspector.tsx`). So the consumer is never asked
+for a Category, and its Demand is asked for only after the edge exists.
+Likewise the Event is defined before the step asking for a vulnerability to it,
+since the vulnerability editor lists the configured Events.
+
+Each step gates on the store reaching that *shape* rather than on particular
+labels, so the user names their own elements. `lib/tour/build-model-tour.test.ts`
+drives the same actions against the real stores and asserts each gate is shut
+before and open after — the one part of a tour that can break silently is a
+predicate reading a field that has been renamed. It also pins the step order
+above, since a tour that asked for a Supply Capacity before its Category would
+strand the user on a step the Inspector cannot satisfy.
+
+Both entry points — the New Project screen and "Build a model" in the User
+Manual drawer — close whatever covers the Canvas before starting.
+
+#### Customize the Propagation
+
+A twelve-step walkthrough of the four declarations that change engine behaviour
+without any code — the **Category Type**, the **Functionality Scale**, the
+per-category **dependency profile**, and **Rules** — changing one at a time and
+re-running the Propagation after each. The before/after discipline is the
+lesson, not a presentation choice: each of these is invisible on the canvas, and
+they can cancel each other out, so a change read without a Propagation after it
+teaches the wrong conclusion. `customize-propagation-tour.test.ts` asserts that
+every step which changes a declaration is followed by a Propagate step.
+
+It runs on **`IJDRR_Extended_example.json`**, not the plain IJDRR example, for a
+structural reason: that network has two substations fed by one source *and*
+linked to each other. Measured with the Earthquake applied (Electric Source
+critical):
+
+| electric Category Type | Result |
+|---|---|
+| `Requisite` (as shipped) | nothing propagates — each substation is the other's alternative supplier under `best_of`, so the pair holds itself up |
+| `SourceToDemands` | City degrades; Water Pump and Hospital fall back on their backups |
+| …then City electric `dependency_level` 2 → 3 | City goes critical |
+
+The plain IJDRR example is insensitive to the Category Type (electric supply 10
+against demand 7 — slack everywhere), which is why the tour needs the extended
+one. What the type does *not* decide is whether failures travel at all: every
+node receives a Requisite aggregation whatever its categories are (§7.2), so a
+critical supplier propagates under either type. The type decides how a shortfall
+is read — levels versus quantities.
+
+- **Entry points:** the New Project screen and the User Manual drawer.
+
+#### Analyse and decide
+
+What the platform does with a Scenario once the engine has produced one: scope,
+causality (`responsibility_share`), Temporal Jump and auto-advance, the
+Scorecard, the Analysis Module — including that the Operativity weighting
+re-scores a completed run without spending an engine evaluation (ADR-0018) — the
+Repair panel, and the File panel's saves and importer.
+
+It runs on the first-run sample in its shipped, already-propagated state,
+because most of its steps point at a result. Almost nothing gates: a guest has
+neither `can_propagate` nor engine evaluations, and `platform-tour.test.ts`
+asserts that fewer than a third of its steps wait on anything.
+
+- **Entry points:** the New Project screen and the User Manual drawer.
+
+All four tours are listed by name at the top of the New Project screen — a name
+and nothing else, since what a tour teaches is its own first card and a second
+copy of it only goes stale. Started from the User Manual drawer instead, the two
+sample-based ones ask for confirmation first: that entry point is reachable over
+real work, and loading the sample discards it.
 
 Implementation — the step/target data model, why no tour library is used, and the
 constraints that shape the ring — is documented in

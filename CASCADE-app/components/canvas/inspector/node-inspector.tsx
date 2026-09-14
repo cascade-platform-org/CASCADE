@@ -24,6 +24,7 @@ import {
 import { CauseBanner } from "./cause-banner";
 import { RulesEditor, PropertiesEditor } from "./editors";
 import { CanvasMembershipSection } from "./canvas-membership";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // SupplyCapacityEditor — free-text category name, editable value, removable rows
@@ -227,6 +228,7 @@ export function NodeInspector({ node }: { node: Node }) {
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
   const categories = useConfigStore(useShallow((s) => s.config.categories));
   const events = useConfigStore(useShallow((s) => s.config.events));
+  const openConfigModal = useUiStore((s) => s.openConfigModal);
   const historyAction = useHistoryAction();
 
   const ownCategories = new Set(node.node_categories ?? []);
@@ -316,7 +318,7 @@ export function NodeInspector({ node }: { node: Node }) {
               className="min-w-[2rem] rounded px-1.5 py-0.5 text-center text-xs font-medium text-white"
               style={{
                 backgroundColor:
-                  scaleLevels.find((l) => l.level === node.functionality)?.color ?? "#94a3b8",
+                  scaleLevels.find((l) => l.level === node.functionality)?.color ?? brandColor("neutral", 400),
               }}
             >
               {node.functionality}
@@ -491,9 +493,17 @@ export function NodeInspector({ node }: { node: Node }) {
             Engine formula: result_functionality = N − stored_drop.
             stored_drop=0 → N (immune); stored_drop=N−1 → 1 (maximum damage).
             Range 0…N−1; 0 = immune (default/absent). */}
-      {events.length > 0 && (
-        <Section title="Vulnerability Levels">
-          {events.map((ev) => {
+      {/* Always rendered, even with no Events defined: an element that can be
+          hurt by nothing is the commonest reason a Propagation does nothing,
+          and a section that only appears once you already know to define an
+          Event cannot tell you that. */}
+      <Section title="Vulnerability Levels">
+        {events.length === 0 && (
+          <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+            No Events yet — nothing can damage this element.
+          </p>
+        )}
+        {events.map((ev) => {
             const level = node.vulnerability_levels?.[ev.id] ?? 0;
             return (
               <Field key={ev.id} label={ev.label}>
@@ -520,9 +530,15 @@ export function NodeInspector({ node }: { node: Node }) {
                 <div className="mt-0.5 text-[10px] text-zinc-400">{vulnHint(level, n)}</div>
               </Field>
             );
-          })}
-        </Section>
-      )}
+        })}
+        <button
+          onClick={() => openConfigModal("events")}
+          title="Define a new Event in the Model Configuration"
+          className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
+        >
+          <Plus size={10} /> New event
+        </button>
+      </Section>
 
       {/* 7. Rules */}
       <Section title="Rules">

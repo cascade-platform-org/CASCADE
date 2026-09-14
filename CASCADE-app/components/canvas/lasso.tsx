@@ -24,6 +24,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useReactFlow } from "@xyflow/react";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Geometry helpers
@@ -190,7 +191,7 @@ export function Lasso({ active, partial = true, onSelect }: LassoProps) {
           <polygon
             points={screenPath.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="rgba(59, 130, 246, 0.08)"
-            stroke="#3b82f6"
+            stroke={brandColor("accent", 500)}
             strokeWidth={1.5}
             strokeDasharray="5 3"
             strokeLinejoin="round"

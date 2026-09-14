@@ -9,6 +9,7 @@ import { materialiseAround } from "@/lib/graph-diff";
 import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnyUpdateEntry } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import JSZip from "jszip";
+import { brandColor } from "@/lib/brand";
 
 function isPropagationEntry(e: ScorecardEntry): e is PropagationScorecardEntry {
   return e.type === "propagation";
@@ -74,7 +75,7 @@ export function operativityToLevel(pct: number, n: number): number {
  */
 export function operativityColor(pct: number, config: ModelConfiguration): string {
   const level = operativityToLevel(pct, config.functionality_scale.length);
-  return config.functionality_scale.find((l) => l.level === level)?.color ?? "#94a3b8";
+  return config.functionality_scale.find((l) => l.level === level)?.color ?? brandColor("neutral", 400);
 }
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,8 @@
 import { X } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { UserManual } from "@/components/help/user-manual";
-import { startGuidedTour } from "@/lib/tour/start-tour";
+import { startTour } from "@/lib/tour/start-tour";
+import { TOURS, type TourId } from "@/lib/tour/registry";
 
 export function UserManualPanel() {
   const closeUserManualPanel = useUiStore((s) => s.closeUserManualPanel);
@@ -39,7 +40,19 @@ export function UserManualPanel() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {/* Hand off rather than stack: the store swaps the right-edge slot. */}
-        <UserManual onOpenRulesManual={openRulesManualPanel} onStartTour={() => void startGuidedTour()} />
+        {/* Every tour points at the Canvas and the Inspector, so the drawer —
+            which covers both — closes before one starts. And unlike the New
+            Project screen, this entry point is reachable over real work: each
+            tour replaces the open project, so each asks first, in its own
+            words (registry `discards`). */}
+        <UserManual
+          onOpenRulesManual={openRulesManualPanel}
+          onStartTour={(id: TourId) => {
+            if (!window.confirm(TOURS[id].discards)) return;
+            closeUserManualPanel();
+            void startTour(id);
+          }}
+        />
       </div>
     </aside>
   );

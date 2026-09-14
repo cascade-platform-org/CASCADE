@@ -1,8 +1,7 @@
 # CASCADE — User Manual
 
 > Also in the app: the **Help** button in the Topbar opens the same text as a
-> side panel, with a **guided tour** that walks the core loop on a worked
-> example. Kept in sync with `CASCADE-app/components/help/user-manual.tsx`.
+> side panel. Kept in sync with `CASCADE-app/components/help/user-manual.tsx`.
 
 1. [Setting up an element](#1-setting-up-an-element) ·
 2. [Rules](#2-rules) ·
@@ -12,6 +11,11 @@
 6. [Saving and loading](#6-saving-and-loading) ·
 7. [Server and roles](#7-server-and-roles) ·
 8. [Keyboard shortcuts](#8-keyboard-shortcuts)
+
+**Guided tour** — the core loop, on a worked example.
+**Build a model** — build one that cascades, on a new empty canvas.
+**Customize the Propagation** — change one declaration at a time, and re-propagate to read what it did.
+**Analyse and decide** — causality, time, the Scorecard, the Analysis Module and repair ranking.
 
 ---
 
@@ -67,6 +71,10 @@ One entry per Event, on nodes and on edges. The level the Event imposes is
 An Event with no vulnerability entries anywhere does nothing when applied. For a
 **Hazard** every affected element is also flagged `direct_damage`, which is what
 puts it on the repair list.
+
+The section is always in the Inspector, even before any Event exists — that is
+the commonest reason a Propagation changes nothing, so it says so rather than
+hiding. **New event** in it opens the Model Configuration on the Events tab.
 
 ### Socio-economic values
 

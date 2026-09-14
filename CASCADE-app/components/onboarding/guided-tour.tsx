@@ -27,10 +27,20 @@ import { useUiStore } from "@/store/ui-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useCanvasStore } from "@/store/canvas-store";
-import { FIRST_RUN_TOUR, missingTourAnchors, type TourStep } from "@/lib/tour/first-run-tour";
+import { useConfigStore } from "@/store/config-store";
+import { useAnalysisStore } from "@/store/analysis-store";
+import { missingTourAnchors, type TourStep } from "@/lib/tour/types";
+import { TOURS, type TourId } from "@/lib/tour/registry";
 
 /** Any store a `waitFor` predicate might read. */
-const WATCHED = [useNetworkStore, useHistoryStore, useUiStore, useCanvasStore];
+const WATCHED = [
+  useNetworkStore,
+  useHistoryStore,
+  useUiStore,
+  useCanvasStore,
+  useConfigStore,
+  useAnalysisStore,
+];
 
 type Side = NonNullable<TourStep["side"]>;
 
@@ -111,11 +121,12 @@ function place(
  */
 export function GuidedTour() {
   const activeTour = useUiStore((s) => s.activeTour);
-  if (activeTour !== "first-run") return null;
-  return <TourRunner key={activeTour} />;
+  if (!activeTour || !(activeTour in TOURS)) return null;
+  return <TourRunner key={activeTour} tourId={activeTour} />;
 }
 
-function TourRunner() {
+function TourRunner({ tourId }: { tourId: string }) {
+  const { steps } = TOURS[tourId as TourId];
   const endTour = useUiStore((s) => s.endTour);
 
   const [index, setIndex] = useState(0);
@@ -127,24 +138,24 @@ function TourRunner() {
   const [size, setSize] = useState({ w: CARD_WIDTH, h: 180 });
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const step: TourStep | undefined = FIRST_RUN_TOUR[index];
-  const isLast = index === FIRST_RUN_TOUR.length - 1;
+  const step: TourStep | undefined = steps[index];
+  const isLast = index === steps.length - 1;
 
   const close = useCallback(() => endTour(), [endTour]);
   const next = useCallback(() => {
-    setIndex((i) => (i >= FIRST_RUN_TOUR.length - 1 ? i : i + 1));
-  }, []);
+    setIndex((i) => (i >= steps.length - 1 ? i : i + 1));
+  }, [steps.length]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    const missing = missingTourAnchors();
+    const missing = missingTourAnchors(steps);
     if (missing.length) {
       console.warn(
         `[tour] no element carries data-tour for: ${missing.join(", ")}. ` +
           "Those steps will render centred.",
       );
     }
-  }, []);
+  }, [steps]);
 
   // Follow the target. A frame loop rather than scroll/resize listeners because
   // the most-highlighted target is a node on a canvas the user can pan and zoom
@@ -253,7 +264,7 @@ function TourRunner() {
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[11px] text-zinc-400">
-            {index + 1} of {FIRST_RUN_TOUR.length}
+            {index + 1} of {steps.length}
           </span>
           <div className="flex items-center gap-1.5">
             {index > 0 && (

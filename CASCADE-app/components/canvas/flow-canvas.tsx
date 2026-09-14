@@ -175,7 +175,7 @@ function FlowCanvas() {
         const captureH = Math.max(Math.ceil(Math.max(0, bounds.y) + bounds.height) + PADDING, cropH);
 
         const dataUrl = await toPng(viewport, {
-          backgroundColor: "#f4f4f5",
+          backgroundColor: brandColor("neutral", 100),
           width: captureW,
           height: captureH,
           filter,
@@ -643,7 +643,7 @@ function FlowCanvas() {
         proOptions={{ hideAttribution: true }}
       >
         {!activeCanvas.georeferenced && (
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         )}
         <NodeSearch />
         <ZoomSlider />
@@ -687,6 +687,7 @@ function FlowCanvas() {
 
 import { ReactFlowProvider } from "@xyflow/react";
 import { levelColor } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 export function FlowCanvasWithProvider() {
   return (

@@ -11,14 +11,14 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { startGuidedTour } from "@/lib/tour/start-tour";
+import { startTour } from "@/lib/tour/start-tour";
 
 export function TourPrompt({ onDismiss }: { onDismiss: () => void }) {
   const [loading, setLoading] = useState(false);
 
   async function takeTour() {
     setLoading(true);
-    await startGuidedTour();
+    await startTour("first-run");
     setLoading(false);
   }
 

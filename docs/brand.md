@@ -17,12 +17,57 @@ every colour in the platform — is generated from them.
 
 ```css
 /* CASCADE-app/app/globals.css */
---hue-neutral: 258;   /* surfaces, text, borders */
---hue-danger:   25;   /* errors, destructive actions, Functionality level 1 */
---hue-warning:  70;   /* warnings */
---hue-success: 149;   /* confirmations */
---hue-accent:  263;   /* interactive, selection, Analysis */
+--hue-neutral:  92;   /* surfaces, text, borders — at chroma 0: true greys */
+--hue-danger:   28;   /* clay red — errors, destructive actions, level 1 */
+--hue-warning:  70;   /* amber — warnings */
+--hue-success: 150;   /* leaf — confirmations */
+--hue-accent:  210;   /* petrol — interactive, selection, Analysis */
 ```
+
+### Why these five
+
+The theme is resilience of the bamboo kind: a system that bends, degrades and
+recovers, rather than one that is either fine or on fire. The pale steps — the
+ones that fill panels and banners — are held at about **0.68× the chroma** of a
+stock Tailwind palette, so surfaces stay calm; the mid and dark steps sit at
+**0.78×**, because a status colour that is too polite stops reading as a status.
+Muting a colour is not the same as bending its hue towards its neighbour: that
+is what turns green into sage and amber into mustard, and a whole UI tinted that
+way looks soiled rather than soft.
+
+| Role | Colour | Reading |
+|---|---|---|
+| `success` | **Leaf** (150°) | Green with only a trace of yellow — the bamboo idea without the olive. |
+| `warning` | **Amber** (70°) | Deliberately not pulled towards green: a yellow with green in it turns mustard, and mustard reads as dirt rather than as caution. |
+| `danger` | **Clay red** (28°) | Warm and definite rather than emergency scarlet — damaged and still structural, which is what Functionality 1 means. |
+| `accent` | **Petrol** (210°) | The one cool hue, and the platform's interactive colour. |
+| `neutral` | **Grey** (achromatic) | Deliberately colourless. A tinted surface reads as dirty rather than as warm, and every panel in the app is a surface — so white is white, black is black, and the four coloured roles do all the talking. |
+
+Three decisions came from colour theory rather than taste:
+
+- **Accent is the exact complement of danger** (32 + 180 = 212 ≈ 210). "You can
+  click this" and "something is wrong" are the two meanings a user must never
+  confuse, so they sit at opposite ends of the wheel.
+- **Danger → warning → success are analogous** (28°, 70°, 150°), which is what
+  makes a degradation gradient read as one scale rather than three unrelated
+  stickers — and the Functionality scale is exactly that gradient.
+- **The neutrals carry no hue at all.** Colour in this app means something —
+  a Functionality level, a warning, a selection — so a surface that is quietly
+  tinted is noise competing with signal.
+
+Separations run 42°, 80°, 60° — far enough apart to name under an off-hue
+display, close enough to read as one system.
+
+### Legibility
+
+Chroma is damped, lightness is not: the ramps keep Tailwind's lightness ladder,
+and contrast is almost entirely a function of lightness. `lib/brand.test.ts`
+asserts it rather than trusting it — every `700` step and the `600` steps that
+carry links and labels clear **WCAG AA (4.5:1) on white**, and no step is
+clipped by sRGB, which would silently collapse two rungs of a ramp onto the same
+colour. The petrol ramp is flatter than the others for that reason: a dark cyan
+is the most gamut-limited colour in the set, so its chroma is capped at what
+sRGB can hold at each lightness.
 
 Change a number there and the platform repaints: buttons, toasts, warning
 banners, panel borders, the Analysis heatmap, the canvas. Nothing else to edit.
@@ -35,9 +80,9 @@ they are brand-critical, brand-neutral and brand-warning at those steps. So
 there is no off-brand colour left to reach for, and the ~2900 colour classes
 already in the codebase were correct the moment the ramps changed.
 
-Each ramp keeps Tailwind's own lightness and chroma ladder and swaps only the
-hue, so contrast — and therefore legibility and accessibility — behaves exactly
-as stock Tailwind.
+Each ramp keeps Tailwind's lightness ladder and replaces both the hue and the
+chroma, so legibility behaves as it does in stock Tailwind while the colour is
+muted to the brand's.
 
 | Write this | You get |
 |---|---|
@@ -54,10 +99,21 @@ mirrors the same five hues and derives hexes with the same OKLCH maths;
 [`lib/colors.ts`](../CASCADE-app/lib/colors.ts) builds the heatmap ramp, the
 Canvas palette and the category palette from it. No hex literals.
 
-`lib/brand.test.ts` reads `globals.css` and **fails the build** if a hue there
-disagrees with `lib/brand.ts`, or if any ramp step hard-codes a hue instead of
-referencing the variable. "Change the hue in globals.css" therefore stays a
+`lib/brand.test.ts` reads `globals.css` and **fails the build** if any of the 55
+ramp steps disagrees with `lib/brand.ts` on hue, lightness *or* chroma, or if a
+step hard-codes a hue instead of referencing the variable.
+`lib/no-hex-literals.test.ts` fails it if any `.ts`/`.tsx` file writes a hex
+colour at all — the one exception being Google's own logo in the auth gate,
+which is not ours to restyle. "Change the hue in globals.css" therefore stays a
 complete instruction.
+
+### The mark
+
+`docs/assets/build.py` derives the logo's colours from the same five hues with
+the same OKLCH maths and regenerates every SVG, PNG and the favicon. The mark
+used to carry its own hexes, so a hue change repainted the platform and left the
+logo behind. Run `python3 docs/assets/build.py` after changing a hue — it needs
+`rsvg-convert` and ImageMagick.
 
 ### Brand marks
 

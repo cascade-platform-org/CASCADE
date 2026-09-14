@@ -18,6 +18,7 @@ import { useUiStore } from "@/store/ui-store";
 import { pickHandles } from "@/lib/edge-routing";
 import { expandBoundsForLabels } from "./cascade-node";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -167,7 +168,7 @@ export function CanvasContextMenu({
         Math.round(bounds.height * zoom + 2 * PADDING),
       );
       const dataUrl = await toSvg(viewport, {
-        backgroundColor: "#f4f4f5",
+        backgroundColor: brandColor("neutral", 100),
         width: captureW,
         height: captureH,
         style: {

@@ -24,6 +24,7 @@ import { nodeTypes } from "@/components/canvas/cascade-node";
 import { edgeTypes } from "@/components/canvas/cascade-edge";
 import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 interface Props {
   snapshot: GraphSnapshot;
@@ -96,7 +97,7 @@ function SnapshotFlow({ snapshot }: Props) {
       }}
       proOptions={{ hideAttribution: true }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={16} size={0.8} color="#d4d4d8" />
+      <Background variant={BackgroundVariant.Dots} gap={16} size={0.8} color={brandColor("neutral", 300)} />
     </ReactFlow>
   );
 }

@@ -25,6 +25,7 @@ import { elementLabel } from "@/lib/coalition";
 import { CATEGORY_COLORS, scoreToColor } from "@/lib/colors";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 import type { Edge, Node } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 /** Not exported: consumers reach it through `Legend`, the shape they render. */
 type LegendItem = { color: string; label: string };
@@ -102,34 +103,34 @@ export function buildLegend(result: AnalysisResult): Legend {
       return {
         type: "swatches",
         items: [
-          { color: "#ef4444", label: "Articulation point" },
-          { color: "#94a3b8", label: "Non-critical" },
+          { color: brandColor("danger", 500), label: "Articulation point" },
+          { color: brandColor("neutral", 400), label: "Non-critical" },
         ],
       };
     case "bridge_edges":
       return {
         type: "swatches",
         items: [
-          { color: "#ef4444", label: "Bridge" },
-          { color: "#94a3b8", label: "Non-bridge" },
+          { color: brandColor("danger", 500), label: "Bridge" },
+          { color: brandColor("neutral", 400), label: "Non-bridge" },
         ],
       };
     case "downstream_reachability":
       return {
         type: "swatches",
         items: [
-          { color: "#4338ca", label: "Source" },
-          { color: "#60a5fa", label: "In downstream cone" },
-          { color: "#e2e8f0", label: "Outside cone" },
+          { color: brandColor("accent", 800), label: "Source" },
+          { color: brandColor("accent", 400), label: "In downstream cone" },
+          { color: brandColor("neutral", 200), label: "Outside cone" },
         ],
       };
     case "upstream_reachability":
       return {
         type: "swatches",
         items: [
-          { color: "#4338ca", label: "Target" },
-          { color: "#60a5fa", label: "In upstream cone" },
-          { color: "#e2e8f0", label: "Outside cone" },
+          { color: brandColor("accent", 800), label: "Target" },
+          { color: brandColor("accent", 400), label: "In upstream cone" },
+          { color: brandColor("neutral", 200), label: "Outside cone" },
         ],
       };
     case "community": {
@@ -234,13 +235,13 @@ function buildCategoricalColorMap(result: AnalysisResult): Record<string, string
     }
   } else if (metric === "articulation_points" || metric === "bridge_edges") {
     for (const [id, score] of Object.entries(scores)) {
-      map[id] = score === 1 ? "#ef4444" : "#94a3b8";
+      map[id] = score === 1 ? brandColor("danger", 500) : brandColor("neutral", 400);
     }
   } else if (metric === "downstream_reachability" || metric === "upstream_reachability") {
     for (const [id, score] of Object.entries(scores)) {
-      if (score === 2) map[id] = "#4338ca";
-      else if (score === 1) map[id] = "#60a5fa";
-      else map[id] = "#e2e8f0";
+      if (score === 2) map[id] = brandColor("accent", 800);
+      else if (score === 1) map[id] = brandColor("accent", 400);
+      else map[id] = brandColor("neutral", 200);
     }
   } else if (metric === "k_core") {
     const vals = Object.values(scores);

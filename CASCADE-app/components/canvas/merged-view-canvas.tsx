@@ -49,6 +49,7 @@ const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
 import { levelColor } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -178,7 +179,7 @@ function MergedViewCanvas() {
         const tx = PADDING - bounds.x * zoom;
         const ty = PADDING - bounds.y * zoom;
         return await toPng(viewport, {
-          backgroundColor: "#f4f4f5",
+          backgroundColor: brandColor("neutral", 100),
           width: captureW,
           height: captureH,
           filter,
@@ -399,7 +400,7 @@ function MergedViewCanvas() {
         proOptions={{ hideAttribution: true }}
       >
         {!geoCanvasId && (
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         )}
         <ZoomSlider />
         <NodeSearch nodes={mergedNodes} />

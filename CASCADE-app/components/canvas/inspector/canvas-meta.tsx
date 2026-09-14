@@ -13,6 +13,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { cn, Field, TextInput, Toggle } from "./primitives";
 import { CANVAS_PALETTE } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Colour palette for Canvas colour picker
@@ -213,7 +214,7 @@ export function AllCanvasesMeta() {
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: c.color ?? "#94a3b8" }}
+                    style={{ backgroundColor: c.color ?? brandColor("neutral", 400) }}
                   />
                   <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
                     {c.label ?? c.id}

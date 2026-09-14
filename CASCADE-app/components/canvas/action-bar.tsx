@@ -96,6 +96,7 @@ export function ActionBar() {
 
       {/* Analyse — same split control, so scope is picked before opening */}
       <ScopeSplitButton
+        dataTour="analyse"
         tone="blue"
         icon={
           <span className="relative flex items-center">

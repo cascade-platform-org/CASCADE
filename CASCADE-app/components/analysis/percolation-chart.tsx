@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { PercolationPoint } from "@/lib/topological-analysis";
+import { brandColor } from "@/lib/brand";
 
 interface PercolationChartProps {
   curve: PercolationPoint[];
@@ -55,7 +56,7 @@ export function PercolationChart({ curve, title = "Percolation Robustness" }: Pe
             key={t}
             x1={PAD.left} y1={toY(t)}
             x2={PAD.left + chartW} y2={toY(t)}
-            stroke="#e4e4e7" strokeWidth={0.5}
+            stroke={brandColor("neutral", 200)} strokeWidth={0.5}
           />
         ))}
 
@@ -66,28 +67,28 @@ export function PercolationChart({ curve, title = "Percolation Robustness" }: Pe
         <path d={pathD} fill="none" stroke="rgb(49,46,129)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
 
         {/* X-axis */}
-        <line x1={PAD.left} y1={PAD.top + chartH} x2={PAD.left + chartW} y2={PAD.top + chartH} stroke="#a1a1aa" strokeWidth={1} />
+        <line x1={PAD.left} y1={PAD.top + chartH} x2={PAD.left + chartW} y2={PAD.top + chartH} stroke={brandColor("neutral", 400)} strokeWidth={1} />
         {xTicks.map((t) => (
-          <text key={t} x={toX(t)} y={PAD.top + chartH + 14} textAnchor="middle" fontSize={9} fill="#a1a1aa">
+          <text key={t} x={toX(t)} y={PAD.top + chartH + 14} textAnchor="middle" fontSize={9} fill={brandColor("neutral", 400)}>
             {Math.round(t * 100)}%
           </text>
         ))}
 
         {/* Y-axis */}
-        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + chartH} stroke="#a1a1aa" strokeWidth={1} />
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + chartH} stroke={brandColor("neutral", 400)} strokeWidth={1} />
         {yTicks.map((t) => (
-          <text key={t} x={PAD.left - 4} y={toY(t) + 3} textAnchor="end" fontSize={9} fill="#a1a1aa">
+          <text key={t} x={PAD.left - 4} y={toY(t) + 3} textAnchor="end" fontSize={9} fill={brandColor("neutral", 400)}>
             {Math.round(t * 100)}%
           </text>
         ))}
 
         {/* Axis labels */}
-        <text x={PAD.left + chartW / 2} y={H - 2} textAnchor="middle" fontSize={9} fill="#71717a">
+        <text x={PAD.left + chartW / 2} y={H - 2} textAnchor="middle" fontSize={9} fill={brandColor("neutral", 500)}>
           Fraction removed
         </text>
         <text
           x={10} y={PAD.top + chartH / 2}
-          textAnchor="middle" fontSize={9} fill="#71717a"
+          textAnchor="middle" fontSize={9} fill={brandColor("neutral", 500)}
           transform={`rotate(-90, 10, ${PAD.top + chartH / 2})`}
         >
           Giant component

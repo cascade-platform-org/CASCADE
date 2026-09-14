@@ -13,6 +13,7 @@ import {
 } from "@/lib/intervention-prioritisation";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { levelColor } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 type SortMode = "efficiency" | "importance" | "cost";
 
@@ -247,7 +248,7 @@ function CandidateTable({
               <div className="flex items-center gap-2">
                 <span
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white"
-                  style={{ backgroundColor: c.kind === "node" ? "#3b82f6" : "#8b5cf6" }}
+                  style={{ backgroundColor: c.kind === "node" ? brandColor("accent", 500) : brandColor("accent", 700) }}
                 >
                   {c.kind}
                 </span>
@@ -343,7 +344,7 @@ function AtRiskTable({
                 <div className="flex items-center gap-2">
                   <span
                     className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white"
-                    style={{ backgroundColor: item.kind === "node" ? "#3b82f6" : "#8b5cf6" }}
+                    style={{ backgroundColor: item.kind === "node" ? brandColor("accent", 500) : brandColor("accent", 700) }}
                   >
                     {item.kind}
                   </span>

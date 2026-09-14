@@ -24,6 +24,7 @@ import { useAnalysisStore } from "@/store/analysis-store";
 import { useElementHeatmapColor } from "./snapshot-colors";
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -79,7 +80,7 @@ interface ShapeProps {
   strokeDashoffset?: number;
 }
 
-function Diamond({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Diamond({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const h = size * 0.5;
   return (
     <polygon
@@ -93,7 +94,7 @@ function Diamond({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDash
   );
 }
 
-function Octagon({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Octagon({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const o = size * 0.2;
   const e = size - o;
   const points = [
@@ -112,7 +113,7 @@ function Octagon({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDash
   );
 }
 
-function Circle({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Circle({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const r = size * 0.5;
   return (
     <circle
@@ -126,7 +127,7 @@ function Circle({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasha
   );
 }
 
-function RoundedSquare({ size, fill, stroke = "#e4e4e7", strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function RoundedSquare({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   return (
     <rect
       x={1} y={1}
@@ -270,7 +271,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
   // targets too. Each carries a unique id so React Flow can pick the closest one.
   const handleDot: React.CSSProperties = {
     width: 10, height: 10,
-    background: "#3b82f6",
+    background: brandColor("accent", 500),
     border: "2px solid #fff",
     borderRadius: "50%",
     opacity: showHandles ? 1 : 0,
@@ -307,7 +308,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           style={{
             top: 0, left: 4,
             width: size + 8, height: size + 8,
-            border: "2px solid #facc15",
+            border: `2px solid ${brandColor("warning", 400)}`,
             borderRadius: "50%",
             pointerEvents: "none",
           }}
@@ -326,7 +327,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
             width={size + 16} height={size + 16}
             rx={4}
             fill="none"
-            stroke="#3b82f6"
+            stroke={brandColor("accent", 500)}
             strokeWidth={2}
             strokeDasharray="4 2"
           />
@@ -357,7 +358,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
             <Shape
               size={size}
               fill="transparent"
-              stroke={hasTimeWarning ? "#fbbf24" : "white"}
+              stroke={hasTimeWarning ? brandColor("warning", 400) : "white"}
               strokeWidth={hasTimeWarning ? 5 : 2}
             />
           </g>
@@ -378,7 +379,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           transform: "translateX(-50%)",
           textAlign: "center",
           fontSize: 13,
-          color: "#52525b",
+          color: brandColor("neutral", 600),
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",

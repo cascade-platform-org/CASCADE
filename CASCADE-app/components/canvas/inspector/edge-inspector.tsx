@@ -16,6 +16,7 @@ import type { Edge } from "@/lib/schemas/network";
 import { Section, Field, NumberInput, Toggle, vulnHint } from "./primitives";
 import { CauseBanner } from "./cause-banner";
 import { RulesEditor, PropertiesEditor } from "./editors";
+import { brandColor } from "@/lib/brand";
 
 export function EdgeInspector({ edge }: { edge: Edge }) {
   const updateEdge = useCanvasStore((s) => s.updateEdge);
@@ -72,7 +73,7 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
               className="min-w-[2rem] rounded px-1.5 py-0.5 text-center text-xs font-medium text-white"
               style={{
                 backgroundColor:
-                  scaleLevels.find((l) => l.level === edge.functionality)?.color ?? "#94a3b8",
+                  scaleLevels.find((l) => l.level === edge.functionality)?.color ?? brandColor("neutral", 400),
               }}
             >
               {edge.functionality}

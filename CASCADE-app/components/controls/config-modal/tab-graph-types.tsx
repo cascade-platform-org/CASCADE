@@ -6,6 +6,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, ColBtn } from "./primitives";
+import { brandColor } from "@/lib/brand";
 
 export function TabGraphTypes() {
   const graphTypes = useConfigStore(useShallow((s) => s.draft.graph_types));
@@ -169,7 +170,7 @@ export function TabGraphTypes() {
               <div key={canvas.id} className="flex items-center gap-2">
                 <span
                   className="h-2 w-2 rounded-full shrink-0"
-                  style={{ background: canvas.color ?? "#71717a" }}
+                  style={{ background: canvas.color ?? brandColor("neutral", 500) }}
                 />
                 <span className="flex-1 truncate text-xs text-zinc-700 dark:text-zinc-300">
                   {canvas.label ?? canvas.id}

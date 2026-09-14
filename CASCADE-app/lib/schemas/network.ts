@@ -190,7 +190,7 @@ export type GeoAnchor = z.infer<typeof GeoAnchorSchema>;
 export const CanvasSchema = z.object({
   id: z.string(),
   label: z.string().optional(),
-  /** Hex colour string for canvas tabs and layer controls, e.g. "#3b82f6". */
+  /** Hex colour for canvas tabs and layer controls — from `CANVAS_PALETTE`. */
   color: z.string().optional(),
   /**
    * EPSG code for the CRS used by node geo fields.

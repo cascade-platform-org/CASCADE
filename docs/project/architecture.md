@@ -223,10 +223,12 @@ claimed grey. `lib/analysis-legend.test.ts` compares the key against
 
 ### Floating windows
 
-- **`components/ui/floating-window.tsx`** — the window shell: drag, eight-way resize, collapse-to-title-bar, maximize/restore, viewport clamping, Escape-to-close, and geometry remembered in `localStorage`, all behind one interface (title, header actions, body). During a pointer gesture it writes geometry straight to the DOM and leaves React state alone until pointer-up, so an arbitrarily heavy body costs nothing per pointer-move.
+- **`components/ui/floating-window.tsx`** — the window shell: drag, eight-way resize, collapse-to-title-bar, maximize/restore, viewport clamping, Escape-to-close, an optional fly-back-to-anchor close (`flyToOnClose`, given the DOM id of the control that reopens the window), and geometry remembered in `localStorage`, all behind one interface (title, header actions, body). Escape is ignored while focus is inside an input, textarea, select or contenteditable: those carry their own Escape (cancel this edit, dismiss this suggestion popup), and closing the window instead would discard what the user was abandoning one step of. During a pointer gesture it writes geometry straight to the DOM and leaves React state alone until pointer-up, so an arbitrarily heavy body costs nothing per pointer-move.
 - **`lib/window-geometry.ts`** — the pure maths that decides where the window lands (`clampToViewport`, `resizeGeometry`, `centredGeometry`). Kept out of the component so the arithmetic is unit-testable without a DOM; `lib/window-geometry.test.ts` covers the edge cases that are awkward to reach by hand (dragged off each edge, a viewport smaller than the window, a minimum-size drag pinning the opposite corner).
 
-The Analysis surface uses it. It was a full-bleed `fixed inset-0` overlay, which hid the very canvas the **Analysis Heatmap** paints — hence the old "Apply heatmap & minimize" button, which closed the page as part of applying. A floating window removes the conflict at its source: the overlay lands on a canvas the user can already see.
+Two surfaces use it, for the same reason. **Analysis** was a full-bleed `fixed inset-0` overlay, which hid the very canvas the **Analysis Heatmap** paints — hence the old "Apply heatmap & minimize" button, which closed the page as part of applying. The **Active Rules** panel was a centred modal over a dimmed backdrop, and a rule is written *about* the network: `if pump is critical then tank is critical` names elements the user then could not see. A floating window removes both conflicts at their source: the window lands on a canvas that stays visible.
+
+The fly-back-on-close choreography started in the Active Rules panel and moved into the shell when that panel became a window. It is presentation only — `onClose` runs either way, immediately when the anchor is off-screen or the user prefers reduced motion — and it exists because a panel that simply vanishes leaves the user hunting for the way back, while one that visibly returns somewhere teaches the location once.
 
 `components/analysis/legend-view.tsx` renders the key for both the Analysis window
 and the canvas overlay, so the two cannot disagree about presentation either. The
@@ -342,7 +344,7 @@ Entry types:
 - **Auto-save** — background save to `localStorage` after **10 seconds of inactivity, and only when the content changed** (ADR-0017). Discarded when an explicit save is made. `update_history` is included: it used to be stripped everywhere small, so undo was empty after a crash, and Graph Diffs made it small enough to keep. A history-free write is the fallback if the quota refuses.
 - **Explicit save** — downloads `project.json` + `config.json` (or a bundle; only a full bundle also adds a local Version). Up to 10 previous explicit saves retained in browser storage.
 - **Load** — Zod validation at the boundary before hydrating stores.
-- **New Project** (mid-session) — the File panel's `requestNewProject()` sets `ui-store`'s `newProjectRequested`, the one signal crossing from inside `EditorShell` up to `app/page.tsx`'s editor/wizard `AppState`. The wizard writes nothing until a step finishes, so `app/page.tsx` tracks a `WizardOrigin` ("startup" vs "editor") purely to route Cancel: startup → identity gate (nothing to return to), mid-session → back to the untouched editor.
+- **New Project** (mid-session) — the File panel's `requestNewProject()` sets `ui-store`'s `newProjectRequested`, the one signal crossing from inside `EditorShell` up to `app/page.tsx`'s editor/wizard `AppState`. The screen writes nothing until the user commits, so `app/page.tsx` tracks a `WizardOrigin` ("startup" vs "editor") purely to route Cancel: startup → identity gate (nothing to return to), mid-session → back to the untouched editor. It is one screen: the three steps it used to have asked for a Model Configuration a dropped bundle already carries, Canvas fields that all live in the Inspector's Canvas Meta panel, and a summary of two fields typed seconds earlier.
 - **Storage footprint** — `getStorageEstimate()` wraps `navigator.storage.estimate()` (the browser's per-origin quota over `localStorage` + IndexedDB) and `historyStorageBytes()` sizes the local save list; the Local tab shows both, since that quota is the real storage limit.
 
 ### Server Sync (opt-in)
@@ -408,10 +410,9 @@ A georeferenced Canvas renders a MapLibre map as a **non-interactive background 
 
 A node carries both `position` (flow) and `geo` (lng/lat); see CONTEXT.md → *Node Position vs Geo Coordinates*. The GeoAnchor is the single per-Canvas correspondence tying the two.
 
-### Guided tour
+### Guided tours
 
-The first-run walkthrough (requirements §8.5). Three constraints shape it, and
-each rules out an off-the-shelf tour library.
+Four tours (requirements §8.5) share one runner. **`lib/tour/registry.ts`** declares each one — label, blurb, steps, and what it needs on screen (`{ sample }` or `{ empty: true }`) — so adding a tour is one entry rather than edits in five files: `lib/tour/start-tour.ts` acts on the `start` descriptor, `components/onboarding/guided-tour.tsx` reads `steps` by `ui-store.activeTour`, and both menus (the New Project screen and the User Manual drawer) render the list from `TOUR_IDS`. **`lib/tour/types.ts`** holds what every tour is made of: the `TourStep` shape, the `awaitUpdate` history gate, `missingTourAnchors`, and `TOUR_ANCHORS` — the `data-tour` names, as a union type, so a step naming an anchor the app does not render is a compile error and `lib/tour/anchors.test.ts` catches the reverse (a listed anchor no component renders any more). The tours themselves are `first-run-tour.ts` (loads the IJDRR sample, teaches the run loop), `build-model-tour.ts` (starts an empty project via `lib/new-project.ts`, teaches authoring), `customize-propagation-tour.ts` (loads `IJDRR_Extended_example.json` and changes its Category Type, dependency profile and Rules, re-propagating after each), and `platform-tour.ts` (the Analysis Module, Scorecard, Repair panel and File panel). Three constraints shape the runner, and each rules out an off-the-shelf tour library.
 
 **No library, because dimming is wrong here.** driver.js, shepherd and intro.js
 all dim the page and make everything outside the spotlight inert. Both behaviours
@@ -434,11 +435,12 @@ applied and propagated, and an absolute check ("the latest history entry is an
 Event") skipped the step on arrival. Gates that watch history compare entry ids,
 not just types.
 
-**Steps are data** in `lib/tour/first-run-tour.ts`; **targets** are `data-tour`
+**Steps are data** in the `lib/tour/*-tour.ts` files; **targets** are `data-tour`
 attributes on the real components, never CSS or DOM-structure selectors. A step
-whose anchor is missing renders centred rather than being dropped, and
-`missingTourAnchors()` warns in development — do not remove a `data-tour`
-attribute without removing its step. A step may add `resolve` for a target a
+whose anchor is missing renders centred rather than being dropped, so removal is
+caught three ways: `TOUR_ANCHORS` types the step field (tsc), `anchors.test.ts`
+checks each listed name is still rendered somewhere, and `missingTourAnchors()`
+warns in development for anchors that exist but are not currently mounted. A step may add `resolve` for a target a
 `data-tour` cannot aim at ("click the Substation" rings that node, found by label
 in the canvas store), or `cardAnchor` to position its card against a different
 element while the ring stays on the target (the Temporal Jump step does, because

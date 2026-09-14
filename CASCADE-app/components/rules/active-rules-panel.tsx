@@ -4,6 +4,13 @@
  * Active Rules Panel (F8) — the rules on one Canvas, or on all of them, with
  * add / edit / delete / toggle support.
  *
+ * It is a {@link FloatingWindow}, like Analysis: draggable, resizable,
+ * collapsible, and with no dimmed backdrop, because a rule is written *about*
+ * the network and reading it against a covered canvas is guesswork. Closing
+ * flies the window back into the Status Bar counter that reopens it
+ * (`flyToOnClose`), which is where that choreography now lives for every
+ * window rather than only this one.
+ *
  * The Canvas is chosen in the header and starts on the one the user is looking
  * at (all of them, in the Global view). It is panel-local: reading another
  * Canvas's rules should not move the editor — following a rule to the
@@ -22,8 +29,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import type { CSSProperties } from "react";
-import { X, BookOpen, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, ScrollText } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -35,6 +41,7 @@ import {
   selectN,
 } from "@/store/config-store";
 import { cn } from "@/lib/utils";
+import { FloatingWindow } from "@/components/ui/floating-window";
 import { RULES_ANCHOR_ID } from "@/lib/ui-anchors";
 import {
   isRuleDisabled,
@@ -228,9 +235,6 @@ function RuleTextArea({
   );
 }
 
-/** Flight duration. Matches the CSS transition on the card below. */
-const CLOSE_MS = 260;
-
 /** Canvas-scope sentinel: show the rules on every Canvas at once. */
 const ALL_CANVASES = "__all__";
 
@@ -265,39 +269,6 @@ export function ActiveRulesPanel() {
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
-
-  // ── Closing choreography ──────────────────────────────────────────────────
-  // The panel flies back into the Status Bar control that reopens it, instead
-  // of blinking out. A modal that vanishes leaves the user hunting for the way
-  // back; one that visibly returns somewhere teaches the location once.
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [flight, setFlight] = useState<CSSProperties | null>(null);
-
-  const beginClose = useCallback(() => {
-    if (flight) return; // already on its way out
-    const card = cardRef.current;
-    const anchorEl = document.getElementById(RULES_ANCHOR_ID);
-    const reducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-    // No anchor on screen, or the user asked for less motion: just close.
-    if (!card || !anchorEl || reducedMotion) {
-      closeActiveRulesPanel();
-      return;
-    }
-
-    const c = card.getBoundingClientRect();
-    const a = anchorEl.getBoundingClientRect();
-    setFlight({
-      transform:
-        `translate(${a.left + a.width / 2 - (c.left + c.width / 2)}px, ` +
-        `${a.top + a.height / 2 - (c.top + c.height / 2)}px) ` +
-        `scale(${Math.max(0.04, a.width / c.width)})`,
-      opacity: 0,
-    });
-    window.setTimeout(closeActiveRulesPanel, CLOSE_MS);
-  }, [flight, closeActiveRulesPanel]);
 
   // ── Inline-edit state ──────────────────────────────────────────────────────
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -550,7 +521,7 @@ export function ActiveRulesPanel() {
     if (entry.elementType === "node") selectNode(entry.elementId);
     else selectEdge(entry.elementId);
     setInspectorOpen(true);
-    beginClose();
+    closeActiveRulesPanel();
   }
 
   const targetOption = elementOptions.find((o) => o.id === targetId);
@@ -574,76 +545,52 @@ export function ActiveRulesPanel() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div
-      className={cn(
-        "fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-sm",
-        "transition-opacity duration-200",
-        flight && "pointer-events-none opacity-0",
-      )}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) beginClose();
-      }}
+    <FloatingWindow
+      open
+      onClose={closeActiveRulesPanel}
+      title="Active Rules"
+      icon={<ScrollText size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
+      flyToOnClose={RULES_ANCHOR_ID}
+      storageKey="cascade.rules.window"
+      defaultSize={{ w: 640, h: 520 }}
+      minSize={{ w: 420, h: 260 }}
+      headerActions={
+        <>
+          {/* Which Canvas's rules to list. Starts on the one you are looking
+              at; the panel used to infer this and give no way to look
+              anywhere else. */}
+          <select
+            value={scope}
+            onChange={(e) => setScopeCanvasId(e.target.value)}
+            title="Which canvas's rules to show"
+            className="rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+          >
+            {canvasOrder.map((id) => {
+              const canvas = allCanvasesMap[id];
+              if (!canvas) return null;
+              return (
+                <option key={id} value={id}>
+                  {canvas.label ?? id}
+                </option>
+              );
+            })}
+            <option value={ALL_CANVASES}>All canvases</option>
+          </select>
+          <span className="text-xs text-zinc-400">
+            {ruleEntries.length} rule{ruleEntries.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={toggleRulesManualPanel}
+            className="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            title="Open the rule-writing manual"
+          >
+            <BookOpen size={14} />
+            Manual
+          </button>
+        </>
+      }
     >
-      <div
-        ref={cardRef}
-        style={flight ?? undefined}
-        className={cn(
-          "mt-10 flex max-h-[58vh] w-[640px] max-w-[95vw] flex-col rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
-          "origin-center transition-[transform,opacity] duration-[260ms] ease-in",
-        )}
-      >
-
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-              Active Rules
-            </h2>
-            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
-              {/* Which Canvas's rules to list. Starts on the one you are
-                  looking at; the panel used to infer this and give no way to
-                  look anywhere else. */}
-              <select
-                value={scope}
-                onChange={(e) => setScopeCanvasId(e.target.value)}
-                title="Which canvas's rules to show"
-                className="rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              >
-                {canvasOrder.map((id) => {
-                  const canvas = allCanvasesMap[id];
-                  if (!canvas) return null;
-                  return (
-                    <option key={id} value={id}>
-                      {canvas.label ?? id}
-                    </option>
-                  );
-                })}
-                <option value={ALL_CANVASES}>All canvases</option>
-              </select>
-              <span>
-                {ruleEntries.length} rule{ruleEntries.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={toggleRulesManualPanel}
-              className="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              title="Open the rule-writing manual"
-            >
-              <BookOpen size={14} />
-              Manual
-            </button>
-            <button
-              onClick={beginClose}
-              title="Close — it goes back to the Rules counter in the status bar"
-              className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* ── Rule list ──────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-3">
           {ruleEntries.length === 0 && !addingRule ? (
@@ -940,6 +887,6 @@ export function ActiveRulesPanel() {
           )}
         </div>
       </div>
-    </div>
+    </FloatingWindow>
   );
 }

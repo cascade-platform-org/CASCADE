@@ -22,6 +22,7 @@ import {
   SkipWarning, vulnHint, isDefined,
 } from "./primitives";
 import { CanvasMembershipSection } from "./canvas-membership";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // VulnerabilityBatchRow — per-event row with local slider + apply button
@@ -416,7 +417,7 @@ export function MultiSelectPanel({
             />
             <span
               className="min-w-[2rem] rounded px-1.5 py-0.5 text-center text-xs font-medium text-white"
-              style={{ backgroundColor: currentLevel?.color ?? "#94a3b8" }}
+              style={{ backgroundColor: currentLevel?.color ?? brandColor("neutral", 400) }}
             >
               {funcValue}
             </span>

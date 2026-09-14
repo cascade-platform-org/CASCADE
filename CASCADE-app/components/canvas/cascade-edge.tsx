@@ -14,6 +14,7 @@ import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store"
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useElementHeatmapColor } from "./snapshot-colors";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 export function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean, targetCanvasLabel?: string): RFEdge {
   return {
@@ -82,7 +83,7 @@ function CascadeEdge({
       id={id}
       path={edgePath}
       style={{
-        stroke: selected ? "#3b82f6" : levelColor,
+        stroke: selected ? brandColor("accent", 500) : levelColor,
         strokeWidth: selected ? 2.5 : 1.5,
         strokeDasharray: data?.isInterCanvas ? "5,4" : undefined,
       }}

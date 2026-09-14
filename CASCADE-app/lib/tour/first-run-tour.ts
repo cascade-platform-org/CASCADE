@@ -16,61 +16,17 @@
  * Anchors are `data-tour="…"` attributes on the real components, never CSS or
  * DOM-structure selectors. `resolve` is the exception, for when a `data-tour`
  * anchor is too coarse to aim at — see the "Open an element" step.
+ *
+ * The step shape and the shared gate helpers live in `lib/tour/types.ts`.
  */
 
 import { useNetworkStore } from "@/store/network-store";
-import { useHistoryStore } from "@/store/history-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useUiStore } from "@/store/ui-store";
-
-export interface TourStep {
-  /** Value of the target's `data-tour` attribute. Omit for a centred step. */
-  anchor?: string;
-  /**
-   * Finer spotlight than `anchor` can express, resolved when the tour starts.
-   * Falls back to `anchor` when it returns null.
-   */
-  resolve?: () => HTMLElement | null;
-  title: string;
-  body: string;
-  side?: "top" | "bottom" | "left" | "right";
-  /**
-   * `data-tour` anchor to position the card against, when sitting next to the
-   * ringed target would cover what the step asks the user to use — a control
-   * that opens a panel over its own surroundings. The ring stays on the target.
-   */
-  cardAnchor?: string;
-  /**
-   * Called when the step appears; returns a predicate re-checked on every store
-   * change. The step advances by itself once the predicate turns true.
-   */
-  waitFor?: () => () => boolean;
-  /** Shown under the body while waiting, in place of a plain "click Next". */
-  waitHint?: string;
-}
+import { awaitUpdate, type TourStep } from "@/lib/tour/types";
 
 /** The sample this tour is written against — 6 nodes and one Earthquake hazard. */
 export const TOUR_SAMPLE_FILE = "IJDRR_example.json";
-
-/** `updateHistory` is latest-first, so entry 0 is the most recent action. */
-function latestUpdate(): { id: string; update_type: string } | undefined {
-  return useHistoryStore.getState().updateHistory[0];
-}
-
-/**
- * Waits for a *new* history entry of the given kind. Comparing entry ids rather
- * than just the type is what stops a pre-loaded scenario from satisfying the
- * step before the user has done anything.
- */
-function awaitUpdate(type: string): () => () => boolean {
-  return () => {
-    const armedAt = latestUpdate()?.id;
-    return () => {
-      const latest = latestUpdate();
-      return !!latest && latest.id !== armedAt && latest.update_type === type;
-    };
-  };
-}
 
 /** The element drawn for a node carrying this label, if it is on screen. */
 function nodeElementByLabel(label: string): HTMLElement | null {
@@ -85,20 +41,20 @@ function nodeElementByLabel(label: string): HTMLElement | null {
 
 export const FIRST_RUN_TOUR: TourStep[] = [
   {
-    title: "A one-minute tour",
+    title: "A worked example",
     body:
-      "You are looking at a small worked example after an earthquake: an electric source " +
-      "feeds a substation, which drives a water pump serving a city and a hospital. We " +
-      "will rewind it and produce this damage ourselves.",
+      "A small interdependent system after an earthquake: an electric source feeds a " +
+      "substation, the substation drives a water pump, and the pump serves a city and a " +
+      "hospital. The scenario is restored and reproduced step by step.",
   },
   {
     anchor: "canvas",
     side: "right",
     title: "The network",
     body:
-      "Nodes are the elements of your system, and an arrow a → b means a supplies b. " +
-      "Colour is each element's condition: green operational, orange degraded, red " +
-      "failed. Only the source was hit directly — everything else here is consequence.",
+      "Nodes are the elements of the system; an edge a → b denotes that a supplies b. Colour " +
+      "encodes Functionality: green operational, orange degraded, red critical. Only the " +
+      "source was damaged directly; every other state is a consequence.",
   },
   {
     anchor: "canvas",
@@ -107,7 +63,7 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     resolve: () => nodeElementByLabel("Substation"),
     side: "left",
     title: "Open an element",
-    body: "Click the Substation node to see how an element is configured.",
+    body: "Select the Substation to inspect how an element is configured.",
     waitHint: "Waiting for you to select a node…",
     waitFor: () => {
       const armedAt = [...useNetworkStore.getState().selectedNodeIds].join(",");
@@ -120,30 +76,28 @@ export const FIRST_RUN_TOUR: TourStep[] = [
   {
     anchor: "inspector",
     side: "left",
-    title: "What it provides and needs",
+    title: "Supply and demand",
     body:
-      "Categories are the services this element deals in. Supply Capacity makes it a " +
-      "source of one; Demand makes it a consumer. Node Type only changes the shape drawn " +
-      "— these two fields decide what it actually does.",
+      "Categories are the services this element deals in. Supply Capacity declares it a " +
+      "supplier of one; Demand declares it a consumer. Node Type determines the shape drawn " +
+      "and nothing else.",
   },
   {
     anchor: "inspector",
     side: "left",
-    title: "How hard it depends",
+    title: "Dependency and backup",
     body:
-      "For each category it consumes there is a Dependency level: N means an upstream " +
-      "failure hits in full, 1 means that service can never bring it down, and values " +
-      "between soften the blow. A backup goes further — the element holds its level and " +
-      "starts a countdown instead of dropping.",
+      "Each consumed category carries a Dependency level: N transmits an upstream failure in " +
+      "full, 1 makes that service unable to degrade the element, intermediate values attenuate " +
+      "it. A backup instead defers the drop — the element holds its level and a countdown starts.",
   },
   {
     anchor: "reset",
     side: "bottom",
-    title: "Rewind it",
+    title: "Restore the baseline",
     body:
-      "The damage on screen is a saved result — an earthquake someone already ran. Click " +
-      "Reset to put the network back to how it was before it, then cause the damage " +
-      "yourself and watch it spread, rather than reading the outcome.",
+      "The damage on screen is a stored result of an earlier run. Reset restores the network " +
+      "to its Scenario Baseline, so the cascade can be reproduced rather than read.",
     waitHint: "Waiting for a Reset…",
     waitFor: awaitUpdate("scenario_reset"),
   },
@@ -152,8 +106,8 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "bottom",
     title: "Apply an Event",
     body:
-      "These are the hazards and disservices defined for the project. Click Earthquake — " +
-      "it damages the electric source. Nothing has spread yet.",
+      "These are the hazards and disservices defined for the project. Apply Earthquake: it " +
+      "damages the electric source. No consequence has been computed yet.",
     waitHint: "Waiting for you to apply an Event…",
     waitFor: awaitUpdate("event_applied"),
   },
@@ -162,8 +116,8 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "bottom",
     title: "Propagate",
     body:
-      "Now run the engine. It works out how that one failure travels through the graph " +
-      "and stops when nothing else can get worse.",
+      "Run the engine. It propagates that failure through the graph and terminates when no " +
+      "element can degrade further.",
     waitHint: "Waiting for a Propagation…",
     waitFor: awaitUpdate("propagation"),
   },
@@ -172,9 +126,9 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "right",
     title: "Read the cascade",
     body:
-      "Select anything that changed colour: the Inspector names which upstream element " +
-      "or Event caused it. An amber ring means the element is holding on a backup rather " +
-      "than having survived.",
+      "Select any element that changed colour: the Inspector names the upstream element or " +
+      "Event responsible. An amber ring marks an element held up by a backup rather than one " +
+      "that was unaffected.",
   },
   {
     anchor: "temporal",
@@ -184,8 +138,8 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "bottom",
     title: "Advance the clock",
     body:
-      "Backups count down, and time only moves when you jump it from here. That is when " +
-      "the second wave of a cascade shows up.",
+      "Backups consume their duration only when time advances, and time advances only from " +
+      "here. A Temporal Jump produces the second wave of the cascade.",
     waitHint: "Waiting for a Temporal Jump…",
     waitFor: () => {
       const armedAt = useUiStore.getState().temporalJumpElapsedHours;
@@ -197,15 +151,7 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     side: "bottom",
     title: "That is the loop",
     body:
-      "Edit, apply, propagate, compare. Help opens the manual: what every attribute does, " +
-      "how to write rules, and how to test an intervention.",
+      "Edit, apply, propagate, compare. Help opens the manual: what each attribute does, how " +
+      "to write Rules, and how to evaluate an intervention.",
   },
 ];
-
-/** Anchors named by the tour that are not currently in the DOM. Dev guard. */
-export function missingTourAnchors(steps: TourStep[] = FIRST_RUN_TOUR): string[] {
-  if (typeof document === "undefined") return [];
-  return [...new Set(steps.map((s) => s.anchor).filter((a): a is string => !!a))].filter(
-    (a) => !document.querySelector(`[data-tour="${a}"]`),
-  );
-}

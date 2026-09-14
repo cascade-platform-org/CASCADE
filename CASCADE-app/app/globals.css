@@ -27,29 +27,53 @@
 @theme {
   /* ── THE FIVE NUMBERS ─────────────────────────────────────────────
    * Hue angles in OKLCH degrees. This is the whole palette.
-   * neutral 258  — brand-slate (256.2) / brand-mist (256.8)
-   * danger   25  — brand-critical #ef4444, also functionality level 1
-   * warning  70  — amber
-   * success 149  — green
-   * accent  263  — the platform's interactive blue
+   *
+   * The theme is resilience — the bamboo kind: a system that bends,
+   * degrades and recovers rather than one that is either fine or on
+   * fire. So the colours are the materials of that idea, held at low
+   * chroma: nothing here is a saturated alert colour.
+   *
+   * neutral  92  — kept, but at CHROMA ZERO: the greys are true greys
+   *                and the near-blacks are near-black. A tinted surface
+   *                reads as dirty rather than as warm, and every panel
+   *                in the app is a surface.
+   * danger   28  — clay red. Warm and definite, not emergency scarlet.
+   * warning  70  — amber. Deliberately not olive: a yellow pulled
+   *                towards green turns mustard, and mustard reads as
+   *                dirt rather than as caution.
+   * success 150  — leaf. Green with only a trace of yellow in it.
+   * accent  210  — petrol. The one cool hue, and near-complement of
+   *                the clay red (28 + 180 = 208), so "interactive" and
+   *                "something is wrong" sit at opposite ends of the
+   *                wheel — they are the two a user must never confuse.
+   *
+   * Hue separations run 50°, 52°, 72°: far enough apart to name, close
+   * enough (danger → warning → success are analogous) to read as one
+   * system rather than five stickers.
    * ----------------------------------------------------------------- */
-  --hue-neutral: 258;
-  --hue-danger: 25;
+  --hue-neutral: 92;
+  --hue-danger: 28;
   --hue-warning: 70;
-  --hue-success: 149;
-  --hue-accent: 263;
+  --hue-success: 150;
+  --hue-accent: 210;
 
   /* ── Brand marks ──────────────────────────────────────────────────
-   * Fixed hexes, not ramp steps: these are the logo's colours and must
-   * match the committed SVG/PNG assets byte for byte (docs/assets/).
+   * The logo's colours, and ramp steps like everything else — they used
+   * to be fixed hexes, which meant a hue change repainted the platform
+   * and left the mark behind. `docs/assets/build.py` derives the same
+   * values from the same five hues and regenerates the SVG/PNG assets,
+   * so "change a hue" still repaints everything.
+   *
+   * Ink and abyss are neutral near-blacks: the mark's colour is the
+   * terracotta of its failing node, not a tinted background.
    * ----------------------------------------------------------------- */
-  --color-brand-ink: #0f172a;
-  --color-brand-paper: #f8fafc;
-  --color-brand-slate: #5b6675;
-  --color-brand-mist: #94a3b8;
-  --color-brand-abyss: #0b1220;
-  --color-brand-critical: #ef4444;
-  --color-brand-critical-soft: #f87171;
+  --color-brand-ink: oklch(16% 0 var(--hue-neutral));
+  --color-brand-abyss: oklch(10% 0 var(--hue-neutral));
+  --color-brand-paper: var(--color-zinc-50);
+  --color-brand-slate: var(--color-zinc-600);
+  --color-brand-mist: var(--color-zinc-400);
+  --color-brand-critical: var(--color-red-500);
+  --color-brand-critical-soft: var(--color-red-400);
 
   /* ── Semantic roles ───────────────────────────────────────────────
    * Preferred in new code: `bg-danger`, `text-warning`, `border-accent`.
@@ -66,21 +90,22 @@
   --color-success-soft: var(--color-green-50);
 
   /* ── Neutral ramp (zinc) — surfaces, text, borders ─────────────────
-   * Chroma is raised above stock zinc so the greys carry the mark's
-   * slate cast instead of reading as flat grey. 400 lands on
-   * brand-mist; 500/600 straddle brand-slate.
+   * Achromatic on purpose. The coloured roles carry the brand; the
+   * surfaces stay out of the way, so white is white and black is black.
+   * The hue variable is still referenced so the ramp cannot be edited
+   * into a tint by accident — at chroma 0 it has no effect.
    * ----------------------------------------------------------------- */
-  --color-zinc-50: oklch(98.5% 0.003 var(--hue-neutral));
-  --color-zinc-100: oklch(96.7% 0.006 var(--hue-neutral));
-  --color-zinc-200: oklch(92% 0.012 var(--hue-neutral));
-  --color-zinc-300: oklch(87.1% 0.019 var(--hue-neutral));
-  --color-zinc-400: oklch(70.5% 0.035 var(--hue-neutral));
-  --color-zinc-500: oklch(55.2% 0.033 var(--hue-neutral));
-  --color-zinc-600: oklch(44.2% 0.03 var(--hue-neutral));
-  --color-zinc-700: oklch(37% 0.03 var(--hue-neutral));
-  --color-zinc-800: oklch(27.4% 0.032 var(--hue-neutral));
-  --color-zinc-900: oklch(21% 0.036 var(--hue-neutral));
-  --color-zinc-950: oklch(14.1% 0.03 var(--hue-neutral));
+  --color-zinc-50: oklch(98.5% 0.0 var(--hue-neutral));
+  --color-zinc-100: oklch(96.7% 0.0 var(--hue-neutral));
+  --color-zinc-200: oklch(92.0% 0.0 var(--hue-neutral));
+  --color-zinc-300: oklch(87.1% 0.0 var(--hue-neutral));
+  --color-zinc-400: oklch(70.5% 0.0 var(--hue-neutral));
+  --color-zinc-500: oklch(55.2% 0.0 var(--hue-neutral));
+  --color-zinc-600: oklch(44.2% 0.0 var(--hue-neutral));
+  --color-zinc-700: oklch(37.0% 0.0 var(--hue-neutral));
+  --color-zinc-800: oklch(27.4% 0.0 var(--hue-neutral));
+  --color-zinc-900: oklch(21.0% 0.0 var(--hue-neutral));
+  --color-zinc-950: oklch(14.1% 0.0 var(--hue-neutral));
 
   /* Aliases: the same ramp under Tailwind's other neutral names, so a
      stray `slate-`/`gray-`/`neutral-` class cannot smuggle in a
@@ -109,33 +134,33 @@
   --color-gray-950: var(--color-zinc-950);
 
   /* ── Danger ramp (red) — errors, destructive actions, level 1 ──── */
-  --color-red-50: oklch(97.1% 0.013 var(--hue-danger));
-  --color-red-100: oklch(93.6% 0.032 var(--hue-danger));
-  --color-red-200: oklch(88.5% 0.062 var(--hue-danger));
-  --color-red-300: oklch(80.8% 0.114 var(--hue-danger));
-  --color-red-400: oklch(70.4% 0.191 var(--hue-danger));
-  --color-red-500: oklch(63.7% 0.237 var(--hue-danger));
-  --color-red-600: oklch(57.7% 0.245 var(--hue-danger));
-  --color-red-700: oklch(50.5% 0.213 var(--hue-danger));
-  --color-red-800: oklch(44.4% 0.177 var(--hue-danger));
-  --color-red-900: oklch(39.6% 0.141 var(--hue-danger));
-  --color-red-950: oklch(25.8% 0.092 var(--hue-danger));
+  --color-red-50: oklch(97.1% 0.009 var(--hue-danger));
+  --color-red-100: oklch(93.6% 0.022 var(--hue-danger));
+  --color-red-200: oklch(88.5% 0.042 var(--hue-danger));
+  --color-red-300: oklch(80.8% 0.078 var(--hue-danger));
+  --color-red-400: oklch(70.4% 0.149 var(--hue-danger));
+  --color-red-500: oklch(63.7% 0.185 var(--hue-danger));
+  --color-red-600: oklch(57.7% 0.191 var(--hue-danger));
+  --color-red-700: oklch(50.5% 0.166 var(--hue-danger));
+  --color-red-800: oklch(44.4% 0.138 var(--hue-danger));
+  --color-red-900: oklch(39.6% 0.11 var(--hue-danger));
+  --color-red-950: oklch(25.8% 0.072 var(--hue-danger));
   --color-rose-50: var(--color-red-50);
   --color-rose-500: var(--color-red-500);
   --color-rose-600: var(--color-red-600);
 
   /* ── Warning ramp (amber) ─────────────────────────────────────── */
-  --color-amber-50: oklch(98.7% 0.022 var(--hue-warning));
-  --color-amber-100: oklch(96.2% 0.059 var(--hue-warning));
-  --color-amber-200: oklch(92.4% 0.12 var(--hue-warning));
-  --color-amber-300: oklch(87.9% 0.169 var(--hue-warning));
-  --color-amber-400: oklch(82.8% 0.189 var(--hue-warning));
-  --color-amber-500: oklch(76.9% 0.188 var(--hue-warning));
-  --color-amber-600: oklch(66.6% 0.179 var(--hue-warning));
-  --color-amber-700: oklch(55.5% 0.163 var(--hue-warning));
-  --color-amber-800: oklch(47.3% 0.137 var(--hue-warning));
-  --color-amber-900: oklch(41.4% 0.112 var(--hue-warning));
-  --color-amber-950: oklch(27.9% 0.077 var(--hue-warning));
+  --color-amber-50: oklch(98.7% 0.008 var(--hue-warning));
+  --color-amber-100: oklch(96.2% 0.024 var(--hue-warning));
+  --color-amber-200: oklch(92.4% 0.053 var(--hue-warning));
+  --color-amber-300: oklch(87.9% 0.086 var(--hue-warning));
+  --color-amber-400: oklch(82.8% 0.128 var(--hue-warning));
+  --color-amber-500: oklch(76.9% 0.147 var(--hue-warning));
+  --color-amber-600: oklch(66.6% 0.135 var(--hue-warning));
+  --color-amber-700: oklch(55.5% 0.113 var(--hue-warning));
+  --color-amber-800: oklch(47.3% 0.096 var(--hue-warning));
+  --color-amber-900: oklch(41.4% 0.085 var(--hue-warning));
+  --color-amber-950: oklch(27.9% 0.06 var(--hue-warning));
   --color-yellow-400: var(--color-amber-400);
   --color-yellow-500: var(--color-amber-500);
   --color-orange-50: var(--color-amber-50);
@@ -147,17 +172,17 @@
   --color-orange-900: var(--color-amber-900);
 
   /* ── Success ramp (green) ─────────────────────────────────────── */
-  --color-green-50: oklch(98.2% 0.018 var(--hue-success));
-  --color-green-100: oklch(96.2% 0.044 var(--hue-success));
-  --color-green-200: oklch(92.5% 0.084 var(--hue-success));
-  --color-green-300: oklch(87.1% 0.15 var(--hue-success));
-  --color-green-400: oklch(79.2% 0.209 var(--hue-success));
-  --color-green-500: oklch(72.3% 0.219 var(--hue-success));
-  --color-green-600: oklch(62.7% 0.194 var(--hue-success));
-  --color-green-700: oklch(52.7% 0.154 var(--hue-success));
-  --color-green-800: oklch(44.8% 0.119 var(--hue-success));
-  --color-green-900: oklch(39.3% 0.095 var(--hue-success));
-  --color-green-950: oklch(26.6% 0.065 var(--hue-success));
+  --color-green-50: oklch(98.2% 0.012 var(--hue-success));
+  --color-green-100: oklch(96.2% 0.03 var(--hue-success));
+  --color-green-200: oklch(92.5% 0.057 var(--hue-success));
+  --color-green-300: oklch(87.1% 0.102 var(--hue-success));
+  --color-green-400: oklch(79.2% 0.163 var(--hue-success));
+  --color-green-500: oklch(72.3% 0.171 var(--hue-success));
+  --color-green-600: oklch(62.7% 0.151 var(--hue-success));
+  --color-green-700: oklch(52.7% 0.12 var(--hue-success));
+  --color-green-800: oklch(44.8% 0.093 var(--hue-success));
+  --color-green-900: oklch(39.3% 0.074 var(--hue-success));
+  --color-green-950: oklch(26.6% 0.051 var(--hue-success));
   --color-emerald-50: var(--color-green-50);
   --color-emerald-100: var(--color-green-100);
   --color-emerald-400: var(--color-green-400);
@@ -166,17 +191,17 @@
   --color-emerald-700: var(--color-green-700);
 
   /* ── Accent ramp (blue) — interactive, selection, Analysis ─────── */
-  --color-blue-50: oklch(97% 0.014 var(--hue-accent));
-  --color-blue-100: oklch(93.2% 0.032 var(--hue-accent));
-  --color-blue-200: oklch(88.2% 0.059 var(--hue-accent));
-  --color-blue-300: oklch(80.9% 0.105 var(--hue-accent));
-  --color-blue-400: oklch(70.7% 0.165 var(--hue-accent));
-  --color-blue-500: oklch(62.3% 0.214 var(--hue-accent));
-  --color-blue-600: oklch(54.6% 0.245 var(--hue-accent));
-  --color-blue-700: oklch(48.8% 0.243 var(--hue-accent));
-  --color-blue-800: oklch(42.4% 0.199 var(--hue-accent));
-  --color-blue-900: oklch(37.9% 0.146 var(--hue-accent));
-  --color-blue-950: oklch(28.2% 0.091 var(--hue-accent));
+  --color-blue-50: oklch(97.0% 0.01 var(--hue-accent));
+  --color-blue-100: oklch(93.2% 0.022 var(--hue-accent));
+  --color-blue-200: oklch(88.2% 0.04 var(--hue-accent));
+  --color-blue-300: oklch(80.9% 0.071 var(--hue-accent));
+  --color-blue-400: oklch(70.7% 0.115 var(--hue-accent));
+  --color-blue-500: oklch(62.3% 0.102 var(--hue-accent));
+  --color-blue-600: oklch(54.6% 0.088 var(--hue-accent));
+  --color-blue-700: oklch(48.8% 0.079 var(--hue-accent));
+  --color-blue-800: oklch(42.4% 0.07 var(--hue-accent));
+  --color-blue-900: oklch(37.9% 0.062 var(--hue-accent));
+  --color-blue-950: oklch(28.2% 0.047 var(--hue-accent));
   --color-sky-50: var(--color-blue-50);
   --color-sky-100: var(--color-blue-100);
   --color-sky-400: var(--color-blue-400);

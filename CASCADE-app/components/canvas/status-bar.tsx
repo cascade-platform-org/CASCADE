@@ -64,6 +64,7 @@ export function StatusBar() {
 
       <button
         id={RULES_ANCHOR_ID}
+        data-tour="rules"
         onClick={toggleActiveRulesPanel}
         className={cn(
           "rounded px-1 transition-colors duration-300 hover:text-zinc-600 dark:hover:text-zinc-300",

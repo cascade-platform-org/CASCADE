@@ -1,0 +1,1572 @@
+{
+  "project": {
+    "version": "2.0",
+    "meta": {
+      "name": "IJDRR example",
+      "created_at": "2026-09-14T13:40:21.744Z",
+      "updated_at": "2026-09-14T13:40:21.744Z"
+    },
+    "nodes": {
+      "node-Pr107eaY": {
+        "id": "node-Pr107eaY",
+        "functionality": 3,
+        "label": "Operator",
+        "node_type": "Personnel",
+        "node_categories": [
+          "operator"
+        ],
+        "functionality_time": 0,
+        "position": {
+          "x": 399.0595011899433,
+          "y": 316.29488771584465
+        },
+        "rules": []
+      },
+      "node-3dR9MeCn": {
+        "id": "node-3dR9MeCn",
+        "functionality": 3,
+        "label": "Electric Source",
+        "node_type": "Source",
+        "node_categories": [
+          "electric"
+        ],
+        "functionality_time": 0,
+        "position": {
+          "x": 397.375,
+          "y": 242.625
+        },
+        "supply_capacity": {
+          "electric": 10
+        },
+        "vulnerability_levels": {
+          "oQtVYPRrdEgfa_3HQvQUQ": 2
+        },
+        "rules": []
+      },
+      "node-KM_lw8FE": {
+        "id": "node-KM_lw8FE",
+        "functionality": 3,
+        "label": "Substation",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "electric"
+        ],
+        "functionality_time": 0,
+        "position": {
+          "x": 508.8922317079705,
+          "y": 240.22310514449543
+        }
+      },
+      "node-uJFHyvJ5": {
+        "id": "node-uJFHyvJ5",
+        "functionality": 3,
+        "label": "Water Pump",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "functionality_time": 0,
+        "position": {
+          "x": 507.6568451820691,
+          "y": 314.7580922072109
+        },
+        "category_dependency_profiles": {
+          "electric": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 24,
+            "demand": 1
+          }
+        }
+      },
+      "node-mYW8d9_h": {
+        "id": "node-mYW8d9_h",
+        "functionality": 3,
+        "label": "City",
+        "node_type": "Service",
+        "functionality_time": 0,
+        "importance": 1,
+        "position": {
+          "x": 615.3129685577912,
+          "y": 305.5327693754286
+        },
+        "category_dependency_profiles": {
+          "electric": {
+            "dependency_level": 2,
+            "demand": 5
+          },
+          "water": {
+            "dependency_level": 3,
+            "demand": 5
+          }
+        }
+      },
+      "node-38A0gTLb": {
+        "id": "node-38A0gTLb",
+        "functionality": 3,
+        "label": "Hospital",
+        "node_type": "Service",
+        "functionality_time": 0,
+        "importance": 0.7,
+        "position": {
+          "x": 623.0185895827192,
+          "y": 237.68194857112297
+        },
+        "category_dependency_profiles": {
+          "electric": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 239,
+            "demand": 1
+          },
+          "water": {
+            "dependency_level": 3,
+            "backup": true,
+            "backup_duration": 48,
+            "demand": 1
+          }
+        }
+      },
+      "node-H89F8O4w": {
+        "id": "node-H89F8O4w",
+        "functionality": 3,
+        "label": "Substation 2",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "electric"
+        ],
+        "functionality_time": 0,
+        "position": {
+          "x": 509.3922317079705,
+          "y": 159.72310514449543
+        }
+      }
+    },
+    "edges": {
+      "edge-i0bQmKRE": {
+        "id": "edge-i0bQmKRE",
+        "source": "node-Pr107eaY",
+        "target": "node-3dR9MeCn",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "tl",
+        "targetHandle": "bl"
+      },
+      "edge-6YzHF_EQ": {
+        "id": "edge-6YzHF_EQ",
+        "source": "node-3dR9MeCn",
+        "target": "node-KM_lw8FE",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "mr",
+        "targetHandle": "ml"
+      },
+      "edge-NPsHMxNF": {
+        "id": "edge-NPsHMxNF",
+        "source": "node-KM_lw8FE",
+        "target": "node-38A0gTLb",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "mr",
+        "targetHandle": "ml"
+      },
+      "edge-f_tnBXBy": {
+        "id": "edge-f_tnBXBy",
+        "source": "node-KM_lw8FE",
+        "target": "node-mYW8d9_h",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "mr",
+        "targetHandle": "tl"
+      },
+      "edge-hRxIEYFn": {
+        "id": "edge-hRxIEYFn",
+        "source": "node-uJFHyvJ5",
+        "target": "node-mYW8d9_h",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "mr",
+        "targetHandle": "ml"
+      },
+      "edge-vztw1dsl": {
+        "id": "edge-vztw1dsl",
+        "source": "node-uJFHyvJ5",
+        "target": "node-38A0gTLb",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "tr",
+        "targetHandle": "bl"
+      },
+      "edge-0eDb-0Ir": {
+        "id": "edge-0eDb-0Ir",
+        "source": "node-KM_lw8FE",
+        "target": "node-uJFHyvJ5",
+        "functionality": 3,
+        "functionality_time": 0,
+        "sourceHandle": "bl",
+        "targetHandle": "tl"
+      },
+      "edge-nDOARaF2": {
+        "id": "edge-nDOARaF2",
+        "source": "node-H89F8O4w",
+        "target": "node-KM_lw8FE",
+        "sourceHandle": "bl",
+        "targetHandle": "tl",
+        "functionality": 3
+      },
+      "edge-T3mEl6YV": {
+        "id": "edge-T3mEl6YV",
+        "source": "node-KM_lw8FE",
+        "target": "node-H89F8O4w",
+        "sourceHandle": "tr",
+        "targetHandle": "br",
+        "functionality": 3
+      },
+      "edge-Xqy_qyy1": {
+        "id": "edge-Xqy_qyy1",
+        "source": "node-3dR9MeCn",
+        "target": "node-H89F8O4w",
+        "sourceHandle": "tr",
+        "targetHandle": "ml",
+        "functionality": 3
+      }
+    },
+    "canvases": [
+      {
+        "id": "canvas-LljW8fXC",
+        "label": "Main Network",
+        "color": "#3b82f6",
+        "georeferenced": false,
+        "graph": {
+          "graph_type": "graph_type_1",
+          "node_ids": [
+            "node-Pr107eaY",
+            "node-3dR9MeCn",
+            "node-KM_lw8FE",
+            "node-uJFHyvJ5",
+            "node-mYW8d9_h",
+            "node-38A0gTLb",
+            "node-H89F8O4w"
+          ],
+          "edge_ids": [
+            "edge-i0bQmKRE",
+            "edge-6YzHF_EQ",
+            "edge-NPsHMxNF",
+            "edge-f_tnBXBy",
+            "edge-hRxIEYFn",
+            "edge-vztw1dsl",
+            "edge-0eDb-0Ir",
+            "edge-nDOARaF2",
+            "edge-T3mEl6YV",
+            "edge-Xqy_qyy1"
+          ]
+        }
+      }
+    ],
+    "update_history": [
+      {
+        "id": "_eivquIU6RMwMBtK3GB2p",
+        "timestamp": "2026-09-14T13:40:15.288Z",
+        "update_type": "scenario_reset",
+        "label": "Reset scenario",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "edge-Xqy_qyy1",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "2uh-7foskmu1FwfYkc80_",
+        "timestamp": "2026-09-14T13:40:14.077Z",
+        "update_type": "propagation",
+        "label": "Propagation (global)",
+        "canvas_id": "canvas-LljW8fXC",
+        "scope": "global",
+        "diff": {
+          "nodes": [],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 1
+                  }
+                }
+              ]
+            },
+            {
+              "id": "edge-Xqy_qyy1",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 1
+                  }
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "_xJLwj7Xg7NY20hOBDHlM",
+        "timestamp": "2026-09-14T13:40:13.097Z",
+        "update_type": "manual_functionality_update",
+        "label": "Manual functionality edit",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "JY1qSxnvXzqPX9DZiYy-e",
+        "timestamp": "2026-09-14T13:39:25.648Z",
+        "update_type": "graph_update",
+        "label": "Add edge",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [],
+          "edges": [
+            {
+              "id": "edge-Xqy_qyy1",
+              "op": "add",
+              "fields": [],
+              "record": {
+                "id": "edge-Xqy_qyy1",
+                "source": "node-3dR9MeCn",
+                "target": "node-H89F8O4w",
+                "sourceHandle": "tr",
+                "targetHandle": "ml",
+                "functionality": 3
+              }
+            }
+          ],
+          "canvases": [
+            {
+              "id": "canvas-LljW8fXC",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "graph",
+                  "before": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir",
+                      "edge-nDOARaF2",
+                      "edge-T3mEl6YV"
+                    ]
+                  },
+                  "after": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir",
+                      "edge-nDOARaF2",
+                      "edge-T3mEl6YV",
+                      "edge-Xqy_qyy1"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "lYE5DyHhJCe1UBQgcQo4l",
+        "timestamp": "2026-09-14T13:39:16.289Z",
+        "update_type": "scenario_reset",
+        "label": "Reset scenario",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                }
+              ]
+            },
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": true,
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "YqIMrU_mFjjxGT7zUP343",
+        "timestamp": "2026-09-14T13:39:14.134Z",
+        "update_type": "propagation",
+        "label": "Propagation (global)",
+        "canvas_id": "canvas-LljW8fXC",
+        "scope": "global",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": true
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 1
+                  }
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "Dawa6S04Q3sqP4zXg2jF9",
+        "timestamp": "2026-09-14T13:39:13.081Z",
+        "update_type": "manual_functionality_update",
+        "label": "Manual functionality edit",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "FqLRBJl3GHXI1ZGDF2N8U",
+        "timestamp": "2026-09-14T13:39:05.265Z",
+        "update_type": "scenario_reset",
+        "label": "Reset scenario",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                }
+              ]
+            },
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": true,
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-uJFHyvJ5",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 24,
+                  "after": 0
+                }
+              ]
+            },
+            {
+              "id": "node-mYW8d9_h",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 2,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 0.5,
+                    "edge-6YzHF_EQ": 0.5
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-38A0gTLb",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 239,
+                  "after": 0
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "kHhXUcZyDXGmWmHIDOW0s",
+        "timestamp": "2026-09-14T13:39:01.607Z",
+        "update_type": "propagation",
+        "label": "Propagation (global)",
+        "canvas_id": "canvas-LljW8fXC",
+        "scope": "global",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": true
+                }
+              ]
+            },
+            {
+              "id": "node-uJFHyvJ5",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 0,
+                  "after": 24
+                }
+              ]
+            },
+            {
+              "id": "node-mYW8d9_h",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 2
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 0.5,
+                    "edge-6YzHF_EQ": 0.5
+                  }
+                }
+              ]
+            },
+            {
+              "id": "node-38A0gTLb",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 0,
+                  "after": 239
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 1
+                  }
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "4nlOF-rHEpCv5ucVkSz9N",
+        "timestamp": "2026-09-14T13:39:00.673Z",
+        "update_type": "manual_functionality_update",
+        "label": "Manual functionality edit",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "2Yy9N5CY-Yh9efsPktgNw",
+        "timestamp": "2026-09-14T13:38:55.313Z",
+        "update_type": "scenario_reset",
+        "label": "Reset scenario",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                }
+              ]
+            },
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": true,
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-uJFHyvJ5",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 24,
+                  "after": 0
+                }
+              ]
+            },
+            {
+              "id": "node-mYW8d9_h",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 2,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 0.5,
+                    "edge-6YzHF_EQ": 0.5
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-38A0gTLb",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 239,
+                  "after": 0
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "D0ex0NwPDayotqEW9sNDc",
+        "timestamp": "2026-09-14T13:38:51.090Z",
+        "update_type": "propagation",
+        "label": "Propagation (global)",
+        "canvas_id": "canvas-LljW8fXC",
+        "scope": "global",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "direct_damage",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": true
+                }
+              ]
+            },
+            {
+              "id": "node-uJFHyvJ5",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 0,
+                  "after": 24
+                }
+              ]
+            },
+            {
+              "id": "node-mYW8d9_h",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 2
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 0.5,
+                    "edge-6YzHF_EQ": 0.5
+                  }
+                }
+              ]
+            },
+            {
+              "id": "node-38A0gTLb",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 0,
+                  "after": 239
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": "__CASCADE_ABSENT__",
+                  "after": {
+                    "node-3dR9MeCn": 1
+                  }
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      },
+      {
+        "id": "du_4nbT0TxRggIZmx_gV5",
+        "timestamp": "2026-09-14T13:38:50.257Z",
+        "update_type": "manual_functionality_update",
+        "label": "Manual functionality edit",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 3,
+                  "after": 1
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "F3P0_TRI6JirgZy7pFr0a",
+        "timestamp": "2026-09-14T13:38:43.864Z",
+        "update_type": "graph_update",
+        "label": "Add edge",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [],
+          "edges": [
+            {
+              "id": "edge-T3mEl6YV",
+              "op": "add",
+              "fields": [],
+              "record": {
+                "id": "edge-T3mEl6YV",
+                "source": "node-KM_lw8FE",
+                "target": "node-H89F8O4w",
+                "sourceHandle": "tr",
+                "targetHandle": "br",
+                "functionality": 3
+              }
+            }
+          ],
+          "canvases": [
+            {
+              "id": "canvas-LljW8fXC",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "graph",
+                  "before": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir",
+                      "edge-nDOARaF2"
+                    ]
+                  },
+                  "after": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir",
+                      "edge-nDOARaF2",
+                      "edge-T3mEl6YV"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ysftLHyrfm1B1o57-p9h-",
+        "timestamp": "2026-09-14T13:38:41.857Z",
+        "update_type": "graph_update",
+        "label": "Move node",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-H89F8O4w",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "position",
+                  "before": {
+                    "x": 508.3922317079705,
+                    "y": 177.72310514449543
+                  },
+                  "after": {
+                    "x": 509.3922317079705,
+                    "y": 159.72310514449543
+                  }
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "12VgMsCAb5n7-LQD980Ta",
+        "timestamp": "2026-09-14T13:38:40.961Z",
+        "update_type": "graph_update",
+        "label": "Add edge",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [],
+          "edges": [
+            {
+              "id": "edge-nDOARaF2",
+              "op": "add",
+              "fields": [],
+              "record": {
+                "id": "edge-nDOARaF2",
+                "source": "node-H89F8O4w",
+                "target": "node-KM_lw8FE",
+                "sourceHandle": "bl",
+                "targetHandle": "tl",
+                "functionality": 3
+              }
+            }
+          ],
+          "canvases": [
+            {
+              "id": "canvas-LljW8fXC",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "graph",
+                  "before": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir"
+                    ]
+                  },
+                  "after": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir",
+                      "edge-nDOARaF2"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "gQcO3MCQ2sV6X1JddwFQr",
+        "timestamp": "2026-09-14T13:38:32.488Z",
+        "update_type": "graph_update",
+        "label": "Move node",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-H89F8O4w",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "position",
+                  "before": {
+                    "x": 498.8922317079705,
+                    "y": 196.72310514449543
+                  },
+                  "after": {
+                    "x": 508.3922317079705,
+                    "y": 177.72310514449543
+                  }
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "ZhTrBy2Y4grmEGfwVO-4t",
+        "timestamp": "2026-09-14T13:38:31.601Z",
+        "update_type": "graph_update",
+        "label": "Move node",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-H89F8O4w",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "position",
+                  "before": {
+                    "x": 548.8922317079705,
+                    "y": 280.22310514449543
+                  },
+                  "after": {
+                    "x": 498.8922317079705,
+                    "y": 196.72310514449543
+                  }
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "canvases": []
+        }
+      },
+      {
+        "id": "-qwW-rRIDPyfeqLW6iccU",
+        "timestamp": "2026-09-14T13:38:30.355Z",
+        "update_type": "graph_update",
+        "label": "Paste 1 node",
+        "canvas_id": "canvas-LljW8fXC",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-H89F8O4w",
+              "op": "add",
+              "fields": [],
+              "record": {
+                "id": "node-H89F8O4w",
+                "functionality": 3,
+                "label": "Substation",
+                "node_type": "Infrastructure",
+                "node_categories": [
+                  "electric"
+                ],
+                "functionality_time": 0,
+                "position": {
+                  "x": 548.8922317079705,
+                  "y": 280.22310514449543
+                }
+              }
+            }
+          ],
+          "edges": [],
+          "canvases": [
+            {
+              "id": "canvas-LljW8fXC",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "graph",
+                  "before": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir"
+                    ]
+                  },
+                  "after": {
+                    "graph_type": "graph_type_1",
+                    "node_ids": [
+                      "node-Pr107eaY",
+                      "node-3dR9MeCn",
+                      "node-KM_lw8FE",
+                      "node-uJFHyvJ5",
+                      "node-mYW8d9_h",
+                      "node-38A0gTLb",
+                      "node-H89F8O4w"
+                    ],
+                    "edge_ids": [
+                      "edge-i0bQmKRE",
+                      "edge-6YzHF_EQ",
+                      "edge-NPsHMxNF",
+                      "edge-f_tnBXBy",
+                      "edge-hRxIEYFn",
+                      "edge-vztw1dsl",
+                      "edge-0eDb-0Ir"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "9DgQgt70L7yhT8bI5hV9d",
+        "timestamp": "2026-09-14T13:38:27.833Z",
+        "update_type": "scenario_reset",
+        "label": "Reset scenario",
+        "diff": {
+          "nodes": [
+            {
+              "id": "node-3dR9MeCn",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                }
+              ]
+            },
+            {
+              "id": "node-KM_lw8FE",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "direct_damage",
+                  "before": true,
+                  "after": "__CASCADE_ABSENT__"
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-uJFHyvJ5",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 24,
+                  "after": 0
+                }
+              ]
+            },
+            {
+              "id": "node-mYW8d9_h",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 2,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-KM_lw8FE": 0.5,
+                    "node-3dR9MeCn": 0.25,
+                    "edge-6YzHF_EQ": 0.25
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "node-38A0gTLb",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality_time",
+                  "before": 239,
+                  "after": 0
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "id": "edge-6YzHF_EQ",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-3dR9MeCn": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "edge-NPsHMxNF",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-KM_lw8FE": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "edge-f_tnBXBy",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-KM_lw8FE": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            },
+            {
+              "id": "edge-0eDb-0Ir",
+              "op": "update",
+              "fields": [
+                {
+                  "field": "functionality",
+                  "before": 1,
+                  "after": 3
+                },
+                {
+                  "field": "responsibility_share",
+                  "before": {
+                    "node-KM_lw8FE": 1
+                  },
+                  "after": "__CASCADE_ABSENT__"
+                }
+              ]
+            }
+          ],
+          "canvases": []
+        }
+      }
+    ],
+    "scorecard": []
+  },
+  "config": {
+    "version": "1.0",
+    "meta": {
+      "name": "Default Config"
+    },
+    "functionality_scale": [
+      {
+        "level": 1,
+        "label": "critical",
+        "color": "#ef4444"
+      },
+      {
+        "level": 2,
+        "label": "operational_warning",
+        "color": "#f97316"
+      },
+      {
+        "level": 3,
+        "label": "operational",
+        "color": "#22c55e"
+      }
+    ],
+    "categories": [
+      {
+        "name": "operator",
+        "category_type": "Requisite",
+        "icon": "LucideUserRound"
+      },
+      {
+        "name": "water",
+        "category_type": "Requisite",
+        "icon": "Droplet"
+      },
+      {
+        "name": "electric",
+        "category_type": "Requisite",
+        "icon": "Zap"
+      }
+    ],
+    "events": [
+      {
+        "id": "oQtVYPRrdEgfa_3HQvQUQ",
+        "label": "Earthquake",
+        "type": "hazard",
+        "frequency_per_10y": 1,
+        "attribute_mutations": {}
+      }
+    ],
+    "graph_types": [
+      {
+        "name": "graph_type_1",
+        "heuristics": [
+          {
+            "id": "source-to-demands-flow",
+            "enabled": true,
+            "params": {
+              "allocation": "priority_greedy"
+            }
+          }
+        ]
+      }
+    ],
+    "node_defaults": {}
+  }
+}

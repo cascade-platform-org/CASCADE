@@ -24,6 +24,7 @@ import type {
 } from "@/lib/schemas";
 import type { Node } from "@/lib/schemas/network";
 import type { EngineAlgorithms } from "@/lib/schemas/api";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Default configuration — N=3, no categories, no events
@@ -33,9 +34,9 @@ export const DEFAULT_CONFIG: ModelConfiguration = {
   version: "1.0",
   meta: { name: "Default Config" },
   functionality_scale: [
-    { level: 1, label: "critical",            color: "#ef4444" },
-    { level: 2, label: "operational_warning", color: "#f97316" },
-    { level: 3, label: "operational",         color: "#22c55e" },
+    { level: 1, label: "critical",            color: brandColor("danger", 500) },
+    { level: 2, label: "operational_warning", color: brandColor("warning", 500) },
+    { level: 3, label: "operational",         color: brandColor("success", 500) },
   ],
   categories: [],
   events: [],
@@ -104,6 +105,12 @@ export interface ConfigActions {
   addScaleLevel: () => void;
   removeScaleLevel: (level: number) => void;
   updateScaleLevel: (level: number, patch: Partial<Omit<FunctionalityScaleLevel, "level">>) => void;
+  /**
+   * Rearrange the scale, worst level first. Takes the current level numbers in
+   * their new order and renumbers them 1..N by position: the numbers are the
+   * scale's identity — every element's `functionality` is one of them — so they
+   * stay put and the labels and colours move between them.
+   */
   reorderScaleLevels: (orderedLevels: number[]) => void;
 
   // --- Categories (operate on draft) ---
@@ -297,7 +304,7 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         const levels = state.draft.functionality_scale;
         const nextLevel = levels.length > 0 ? Math.max(...levels.map((l) => l.level)) + 1 : 1;
-        levels.push({ level: nextLevel, label: `level_${nextLevel}`, color: "#94a3b8" });
+        levels.push({ level: nextLevel, label: `level_${nextLevel}`, color: brandColor("neutral", 400) });
         recomputeDirty(state);
       });
     },
@@ -324,7 +331,11 @@ export const useConfigStore = create<ConfigStore>()(
     reorderScaleLevels(orderedLevels) {
       set((state) => {
         const map = new Map(state.draft.functionality_scale.map((l) => [l.level, l]));
-        state.draft.functionality_scale = orderedLevels.map((lvl) => map.get(lvl)!).filter(Boolean);
+        const entries = orderedLevels.map((lvl) => map.get(lvl)).filter((l) => !!l);
+        // A partial order would silently drop levels — and dropping one shifts
+        // N, which changes what every stored Functionality means.
+        if (entries.length !== state.draft.functionality_scale.length) return;
+        state.draft.functionality_scale = entries.map((entry, i) => ({ ...entry, level: i + 1 }));
         recomputeDirty(state);
       });
     },
@@ -578,7 +589,7 @@ export const selectScaleLevels = (state: ConfigStore): FunctionalityScaleLevel[]
 
 /** Color for a given functionality integer level. Falls back to gray. */
 export const selectLevelColor = (level: number) => (state: ConfigStore): string =>
-  state.config.functionality_scale.find((l) => l.level === level)?.color ?? "#94a3b8";
+  state.config.functionality_scale.find((l) => l.level === level)?.color ?? brandColor("neutral", 400);
 
 /** First 5 events shown in the Action Bar. */
 export const selectActionBarEvents = (state: ConfigStore): EventDefinition[] =>

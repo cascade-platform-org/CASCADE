@@ -39,6 +39,7 @@ import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider } from "./zoom-slider";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Group node — coloured background labelled with the canvas name
@@ -103,7 +104,7 @@ function GlobalEdge({
       id={id}
       path={edgePath}
       style={{
-        stroke: selected ? "#3b82f6" : (data?.color ?? "#94a3b8"),
+        stroke: selected ? brandColor("accent", 500) : (data?.color ?? brandColor("neutral", 400)),
         strokeWidth: selected ? 2.5 : 1.5,
         strokeDasharray: data?.isInterCanvas ? "6 3" : undefined,
       }}
@@ -162,7 +163,8 @@ function GlobalViewCanvas() {
         const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
 
         return await toPng(viewport, {
-          backgroundColor: "#ffffff",
+          // Paper, not pure white: a snapshot should look like the canvas it came from.
+          backgroundColor: brandColor("neutral", 50),
           width: IMG_W,
           height: IMG_H,
           filter,
@@ -204,7 +206,7 @@ function GlobalViewCanvas() {
           id: `group-${canvas.id}`,
           type: "canvasGroup",
           position: { x: groupOffsetX, y: 60 },
-          data: { label: canvas.label ?? canvas.id, color: canvas.color ?? "#94a3b8" },
+          data: { label: canvas.label ?? canvas.id, color: canvas.color ?? brandColor("neutral", 400) },
           style: { width: 200, height: 120 },
         });
         groupOffsetX += 200 + GROUP_COL_GAP;
@@ -231,7 +233,7 @@ function GlobalViewCanvas() {
         id: `group-${canvas.id}`,
         type: "canvasGroup",
         position: { x: groupOffsetX, y: 60 },
-        data: { label: canvas.label ?? canvas.id, color: canvas.color ?? "#94a3b8" },
+        data: { label: canvas.label ?? canvas.id, color: canvas.color ?? brandColor("neutral", 400) },
         style: { width: groupW, height: groupH },
       });
 
@@ -303,7 +305,7 @@ function GlobalViewCanvas() {
         panOnScroll={false}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         <ZoomSlider />
       </ReactFlow>
 

@@ -44,6 +44,8 @@ export function Toolbox() {
         return (
           <div
             key={tool}
+            // Anchors for the build-a-model tour, which rings these two.
+            data-tour={tool === "add-node" ? "tool-add-node" : tool === "add-edge" ? "tool-add-edge" : undefined}
             className="relative"
             onMouseEnter={() => { if (isAddNode) setTemplatePopoverOpen(true); }}
             onMouseLeave={() => { if (isAddNode) setTemplatePopoverOpen(false); }}

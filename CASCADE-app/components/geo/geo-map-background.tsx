@@ -24,6 +24,7 @@ import { useReactFlow, useViewport } from "@xyflow/react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useMapViewportSync } from "@/hooks/useMapViewportSync";
 import type { GeoAnchor } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 // maplibre-gl 6 loads its tile-decoding work into a Web Worker, and under
 // Next.js the worker file has to be served as a plain same-origin asset:
@@ -473,9 +474,9 @@ export function GeoMapBackground({ canvasId }: GeoMapBackgroundProps) {
           }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <line x1="12" y1="2" x2="12" y2="22" stroke="#ef4444" strokeWidth="2" />
-            <line x1="2" y1="12" x2="22" y2="12" stroke="#ef4444" strokeWidth="2" />
-            <circle cx="12" cy="12" r="3" fill="#ef4444" />
+            <line x1="12" y1="2" x2="12" y2="22" stroke={brandColor("danger", 500)} strokeWidth="2" />
+            <line x1="2" y1="12" x2="22" y2="12" stroke={brandColor("danger", 500)} strokeWidth="2" />
+            <circle cx="12" cy="12" r="3" fill={brandColor("danger", 500)} />
           </svg>
         </div>
       )}

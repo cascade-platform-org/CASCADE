@@ -14,6 +14,7 @@
  */
 
 import type { ReactNode } from "react";
+import { TOURS, TOUR_IDS, type TourId } from "@/lib/tour/registry";
 
 const SECTIONS = [
   { id: "element", n: 1, title: "Setting up an element" },
@@ -136,12 +137,37 @@ function Contents() {
   );
 }
 
+/** One walkthrough offered in a single line: name, what it teaches, start. */
+function TourLine({
+  name,
+  blurb,
+  onStart,
+}: {
+  name: string;
+  blurb: string;
+  onStart: () => void;
+}) {
+  return (
+    <p className="text-xs text-zinc-500">
+      <button
+        type="button"
+        onClick={onStart}
+        className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400"
+      >
+        {name}
+      </button>{" "}
+      — {blurb}
+    </p>
+  );
+}
+
 export function UserManual({
   onOpenRulesManual,
   onStartTour,
 }: {
   onOpenRulesManual?: () => void;
-  onStartTour?: () => void;
+  /** Omitted where no tour can be started from — the list is then hidden. */
+  onStartTour?: (id: TourId) => void;
 }) {
   return (
     <div className="space-y-6 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
@@ -152,18 +178,25 @@ export function UserManual({
         <p className="text-xs text-zinc-500">
           Setting up elements, writing rules, running a scenario.
         </p>
-        {onStartTour && (
-          <button
-            type="button"
-            onClick={onStartTour}
-            className="text-xs font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400"
-          >
-            Take the guided tour →
-          </button>
-        )}
       </header>
 
       <Contents />
+
+      {/* The walkthroughs, one line each, straight from the registry: what
+          each teaches is declared once there, and the tour's own first card
+          says the rest. */}
+      {onStartTour && (
+        <div className="space-y-1">
+          {TOUR_IDS.map((id) => (
+            <TourLine
+              key={id}
+              name={TOURS[id].label}
+              blurb={TOURS[id].blurb}
+              onStart={() => onStartTour(id)}
+            />
+          ))}
+        </div>
+      )}
 
       <Section id="element" n={1} title="Setting up an element">
         <p className="text-xs text-zinc-500">
@@ -311,6 +344,12 @@ export function UserManual({
             applied. For a <strong>Hazard</strong> every affected element is also
             flagged <Code>direct_damage</Code>, which is what puts it on the repair
             list.
+          </p>
+          <p className="text-xs text-zinc-500">
+            The section is always in the Inspector, even before any Event exists —
+            that is the commonest reason a Propagation changes nothing, so it says
+            so rather than hiding. <strong>New event</strong> in it opens the Model
+            Configuration on the Events tab.
           </p>
         </Sub>
 

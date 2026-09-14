@@ -6,6 +6,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { cn, NumberInput, ColBtn } from "./primitives";
 import type { Node, CategoryDependencyProfiles, CategoryDependencyProfile } from "@/lib/schemas/network";
+import { brandColor } from "@/lib/brand";
 
 const NODE_TYPE_OPTIONS = ["Source", "Infrastructure", "Service", "Personnel"];
 
@@ -115,7 +116,7 @@ export function TabNodeDefaults() {
                             "rounded px-2 py-0.5 text-xs transition-colors",
                             active ? "text-white" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
                           )}
-                          style={active ? { backgroundColor: cat.color ?? "#6b7280" } : undefined}
+                          style={active ? { backgroundColor: cat.color ?? brandColor("neutral", 500) } : undefined}
                         >
                           {cat.name}
                         </button>

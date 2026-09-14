@@ -16,6 +16,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { categoryToIcon } from "@/lib/category-icons";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // DirectDamageEditor
@@ -323,7 +324,7 @@ export function VulnerabilityLevelsEditor({ eventId }: { eventId: string }) {
             className={cn("rounded px-2 py-0.5 text-xs transition-colors",
               filterCat === cat.name ? "text-white" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
             )}
-            style={filterCat === cat.name ? { backgroundColor: cat.color ?? "#6b7280" } : undefined}>
+            style={filterCat === cat.name ? { backgroundColor: cat.color ?? brandColor("neutral", 500) } : undefined}>
             {cat.name}
           </button>
         ))}
