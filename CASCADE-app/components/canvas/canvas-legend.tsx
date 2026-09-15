@@ -165,10 +165,10 @@ function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
                       strokeWidth={1.5}
                     />
                   </svg>
-                  <span className="text-zinc-600 dark:text-zinc-400">Functionality Time &gt; 0</span>
+                  <span className="text-zinc-600 dark:text-zinc-400">Functionality Time</span>
                 </div>
                 <div className="pl-[18px] text-[9px] leading-tight text-zinc-400">
-                  on backup: hours left before it drops
+                  on backup
                 </div>
               </div>
             </div>

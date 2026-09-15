@@ -18,14 +18,27 @@ let _iconCache: IconMap | null = null;
 
 export async function loadIconsIntoCache(): Promise<IconMap> {
   if (_iconCache) return _iconCache;
-  const { allIcons } = await import("@/lib/lucide-all");
+  const { allIcons, iconsByAnyName } = await import("@/lib/lucide-all");
   _iconCache = allIcons as IconMap;
-  primeIconRegistry(allIcons as Record<string, import("@/lib/category-icons").LucideIcon>);
+  primeIconRegistry(
+    allIcons as Record<string, import("@/lib/category-icons").LucideIcon>,
+    iconsByAnyName as Record<string, import("@/lib/category-icons").LucideIcon>,
+  );
   return _iconCache;
 }
 
-/** Names shown first in the picker (pinned as favourites). */
-export const FAVORITE_ICON_NAMES = Object.keys(ICON_REGISTRY);
+/**
+ * Names shown first in the picker (pinned as favourites).
+ *
+ * Under each icon's *canonical* name, not the name `ICON_REGISTRY` imports it
+ * as: two of those imports are deprecated aliases (`Waves` is
+ * `WavesHorizontal`, `Train` is `TramFront`), and the full pool lists icons
+ * canonically — so keying favourites off the import names would silently drop
+ * those two from the favourites row.
+ */
+export const FAVORITE_ICON_NAMES = Object.values(ICON_REGISTRY).map(
+  (icon) => (icon as unknown as { displayName: string }).displayName,
+);
 
 // ---------------------------------------------------------------------------
 // IconPickerButton — shared by category rows and event rows

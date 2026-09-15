@@ -80,11 +80,23 @@ function byKeyword(name: string): LucideIcon {
  */
 let _allIconsCache: Record<string, LucideIcon> | null = null;
 
+/**
+ * The same icons under every name lucide-react exports them as. `_allIconsCache`
+ * holds one entry per icon (canonical name only), so a project that stored an
+ * alias — `DropletIcon`, `LucideDroplet`, or a name Lucide has since renamed —
+ * resolves through here instead of falling back to the Tag placeholder.
+ */
+let _aliasCache: Record<string, LucideIcon> | null = null;
+
 /** Components subscribe here to be notified when the cache becomes ready. */
 const _readyCallbacks: Array<() => void> = [];
 
-export function primeIconRegistry(icons: Record<string, LucideIcon>): void {
+export function primeIconRegistry(
+  icons: Record<string, LucideIcon>,
+  aliases?: Record<string, LucideIcon>,
+): void {
   _allIconsCache = icons;
+  if (aliases) _aliasCache = aliases;
   _readyCallbacks.splice(0).forEach((fn) => fn());
 }
 
@@ -94,8 +106,11 @@ export function primeIconRegistry(icons: Record<string, LucideIcon>): void {
  */
 export async function loadAllIconsOnce(): Promise<void> {
   if (_allIconsCache) return;
-  const { allIcons } = await import("@/lib/lucide-all");
-  primeIconRegistry(allIcons as Record<string, LucideIcon>);
+  const { allIcons, iconsByAnyName } = await import("@/lib/lucide-all");
+  primeIconRegistry(
+    allIcons as Record<string, LucideIcon>,
+    iconsByAnyName as Record<string, LucideIcon>,
+  );
 }
 
 /**
@@ -121,9 +136,12 @@ export function subscribeIconsReady(fn: () => void): () => void {
  * the 20-icon ICON_REGISTRY, then returns null if not found.
  */
 export function resolveIcon(name: string): LucideIcon | null {
-  if (_allIconsCache?.[name]) return _allIconsCache[name];
-  if (ICON_REGISTRY[name]) return ICON_REGISTRY[name];
-  return null;
+  return lookup(name) ?? null;
+}
+
+/** Stored name → icon, accepting the alias spellings Lucide also exports. */
+function lookup(name: string): LucideIcon | undefined {
+  return _allIconsCache?.[name] ?? _aliasCache?.[name] ?? ICON_REGISTRY[name];
 }
 
 /**
@@ -133,8 +151,8 @@ export function resolveIcon(name: string): LucideIcon | null {
  */
 export function categoryToIcon(name: string, icon?: string): LucideIcon {
   if (icon) {
-    if (_allIconsCache?.[icon]) return _allIconsCache[icon];
-    if (ICON_REGISTRY[icon]) return ICON_REGISTRY[icon];
+    const found = lookup(icon);
+    if (found) return found;
   }
   return byKeyword(name);
 }

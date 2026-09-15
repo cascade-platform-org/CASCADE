@@ -143,6 +143,12 @@ function TourRunner({ tourId }: { tourId: string }) {
    *  names a `cardAnchor` because the target opens a panel under itself. */
   const [cardRect, setCardRect] = useState<DOMRect | null>(null);
   const [size, setSize] = useState({ w: CARD_WIDTH, h: 180 });
+  /** Viewport height, read the same way `place()` reads it. A CSS `100vh` cap
+   *  is not the same number in every browser (and not the same as
+   *  `window.innerHeight` under some zoom and toolbar states), and a card
+   *  measured against one limit but clamped against the other is exactly how it
+   *  ends up cut off at both ends. One source, in pixels. */
+  const [viewportH, setViewportH] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const step: TourStep | undefined = steps[index];
@@ -180,11 +186,12 @@ function TourRunner({ tourId }: { tourId: string }) {
             .querySelector<HTMLElement>(`[data-tour="${step.cardAnchor}"]`)
             ?.getBoundingClientRect() ?? r
         : r;
-      const key = `${describe(r)}|${describe(c)}`;
+      const key = `${describe(r)}|${describe(c)}|${window.innerHeight}`;
       if (key !== last) {
         last = key;
         setRect(r);
         setCardRect(c);
+        setViewportH(window.innerHeight);
       }
       frame = requestAnimationFrame(tick);
     };
@@ -246,10 +253,16 @@ function TourRunner({ tourId }: { tourId: string }) {
         ref={cardRef}
         role="dialog"
         aria-label={step.title}
-        className="fixed z-[9999] overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800"
-        // maxHeight, not a fixed one: on a short viewport a long step scrolls
-        // inside the card instead of running off the bottom with its buttons.
-        style={{ left, top, width: CARD_WIDTH, maxHeight: `calc(100vh - ${MARGIN * 2}px)` }}
+        className="fixed z-[9999] flex flex-col rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800"
+        // A cap, not a fixed height: a long step on a short viewport scrolls its
+        // prose while the title and the buttons stay put, so neither end of the
+        // card can be off-screen whatever the browser's chrome or zoom does.
+        style={{
+          left,
+          top,
+          width: CARD_WIDTH,
+          maxHeight: viewportH ? viewportH - MARGIN * 2 : undefined,
+        }}
       >
         <button
           onClick={close}
@@ -259,21 +272,26 @@ function TourRunner({ tourId }: { tourId: string }) {
           <X size={13} />
         </button>
 
-        <p className="pr-5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+        <p className="shrink-0 pr-5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
           {step.title}
         </p>
-        {/* pre-line: a step may set a rule or a formula on its own line, and a
-            collapsed newline would run it into the prose. */}
-        <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
-          {step.body}
-        </p>
-        {step.waitHint && (
-          <p className="mt-2 text-xs italic text-blue-600 dark:text-blue-400">
-            {step.waitHint}
-          </p>
-        )}
 
-        <div className="mt-3 flex items-center justify-between">
+        {/* The only part that scrolls. `min-h-0` is what lets a flex child be
+            shorter than its content. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* pre-line: a step may set a rule or a formula on its own line, and a
+              collapsed newline would run it into the prose. */}
+          <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+            {step.body}
+          </p>
+          {step.waitHint && (
+            <p className="mt-2 text-xs italic text-blue-600 dark:text-blue-400">
+              {step.waitHint}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-3 flex shrink-0 items-center justify-between">
           <span className="text-[11px] text-zinc-400">
             {index + 1} of {steps.length}
           </span>
