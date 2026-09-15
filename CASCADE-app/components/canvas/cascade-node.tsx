@@ -32,6 +32,10 @@ import { brandColor } from "@/lib/brand";
 
 const MIN_SIZE = 24;
 const MAX_SIZE = 56;
+
+/** How far the backup pulse sits outside the shape, on every side. Small: the
+ *  ring reads as part of the node rather than as a halo around it. */
+const PING_PAD = 3;
 function nodeSize(importance: number | undefined): number {
   const imp = importance ?? 0.5;
   return Math.round(MIN_SIZE + (MAX_SIZE - MIN_SIZE) * Math.min(1, Math.max(0, imp)));
@@ -301,14 +305,21 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
       ))}
 
 
-      {/* Animated ping for backup state */}
+      {/* Animated ping for backup state. The shape is drawn at x=8..8+size,
+          y=0..size inside the SVG, so the ring is inset by PING_PAD on all four
+          sides of *that* box — an equal margin on left and top is what centres
+          it, and getting the vertical one wrong pushed the pulse below the
+          node. */}
       {hasTimeWarning && (
         <div
           className="animate-ping absolute rounded-full opacity-60"
           style={{
-            top: 0, left: 4,
-            width: size + 8, height: size + 8,
-            border: `2px solid ${brandColor("warning", 400)}`,
+            top: -PING_PAD, left: 8 - PING_PAD,
+            width: size + 2 * PING_PAD, height: size + 2 * PING_PAD,
+            border: `1.5px solid ${brandColor("warning", 400)}`,
+            // Tailwind's ping beats once a second, which on a canvas full of
+            // backed-up elements reads as flicker. Slow enough to be a pulse.
+            animationDuration: "2.6s",
             borderRadius: "50%",
             pointerEvents: "none",
           }}
@@ -359,7 +370,7 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
               size={size}
               fill="transparent"
               stroke={hasTimeWarning ? brandColor("warning", 400) : "white"}
-              strokeWidth={hasTimeWarning ? 5 : 2}
+              strokeWidth={hasTimeWarning ? 3 : 2}
             />
           </g>
         </g>

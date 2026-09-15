@@ -4,7 +4,7 @@
  * GuidedTour — runs the first-run tour over the real editor UI.
  *
  * Mounted permanently in EditorShell and inert until `ui-store.activeTour` is
- * set; `startTour()` closes any open drawer first so nothing covers a target.
+ * set; `startTour()` closes any open panel first so nothing covers a target.
  *
  * Written by hand rather than with a tour library on purpose. Every library of
  * this kind (driver.js, shepherd, intro.js) dims the page and makes everything
@@ -31,6 +31,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { missingTourAnchors, type TourStep } from "@/lib/tour/types";
 import { TOURS, type TourId } from "@/lib/tour/registry";
+import { startTour } from "@/lib/tour/start-tour";
 
 /** Any store a `waitFor` predicate might read. */
 const WATCHED = [
@@ -84,7 +85,13 @@ function place(
   const vh = window.innerHeight;
   const clamp = (v: number, max: number) => Math.max(MARGIN, Math.min(v, max - MARGIN));
 
-  if (!target) return { left: (vw - w) / 2, top: (vh - h) / 2 };
+  // Centred — but clamped like every other branch. A card taller than the
+  // viewport (a long step on a laptop, or browser zoom above 100 %) would
+  // otherwise take a negative top and lose its title off the top of the screen,
+  // with nothing to scroll.
+  if (!target) {
+    return { left: clamp((vw - w) / 2, vw - w), top: clamp((vh - h) / 2, vh - h) };
+  }
 
   const fits: Record<Side, boolean> = {
     top: target.top - GAP - h >= MARGIN,
@@ -220,17 +227,17 @@ function TourRunner({ tourId }: { tourId: string }) {
   return createPortal(
     <>
       {/* The ring. Nothing is dimmed: the point of most steps is to look at
-          what is behind them. */}
+          what is behind them — so the ring itself has to carry the whole
+          signal. It is opaque and pulses (`.tour-ring`, app/globals.css). */}
       {rect && (
         <div
           aria-hidden
-          className="pointer-events-none fixed z-[9998] rounded-lg ring-2 ring-blue-500 transition-[top,left,width,height] duration-150"
+          className="tour-ring pointer-events-none fixed z-[9998] rounded-lg ring-4 ring-blue-500 transition-[top,left,width,height] duration-150"
           style={{
             left: rect.left - 4,
             top: rect.top - 4,
             width: rect.width + 8,
             height: rect.height + 8,
-            boxShadow: "0 0 0 4px rgba(59,130,246,0.22)",
           }}
         />
       )}
@@ -239,8 +246,10 @@ function TourRunner({ tourId }: { tourId: string }) {
         ref={cardRef}
         role="dialog"
         aria-label={step.title}
-        className="fixed z-[9999] rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800"
-        style={{ left, top, width: CARD_WIDTH }}
+        className="fixed z-[9999] overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-800"
+        // maxHeight, not a fixed one: on a short viewport a long step scrolls
+        // inside the card instead of running off the bottom with its buttons.
+        style={{ left, top, width: CARD_WIDTH, maxHeight: `calc(100vh - ${MARGIN * 2}px)` }}
       >
         <button
           onClick={close}
@@ -253,7 +262,9 @@ function TourRunner({ tourId }: { tourId: string }) {
         <p className="pr-5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
           {step.title}
         </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+        {/* pre-line: a step may set a rule or a formula on its own line, and a
+            collapsed newline would run it into the prose. */}
+        <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
           {step.body}
         </p>
         {step.waitHint && (
@@ -273,6 +284,19 @@ function TourRunner({ tourId }: { tourId: string }) {
                 className="rounded-md px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"
               >
                 Back
+              </button>
+            )}
+            {/* A tour that ends where another begins says so, rather than
+                leaving the user to find the next one in the Help window. */}
+            {isLast && step.nextTour && step.nextTour in TOURS && (
+              <button
+                onClick={() => {
+                  close();
+                  void startTour(step.nextTour as TourId);
+                }}
+                className="rounded-md border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30"
+              >
+                {TOURS[step.nextTour as TourId].label} →
               </button>
             )}
             <button

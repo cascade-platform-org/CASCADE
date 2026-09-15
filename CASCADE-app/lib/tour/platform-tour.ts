@@ -5,7 +5,9 @@
  * The companion to the customize tour, which covers the declarations that steer
  * the engine. This one starts where a Propagation ends: read the causality,
  * advance time, keep comparisons in the Scorecard, rank elements in the
- * Analysis Module, rank repairs, and get data in and out.
+ * Analysis Module, rank repairs, and get data in and out. Canvases and
+ * Propagation Scope belong to authoring, so they are taught in the build
+ * tour instead.
  *
  * It runs on the worked example in its shipped, already-propagated state,
  * because most of these steps point at a result — a responsibility share, an
@@ -30,33 +32,31 @@ export const PLATFORM_TOUR: TourStep[] = [
       "repairs.",
   },
   {
-    anchor: "global-view",
-    side: "bottom",
-    title: "Scope: one Canvas or all of them",
-    body:
-      "Canvases partition a project by system or by layer. Propagate and Analyse each carry " +
-      "their own scope selector: local computes on the active Canvas alone, global on every " +
-      "Canvas at once, following inter-canvas edges. The All tab shows them together, " +
-      "read-only.",
-  },
-  {
     anchor: "inspector",
     side: "left",
     title: "Causality is recorded, not inferred",
     body:
       "Every degraded element carries a responsibility share: which upstream element or Event " +
-      "produced its level, and in what proportion. The Inspector states it in words. The " +
-      "repair ranking is computed from these shares rather than from the topology.",
+      "produced its level, and in what proportion. The Inspector on the right states it in " +
+      "words. Those shares are what the repair ranking is computed from — a degraded element " +
+      "is traced " +
+      "back to the damage that caused it, rather than to whatever sits next to it in the " +
+      "graph.",
   },
   {
     anchor: "temporal",
-    cardAnchor: "canvas",
     side: "bottom",
-    title: "Time is explicit",
+    title: "Move the clock",
     body:
-      "Backups and repair estimates are counted in hours, and hours pass only through a " +
-      "Temporal Jump. Auto-advance repeats jump-and-propagate until the network stops " +
-      "changing, which is how a deferred second wave and a recovery both appear.",
+      "Backups and repair estimates are counted in hours, and hours pass only from here. Jump " +
+      "far enough to expire a backup and the deferred second wave arrives; auto-advance " +
+      "repeats jump-and-propagate until the network stops changing, which is how a recovery " +
+      "plays out too.",
+    waitHint: "Waiting for a Temporal Jump…",
+    waitFor: () => {
+      const armedAt = useUiStore.getState().temporalJumpElapsedHours;
+      return () => useUiStore.getState().temporalJumpElapsedHours > armedAt;
+    },
   },
   {
     anchor: "scorecard",
@@ -96,9 +96,11 @@ export const PLATFORM_TOUR: TourStep[] = [
     side: "bottom",
     title: "Repair ranks by what it unblocks",
     body:
-      "The Repair panel ranks physically damaged elements by Recovery Value — the weighted " +
-      "loss that terminates on them along the responsibility chains — and by value per repair " +
-      "hour. Elements holding on a backup are listed separately with the hours they have left.",
+      "Only physically damaged elements can be repaired, so only they are ranked — a node " +
+      "that is merely starved recovers when its supplier does. Each is scored by Recovery " +
+      "Value: the weighted operativity that would come back along its responsibility chains, " +
+      "and the same again per repair hour. Elements holding on a backup are listed separately " +
+      "with the hours they have left.",
   },
   {
     anchor: "file",
@@ -113,6 +115,9 @@ export const PLATFORM_TOUR: TourStep[] = [
     title: "That is the surface",
     body:
       "The Scorecard, the Analysis Module and the Repair panel all read one Propagation. The " +
-      "manual documents each field, and the Rules Manual the rule grammar in full.",
+      "manual documents each field, and the Rules Manual the rule grammar in full.\n\n" +
+      "That is the last of the four walkthroughs. Build a model of your own next, or reopen " +
+      "any tour from Help.",
+    nextTour: "build-model",
   },
 ];

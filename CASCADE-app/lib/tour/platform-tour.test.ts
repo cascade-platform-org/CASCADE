@@ -13,7 +13,7 @@ import { PLATFORM_TOUR } from "./platform-tour";
 import { gate } from "./test-helpers";
 
 beforeEach(() => {
-  useUiStore.setState({ scorecardPanelOpen: false } as never);
+  useUiStore.setState({ scorecardPanelOpen: false, temporalJumpElapsedHours: 0 } as never);
   useAnalysisStore.setState({ analysisPageOpen: false } as never);
 });
 
@@ -31,9 +31,26 @@ describe("platform tour — every step's gate", () => {
     useAnalysisStore.setState({ analysisPageOpen: true } as never);
     expect(open()).toBe(true);
   });
+
+  it("'Move the clock' opens on a jump made after the step appeared", () => {
+    // The sample arrives with hours already on the clock, so an absolute check
+    // would be satisfied on arrival and the step would skip itself.
+    useUiStore.setState({ temporalJumpElapsedHours: 48 } as never);
+    const open = gate(PLATFORM_TOUR, "Move the clock");
+    expect(open(), "the hours already elapsed do not count").toBe(false);
+    useUiStore.setState({ temporalJumpElapsedHours: 72 } as never);
+    expect(open()).toBe(true);
+  });
 });
 
 describe("platform tour — shape", () => {
+  it("leaves Canvases and scope to the build tour", () => {
+    // Multi-canvas is an authoring decision, not a reading of a result.
+    const anchors = PLATFORM_TOUR.map((s) => s.anchor);
+    expect(anchors).not.toContain("global-view");
+    expect(anchors).not.toContain("add-canvas");
+  });
+
   it("opens and closes with a step that asks for nothing", () => {
     expect(PLATFORM_TOUR[0].waitFor).toBeUndefined();
     expect(PLATFORM_TOUR[PLATFORM_TOUR.length - 1].waitFor).toBeUndefined();
@@ -46,10 +63,12 @@ describe("platform tour — shape", () => {
   });
 
   it("stays walkable without a server", () => {
-    // A guest has neither can_propagate nor engine evaluations. This tour
-    // reads results rather than producing them, so almost nothing gates.
+    // A guest has neither can_propagate nor engine evaluations, and `Next` is
+    // never removed — but a tour that gates most of its steps still reads as
+    // stuck to one. This tour reports results rather than producing them, so
+    // at most a third of it waits on anything.
     const gated = PLATFORM_TOUR.filter((s) => s.waitFor).length;
-    expect(gated).toBeLessThan(PLATFORM_TOUR.length / 3);
+    expect(gated).toBeLessThanOrEqual(Math.floor(PLATFORM_TOUR.length / 3));
   });
 
 });

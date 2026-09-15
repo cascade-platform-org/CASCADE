@@ -163,6 +163,13 @@ export interface UiState {
    * then clear the field. Used by panels outside the ReactFlow provider tree.
    */
   pendingFocusNodeId: string | null;
+  /**
+   * One-shot request to frame the whole network. Set by anything that changes
+   * what is on screen from outside the ReactFlow tree — a tour loading its
+   * sample, above all — because a viewport fitted on one screen size is cut off
+   * on a smaller one, and until now nothing re-fitted it.
+   */
+  fitViewRequested: boolean;
 
   // --- Unsaved changes ---
   hasUnsavedChanges: boolean;
@@ -255,6 +262,8 @@ export interface UiActions {
   // --- Programmatic canvas focus ---
   requestFocusNode: (id: string) => void;
   clearFocusNode: () => void;
+  requestFitView: () => void;
+  clearFitViewRequest: () => void;
 
   // --- Inspector ---
   setInspectorOpen: (open: boolean) => void;
@@ -329,6 +338,7 @@ const initialState: UiState = {
   interventionPanelOpen: false,
   attributeScanPanelOpen: false,
   pendingFocusNodeId: null,
+  fitViewRequested: false,
   temporalAutoPropagate: true,
   temporalJumpRevertSnapshot: null,
   temporalJumpElapsedHours: 0,
@@ -485,20 +495,19 @@ export const useUiStore = create<UiStore>()(
     // Rules Manual panel
     // -------------------------------------------------------------------------
 
-    // The two manual drawers share the same right-edge slot (fixed inset-y-0
-    // right-0 z-50), so opening either one always closes the other — otherwise
-    // the second silently paints over the first.
+    // The two manuals used to be one right-edge drawer slot, so opening either
+    // closed the other. They are floating windows now and can sit side by
+    // side — which is the point of following §2 of the User Manual into the
+    // rule grammar.
     toggleRulesManualPanel() {
       set((state) => {
         state.rulesManualPanelOpen = !state.rulesManualPanelOpen;
-        if (state.rulesManualPanelOpen) state.userManualPanelOpen = false;
       });
     },
 
     openRulesManualPanel() {
       set((state) => {
         state.rulesManualPanelOpen = true;
-        state.userManualPanelOpen = false;
       });
     },
 
@@ -509,7 +518,6 @@ export const useUiStore = create<UiStore>()(
     toggleUserManualPanel() {
       set((state) => {
         state.userManualPanelOpen = !state.userManualPanelOpen;
-        if (state.userManualPanelOpen) state.rulesManualPanelOpen = false;
       });
     },
 
@@ -591,6 +599,14 @@ export const useUiStore = create<UiStore>()(
 
     clearFocusNode() {
       set((state) => { state.pendingFocusNodeId = null; });
+    },
+
+    requestFitView() {
+      set((state) => { state.fitViewRequested = true; });
+    },
+
+    clearFitViewRequest() {
+      set((state) => { state.fitViewRequested = false; });
     },
 
     // -------------------------------------------------------------------------

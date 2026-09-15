@@ -334,6 +334,15 @@ The engine records for each degraded Element which upstream Elements or Events a
 - Add / edit / remove edges (direction, capacity, vulnerability levels).
 - Undo/redo stack.
 
+### 8.1a Navigating the canvas *(implemented)*
+
+Zoom is on the scroll wheel and the zoom cluster (bottom-left); panning is on the **middle
+mouse button** or the **Hand tool** (`H`). Neither is discoverable, and a laptop trackpad has
+no middle button at all, so the cluster also carries a **Fit** control (`F`, or the ⤢ button)
+that frames the whole network — the way back from a canvas scrolled off-screen. Starting a
+tour requests the same fit, because a project file carries the viewport it was saved with and
+that viewport is wrong on any other screen size.
+
 ### 8.2 Selection
 
 | Method | Description |
@@ -400,7 +409,7 @@ advance time — pointing at the real editor UI.
 
 #### Build a model
 
-A hands-on walkthrough of nine actions that **starts its own empty project**
+A hands-on walkthrough of fifteen actions that **starts its own empty project**
 (`lib/new-project.ts`, the same blank slate the New Project screen's "Create
 project" button makes) and loads no sample.
 
@@ -424,13 +433,23 @@ the network looks correct and the cascade simply does nothing:
 4. an Event with no `vulnerability_levels` entry anywhere is a no-op.
 
 The order of the steps is dictated by the Inspector rather than by taste. Only
-the **provider** is tagged with a Category: that tag is what makes its Supply
-Capacity section appear, and — once the edge is drawn — what makes the
+the **provider** is tagged with a Category and set to Node Type Source: either
+one makes its Supply Capacity section appear, and — once the edge is drawn — what makes the
 consumer's Category Dependency Profile section appear by itself
 (`inboundCategories` in `node-inspector.tsx`). So the consumer is never asked
 for a Category, and its Demand is asked for only after the edge exists.
 Likewise the Event is defined before the step asking for a vulnerability to it,
 since the vulnerability editor lists the configured Events.
+
+The second half is the multi-canvas one, and it is built rather than
+described: a second Canvas, a second Category with its own supplier placed on
+it, an **inter-canvas edge** from that supplier to the consumer built in the
+first half, the **All** tab where the two Canvases are finally one network, and
+a global Propagation. The two things that surprise people about Canvases are
+only visible by doing it — an ordinary edge cannot leave a Canvas (the
+Inter-Canvas Edge tool exists for that), and a Category arrives at a node over
+an edge without the node being tagged with it (the profile block appears marked
+*via parent*).
 
 Each step gates on the store reaching that *shape* rather than on particular
 labels, so the user names their own elements. `lib/tour/build-model-tour.test.ts`
@@ -441,14 +460,17 @@ above, since a tour that asked for a Supply Capacity before its Category would
 strand the user on a step the Inspector cannot satisfy.
 
 Both entry points — the New Project screen and "Build a model" in the User
-Manual drawer — close whatever covers the Canvas before starting.
+Manual window — close whatever covers the Canvas before starting.
 
 #### Customize the Propagation
 
-A twelve-step walkthrough of the four declarations that change engine behaviour
-without any code — the **Category Type**, the **Functionality Scale**, the
-per-category **dependency profile**, and **Rules** — changing one at a time and
-re-running the Propagation after each. The before/after discipline is the
+A walkthrough of the declarations that change engine behaviour without any code
+— the **Category Type**, the per-category **dependency profile**, and **Rules**,
+one of each of the three kinds — changing one at a time and re-running the
+Propagation after each. It opens by applying the sample's Earthquake (the sample
+ships on its baseline, so there is nothing to Reset first) and closes by handing
+over to *Analyse and decide* through the step's `nextTour`, which the runner
+renders as a button. The before/after discipline is the
 lesson, not a presentation choice: each of these is invisible on the canvas, and
 they can cancel each other out, so a change read without a Propagation after it
 teaches the wrong conclusion. `customize-propagation-tour.test.ts` asserts that
@@ -465,6 +487,14 @@ critical):
 | `SourceToDemands` | City degrades; Water Pump and Hospital fall back on their backups |
 | …then City electric `dependency_level` 2 → 3 | City goes critical |
 
+Each of the three Rules then has a measured effect of its own, on that state:
+
+| Rule | Kind | Result |
+|---|---|---|
+| `average_of(Electric Source, Substation 2) propagates to Substation` | intracategorical | both substations follow the source down — the pair stops propping itself up |
+| `best_of(electric, water) propagates to City` | intercategorical | the City returns to operational on its intact water |
+| `if Electric Source is critical then Hospital is critical` | specific | the Hospital fails despite its backup |
+
 The plain IJDRR example is insensitive to the Category Type (electric supply 10
 against demand 7 — slack everywhere), which is why the tour needs the extended
 one. What the type does *not* decide is whether failures travel at all: every
@@ -476,11 +506,17 @@ is read — levels versus quantities.
 
 #### Analyse and decide
 
-What the platform does with a Scenario once the engine has produced one: scope,
-causality (`responsibility_share`), Temporal Jump and auto-advance, the
+What the platform does with a Scenario once the engine has produced one:
+causality (`responsibility_share`), a Temporal Jump the user actually runs, the
 Scorecard, the Analysis Module — including that the Operativity weighting
 re-scores a completed run without spending an engine evaluation (ADR-0018) — the
 Repair panel, and the File panel's saves and importer.
+
+Canvases and Propagation Scope are **not** here: choosing how to layer a project
+is an authoring decision, so the build tour teaches it, at the point where the
+user has a working model to split. The Repair step states the §10 rule plainly —
+only Elements with `direct_damage` are ranked, because a merely starved Element
+recovers when its supplier does.
 
 It runs on the first-run sample in its shipped, already-propagated state,
 because most of its steps point at a result. Almost nothing gates: a guest has

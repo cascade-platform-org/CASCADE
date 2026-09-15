@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
+import { HELP_ANCHOR_ID, SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
 import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 import type { Canvas } from "@/lib/schemas/network";
@@ -55,10 +56,11 @@ export function Topbar() {
       {/* Right actions */}
       <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
         {/* "Help" + HelpCircle, distinct from the Active Rules panel's
-            BookOpen "Manual" button, which opens the rule-grammar drawer. */}
+            BookOpen "Manual" button, which opens the rule-grammar window. */}
         <TopbarIconButton
           label="Help"
           dataTour="help"
+          id={HELP_ANCHOR_ID}
           onClick={() => useUiStore.getState().toggleUserManualPanel()}
         >
           <HelpCircle size={15} />
@@ -75,6 +77,7 @@ export function Topbar() {
         <TopbarIconButton
           label="Scorecard"
           dataTour="scorecard"
+          id={SCORECARD_ANCHOR_ID}
           onClick={() => useUiStore.getState().toggleScorecardPanel()}
         >
           <BookMarked size={15} />
@@ -593,6 +596,7 @@ function AddCanvasButton() {
       <button
         onClick={handleOpen}
         title="Add canvas"
+        data-tour="add-canvas"
         className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
       >
         <Plus size={14} />
@@ -737,15 +741,19 @@ function TopbarIconButton({
   onClick,
   children,
   dataTour,
+  id,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
   /** Stable anchor id for the guided tour (see lib/tour/first-run-tour.ts). */
   dataTour?: string;
+  /** DOM id a floating window flies back into on close (lib/ui-anchors.ts). */
+  id?: string;
 }) {
   return (
     <button
+      id={id}
       onClick={onClick}
       title={label}
       data-tour={dataTour}

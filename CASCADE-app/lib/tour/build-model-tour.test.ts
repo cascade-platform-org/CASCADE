@@ -16,6 +16,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
 import { BUILD_MODEL_TOUR } from "./build-model-tour";
 import { gate } from "./test-helpers";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -27,6 +28,7 @@ const quake: EventDefinition = { id: "quake", label: "Quake", type: "hazard", fr
 beforeEach(() => {
   useHistoryStore.setState({ updateHistory: [], redoStack: [], retiredBaseline: [] });
   useConfigStore.setState({ config: { ...DEFAULT_CONFIG, categories: [], events: [] } });
+  useUiStore.setState({ globalViewActive: false } as never);
   useCanvasStore.setState({
     nodes: {},
     edges: {},
@@ -126,6 +128,20 @@ describe("build tour — every step's gate", () => {
     expect(open()).toBe(true);
   });
 
+  it("'Set the vulnerability' waits for a NEW one, not one already set", () => {
+    // The Event editor in the Model Configuration sets vulnerability levels
+    // too, so the previous step is a place the user may already have done it.
+    addNodes(2);
+    patchConfig({ events: [quake] });
+    patchNode("n1", { vulnerability_levels: { quake: 2 } });
+
+    const open = gate(BUILD_MODEL_TOUR, "Set the vulnerability");
+    expect(open(), "what was already there does not count").toBe(false);
+
+    patchNode("n2", { vulnerability_levels: { quake: 1 } });
+    expect(open()).toBe(true);
+  });
+
   it("'Apply the Event' waits for a NEW history entry", () => {
     // Pre-existing history must not satisfy a gate the user has not acted on.
     useHistoryStore.setState({
@@ -150,6 +166,90 @@ describe("build tour — every step's gate", () => {
     useHistoryStore.setState({
       updateHistory: [{ id: "b", update_type: "propagation" }],
     } as never);
+    expect(open()).toBe(true);
+  });
+
+  it("'Split it across Canvases' opens on a second Canvas", () => {
+    const open = gate(BUILD_MODEL_TOUR, "Split it across Canvases");
+    expect(open()).toBe(false);
+    useCanvasStore.setState({
+      canvases: {
+        c1: { id: "c1", label: "Main", graph: { graph_type: "default", node_ids: [], edge_ids: [] } },
+        c2: { id: "c2", label: "Power", graph: { graph_type: "default", node_ids: [], edge_ids: [] } },
+      },
+      canvasOrder: ["c1", "c2"],
+    } as never);
+    expect(open()).toBe(true);
+  });
+
+  it("'A second service' opens on a second Category, not the first", () => {
+    patchConfig({ categories: [{ name: "power", type: "Requisite" }] });
+    const open = gate(BUILD_MODEL_TOUR, "A second service");
+    expect(open(), "the Category from step 2 does not count").toBe(false);
+    patchConfig({
+      categories: [
+        { name: "power", type: "Requisite" },
+        { name: "water", type: "SourceToDemands" },
+      ],
+    });
+    expect(open()).toBe(true);
+  });
+
+  it("'Build the second system' opens on a second supplier", () => {
+    addNodes(2);
+    patchNode("n1", { supply_capacity: { power: 10 } });
+    const open = gate(BUILD_MODEL_TOUR, "Build the second system");
+    expect(open(), "the supplier from step 4 does not count").toBe(false);
+    patchNode("n2", { supply_capacity: { water: 5 } });
+    expect(open()).toBe(true);
+  });
+
+  it("'Connect across Canvases' opens only for an edge whose ends are on different Canvases", () => {
+    addNodes(3);
+    useCanvasStore.setState({
+      canvases: {
+        c1: { id: "c1", label: "Main", graph: { graph_type: "default", node_ids: ["n1", "n2"], edge_ids: [] } },
+        c2: { id: "c2", label: "Water", graph: { graph_type: "default", node_ids: ["n3"], edge_ids: [] } },
+      },
+      canvasOrder: ["c1", "c2"],
+      edges: { e1: { id: "e1", source: "n1", target: "n2", functionality: N } },
+    } as never);
+
+    const open = gate(BUILD_MODEL_TOUR, "Connect across Canvases");
+    expect(open(), "an edge inside one Canvas is not an inter-canvas edge").toBe(false);
+
+    useCanvasStore.setState({
+      edges: {
+        ...useCanvasStore.getState().edges,
+        e2: { id: "e2", source: "n3", target: "n2", functionality: N },
+      },
+    } as never);
+    expect(open()).toBe(true);
+  });
+
+  it("'Connect across Canvases' ignores an edge between nodes that share a Canvas", () => {
+    // Canvas Membership can copy a node onto a second Canvas. An edge between
+    // two nodes that both appear on c1 is local there, whatever else they are
+    // shown on.
+    addNodes(2);
+    useCanvasStore.setState({
+      canvases: {
+        c1: { id: "c1", label: "Main", graph: { graph_type: "default", node_ids: ["n1", "n2"], edge_ids: [] } },
+        c2: { id: "c2", label: "Water", graph: { graph_type: "default", node_ids: ["n2"], edge_ids: [] } },
+      },
+      canvasOrder: ["c1", "c2"],
+      edges: { e1: { id: "e1", source: "n1", target: "n2", functionality: N } },
+    } as never);
+
+    const open = gate(BUILD_MODEL_TOUR, "Connect across Canvases");
+    expect(open()).toBe(false);
+  });
+
+  it("'See it whole' opens on the All tab", () => {
+    useUiStore.setState({ globalViewActive: false } as never);
+    const open = gate(BUILD_MODEL_TOUR, "See it whole");
+    expect(open()).toBe(false);
+    useUiStore.setState({ globalViewActive: true } as never);
     expect(open()).toBe(true);
   });
 });

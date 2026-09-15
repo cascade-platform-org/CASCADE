@@ -8,7 +8,7 @@
  */
 
 import { useCallback } from "react";
-import { ZoomIn, ZoomOut } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 
 export function ZoomSlider() {
-  const { zoomIn, zoomOut, zoomTo } = useReactFlow();
+  const { zoomIn, zoomOut, zoomTo, fitView } = useReactFlow();
   const { zoom } = useViewport();
 
   const pct = Math.round(zoom * 100);
@@ -60,6 +60,19 @@ export function ZoomSlider() {
           className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
         >
           <ZoomIn size={13} />
+        </button>
+
+        {/* Fit — the way back when the network is off-screen. Panning is on the
+            middle mouse button or the Hand tool, neither of which a first-time
+            user finds by accident (and a trackpad has no middle button at all),
+            so without this control a badly framed canvas is a dead end. */}
+        <button
+          onClick={() => fitView({ duration: 300, padding: 0.2 })}
+          title="Fit the whole network on screen (F)"
+          data-tour="fit-view"
+          className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+        >
+          <Maximize2 size={13} />
         </button>
 
         {/* Percentage label — click resets to 100 % */}

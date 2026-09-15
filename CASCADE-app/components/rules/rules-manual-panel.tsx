@@ -1,44 +1,37 @@
 "use client";
 
 /**
- * RulesManualPanel — slide-over drawer that hosts the {@link RulesManual}.
+ * RulesManualPanel — the {@link RulesManual} in a {@link FloatingWindow}.
  *
- * Anchored to the right edge so the guide sits next to the user's work
- * (canvas / rule editor) rather than covering it. Toggled from the
- * "Manual" button via the UI store (`rulesManualPanelOpen`). The backdrop
- * is intentionally non-blocking (no dark overlay) so authoring stays
- * visible while reading.
+ * Same move as the User Manual, and for a sharper reason: it is opened from
+ * the Active Rules window, and as a right-edge drawer it landed on top of the
+ * rule being written. Two windows can sit side by side. Closing flies it back
+ * into the "Manual" button in the Active Rules title bar.
  */
 
-import { X } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
+import { FloatingWindow } from "@/components/ui/floating-window";
+import { RULES_MANUAL_ANCHOR_ID } from "@/lib/ui-anchors";
 import { RulesManual } from "@/components/rules/rules-manual";
 
 export function RulesManualPanel() {
   const closeRulesManualPanel = useUiStore((s) => s.closeRulesManualPanel);
 
   return (
-    <aside
-      className="fixed inset-y-0 right-0 z-50 flex w-[480px] max-w-[95vw] flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
-      role="dialog"
-      aria-label="Rules manual"
+    <FloatingWindow
+      open
+      onClose={closeRulesManualPanel}
+      title="Rules Manual"
+      icon={<BookOpen size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
+      flyToOnClose={RULES_MANUAL_ANCHOR_ID}
+      storageKey="cascade.rules-manual.window"
+      defaultSize={{ w: 520, h: 620 }}
+      minSize={{ w: 360, h: 280 }}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          Rules Manual
-        </h2>
-        <button
-          onClick={closeRulesManualPanel}
-          className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
-          aria-label="Close manual"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-4">
         <RulesManual />
       </div>
-    </aside>
+    </FloatingWindow>
   );
 }

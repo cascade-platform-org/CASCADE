@@ -54,7 +54,10 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     body:
       "Nodes are the elements of the system; an edge a → b denotes that a supplies b. Colour " +
       "encodes Functionality: green operational, orange degraded, red critical. Only the " +
-      "source was damaged directly; every other state is a consequence.",
+      "source was damaged directly; every other state is a consequence.\n\n" +
+      "Moving around: scroll to zoom, drag with the middle mouse button or the Hand tool (H) " +
+      "to pan, and press F — or the ⤢ button at bottom left — to fit the whole network on " +
+      "screen again.",
   },
   {
     anchor: "canvas",
@@ -63,7 +66,9 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     resolve: () => nodeElementByLabel("Substation"),
     side: "left",
     title: "Open an element",
-    body: "Select the Substation to inspect how an element is configured.",
+    body:
+      "Select the Substation. Everything it declares opens in the Inspector — the panel down " +
+      "the right-hand side.",
     waitHint: "Waiting for you to select a node…",
     waitFor: () => {
       const armedAt = [...useNetworkStore.getState().selectedNodeIds].join(",");
@@ -76,20 +81,24 @@ export const FIRST_RUN_TOUR: TourStep[] = [
   {
     anchor: "inspector",
     side: "left",
-    title: "Supply and demand",
+    title: "Supply Capacity",
     body:
-      "Categories are the services this element deals in. Supply Capacity declares it a " +
-      "supplier of one; Demand declares it a consumer. Node Type determines the shape drawn " +
-      "and nothing else.",
+      "This is the Inspector, on the right. A Category is a service the element deals in — " +
+      "often a resource that is consumed, such as water or electricity. Supply Capacity is " +
+      "how much of a Category this element can " +
+      "supply. What it requires is not a field of its own: it is the Demand held in its " +
+      "Category Dependency Profile for that Category, shown further down. Node Type " +
+      "determines the shape drawn and nothing else.",
   },
   {
     anchor: "inspector",
     side: "left",
-    title: "Dependency and backup",
+    title: "Category Dependency Profile",
     body:
-      "Each consumed category carries a Dependency level: N transmits an upstream failure in " +
-      "full, 1 makes that service unable to degrade the element, intermediate values attenuate " +
-      "it. A backup instead defers the drop — the element holds its level and a countdown starts.",
+      "One entry per Category reaching this element. Dependency level: N transmits an upstream " +
+      "failure in full, 1 makes that service unable to degrade the element, intermediate values " +
+      "attenuate it. Demand is the quantity the element requests in that Category. A backup " +
+      "instead defers the drop — the element holds its level and a countdown starts.",
   },
   {
     anchor: "reset",
@@ -122,19 +131,17 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     waitFor: awaitUpdate("propagation"),
   },
   {
-    anchor: "canvas",
-    side: "right",
+    anchor: "legend",
+    side: "left",
     title: "Read the cascade",
     body:
-      "Select any element that changed colour: the Inspector names the upstream element or " +
-      "Event responsible. An amber ring marks an element held up by a backup rather than one " +
-      "that was unaffected.",
+      "The Legend is the key to what is now on screen: the Functionality colours, the Node " +
+      "Type shapes, and the amber ring — an element still held up by a backup, with hours " +
+      "left on its Functionality Time. Select any element that changed colour and the " +
+      "Inspector on the right names the upstream element or Event responsible.",
   },
   {
     anchor: "temporal",
-    // Time opens a panel directly under its button, exactly where the card
-    // would otherwise sit — so the card goes to the canvas instead.
-    cardAnchor: "canvas",
     side: "bottom",
     title: "Advance the clock",
     body:
@@ -152,6 +159,8 @@ export const FIRST_RUN_TOUR: TourStep[] = [
     title: "That is the loop",
     body:
       "Edit, apply, propagate, compare. Help opens the manual: what each attribute does, how " +
-      "to write Rules, and how to evaluate an intervention.",
+      "to write Rules, and how to evaluate an intervention.\n\n" +
+      "Next: build a network of your own, from an empty canvas.",
+    nextTour: "build-model",
   },
 ];

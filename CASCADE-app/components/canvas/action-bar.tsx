@@ -15,6 +15,8 @@ import { useShallow } from "zustand/react/shallow";
 import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
+import { FloatingWindow } from "@/components/ui/floating-window";
+import { TEMPORAL_ANCHOR_ID } from "@/lib/ui-anchors";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -329,6 +331,7 @@ function TemporalJumpControls({
   return (
     <div className="relative">
       <ActionButton
+        id={TEMPORAL_ANCHOR_ID}
         onClick={() => { if (!busy) setOpen((v) => !v); }}
         disabled={busy}
         title="Temporal Jump controls"
@@ -339,10 +342,21 @@ function TemporalJumpControls({
         <ChevronDown size={11} className={cn("transition-transform", open && "rotate-180")} />
       </ActionButton>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      {/* A window, not a popover. A jump is judged by what it does to the
+          canvas, and a panel hanging off its own button covered the elements
+          whose countdowns it was advancing — and could not be moved out of the
+          way. Closing flies it back into the Time button. */}
+      <FloatingWindow
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Temporal Jump"
+        icon={<Clock size={15} className="shrink-0 text-violet-600 dark:text-violet-400" />}
+        flyToOnClose={TEMPORAL_ANCHOR_ID}
+        storageKey="cascade.temporal.window"
+        defaultSize={{ w: 320, h: 400 }}
+        minSize={{ w: 280, h: 220 }}
+      >
+        <div className="flex-1 overflow-y-auto">
 
             {/* Timeline slider — only shown when elements have Functionality Time */}
             {maxHours > 0 && (
@@ -452,9 +466,8 @@ function TemporalJumpControls({
                 Uses current scope ({scope})
               </p>
             </div>
-          </div>
-        </>
-      )}
+        </div>
+      </FloatingWindow>
     </div>
   );
 }
@@ -616,15 +629,19 @@ function ActionButton({
   title,
   className,
   children,
+  id,
 }: {
   onClick: () => void;
   disabled?: boolean;
   title?: string;
   className?: string;
   children: React.ReactNode;
+  /** DOM id a floating window flies back into on close (lib/ui-anchors.ts). */
+  id?: string;
 }) {
   return (
     <button
+      id={id}
       onClick={disabled ? undefined : onClick}
       title={title}
       disabled={disabled}

@@ -250,3 +250,39 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Guided-tour highlight.
+   The ring is the only thing that tells the user *where* to act, and on a busy
+   canvas a thin translucent outline disappeared into the background. It is
+   drawn opaque, and breathes so the eye catches it: two stacked box-shadow
+   halos, the outer one expanding and fading on each beat. Colours come from
+   the accent ramp (globals @theme), mixed down with color-mix rather than
+   written as literals — see docs/brand.md. */
+@keyframes tour-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--color-blue-500) 55%, transparent),
+      0 0 0 9px color-mix(in oklab, var(--color-blue-500) 22%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in oklab, var(--color-blue-500) 70%, transparent),
+      0 0 0 18px color-mix(in oklab, var(--color-blue-500) 0%, transparent);
+  }
+}
+
+.tour-ring {
+  animation: tour-pulse 1.5s ease-in-out infinite;
+}
+
+/* A pulsing outline is exactly the motion vestibular disorders react to, so
+   hold it still and keep the opaque halo instead. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-ring {
+    animation: none;
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--color-blue-500) 55%, transparent),
+      0 0 0 9px color-mix(in oklab, var(--color-blue-500) 22%, transparent);
+  }
+}

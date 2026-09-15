@@ -97,6 +97,22 @@ function FlowCanvas() {
     return () => cancelAnimationFrame(raf);
   }, [activeCanvasId, fitView, getNodes]);
 
+  // Frame the whole network on request (a tour starting, say). Deferred by two
+  // frames rather than one: the request usually arrives while a modal is still
+  // closing, and fitting against a container that is about to change size is
+  // how a network ends up half off-screen on a smaller display.
+  const fitViewRequested = useUiStore((s) => s.fitViewRequested);
+  useEffect(() => {
+    if (!fitViewRequested) return;
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (getNodes().length > 0) fitView({ duration: 400, padding: 0.2 });
+        useUiStore.getState().clearFitViewRequest();
+      }),
+    );
+    return () => cancelAnimationFrame(raf);
+  }, [fitViewRequested, fitView, getNodes]);
+
   // Fly to a node requested from outside the ReactFlow tree (attribute scan panel, etc.)
   const pendingFocusNodeId = useUiStore((s) => s.pendingFocusNodeId);
   useEffect(() => {
@@ -557,6 +573,9 @@ function FlowCanvas() {
           E: () => useUiStore.getState().setActiveTool("add-edge"),
           h: () => useUiStore.getState().setActiveTool("pan"),
           H: () => useUiStore.getState().setActiveTool("pan"),
+          // Not a tool — the way back when the network is off-screen.
+          f: () => useUiStore.getState().requestFitView(),
+          F: () => useUiStore.getState().requestFitView(),
         };
         toolMap[e.key]?.();
       }

@@ -1,12 +1,19 @@
 "use client";
 
 /**
- * scorecard-panel.tsx — Full-screen overlay listing all saved Scorecard entries.
+ * scorecard-panel.tsx — the saved Scorecard entries, listed in a
+ * {@link FloatingWindow}.
  *
  * Displays per-entry Operativity Scores, collapsible canvas snapshots,
  * a ZIP export button, and per-entry delete.
  * The "Save to Scorecard" dialog (operativity-scorecard.tsx) is triggered
  * from here (or from the ActionBar after a Propagation).
+ *
+ * A window rather than a modal, like Analysis and Active Rules: an entry is
+ * read *against* the network it scores, and comparing a saved snapshot with
+ * what is live on the canvas was impossible while the canvas was behind a
+ * dimmed backdrop. Closing flies the window back into the Topbar button that
+ * reopens it.
  */
 
 import { useState, useEffect, useMemo } from "react";
@@ -30,6 +37,8 @@ import {
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
+import { FloatingWindow } from "@/components/ui/floating-window";
+import { SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
 import { SaveScorecardDialog } from "./operativity-scorecard";
 import { SnapshotFlowView } from "./snapshot-flow-view";
 import { buildColorMap } from "@/lib/analysis-legend";
@@ -107,30 +116,30 @@ export function ScorecardPanel() {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
-    >
-      <div className="flex h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
-          <div className="flex items-center gap-2.5">
-            <BookMarked size={18} className="text-blue-600" />
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Scorecard</h2>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+    <>
+      <FloatingWindow
+        open
+        onClose={close}
+        title="Scorecard"
+        icon={<BookMarked size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
+        flyToOnClose={SCORECARD_ANCHOR_ID}
+        storageKey="cascade.scorecard.window"
+        defaultSize={{ w: 880, h: 620 }}
+        minSize={{ w: 460, h: 300 }}
+        headerActions={
+          <>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
               {scorecard.length} {scorecard.length === 1 ? "entry" : "entries"}
             </span>
-          </div>
 
-          <div className="flex items-center gap-2">
             {/* Operativity weighting selector — controls how every score below is computed */}
-            <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
               <span className="shrink-0">Weight</span>
               <select
                 value={oiWeightAttr}
                 onChange={(e) => setOiWeightAttr(e.target.value)}
                 title="How the Operativity Score is weighted across nodes"
-                className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                className="rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
                 {oiWeightOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -140,9 +149,9 @@ export function ScorecardPanel() {
 
             <button
               onClick={() => openSaveDialog()}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
             >
-              <PlusCircle size={14} />
+              <PlusCircle size={12} />
               Save current
             </button>
 
@@ -151,26 +160,18 @@ export function ScorecardPanel() {
               disabled={scorecard.length === 0 || exporting}
               title="Export as ZIP (scorecard.md + images)"
               className={cn(
-                "flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium transition-colors dark:border-zinc-700",
+                "flex items-center gap-1 rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium transition-colors dark:border-zinc-700",
                 scorecard.length === 0 || exporting
                   ? "cursor-not-allowed opacity-40 text-zinc-400"
                   : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800",
               )}
             >
-              <Download size={14} />
+              <Download size={12} />
               {exporting ? "Exporting…" : "Export ZIP"}
             </button>
-
-            <button
-              onClick={close}
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
+          </>
+        }
+      >
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {/* Gap detection */}
           {(hasGaps || computingGaps) && (
@@ -246,7 +247,7 @@ export function ScorecardPanel() {
             </div>
           )}
         </div>
-      </div>
+      </FloatingWindow>
 
       {saveDialogOpen && (
         <SaveScorecardDialog
@@ -254,7 +255,7 @@ export function ScorecardPanel() {
           {...saveDialogProps}
         />
       )}
-    </div>
+    </>
   );
 }
 

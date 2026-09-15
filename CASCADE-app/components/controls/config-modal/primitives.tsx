@@ -41,36 +41,9 @@ export function TextInput({
 // NumberInput
 // ---------------------------------------------------------------------------
 
-export function NumberInput({
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  className,
-}: {
-  value: number | undefined;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  className?: string;
-}) {
-  return (
-    <input
-      type="number"
-      value={value ?? ""}
-      min={min}
-      max={max}
-      step={step ?? 1}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className={cn(
-        "rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200",
-        className,
-      )}
-    />
-  );
-}
+/** The app-wide numeric field — same component the Inspector uses, so a
+ *  leading zero or a half-typed decimal behaves identically in both. */
+export { NumberInput } from "@/components/ui/number-input";
 
 // ---------------------------------------------------------------------------
 // ColBtn — ghost / danger variants

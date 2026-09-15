@@ -2,7 +2,8 @@
 
 /**
  * canvas-legend.tsx — collapsible bottom-right legend overlay: Functionality
- * colour scale + Node Type shapes. Replaces the React Flow MiniMap.
+ * colour scale + Node Type shapes + Element state. Replaces the React Flow
+ * MiniMap.
  *
  * While an Analysis Heatmap is applied the Functionality block is REPLACED, not
  * supplemented: the Analysis Heatmap overrides every Element's fill (see
@@ -19,6 +20,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { LegendView } from "@/components/analysis/legend-view";
 import { FALLBACK_LEVEL_COLOR } from "@/lib/colors";
+import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
 // Canvas Legend — replaces MiniMap, bottom-right overlay
@@ -79,6 +81,7 @@ function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
   return (
     <div
       data-export-ignore
+      data-tour="legend"
       className={cn(
         "absolute bottom-3 right-3 z-10",
         // Analysis Metric names and swatch labels ("In downstream cone") need
@@ -139,6 +142,36 @@ function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
                 </div>
               </div>
             )}
+
+            {/* Element state — the one thing on a node that is neither its
+                colour nor its shape. The canvas pulses an amber ring around
+                an element whose countdown is running (cascade-node.tsx), and
+                nothing on screen said what that meant. */}
+            <div>
+              <div className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-zinc-400">
+                State
+              </div>
+              <div
+                title="Functionality Time is the hours left on a backup. The element keeps its current level until the countdown reaches zero, then drops to the worst one. The countdown only moves on a Temporal Jump."
+              >
+                <div className="flex items-center gap-1.5">
+                  <svg width={13} height={13} style={{ flexShrink: 0 }}>
+                    <circle
+                      cx={6.5}
+                      cy={6.5}
+                      r={5}
+                      fill="none"
+                      stroke={brandColor("warning", 400)}
+                      strokeWidth={1.5}
+                    />
+                  </svg>
+                  <span className="text-zinc-600 dark:text-zinc-400">Functionality Time &gt; 0</span>
+                </div>
+                <div className="pl-[18px] text-[9px] leading-tight text-zinc-400">
+                  on backup: hours left before it drops
+                </div>
+              </div>
+            </div>
 
             {/* Node types */}
             <div>

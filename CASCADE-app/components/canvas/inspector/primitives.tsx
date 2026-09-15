@@ -82,35 +82,9 @@ export function TextInput({
   );
 }
 
-export function NumberInput({
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  placeholder,
-}: {
-  value: number | undefined;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  /** Shown while the field is empty — use it for the value that applies then. */
-  placeholder?: string;
-}) {
-  return (
-    <input
-      type="number"
-      value={value ?? ""}
-      placeholder={placeholder}
-      min={min}
-      max={max}
-      step={step ?? 1}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-    />
-  );
-}
+/** The app-wide numeric field. Re-exported so Inspector code keeps importing
+ *  its primitives from one place. */
+export { NumberInput } from "@/components/ui/number-input";
 
 export function Toggle({
   value,

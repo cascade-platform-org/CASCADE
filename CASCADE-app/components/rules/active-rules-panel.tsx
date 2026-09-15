@@ -42,7 +42,7 @@ import {
 } from "@/store/config-store";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
-import { RULES_ANCHOR_ID } from "@/lib/ui-anchors";
+import { RULES_ANCHOR_ID, RULES_MANUAL_ANCHOR_ID } from "@/lib/ui-anchors";
 import {
   isRuleDisabled,
   ruleBody,
@@ -580,6 +580,7 @@ export function ActiveRulesPanel() {
             {ruleEntries.length} rule{ruleEntries.length !== 1 ? "s" : ""}
           </span>
           <button
+            id={RULES_MANUAL_ANCHOR_ID}
             onClick={toggleRulesManualPanel}
             className="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             title="Open the rule-writing manual"

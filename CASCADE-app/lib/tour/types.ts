@@ -32,8 +32,12 @@ export const TOUR_ANCHORS = [
   "file",
   "rules",
   "global-view",
+  "add-canvas",
+  "fit-view",
+  "legend",
   "tool-add-node",
   "tool-add-edge",
+  "tool-inter-canvas-edge",
 ] as const;
 
 export type TourAnchor = (typeof TOUR_ANCHORS)[number];
@@ -62,6 +66,13 @@ export interface TourStep {
   waitFor?: () => () => boolean;
   /** Shown under the body while waiting, in place of a plain "click Next". */
   waitHint?: string;
+  /**
+   * A tour to hand over to, offered as a button on this step (a closing step,
+   * in practice). Typed as a plain string rather than `TourId` so the step
+   * files stay independent of the registry that collects them — the runner
+   * looks it up and shows nothing if it does not resolve.
+   */
+  nextTour?: string;
 }
 
 /**

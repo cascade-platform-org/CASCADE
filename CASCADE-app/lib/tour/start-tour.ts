@@ -2,7 +2,7 @@
  * start-tour.ts — the one way to launch a tour.
  *
  * Several places offer them (the New Project screen, the first-run prompt, the
- * User Manual drawer) and all must do the same thing: put what the tour is
+ * User Manual window) and all must do the same thing: put what the tour is
  * written against on screen, then start it. The per-tour details live in
  * `registry.ts`; this is the one function that acts on them.
  *
@@ -47,5 +47,9 @@ export async function startTour(id: TourId, projectName?: string): Promise<void>
   // However the user got here, they have now been offered a tour — the
   // first-run prompt must not appear on top of one, or after it.
   markTourOffered();
+  // Frame the network first: a project file carries the viewport it was saved
+  // with, so on a different screen the tour would open on a network that is
+  // half off-screen — and a first-time user does not yet know how to pan.
+  useUiStore.getState().requestFitView();
   useUiStore.getState().startTour(id);
 }

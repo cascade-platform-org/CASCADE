@@ -200,10 +200,22 @@ export function UserManual({
 
       <Section id="element" n={1} title="Setting up an element">
         <p className="text-xs text-zinc-500">
-          Select a node or edge and fill in the Inspector on the right.
+          Select a node or edge and fill in the Inspector — the panel on the
+          right. The headings below are the Inspector&rsquo;s own sections, in
+          the order it shows them, and the field names are the ones on its
+          labels: keep the two side by side and every row here has a control
+          next to it.
+        </p>
+        <p className="text-xs text-zinc-500">
+          A section missing from the panel has nothing to configure yet.{" "}
+          <strong>Supply Capacity</strong> appears once the node carries a
+          Category (or is a Source),{" "}
+          <strong>Category Dependency Profiles</strong> once a Category reaches
+          it, and <strong>Canvas Membership</strong> once the project has a
+          second Canvas.
         </p>
 
-        <Sub title="Identity and type">
+        <Sub title="Identity">
           <Table head={["Field", "Meaning", "Consequence"]}>
             <tr>
               <Td>
@@ -233,7 +245,7 @@ export function UserManual({
               <Td>
                 The services this node deals in (<Code>water</Code>,{" "}
                 <Code>power</Code>, <Code>transport</Code>, <Code>manager</Code>,
-                …).
+                …). A Category is a service, often a resource that is consumed.
               </Td>
               <Td>
                 Determines how neighbours aggregate it: suppliers of the same
@@ -244,14 +256,69 @@ export function UserManual({
           </Table>
         </Sub>
 
-        <Sub title="Supplier or consumer">
+        <Sub title="Functionality">
           <p className="text-xs text-zinc-500">
-            Per category a node should be one or the other.
+            The element&rsquo;s current condition — scenario state, not model.
+            A <strong>Reset</strong> clears every field in this section.
           </p>
           <Table head={["Field", "Meaning", "Consequence"]}>
             <tr>
               <Td>
-                <strong>Supply Capacity</strong>
+                <strong>Functionality</strong> <Code>1–N</Code>
+              </Td>
+              <Td>
+                Where the element sits on the Functionality scale, <Code>1</Code>{" "}
+                worst, <Code>N</Code> fully operational.
+              </Td>
+              <Td>
+                Sets the colour on the canvas and scales what a source delivers.
+                Edit it by hand to pose a what-if; a Propagation overwrites it.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Functionality Time</strong> (hours)
+              </Td>
+              <Td>Hours left on a backup that is holding this element up.</Td>
+              <Td>
+                Above zero the element keeps its level and pulses with an amber
+                ring on the canvas. The countdown moves only on a{" "}
+                <strong>Temporal Jump</strong>; at zero the element drops to{" "}
+                <Code>1</Code>.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Direct damage</strong> (physical breakage)
+              </Td>
+              <Td>The element is broken itself, not starved by a neighbour.</Td>
+              <Td>
+                Set by a <strong>Hazard</strong>, or by hand. It draws a crack on
+                the element and is what puts it on the repair ranking — only
+                directly damaged elements can be repaired.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Expected repair time</strong> (hours)
+              </Td>
+              <Td>How long that breakage takes to fix. Shown once damaged.</Td>
+              <Td>
+                Feeds the repair ranking&rsquo;s value-per-hour, never the
+                cascade.
+              </Td>
+            </tr>
+          </Table>
+        </Sub>
+
+        <Sub title="Supply Capacity">
+          <p className="text-xs text-zinc-500">
+            One amount per Category — what this element can supply.
+          </p>
+          <Table head={["Field", "Meaning", "Consequence"]}>
+            <tr>
+              <Td>
+                <strong>Supply Capacity</strong> <Code>{"{category: amount}"}</Code>
               </Td>
               <Td>Makes the node a source of that category.</Td>
               <Td>
@@ -262,98 +329,18 @@ export function UserManual({
                 Node Type says.
               </Td>
             </tr>
-            <tr>
-              <Td>
-                <strong>Demand</strong>
-              </Td>
-              <Td>Makes the node a consumer of that category.</Td>
-              <Td>
-                Only nodes with <Code>demand &gt; 0</Code> are served by the flow
-                allocation. A <Code>SourceToDemands</Code> node with no demand is
-                invisible to it.
-              </Td>
-            </tr>
           </Table>
           <Callout>
-            Setting both for the <em>same</em> category is accepted but almost
-            always a slip: the node becomes a source <em>and</em> a consumer of
-            that category and partly serves its own demand. The Inspector flags
-            it — split the node in two, or clear one value.
+            What the element <em>requires</em> is not here: Demand lives in its
+            Category Dependency Profile, further down. Setting both for the{" "}
+            <em>same</em> category is accepted but almost always a slip — the node
+            becomes a source <em>and</em> a consumer of it and partly serves its
+            own demand. The Inspector flags it; split the node in two, or clear
+            one value.
           </Callout>
         </Sub>
 
-        <Sub title="Category dependency profile">
-          <p className="text-xs text-zinc-500">
-            One block per category the node consumes.
-          </p>
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Dependency level</strong> <Code>1..N</Code>
-              </Td>
-              <Td>How hard a shortfall in this category pulls the node down.</Td>
-              <Td>
-                <Code>N</Code> (the default) passes the drop through unchanged.{" "}
-                <Code>1</Code> means this category can never degrade the node.
-                Values in between soften it — a <Code>critical</Code> upstream
-                becomes a warning rather than a failure.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Has backup</strong> + <strong>Backup duration</strong>
-              </Td>
-              <Td>
-                The node holds its current level instead of dropping, and starts a
-                countdown.
-              </Td>
-              <Td>
-                The drop is deferred, not cancelled. The countdown only moves when
-                you fire a <strong>Temporal Jump</strong> — without one the node
-                looks like it survived. On expiry it goes straight to <Code>1</Code>
-                .
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Priority</strong> <Code>1..10</Code> (default 5)
-              </Td>
-              <Td>Who gets served first when supply is short.</Td>
-              <Td>
-                Only used by <Code>SourceToDemands</Code> categories. Equal
-                priorities share the shortage; a higher priority takes its full
-                demand before lower ones get anything.
-              </Td>
-            </tr>
-          </Table>
-          <p className="text-xs text-zinc-500">
-            A category with no profile behaves as <Code>dependency_level = N</Code>{" "}
-            — full dependency. Leaving it out never stops propagation.
-          </p>
-        </Sub>
-
-        <Sub title="Vulnerability levels">
-          <p>
-            One entry per Event, on nodes and on edges. The level the Event
-            imposes is <Code>N − vulnerability</Code>: at N=3, <Code>1</Code> →{" "}
-            <Code>operational_warning</Code>, <Code>2</Code> → <Code>critical</Code>
-            , absent → untouched.
-          </p>
-          <p className="text-xs text-zinc-500">
-            An Event with no vulnerability entries anywhere does nothing when
-            applied. For a <strong>Hazard</strong> every affected element is also
-            flagged <Code>direct_damage</Code>, which is what puts it on the repair
-            list.
-          </p>
-          <p className="text-xs text-zinc-500">
-            The section is always in the Inspector, even before any Event exists —
-            that is the commonest reason a Propagation changes nothing, so it says
-            so rather than hiding. <strong>New event</strong> in it opens the Model
-            Configuration on the Events tab.
-          </p>
-        </Sub>
-
-        <Sub title="Socio-economic values">
+        <Sub title="Socioeconomic Values">
           <Table head={["Field", "Meaning", "Consequence"]}>
             <tr>
               <Td>
@@ -381,10 +368,129 @@ export function UserManual({
           </Table>
         </Sub>
 
+        <Sub title="Category Dependency Profiles">
+          <p className="text-xs text-zinc-500">
+            One block per Category reaching this element, each headed by the
+            Category name. A block tagged <em>via parent</em> came from an edge
+            rather than from the node&rsquo;s own Categories.
+          </p>
+          <Table head={["Field", "Meaning", "Consequence"]}>
+            <tr>
+              <Td>
+                <strong>Dependency level</strong> <Code>1–N</Code>
+              </Td>
+              <Td>How hard a shortfall in this category pulls the node down.</Td>
+              <Td>
+                <Code>N</Code> (the default) passes the drop through unchanged.{" "}
+                <Code>1</Code> means this category can never degrade the node.
+                Values in between soften it — a <Code>critical</Code> upstream
+                becomes a warning rather than a failure.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Has backup</strong> + <strong>Backup duration</strong>{" "}
+                (hours)
+              </Td>
+              <Td>
+                The node holds its current level instead of dropping, and starts a
+                countdown.
+              </Td>
+              <Td>
+                The drop is deferred, not cancelled: the duration is written to{" "}
+                <strong>Functionality Time</strong> above, and only a{" "}
+                <strong>Temporal Jump</strong> moves it. On expiry the node goes
+                straight to <Code>1</Code>.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Demand</strong>
+              </Td>
+              <Td>
+                The quantity of that category the node requires. This is where a
+                consumer is declared.
+              </Td>
+              <Td>
+                Only nodes with <Code>demand &gt; 0</Code> are served by the flow
+                allocation. A <Code>SourceToDemands</Code> node with no demand is
+                invisible to it.
+              </Td>
+            </tr>
+            <tr>
+              <Td>
+                <strong>Priority</strong> <Code>1–10</Code> (default 5)
+              </Td>
+              <Td>Who gets served first when supply is short.</Td>
+              <Td>
+                Only used by <Code>SourceToDemands</Code> categories. Equal
+                priorities share the shortage; a higher priority takes its full
+                demand before lower ones get anything.
+              </Td>
+            </tr>
+          </Table>
+          <p className="text-xs text-zinc-500">
+            A category with no profile behaves as <Code>dependency_level = N</Code>{" "}
+            — full dependency. Leaving it out never stops propagation.
+          </p>
+        </Sub>
+
+        <Sub title="Vulnerability Levels">
+          <p>
+            One entry per Event, on nodes and on edges. The level the Event
+            imposes is <Code>N − vulnerability</Code>: at N=3, <Code>1</Code> →{" "}
+            <Code>operational_warning</Code>, <Code>2</Code> → <Code>critical</Code>
+            , absent → untouched.
+          </p>
+          <p className="text-xs text-zinc-500">
+            An Event with no vulnerability entries anywhere does nothing when
+            applied. For a <strong>Hazard</strong> every affected element is also
+            flagged <Code>direct_damage</Code>, which is what puts it on the repair
+            list.
+          </p>
+          <p className="text-xs text-zinc-500">
+            The section is always in the Inspector, even before any Event exists —
+            that is the commonest reason a Propagation changes nothing, so it says
+            so rather than hiding. <strong>New event</strong> in it opens the Model
+            Configuration on the Events tab.
+          </p>
+        </Sub>
+
+        <Sub title="Rules">
+          <p className="text-xs text-zinc-500">
+            The rules attached to this element, and <strong>Add rule</strong>,
+            which opens the Active Rules window aimed at it. What to write is §2
+            below.
+          </p>
+        </Sub>
+
+        <Sub title="Properties">
+          <p className="text-xs text-zinc-500">
+            Free key/value attributes carried with the element — a population, an
+            asset code, a pressure. Numeric ones become weighting options for the
+            Operativity Score, and Rules can read them. The engine ignores the
+            rest.
+          </p>
+        </Sub>
+
+        <Sub title="Canvas Membership">
+          <p className="text-xs text-zinc-500">
+            Shown once the project has a second Canvas: pick a{" "}
+            <strong>Target canvas</strong>, then <strong>Copy</strong> (the
+            element stays here as well) or <strong>Move</strong> (it leaves this
+            Canvas, and edges crossing the boundary become inter-canvas edges).
+            An element is numbered once across the whole project, so the same
+            element shown on two Canvases is one element.
+          </p>
+        </Sub>
+
         <Sub title="Edges">
           <p>
             An edge <Code>a → b</Code> means <strong>a supplies b</strong>. Drawn
-            the other way, nothing propagates.
+            the other way, nothing propagates. The Edge Inspector shows the same
+            sections, minus the ones that are about supply and demand: Identity is
+            the pair it connects, and <strong>Capacity</strong> stands where
+            Supply Capacity does on a node.
           </p>
           <Table head={["Field", "Meaning", "Consequence"]}>
             <tr>
@@ -410,7 +516,7 @@ export function UserManual({
             </tr>
             <tr>
               <Td>
-                <strong>Vulnerability levels</strong>
+                <strong>Vulnerability Levels</strong>
               </Td>
               <Td>Same as nodes.</Td>
               <Td>

@@ -1,10 +1,9 @@
 /**
  * customize-propagation-tour.ts — how to change what the engine computes.
  *
- * Four declarations steer a Propagation, and none of them is code: the Category
- * Type, the Functionality Scale, the per-category dependency profile, and
- * Rules. This tour changes one at a time and re-runs the Propagation after
- * each, because that is the only honest way to read them — every one is
+ * Three declarations steer a Propagation, and none of them is code: the Category
+ * Type, the per-category dependency profile, and Rules. This tour changes one
+ * at a time and re-runs the Propagation after each, because that is the only honest way to read them — every one is
  * invisible on the canvas, and they can cancel each other out.
  *
  * It runs on `IJDRR_Extended_example.json` rather than the plain IJDRR example,
@@ -73,20 +72,10 @@ export const CUSTOMIZE_PROPAGATION_TOUR: TourStep[] = [
   {
     title: "Customize the Propagation",
     body:
-      "Four declarations decide what the engine computes: the Category Type, the " +
-      "Functionality Scale, the dependency profile, and Rules. We change them one at a time " +
-      "and re-run the Propagation after each. Read the network before and after every " +
-      "change — none of these is visible on the canvas.",
-  },
-  {
-    anchor: "reset",
-    side: "bottom",
-    title: "Start from a known state",
-    body:
-      "Reset returns the network to its Scenario Baseline. Each change below is then measured " +
-      "against the same undamaged starting point, with nothing else moving.",
-    waitHint: "Waiting for a Reset…",
-    waitFor: awaitUpdate("scenario_reset"),
+      "Three declarations decide what the engine computes: the Category Type, the dependency " +
+      "profile, and Rules — and Rules come in three kinds, so we write one of each. Every " +
+      "change is followed by a Propagation, because none of them is visible on the canvas " +
+      "until the engine runs.",
   },
   {
     anchor: "events",
@@ -116,8 +105,8 @@ export const CUSTOMIZE_PROPAGATION_TOUR: TourStep[] = [
     title: "Change the Category Type",
     body:
       "Model Configuration → Categories: switch electric from Requisite to SourceToDemands. " +
-      "That type allocates a quantity instead of a level — Supply Capacity, Demand, edge " +
-      "Capacity and Priority all count.",
+      "That type allocates a quantity instead of a level — Supply Capacity, the Demand and " +
+      "Priority in each Category Dependency Profile, and edge Capacity all count.",
     waitHint: "Waiting for a Category Type change…",
     waitFor: () => {
       const armedAt = categoryTypes();
@@ -141,8 +130,9 @@ export const CUSTOMIZE_PROPAGATION_TOUR: TourStep[] = [
     side: "left",
     title: "Raise the Dependency level",
     body:
-      "Select the City and set its electric Dependency level to 3 — full dependency. Its " +
-      "Demand, the supply and the graph are all unchanged; only its tolerance moved. It was " +
+      "Select the City and, in the Inspector on the right, set its electric Dependency level " +
+      "to 3 — full dependency. Its Demand, the supply and the graph are all unchanged; only " +
+      "its tolerance moved. It was " +
       "2, which is what softened the shortfall into a warning.",
     waitHint: "Waiting for a higher Dependency level…",
     waitFor: () => {
@@ -162,24 +152,15 @@ export const CUSTOMIZE_PROPAGATION_TOUR: TourStep[] = [
     waitFor: awaitUpdate("propagation"),
   },
   {
-    anchor: "config",
-    side: "bottom",
-    title: "The Functionality Scale sets the resolution",
-    body:
-      "The Functionality Scale tab defines N and the label of each level. Every result is " +
-      "expressed on it, and vulnerability levels and dependency levels are read against it. A " +
-      "3-level scale cannot express a degradation a 5-level scale distinguishes, so N is a " +
-      "modelling decision.",
-  },
-  {
     anchor: "rules",
     side: "top",
-    title: "Rules override the aggregation",
+    title: "Rule 1 of 3 — intracategorical",
     body:
-      "The Rules counter opens the Active Rules panel. Where the defaults are wrong — three " +
-      "roads that congest rather than one being enough, a service that covers for another — a " +
-      "Rule states the exception: intracategorical, intercategorical, or a specific if/then. " +
-      "Write one against the selected element.",
+      "The Rules counter opens the Active Rules panel. Within one category the engine takes " +
+      "the best supplier: one healthy feed is enough, which is why the two substations have " +
+      "been holding each other up. Where that is wrong — three roads that congest as each " +
+      "closes — say so. Select the Substation and write:\n\n" +
+      "average_of(Electric Source, Substation 2) propagates to Substation",
     waitHint: "Waiting for a Rule…",
     waitFor: () => {
       const armedAt = ruleCount();
@@ -189,20 +170,73 @@ export const CUSTOMIZE_PROPAGATION_TOUR: TourStep[] = [
   {
     anchor: "propagate",
     side: "bottom",
-    title: "Propagate — Rules run in the engine",
+    title: "Propagate — averaging instead of best-of",
     body:
       "A Rule is evaluated by the engine, after the category heuristics and before " +
-      "convergence, so it changes nothing until the next Propagation.",
+      "convergence, so it changes nothing until the next Propagation. Both substations now " +
+      "follow the source down: averaging its two feeds stops the pair propping itself up.",
     waitHint: "Waiting for a Propagation…",
     waitFor: awaitUpdate("propagation"),
   },
   {
-    anchor: "scorecard",
-    side: "bottom",
-    title: "Keep the comparison",
+    anchor: "rules",
+    side: "top",
+    title: "Rule 2 of 3 — intercategorical",
     body:
-      "Every step here was a before and an after. Saving each to the Scorecard makes the " +
-      "comparison durable: an entry stores the Scenario, its Operativity Score and a " +
-      "snapshot, which is what turns a sequence of edits into a result worth reporting.",
+      "Across categories the default is the worst of them: an element needs all its services. " +
+      "Where one can cover for another, name the categories rather than the elements — that " +
+      "is what makes a Rule intercategorical. The City is critical for want of electricity, " +
+      "and its water is intact. Select it and write:\n\n" +
+      "best_of(electric, water) propagates to City",
+    waitHint: "Waiting for a second Rule…",
+    waitFor: () => {
+      const armedAt = ruleCount();
+      return () => ruleCount() > armedAt;
+    },
+  },
+  {
+    anchor: "propagate",
+    side: "bottom",
+    title: "Propagate — one service covering for another",
+    body:
+      "The City comes back to operational: its water is fine, and best_of across its two " +
+      "categories is now what decides it. Nothing else changed — the kind was inferred from " +
+      "the arguments being category names rather than elements.",
+    waitHint: "Waiting for a Propagation…",
+    waitFor: awaitUpdate("propagation"),
+  },
+  {
+    anchor: "rules",
+    side: "top",
+    title: "Rule 3 of 3 — specific",
+    body:
+      "The last kind states an outcome outright, for what no aggregation expresses — a " +
+      "contract, a shutdown procedure, a regulation. It starts with if, and it can name any " +
+      "element as its target. Write:\n\n" +
+      "if Electric Source is critical then Hospital is critical",
+    waitHint: "Waiting for a third Rule…",
+    waitFor: () => {
+      const armedAt = ruleCount();
+      return () => ruleCount() > armedAt;
+    },
+  },
+  {
+    anchor: "propagate",
+    side: "bottom",
+    title: "Propagate — a forced outcome",
+    body:
+      "The Hospital goes critical even though its backup was carrying it. A specific Rule " +
+      "overrides the proposal for its target, clamped to worsening: it can impose a failure " +
+      "the graph would not have produced, and it never repairs anything.",
+    waitHint: "Waiting for a Propagation…",
+    waitFor: awaitUpdate("propagation"),
+  },
+  {
+    title: "That is the engine, steered",
+    body:
+      "A Category Type, a dependency profile and three Rules — each read by propagating and " +
+      "comparing. What the platform does with a Scenario once it exists is the next " +
+      "walkthrough: causality, time, the Analysis Module and repair ranking.",
+    nextTour: "platform",
   },
 ];

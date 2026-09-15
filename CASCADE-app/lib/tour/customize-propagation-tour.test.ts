@@ -15,6 +15,7 @@ import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
 import { CUSTOMIZE_PROPAGATION_TOUR } from "./customize-propagation-tour";
 import { gate } from "./test-helpers";
+import { TOURS } from "./registry";
 
 const N = 3;
 
@@ -74,8 +75,8 @@ describe("customize tour — every step's gate", () => {
     expect(open()).toBe(true);
   });
 
-  it("'Rules override the aggregation' opens on a rule the user just wrote", () => {
-    const open = gate(CUSTOMIZE_PROPAGATION_TOUR, "Rules override the aggregation");
+  it("each Rule step opens on a rule the user just wrote", () => {
+    const open = gate(CUSTOMIZE_PROPAGATION_TOUR, "Rule 1 of 3 — intracategorical");
     expect(open()).toBe(false);
     const nodes = { ...useCanvasStore.getState().nodes };
     nodes.city = { ...nodes.city, rules: ["average_of(a, b) propagates to City electric"] } as never;
@@ -122,15 +123,19 @@ describe("customize tour — every step's gate", () => {
     expect(open()).toBe(true);
   });
 
-  it("'Start from a known state' waits for a Reset, not for any update", () => {
-    const open = gate(CUSTOMIZE_PROPAGATION_TOUR, "Start from a known state");
-    useHistoryStore.setState({
-      updateHistory: [{ id: "a", update_type: "propagation" }],
-    } as never);
-    expect(open()).toBe(false);
-    useHistoryStore.setState({
-      updateHistory: [{ id: "b", update_type: "scenario_reset" }],
-    } as never);
+  it("a later Rule step counts the rule written for IT, not the earlier ones", () => {
+    // Each Rule gate arms on the running total, so the second and third steps
+    // must not be satisfied by rules the user wrote for the first.
+    const nodes = { ...useCanvasStore.getState().nodes };
+    nodes.city = { ...nodes.city, rules: ["rule one"] } as never;
+    useCanvasStore.setState({ nodes } as never);
+
+    const open = gate(CUSTOMIZE_PROPAGATION_TOUR, "Rule 2 of 3 — intercategorical");
+    expect(open(), "the rule from the previous step does not count").toBe(false);
+
+    const more = { ...useCanvasStore.getState().nodes };
+    more.city = { ...more.city, rules: ["rule one", "rule two"] } as never;
+    useCanvasStore.setState({ nodes: more } as never);
     expect(open()).toBe(true);
   });
 });
@@ -144,7 +149,9 @@ describe("customize tour — shape", () => {
       "Break the source",
       "Change the Category Type",
       "Raise the Dependency level",
-      "Rules override the aggregation",
+      "Rule 1 of 3 — intracategorical",
+      "Rule 2 of 3 — intercategorical",
+      "Rule 3 of 3 — specific",
     ];
     for (const title of changeSteps) {
       const i = steps.findIndex((s) => s.title === title);
@@ -164,4 +171,18 @@ describe("customize tour — shape", () => {
     }
   });
 
+  it("writes one Rule of each kind", () => {
+    // The three kinds are inferred from a rule's shape, not declared, which is
+    // the part that catches people out — so the tour has to show all three.
+    const titles = CUSTOMIZE_PROPAGATION_TOUR.map((s) => s.title);
+    expect(titles).toContain("Rule 1 of 3 — intracategorical");
+    expect(titles).toContain("Rule 2 of 3 — intercategorical");
+    expect(titles).toContain("Rule 3 of 3 — specific");
+  });
+
+  it("hands over to a tour that exists", () => {
+    const last = CUSTOMIZE_PROPAGATION_TOUR[CUSTOMIZE_PROPAGATION_TOUR.length - 1];
+    expect(last.nextTour, "the closing step offers no follow-on tour").toBeTruthy();
+    expect(Object.keys(TOURS)).toContain(last.nextTour!);
+  });
 });

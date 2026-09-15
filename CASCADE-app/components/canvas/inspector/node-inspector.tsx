@@ -400,7 +400,7 @@ export function NodeInspector({ node }: { node: Node }) {
             return (
               <div key={cat} className="mb-3">
                 <div className="mb-1 flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                  <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                     {cat}
                   </span>
                   {isInbound && (

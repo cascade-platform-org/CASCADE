@@ -21,43 +21,74 @@
 
 ## 1. Setting up an element
 
-Select a node or edge and fill in the Inspector on the right.
+Select a node or edge and fill in the Inspector — the panel on the right. The
+headings below are the Inspector's own sections, in the order it shows them, and
+the field names are the ones on its labels: keep the two side by side and every
+row here has a control next to it.
 
-### Identity and type
+A section missing from the panel has nothing to configure yet. **Supply
+Capacity** appears once the node carries a Category (or is a Source), **Category
+Dependency Profiles** once a Category reaches it, and **Canvas Membership** once
+the project has a second Canvas.
+
+### Identity
 
 | Field | Meaning | Consequence |
 |---|---|---|
 | **Label** | The name shown on the canvas. | Rules can reference it. Two nodes with the same label make any rule naming it ambiguous — the rule is reported, not guessed. |
 | **Node Type** | Source / Infrastructure / Service / Personnel. | Changes the shape drawn, nothing else. It does **not** make a node supply or consume anything — `Supply Capacity` and `Demand` do that. |
-| **Categories** | The services this node deals in (`water`, `power`, `transport`, `manager`, …). | Determines how neighbours aggregate it: suppliers of the same category are alternatives, different categories are all required. A node with no category participates in nothing. |
+| **Categories** | The services this node deals in (`water`, `power`, `transport`, `manager`, …). A Category is a service, often a resource that is consumed. | Determines how neighbours aggregate it: suppliers of the same category are alternatives, different categories are all required. A node with no category participates in nothing. |
 
-### Supplier or consumer
+### Functionality
 
-Per category a node should be one or the other.
+The element's current condition — scenario state, not model. A **Reset** clears
+every field in this section.
+
+| Field | Meaning | Consequence |
+|---|---|---|
+| **Functionality** `1–N` | Where the element sits on the Functionality scale, `1` worst, `N` fully operational. | Sets the colour on the canvas and scales what a source delivers. Edit it by hand to pose a what-if; a Propagation overwrites it. |
+| **Functionality Time** (hours) | Hours left on a backup that is holding this element up. | Above zero the element keeps its level and pulses with an amber ring on the canvas. The countdown moves only on a **Temporal Jump**; at zero the element drops to `1`. |
+| **Direct damage** (physical breakage) | The element is broken itself, not starved by a neighbour. | Set by a **Hazard**, or by hand. It draws a crack on the element and is what puts it on the repair ranking — only directly damaged elements can be repaired. |
+| **Expected repair time** (hours) | How long that breakage takes to fix. Shown once damaged. | Feeds the repair ranking's value-per-hour, never the cascade. |
+
+### Supply Capacity
+
+One amount per Category — what this element can supply.
 
 | Field | Meaning | Consequence |
 |---|---|---|
 | **Supply Capacity** `{category: amount}` | Makes the node a source of that category. | Effective output is `supply_capacity × functionality / N`, so a source at `operational_warning` on a 3-level scale delivers two thirds. Leave it empty and the node supplies nothing, whatever its Node Type says. |
-| **Demand** (per category, in the profile) | Makes the node a consumer of that category. | Only nodes with `demand > 0` are served by the flow allocation. A `SourceToDemands` node with no demand is invisible to it. |
 
-Setting both for the **same** category is accepted but almost always a slip: the
-node becomes a source *and* a consumer of that category and partly serves its own
-demand. The Inspector flags it — split the node in two, or clear one value.
+What the element *requires* is not here: Demand lives in its Category Dependency
+Profile, further down. Setting both for the **same** category is accepted but
+almost always a slip — the node becomes a source *and* a consumer of it and
+partly serves its own demand. The Inspector flags it; split the node in two, or
+clear one value.
 
-### Category Dependency Profile
-
-One block per category the node consumes. Add it, and these apply:
+### Socioeconomic Values
 
 | Field | Meaning | Consequence |
 |---|---|---|
-| **Dependency level** `1..N` | How hard a shortfall in this category pulls the node down. | `N` (the default) passes the drop through unchanged. `1` means this category can never degrade the node. Values in between soften it — a `critical` upstream becomes a warning rather than a failure. |
-| **Has backup** + **Backup duration (hours)** | The node holds its current level instead of dropping, and starts a countdown. | The drop is deferred, not cancelled. The countdown only moves when you fire a **Temporal Jump** — without one the node looks like it survived. On expiry it goes straight to `1`. |
-| **Priority** `1..10` (default 5) | Who gets served first when supply is short. | Only used by `SourceToDemands` categories. Equal priorities share the shortage; a higher priority takes its full demand before lower ones get anything. |
+| **Importance** `0–1` | How much this node counts. Defaults to **0.5**. | No effect on propagation. It sets the size the node is drawn at, weights the Operativity Score, and through it decides which elements the Shapley analysis calls neuralgic. |
+| **Cost of disservice / day** | Money lost per day while degraded. | Same: scoring and the repair ranking, never the cascade itself. Takes precedence over Importance where both are set. |
+
+### Category Dependency Profiles
+
+One block per Category reaching this element, each headed by the Category name.
+A block tagged *via parent* came from an edge rather than from the node's own
+Categories.
+
+| Field | Meaning | Consequence |
+|---|---|---|
+| **Dependency level** `1–N` | How hard a shortfall in this category pulls the node down. | `N` (the default) passes the drop through unchanged. `1` means this category can never degrade the node. Values in between soften it — a `critical` upstream becomes a warning rather than a failure. |
+| **Has backup** + **Backup duration (hours)** | The node holds its current level instead of dropping, and starts a countdown. | The drop is deferred, not cancelled: the duration is written to **Functionality Time** above, and only a **Temporal Jump** moves it. On expiry the node goes straight to `1`. |
+| **Demand** | The quantity of that category the node requires. This is where a consumer is declared. | Only nodes with `demand > 0` are served by the flow allocation. A `SourceToDemands` node with no demand is invisible to it. |
+| **Priority** `1–10` (default 5) | Who gets served first when supply is short. | Only used by `SourceToDemands` categories. Equal priorities share the shortage; a higher priority takes its full demand before lower ones get anything. |
 
 A category with no profile behaves as `dependency_level = N` — full dependency.
 Leaving it out never stops propagation.
 
-### Vulnerability levels
+### Vulnerability Levels
 
 One entry per Event, on nodes and on edges. The level the Event imposes is
 `N − vulnerability`:
@@ -76,22 +107,37 @@ The section is always in the Inspector, even before any Event exists — that is
 the commonest reason a Propagation changes nothing, so it says so rather than
 hiding. **New event** in it opens the Model Configuration on the Events tab.
 
-### Socio-economic values
+### Rules
 
-| Field | Meaning | Consequence |
-|---|---|---|
-| **Importance** `0–1` | How much this node counts. Defaults to **0.5**. | No effect on propagation. It sets the size the node is drawn at, weights the Operativity Score, and through it decides which elements the Shapley analysis calls neuralgic. |
-| **Cost of disservice / day** | Money lost per day while degraded. | Same: scoring and the repair ranking, never the cascade itself. Takes precedence over Importance where both are set. |
+The rules attached to this element, and **Add rule**, which opens the Active
+Rules window aimed at it. What to write is §2 below.
+
+### Properties
+
+Free key/value attributes carried with the element — a population, an asset
+code, a pressure. Numeric ones become weighting options for the Operativity
+Score, and Rules can read them. The engine ignores the rest.
+
+### Canvas Membership
+
+Shown once the project has a second Canvas: pick a **Target canvas**, then
+**Copy** (the element stays here as well) or **Move** (it leaves this Canvas,
+and edges crossing the boundary become inter-canvas edges). An element is
+numbered once across the whole project, so the same element shown on two
+Canvases is one element.
 
 ### Edges
 
 An edge `a → b` means **a supplies b**. Drawn the other way, nothing propagates.
+The Edge Inspector shows the same sections, minus the ones that are about supply
+and demand: Identity is the pair it connects, and **Capacity** stands where
+Supply Capacity does on a node.
 
 | Field | Meaning | Consequence |
 |---|---|---|
 | **Capacity** | Ceiling on the flow the edge carries. | Scales with the edge's own Functionality. An edge carries exactly one category — for two limits on the same connection, draw two edges. |
 | **Functionality** | The edge's own condition. | The engine commits `worst_of(edge, source node)`, so an intact edge from a failed source is still down. |
-| **Vulnerability levels** | Same as nodes. | An edge can be broken directly by a Hazard — a cut cable, a collapsed bridge. |
+| **Vulnerability Levels** | Same as nodes. | An edge can be broken directly by a Hazard — a cut cable, a collapsed bridge. |
 
 ## 2. Rules
 

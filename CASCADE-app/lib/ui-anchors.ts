@@ -9,3 +9,15 @@
 
 /** The Status Bar's "Rules: N active" control — home of the Active Rules panel. */
 export const RULES_ANCHOR_ID = "cascade-rules-anchor";
+
+/** The Topbar's "Scorecard" button — home of the Scorecard window. */
+export const SCORECARD_ANCHOR_ID = "cascade-scorecard-anchor";
+
+/** The Action Bar's "Time" button — home of the Temporal Jump window. */
+export const TEMPORAL_ANCHOR_ID = "cascade-temporal-anchor";
+
+/** The Topbar's "Help" button — home of the User Manual window. */
+export const HELP_ANCHOR_ID = "cascade-help-anchor";
+
+/** The Active Rules window's "Manual" button — home of the Rules Manual window. */
+export const RULES_MANUAL_ANCHOR_ID = "cascade-rules-manual-anchor";
