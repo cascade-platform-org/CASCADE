@@ -18,7 +18,8 @@
     "audit:deps": "npm audit --omit=dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "harness:shapley": "vitest run --config vitest.harness.config.mts"
+    "harness:shapley": "vitest run --config vitest.harness.config.mts",
+    "docs:manual": "node scripts/build-user-manual.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",

@@ -602,10 +602,10 @@ export function MultiSelectPanel({
         </Section>
       )}
 
-      {/* ── Edge Capacity (edges only) ── */}
+      {/* ── Edge Throughput Capacity (edges only) ── */}
       {isEdgesOnly && (
-        <Section title="Capacity">
-          <Field label="Max throughput">
+        <Section title="Capacities">
+          <Field label="Throughput Capacity">
             <div className="flex gap-1">
               <input
                 type="number"

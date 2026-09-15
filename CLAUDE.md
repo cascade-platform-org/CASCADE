@@ -69,6 +69,7 @@ When a feature is added or changed, update the relevant `.md` files in the same 
 | New API endpoint         | `docs/project/api-reference.md`                                     |
 | Architecture change      | `docs/project/architecture.md`                                      |
 | New feature or behaviour | `docs/project/requirements.md` (mark as implemented or update spec) |
+| User-facing manual text  | `docs/project/user-manual.md`, then `npm run docs:manual` (regenerates `CASCADE-app/lib/generated/user-manual.ts`; commit both) |
 | Deployment change        | `docs/project/deployment.md`                                        |
 | New domain term or decision | `CONTEXT.md` and/or a new ADR in `docs/adr/`                    |
 

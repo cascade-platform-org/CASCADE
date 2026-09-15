@@ -86,8 +86,8 @@ export function InterCanvasEdgeDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
+      <div className="my-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900">
         {/* Header */}
         <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           Add inter-canvas edge

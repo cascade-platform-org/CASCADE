@@ -1,31 +1,33 @@
 "use client";
 
 /**
- * UserManual — the in-app user guide: setting up elements, writing rules,
- * running a scenario.
+ * UserManual — the in-app user guide.
  *
- * Same convention as {@link RulesManual}: a self-contained presentational
- * component (pure JSX, no markdown dependency) that is the canonical
- * user-facing text. It deliberately stops where the rule grammar begins —
- * that reference lives in the Rules Manual panel, opened from §2 here.
+ * It no longer carries any prose. `docs/project/user-manual.md` is the single
+ * source: `npm run docs:manual` parses it into `lib/generated/user-manual.ts`,
+ * and this file is the renderer that gives that structure the app's own
+ * styling. Two copies of the same text was one copy too many — they drifted,
+ * which is what this arrangement exists to make impossible
+ * (`lib/manual/user-manual.test.ts` fails when the generated file is stale).
  *
- * Kept in sync by hand with docs/project/user-manual.md, which carries the same
- * sections for readers outside the app. Change both together.
+ * Two things are NOT in the markdown, because they are behaviour rather than
+ * text: the walkthrough list (read from the tour registry, so a new tour
+ * appears here by existing) and the Rules Manual button. The second is written
+ * in the markdown as an ordinary link, `[Rules Manual](cascade:rules-manual)`,
+ * and turned into a button here — a `cascade:` href is the manual's way of
+ * naming an action instead of a destination.
+ *
+ * It deliberately stops where the rule grammar begins — that reference lives in
+ * the Rules Manual window, opened from §3.
  */
 
 import type { ReactNode } from "react";
 import { TOURS, TOUR_IDS, type TourId } from "@/lib/tour/registry";
+import { USER_MANUAL } from "@/lib/generated/user-manual";
+import type { ManualBlock, ManualSpan } from "@/lib/manual/types";
 
-const SECTIONS = [
-  { id: "element", n: 1, title: "Setting up an element" },
-  { id: "rules", n: 2, title: "Rules" },
-  { id: "scenario", n: 3, title: "Running a scenario" },
-  { id: "intervention", n: 4, title: "Testing an intervention" },
-  { id: "analysis", n: 5, title: "Analysis results" },
-  { id: "files", n: 6, title: "Saving and loading" },
-  { id: "server", n: 7, title: "Server and roles" },
-  { id: "shortcuts", n: 8, title: "Keyboard shortcuts" },
-] as const;
+/** Actions the manual can name in a link, instead of a destination. */
+const ACTION_PREFIX = "cascade:";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -86,21 +88,23 @@ function Sub({ title, children }: { title: string; children: ReactNode }) {
 
 function Table({ head, children }: { head: string[]; children: ReactNode }) {
   return (
-    <table className="w-full border-collapse text-xs">
-      <thead>
-        <tr>
-          {head.map((h) => (
-            <th
-              key={h}
-              className="border-b border-zinc-200 px-2 py-1.5 text-left font-medium text-zinc-500 dark:border-zinc-700"
-            >
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr>
+            {head.map((h, i) => (
+              <th
+                key={i}
+                className="border-b border-zinc-200 px-2 py-1.5 text-left font-medium text-zinc-500 dark:border-zinc-700"
+              >
+                {h.replace(/\*\*/g, "")}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
   );
 }
 
@@ -112,11 +116,137 @@ function Td({ children }: { children: ReactNode }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Rendering the parsed markdown
+// ---------------------------------------------------------------------------
+
+function Spans({
+  spans,
+  onAction,
+}: {
+  spans: ManualSpan[];
+  onAction?: (action: string) => void;
+}) {
+  return (
+    <>
+      {spans.map((span, i) => {
+        switch (span.kind) {
+          case "code":
+            return <Code key={i}>{span.text}</Code>;
+          case "strong":
+            return <strong key={i}>{span.text}</strong>;
+          case "em":
+            return <em key={i}>{span.text}</em>;
+          case "break":
+            return <br key={i} />;
+          case "link": {
+            if (span.href.startsWith(ACTION_PREFIX)) {
+              const action = span.href.slice(ACTION_PREFIX.length);
+              // No handler wired (the manual rendered outside the editor): the
+              // name still reads correctly as plain text.
+              if (!onAction) return <strong key={i}>{span.text}</strong>;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onAction(action)}
+                  className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400"
+                >
+                  {span.text}
+                </button>
+              );
+            }
+            return (
+              <a
+                key={i}
+                href={span.href}
+                className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400"
+              >
+                {span.text}
+              </a>
+            );
+          }
+          default:
+            return <span key={i}>{span.text}</span>;
+        }
+      })}
+    </>
+  );
+}
+
+function Blocks({
+  blocks,
+  onAction,
+}: {
+  blocks: ManualBlock[];
+  onAction?: (action: string) => void;
+}) {
+  return (
+    <>
+      {blocks.map((block, i) => {
+        switch (block.type) {
+          case "paragraph":
+            return (
+              <p key={i} className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+                <Spans spans={block.spans} onAction={onAction} />
+              </p>
+            );
+          case "callout":
+            return (
+              <Callout key={i}>
+                <Spans spans={block.spans} onAction={onAction} />
+              </Callout>
+            );
+          case "code":
+            return <Block key={i}>{block.text}</Block>;
+          case "list": {
+            const List = block.ordered ? "ol" : "ul";
+            return (
+              <List
+                key={i}
+                className={`space-y-1 pl-5 text-xs text-zinc-600 dark:text-zinc-400 ${
+                  block.ordered ? "list-decimal" : "list-disc"
+                }`}
+              >
+                {block.items.map((item, j) => (
+                  <li key={j}>
+                    <Spans spans={item} onAction={onAction} />
+                  </li>
+                ))}
+              </List>
+            );
+          }
+          case "table":
+            return (
+              <Table key={i} head={block.head}>
+                {block.rows.map((row, j) => (
+                  <tr key={j}>
+                    {row.map((cell, k) => (
+                      <Td key={k}>
+                        <Spans spans={cell} onAction={onAction} />
+                      </Td>
+                    ))}
+                  </tr>
+                ))}
+              </Table>
+            );
+          case "sub":
+            return (
+              <Sub key={i} title={block.title}>
+                <Blocks blocks={block.blocks} onAction={onAction} />
+              </Sub>
+            );
+        }
+      })}
+    </>
+  );
+}
+
 function Contents() {
   return (
     <nav className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-2 dark:border-zinc-800 dark:bg-zinc-800/40">
       <ol className="space-y-0.5">
-        {SECTIONS.map((s) => (
+        {USER_MANUAL.sections.map((s) => (
           <li key={s.id}>
             <button
               type="button"
@@ -169,6 +299,12 @@ export function UserManual({
   /** Omitted where no tour can be started from — the list is then hidden. */
   onStartTour?: (id: TourId) => void;
 }) {
+  const onAction = onOpenRulesManual
+    ? (action: string) => {
+        if (action === "rules-manual") onOpenRulesManual();
+      }
+    : undefined;
+
   return (
     <div className="space-y-6 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
       <header className="space-y-1">
@@ -187,6 +323,9 @@ export function UserManual({
           says the rest. */}
       {onStartTour && (
         <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+            Platform Tutorials
+          </p>
           {TOUR_IDS.map((id) => (
             <TourLine
               key={id}
@@ -198,776 +337,11 @@ export function UserManual({
         </div>
       )}
 
-      <Section id="element" n={1} title="Setting up an element">
-        <p className="text-xs text-zinc-500">
-          Select a node or edge and fill in the Inspector — the panel on the
-          right. The headings below are the Inspector&rsquo;s own sections, in
-          the order it shows them, and the field names are the ones on its
-          labels: keep the two side by side and every row here has a control
-          next to it.
-        </p>
-        <p className="text-xs text-zinc-500">
-          A section missing from the panel has nothing to configure yet.{" "}
-          <strong>Supply Capacity</strong> appears once the node carries a
-          Category (or is a Source),{" "}
-          <strong>Category Dependency Profiles</strong> once a Category reaches
-          it, and <strong>Canvas Membership</strong> once the project has a
-          second Canvas.
-        </p>
-
-        <Sub title="Identity">
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Label</strong>
-              </Td>
-              <Td>The name shown on the canvas.</Td>
-              <Td>
-                Rules can reference it. Two nodes with the same label make any
-                rule naming it ambiguous — the rule is reported, not guessed.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Node Type</strong>
-              </Td>
-              <Td>Source / Infrastructure / Service / Personnel.</Td>
-              <Td>
-                Changes the shape drawn, nothing else. It does <strong>not</strong>{" "}
-                make a node supply or consume anything — <Code>Supply Capacity</Code>{" "}
-                and <Code>Demand</Code> do that.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Categories</strong>
-              </Td>
-              <Td>
-                The services this node deals in (<Code>water</Code>,{" "}
-                <Code>power</Code>, <Code>transport</Code>, <Code>manager</Code>,
-                …). A Category is a service, often a resource that is consumed.
-              </Td>
-              <Td>
-                Determines how neighbours aggregate it: suppliers of the same
-                category are alternatives, different categories are all required.
-                A node with no category participates in nothing.
-              </Td>
-            </tr>
-          </Table>
-        </Sub>
-
-        <Sub title="Functionality">
-          <p className="text-xs text-zinc-500">
-            The element&rsquo;s current condition — scenario state, not model.
-            A <strong>Reset</strong> clears every field in this section.
-          </p>
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Functionality</strong> <Code>1–N</Code>
-              </Td>
-              <Td>
-                Where the element sits on the Functionality scale, <Code>1</Code>{" "}
-                worst, <Code>N</Code> fully operational.
-              </Td>
-              <Td>
-                Sets the colour on the canvas and scales what a source delivers.
-                Edit it by hand to pose a what-if; a Propagation overwrites it.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Functionality Time</strong> (hours)
-              </Td>
-              <Td>Hours left on a backup that is holding this element up.</Td>
-              <Td>
-                Above zero the element keeps its level and pulses with an amber
-                ring on the canvas. The countdown moves only on a{" "}
-                <strong>Temporal Jump</strong>; at zero the element drops to{" "}
-                <Code>1</Code>.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Direct damage</strong> (physical breakage)
-              </Td>
-              <Td>The element is broken itself, not starved by a neighbour.</Td>
-              <Td>
-                Set by a <strong>Hazard</strong>, or by hand. It draws a crack on
-                the element and is what puts it on the repair ranking — only
-                directly damaged elements can be repaired.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Expected repair time</strong> (hours)
-              </Td>
-              <Td>How long that breakage takes to fix. Shown once damaged.</Td>
-              <Td>
-                Feeds the repair ranking&rsquo;s value-per-hour, never the
-                cascade.
-              </Td>
-            </tr>
-          </Table>
-        </Sub>
-
-        <Sub title="Supply Capacity">
-          <p className="text-xs text-zinc-500">
-            One amount per Category — what this element can supply.
-          </p>
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Supply Capacity</strong> <Code>{"{category: amount}"}</Code>
-              </Td>
-              <Td>Makes the node a source of that category.</Td>
-              <Td>
-                Effective output is{" "}
-                <Code>supply_capacity × functionality / N</Code>, so a source at{" "}
-                <Code>operational_warning</Code> on a 3-level scale delivers two
-                thirds. Leave it empty and the node supplies nothing, whatever its
-                Node Type says.
-              </Td>
-            </tr>
-          </Table>
-          <Callout>
-            What the element <em>requires</em> is not here: Demand lives in its
-            Category Dependency Profile, further down. Setting both for the{" "}
-            <em>same</em> category is accepted but almost always a slip — the node
-            becomes a source <em>and</em> a consumer of it and partly serves its
-            own demand. The Inspector flags it; split the node in two, or clear
-            one value.
-          </Callout>
-        </Sub>
-
-        <Sub title="Socioeconomic Values">
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Importance</strong> <Code>0–1</Code>
-              </Td>
-              <Td>
-                How much this node counts. Defaults to <Code>0.5</Code>.
-              </Td>
-              <Td>
-                No effect on propagation. It sets the size the node is drawn at,
-                weights the Operativity Score, and through it decides which
-                elements the Shapley analysis calls neuralgic.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Cost of disservice / day</strong>
-              </Td>
-              <Td>Money lost per day while degraded.</Td>
-              <Td>
-                Same: scoring and the repair ranking, never the cascade itself.
-                Takes precedence over Importance where both are set.
-              </Td>
-            </tr>
-          </Table>
-        </Sub>
-
-        <Sub title="Category Dependency Profiles">
-          <p className="text-xs text-zinc-500">
-            One block per Category reaching this element, each headed by the
-            Category name. A block tagged <em>via parent</em> came from an edge
-            rather than from the node&rsquo;s own Categories.
-          </p>
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Dependency level</strong> <Code>1–N</Code>
-              </Td>
-              <Td>How hard a shortfall in this category pulls the node down.</Td>
-              <Td>
-                <Code>N</Code> (the default) passes the drop through unchanged.{" "}
-                <Code>1</Code> means this category can never degrade the node.
-                Values in between soften it — a <Code>critical</Code> upstream
-                becomes a warning rather than a failure.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Has backup</strong> + <strong>Backup duration</strong>{" "}
-                (hours)
-              </Td>
-              <Td>
-                The node holds its current level instead of dropping, and starts a
-                countdown.
-              </Td>
-              <Td>
-                The drop is deferred, not cancelled: the duration is written to{" "}
-                <strong>Functionality Time</strong> above, and only a{" "}
-                <strong>Temporal Jump</strong> moves it. On expiry the node goes
-                straight to <Code>1</Code>.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Demand</strong>
-              </Td>
-              <Td>
-                The quantity of that category the node requires. This is where a
-                consumer is declared.
-              </Td>
-              <Td>
-                Only nodes with <Code>demand &gt; 0</Code> are served by the flow
-                allocation. A <Code>SourceToDemands</Code> node with no demand is
-                invisible to it.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Priority</strong> <Code>1–10</Code> (default 5)
-              </Td>
-              <Td>Who gets served first when supply is short.</Td>
-              <Td>
-                Only used by <Code>SourceToDemands</Code> categories. Equal
-                priorities share the shortage; a higher priority takes its full
-                demand before lower ones get anything.
-              </Td>
-            </tr>
-          </Table>
-          <p className="text-xs text-zinc-500">
-            A category with no profile behaves as <Code>dependency_level = N</Code>{" "}
-            — full dependency. Leaving it out never stops propagation.
-          </p>
-        </Sub>
-
-        <Sub title="Vulnerability Levels">
-          <p>
-            One entry per Event, on nodes and on edges. The level the Event
-            imposes is <Code>N − vulnerability</Code>: at N=3, <Code>1</Code> →{" "}
-            <Code>operational_warning</Code>, <Code>2</Code> → <Code>critical</Code>
-            , absent → untouched.
-          </p>
-          <p className="text-xs text-zinc-500">
-            An Event with no vulnerability entries anywhere does nothing when
-            applied. For a <strong>Hazard</strong> every affected element is also
-            flagged <Code>direct_damage</Code>, which is what puts it on the repair
-            list.
-          </p>
-          <p className="text-xs text-zinc-500">
-            The section is always in the Inspector, even before any Event exists —
-            that is the commonest reason a Propagation changes nothing, so it says
-            so rather than hiding. <strong>New event</strong> in it opens the Model
-            Configuration on the Events tab.
-          </p>
-        </Sub>
-
-        <Sub title="Rules">
-          <p className="text-xs text-zinc-500">
-            The rules attached to this element, and <strong>Add rule</strong>,
-            which opens the Active Rules window aimed at it. What to write is §2
-            below.
-          </p>
-        </Sub>
-
-        <Sub title="Properties">
-          <p className="text-xs text-zinc-500">
-            Free key/value attributes carried with the element — a population, an
-            asset code, a pressure. Numeric ones become weighting options for the
-            Operativity Score, and Rules can read them. The engine ignores the
-            rest.
-          </p>
-        </Sub>
-
-        <Sub title="Canvas Membership">
-          <p className="text-xs text-zinc-500">
-            Shown once the project has a second Canvas: pick a{" "}
-            <strong>Target canvas</strong>, then <strong>Copy</strong> (the
-            element stays here as well) or <strong>Move</strong> (it leaves this
-            Canvas, and edges crossing the boundary become inter-canvas edges).
-            An element is numbered once across the whole project, so the same
-            element shown on two Canvases is one element.
-          </p>
-        </Sub>
-
-        <Sub title="Edges">
-          <p>
-            An edge <Code>a → b</Code> means <strong>a supplies b</strong>. Drawn
-            the other way, nothing propagates. The Edge Inspector shows the same
-            sections, minus the ones that are about supply and demand: Identity is
-            the pair it connects, and <strong>Capacity</strong> stands where
-            Supply Capacity does on a node.
-          </p>
-          <Table head={["Field", "Meaning", "Consequence"]}>
-            <tr>
-              <Td>
-                <strong>Capacity</strong>
-              </Td>
-              <Td>Ceiling on the flow the edge carries.</Td>
-              <Td>
-                Scales with the edge&rsquo;s own Functionality. An edge carries
-                exactly one category — for two limits on the same connection, draw
-                two edges.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Functionality</strong>
-              </Td>
-              <Td>The edge&rsquo;s own condition.</Td>
-              <Td>
-                The engine commits <Code>worst_of(edge, source node)</Code>, so an
-                intact edge from a failed source is still down.
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Vulnerability Levels</strong>
-              </Td>
-              <Td>Same as nodes.</Td>
-              <Td>
-                An edge can be broken directly by a Hazard — a cut cable, a
-                collapsed bridge.
-              </Td>
-            </tr>
-          </Table>
-        </Sub>
-      </Section>
-
-      <Section id="rules" n={2} title="Rules">
-        <p>
-          Rules cover what the graph alone cannot express. This is about when and
-          why
-          {onOpenRulesManual ? (
-            <>
-              ; the grammar reference is the{" "}
-              <button
-                type="button"
-                onClick={onOpenRulesManual}
-                className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400"
-              >
-                Rules Manual
-              </button>
-              .
-            </>
-          ) : (
-            <>; the grammar reference is the Rules Manual panel.</>
-          )}
-        </p>
-        <p>
-          Write them in the <strong>Active Rules</strong> panel &mdash; the
-          Inspector&rsquo;s <em>Add rule</em> opens it, and so does the Rules
-          counter in the status bar. It suggests names, operators and levels as
-          you type, and aims at whatever element is selected. The dropdown in its
-          header picks which canvas&rsquo;s rules you are looking at, starting
-          on the one you are on; <em>All canvases</em> shows every rule in the
-          project. Closing it animates back into that status-bar counter, which
-          is where you reopen it.
-        </p>
-
-        <Sub title="When you need one">
-          <p className="text-xs text-zinc-500">
-            Without any rule the engine already assumes:
-          </p>
-          <ul className="list-disc space-y-1 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
-            <li>
-              several suppliers of the <strong>same</strong> category → the target
-              takes the <strong>best</strong> of them (one healthy supplier is
-              enough);
-            </li>
-            <li>
-              several <strong>different</strong> categories → the target takes the{" "}
-              <strong>worst</strong> across them (it needs all of them);
-            </li>
-            <li>
-              partial tolerance is <Code>Dependency level</Code>, not a rule;
-            </li>
-            <li>
-              a delayed failure is <Code>Has backup</Code>, not a rule.
-            </li>
-          </ul>
-          <p className="text-xs text-zinc-500">
-            Write a rule when the real system contradicts one of those. Many rules
-            usually means the model wants a different Category Type or an extra
-            node instead.
-          </p>
-        </Sub>
-
-        <Sub title="The three kinds">
-          <Table head={["Kind", "Shape", "What it changes"]}>
-            <tr>
-              <Td>
-                <strong>Intracategorical</strong>
-              </Td>
-              <Td>
-                <Code>op(a, b, …) propagates to target</Code>
-              </Td>
-              <Td>
-                How the target combines suppliers <strong>within one</strong>{" "}
-                category
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Intercategorical</strong>
-              </Td>
-              <Td>
-                <Code>op(cat1, cat2, …) propagates to target</Code>
-              </Td>
-              <Td>
-                How the target combines its <strong>different</strong> categories
-              </Td>
-            </tr>
-            <tr>
-              <Td>
-                <strong>Specific</strong>
-              </Td>
-              <Td>
-                <Code>{"if <condition> then <target> is <level>"}</Code>
-              </Td>
-              <Td>Forces an outcome when a named situation holds</Td>
-            </tr>
-          </Table>
-          <p className="text-xs text-zinc-500">
-            The kind is inferred: starting with <Code>if</Code> makes it Specific;
-            otherwise naming a <em>category</em> in the arguments makes it
-            Intercategorical, else Intracategorical. Operators:{" "}
-            <Code>worst_of</Code>, <Code>best_of</Code>, <Code>average_of</Code>,{" "}
-            <Code>median_of</Code>, <Code>majority_of</Code>.
-          </p>
-        </Sub>
-
-        <Sub title="Examples">
-          <p>
-            <strong>Degrade gradually instead of all-or-nothing.</strong> A city
-            has three road approaches. The default keeps it fully connected while
-            any one is open; real traffic congests as routes close:
-          </p>
-          <Block>{`average_of(Udine Access, Aquileia Access, Cividale Access)
-  propagates to Palmanova transport`}</Block>
-          <p className="text-xs text-zinc-500">
-            One route <Code>critical</Code>, two <Code>operational</Code> →{" "}
-            <Code>⌊(1+3+3)/3⌋ = 2</Code>.
-          </p>
-
-          <p>
-            <strong>Let one service cover for another.</strong> A town copes with
-            losing power <em>or</em> water while the roads are open; it fails only
-            when transport is impaired <strong>and</strong> one utility is too:
-          </p>
-          <Block>{`worst_of(
-  best_of(Jalmicco electric, Jalmicco transport),
-  best_of(Jalmicco water,    Jalmicco transport)
-) propagates to Jalmicco`}</Block>
-
-          <p>
-            <strong>Hold an element up under a standing agreement.</strong> A water
-            source depends on power, but a protocol between the two operators keeps
-            it running while both are functioning:
-          </p>
-          <Block>{`if water Operator.protocol_active is True
-and water Operator is operational
-and electric Operator is operational
-then Fauglis water Source is operational`}</Block>
-          <p className="text-xs text-zinc-500">
-            The first condition reads a custom attribute you added under{" "}
-            <strong>Properties</strong>; the others read live Functionality. When
-            either operator degrades the rule stops firing and normal propagation
-            takes over. Conditions take <Code>and</Code> / <Code>or</Code> /{" "}
-            <Code>not</Code>, parentheses, any attribute after a dot (default{" "}
-            <Code>functionality</Code>), and <Code>{"< <= > >= = ≠"}</Code>.
-          </p>
-        </Sub>
-
-        <Sub title="Order of application">
-          <p className="text-xs text-zinc-500">
-            Per node, per round: <strong>propose → guard → commit.</strong>
-          </p>
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
-            <li>
-              <strong>Propose</strong> — supplier logic; intra/intercategorical
-              rules swap the combining operator here.
-            </li>
-            <li>
-              <strong>Guard</strong> — <Code>Dependency level</Code> softens the
-              proposal, <Code>Has backup</Code> defers it.
-            </li>
-            <li>
-              <strong>Specific rules</strong> — highest priority; a firing rule
-              replaces the result and overrides both the softening and the backup
-              deferral.
-            </li>
-            <li>
-              <strong>Commit</strong> — <Code>worst_of(current, result)</Code>.
-            </li>
-          </ol>
-        </Sub>
-
-        <Sub title="What bites people">
-          <ul className="list-disc space-y-1 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
-            <li>
-              A rule that would <strong>improve</strong> an element does nothing.
-            </li>
-            <li>
-              In an intracategorical rule the listed elements only{" "}
-              <strong>select the category</strong> — the operator then governs{" "}
-              <em>all</em> of the target&rsquo;s suppliers in it. Name the category
-              directly to be unambiguous:{" "}
-              <Code>worst_of(water) propagates to tank</Code>.
-            </li>
-            <li>
-              A misspelt level label or an unknown element name makes the rule{" "}
-              <strong>ignored with a warning</strong>, not an error. Read the
-              warnings after a Propagation.
-            </li>
-          </ul>
-        </Sub>
-      </Section>
-
-      <Section id="scenario" n={3} title="Running a scenario">
-        <ol className="list-decimal space-y-1.5 pl-5">
-          <li>
-            <strong>Define the Event</strong> in Config → Events, as a{" "}
-            <strong>Hazard</strong> (physical damage, needs repair) or a{" "}
-            <strong>Disservice</strong> (no damage, clears with its cause). Then
-            set <Code>Vulnerability levels</Code> on the exposed elements.
-          </li>
-          <li>
-            <strong>Pick the scope.</strong> <em>Local</em> sends only the active
-            Canvas; <em>Global</em> sends the whole project.
-          </li>
-          <li>
-            <strong>Apply</strong> the Event. Several can be stacked before
-            propagating.
-          </li>
-          <li>
-            <strong>Propagate.</strong>
-          </li>
-          <li>
-            <strong>Advance time</strong> if anything is on backup:{" "}
-            <strong>Temporal Jump</strong> moves the clock by hand,{" "}
-            <em>Auto-advance</em> jumps to the next expiry and re-propagates until
-            nothing is left holding.
-          </li>
-        </ol>
-        <Callout>
-          <strong>Inter-canvas edges only participate under Global scope.</strong>{" "}
-          A cross-sector cascade will not show up in a local run.
-        </Callout>
-        <p className="text-xs text-zinc-500">
-          <strong>Reset</strong> ends the current scenario and hands back a
-          working network. Every element goes to full functionality with no
-          countdown and no damage, whatever put it there — so Reset always
-          repairs the graph, even if something else has gone wrong. On top of
-          that it undoes anything Events and Propagations changed beyond
-          functionality, such as an attribute a rule wrote. Changes to the{" "}
-          <em>model</em> stay: a renamed element, a moved node, a corrected
-          capacity is your work, not the scenario&apos;s. It also ends any
-          temporal-jump run, and clears the Analysis Heatmap, whose colours
-          describe a scenario that is gone. Note that an element you authored
-          below full functionality as its <em>normal</em> state is raised to full
-          by Reset too.
-        </p>
-      </Section>
-
-      <Section id="intervention" n={4} title="Testing an intervention">
-        <p className="text-xs text-zinc-500">
-          An intervention is a model edit, re-run and compared against a Scorecard
-          entry saved from the baseline:
-        </p>
-        <Table head={["Intervention", "Set"]}>
-          <tr>
-            <Td>Physical hardening</Td>
-            <Td>
-              remove that element&rsquo;s <Code>Vulnerability levels</Code> entry
-            </Td>
-          </tr>
-          <tr>
-            <Td>Preparedness protocol</Td>
-            <Td>a Specific rule</Td>
-          </tr>
-          <tr>
-            <Td>Load-shedding agreement</Td>
-            <Td>
-              raise <Code>Priority</Code> on the protected consumer
-            </Td>
-          </tr>
-          <tr>
-            <Td>New backup</Td>
-            <Td>
-              <Code>Has backup</Code> + <Code>Backup duration</Code>
-            </Td>
-          </tr>
-          <tr>
-            <Td>More headroom</Td>
-            <Td>
-              raise <Code>Supply Capacity</Code>, or the <Code>Capacity</Code> of
-              the limiting edge
-            </Td>
-          </tr>
-        </Table>
-      </Section>
-
-      <Section id="analysis" n={5} title="Analysis results">
-        <p>
-          The Analysis page scores every element. <strong>Topological</strong>{" "}
-          metrics (betweenness, reachability, communities, &hellip;) run in the
-          browser. The Analysis window floats over the canvas: drag its title bar
-          to move it, its edges to resize it, and the &minus; button to roll it
-          up to the title bar when you want the canvas back. <strong>Model-based</strong> metrics (Vitality, Shapley)
-          re-run the propagation engine once per element or coalition, so they
-          need the server and can take a while &mdash; the panel shows the call
-          count before you start, and Cancel keeps whatever it has.
-        </p>
-        <p>
-          <strong>OI node weight</strong> decides which node attribute weights
-          the Operativity Score. Changing it re-scores the result you already
-          have &mdash; no new engine calls, and nothing is lost &mdash; so it is
-          safe to try several weightings on one expensive run.
-        </p>
-        <p>
-          The scores are painted onto the elements as soon as the metric
-          finishes &mdash; no button to press. The canvas legend swaps its
-          Functionality scale for the metric&rsquo;s own key, because the colours
-          no longer mean Functionality. Change the OI node weight and the colours
-          follow the new numbers. The overlay stays until you press{" "}
-          <strong>Clear heatmap</strong> or Reset the scenario &mdash; closing
-          the Analysis window leaves it alone, and the Analyse button carries a
-          dot while a heatmap is live. <strong>Apply heatmap to canvas</strong>
-          {" "}puts it back after a Clear.
-        </p>
-        <p>
-          After a Shapley run,{" "}
-          <strong>Export Shapley values (JSON)</strong> saves the result: one
-          &phi;&#770; per element, plus the seed the run used. Keeping the seed
-          means the same estimate can be replayed later, and the file is what the
-          paper&rsquo;s centrality comparison reads, so a published number is
-          always a number the app produced.
-        </p>
-      </Section>
-
-      <Section id="files" n={6} title="Saving and loading">
-        <p className="text-xs text-zinc-500">
-          The <strong>File</strong> button in the Topbar opens four tabs.
-        </p>
-        <Table head={["Tab", "What it does"]}>
-          <tr>
-            <Td>
-              <strong>Local</strong>
-            </Td>
-            <Td>
-              Save to your computer, open a <Code>.json</Code> file, and the last
-              10 saves kept in this browser. Plus a backup folder, written to
-              every time you close the tab.
-            </Td>
-          </tr>
-          <tr>
-            <Td>
-              <strong>Cloud</strong>
-            </Td>
-            <Td>
-              Save to your account and open it on any device. Last 10 kept. Needs
-              sign-in with Sync.
-            </Td>
-          </tr>
-          <tr>
-            <Td>
-              <strong>Import</strong>
-            </Td>
-            <Td>
-              Build a project from an EPANET <Code>.inp</Code> file.
-            </Td>
-          </tr>
-          <tr>
-            <Td>
-              <strong>New</strong>
-            </Td>
-            <Td>
-              Start a fresh project. Your current one stays open until you finish
-              the setup, so Cancel costs nothing.
-            </Td>
-          </tr>
-        </Table>
-        <p>
-          Local and cloud saves are independent: clearing your browser does not
-          touch your cloud saves, and deleting a cloud save does not touch your
-          computer.
-        </p>
-        <p>
-          <strong>Auto-save</strong> (Cloud tab) keeps one spare copy that
-          updates as you work. It never replaces one of your 10 cloud saves.
-          Switching it off deletes it.
-        </p>
-      </Section>
-
-      <Section id="server" n={7} title="Server and roles">
-        <p>
-          <strong>Propagate</strong> and the model-based analyses (Shapley,
-          Vitality) need the server and <Code>can_propagate</Code> —{" "}
-          <Code>analyst</Code> and above. <strong>Sync</strong> needs{" "}
-          <Code>can_sync</Code>. Everything else, including topological analysis,
-          works offline. Roles also carry a node cap and an engine-evaluation
-          budget per minute.
-        </p>
-      </Section>
-
-      <Section id="shortcuts" n={8} title="Keyboard shortcuts">
-        <p>
-          Every shortcut the editor listens for. They are ignored while you are
-          typing in a text field, so they never fight the Inspector.{" "}
-          <Code>Ctrl</Code> is <Code>⌘</Code> on macOS.
-        </p>
-
-        <Sub title="Editing">
-          <Table head={["Key", "Does"]}>
-            <tr>
-              <Td><Code>Ctrl+Z</Code></Td>
-              <Td>Undo the last change to the network.</Td>
-            </tr>
-            <tr>
-              <Td><Code>Ctrl+Y</Code> or <Code>Ctrl+Shift+Z</Code></Td>
-              <Td>Redo.</Td>
-            </tr>
-            <tr>
-              <Td><Code>Ctrl+A</Code></Td>
-              <Td>Select every element on the current Canvas, and open the Inspector.</Td>
-            </tr>
-            <tr>
-              <Td><Code>Ctrl+C</Code> / <Code>Ctrl+V</Code></Td>
-              <Td>Copy the selection, and paste it onto the active Canvas.</Td>
-            </tr>
-            <tr>
-              <Td><Code>Delete</Code> or <Code>Backspace</Code></Td>
-              <Td>Delete the selected nodes and edges.</Td>
-            </tr>
-          </Table>
-        </Sub>
-
-        <Sub title="Scenario">
-          <Table head={["Key", "Does"]}>
-            <tr>
-              <Td><Code>Ctrl+R</Code></Td>
-              <Td>
-                Clear the most recently applied Event. This removes the cascade
-                with it — a Propagation computed from an Event that is no longer
-                there describes nothing. Other Events stay applied but
-                un-propagated; re-run Propagation when you want the new cascade.
-                Your own edits are untouched, and <Code>Ctrl+Z</Code> brings the
-                Event and its cascade back. Note this takes over the
-                browser&apos;s reload shortcut while the canvas has focus; use{" "}
-                <Code>F5</Code> to reload.
-              </Td>
-            </tr>
-          </Table>
-        </Sub>
-
-        <Sub title="Tools">
-          <p>
-            Single letters, no modifier — they pick the active tool, the same as
-            clicking it in the toolbar.
-          </p>
-          <Table head={["Key", "Tool"]}>
-            <tr><Td><Code>V</Code></Td><Td>Select</Td></tr>
-            <tr><Td><Code>N</Code></Td><Td>Add node</Td></tr>
-            <tr><Td><Code>E</Code></Td><Td>Add edge</Td></tr>
-            <tr><Td><Code>H</Code></Td><Td>Pan</Td></tr>
-          </Table>
-        </Sub>
-      </Section>
+      {USER_MANUAL.sections.map((section) => (
+        <Section key={section.id} id={section.id} n={section.n} title={section.title}>
+          <Blocks blocks={section.blocks} onAction={onAction} />
+        </Section>
+      ))}
     </div>
   );
 }

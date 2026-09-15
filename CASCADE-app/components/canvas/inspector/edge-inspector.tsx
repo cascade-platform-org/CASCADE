@@ -107,8 +107,13 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
         )}
       </Section>
 
-      <Section title="Capacity">
-        <Field label="Capacity">
+      {/* Same name as the node field: an edge only ever passes flow through,
+          which is exactly what a node's Throughput Capacity means. */}
+      <Section title="Capacities">
+        <Field
+          label="Throughput Capacity"
+          hint="How much can pass along this edge. Scales with the edge's Functionality."
+        >
           <NumberInput value={edge.capacity} min={0} onChange={(v) => patch({ capacity: v })} />
         </Field>
       </Section>

@@ -243,6 +243,25 @@ export function NodeInspector({ node }: { node: Node }) {
   }
   const profileCategories = [...ownCategories, ...inboundCategories];
 
+  // Throughput only applies where quantities do. The node must be IN the
+  // category for the flow pass to give it an arc at all (engine/flow.py,
+  // `_in_category`), so inbound-only categories are excluded.
+  const throughputCategories = [...ownCategories].filter(
+    (cat) => categories.find((c) => c.name === cat)?.category_type === "SourceToDemands",
+  );
+
+  /**
+   * What an unset Throughput Capacity means for a category: the largest supply
+   * any source declares for it (engine/flow.py, `_max_source_supply`), or null
+   * when the category has no source at all and the arc is unbounded.
+   */
+  function defaultThroughput(cat: string): number | null {
+    const supplies = Object.values(allNodes)
+      .map((other) => other.supply_capacity?.[cat])
+      .filter((v): v is number => typeof v === "number");
+    return supplies.length > 0 ? Math.max(...supplies) : null;
+  }
+
   const patch = useCallback(
     (partial: Partial<Node>) => updateNode(node.id, partial),
     [node.id, updateNode],
@@ -355,17 +374,63 @@ export function NodeInspector({ node }: { node: Node }) {
         )}
       </Section>
 
-      {/* 3. Supply Capacity */}
+      {/* 3. Capacities — what the node can PRODUCE and what it can PASS ON.
+          Two different numbers the flow pass reads separately: supply feeds the
+          source arc, throughput caps the node's own in→out arc (engine/flow.py,
+          `_effective_supply` / `_throughput`). Throughput used to exist in the
+          schema and in the engine with no field anywhere in the UI, so it could
+          only be set by importing or hand-editing JSON. */}
       {/* `?.length` is a NUMBER: on a node with no Categories it is 0, and
           `0 && …` renders a literal "0" into the panel rather than nothing. */}
       {(node.node_type === "Source" || (node.node_categories?.length ?? 0) > 0) && (
-        <Section title="Supply Capacity">
-          <SupplyCapacityEditor
-            supply={node.supply_capacity ?? {}}
-            configCats={categories.map((c) => c.name)}
-            onChange={(s) => patch({ supply_capacity: s })}
-          />
+        <Section title="Capacities">
+          <Field label="Supply Capacity" hint="How much of a Category this node can supply.">
+            <SupplyCapacityEditor
+              supply={node.supply_capacity ?? {}}
+              configCats={categories.map((c) => c.name)}
+              onChange={(s) => patch({ supply_capacity: s })}
+            />
+          </Field>
           <SupplyDemandConflictWarning node={node} />
+
+          {/* Only SourceToDemands categories: the Requisite pass carries no
+              quantities, so a throughput limit would read as a live control
+              that does nothing. */}
+          {throughputCategories.map((cat) => {
+            const profile = node.category_dependency_profiles?.[cat];
+            const fallback = defaultThroughput(cat);
+            return (
+              <Field
+                key={cat}
+                label={`Throughput Capacity — ${cat}`}
+                hint={
+                  fallback === null
+                    ? "How much can pass through this node. Unset: unlimited."
+                    : `How much can pass through this node. Unset: ${fallback}, the largest supply declared for ${cat}.`
+                }
+              >
+                <NumberInput
+                  value={profile?.capacity}
+                  min={0}
+                  placeholder={fallback === null ? "unlimited" : String(fallback)}
+                  onChange={(v) =>
+                    patch({
+                      category_dependency_profiles: {
+                        ...(node.category_dependency_profiles ?? {}),
+                        // 0 is how the field comes back when it is cleared, and
+                        // "passes nothing" is not what clearing means — drop the
+                        // key instead so the default applies again.
+                        [cat]: {
+                          ...(profile ?? { dependency_level: n }),
+                          capacity: v > 0 ? v : undefined,
+                        },
+                      },
+                    })
+                  }
+                />
+              </Field>
+            );
+          })}
         </Section>
       )}
 

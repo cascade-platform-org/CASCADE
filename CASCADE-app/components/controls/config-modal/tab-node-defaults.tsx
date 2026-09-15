@@ -146,6 +146,11 @@ export function TabNodeDefaults() {
                               onChange={(v) => updateProfile(name, tpl, catName, { demand: v })} />
                           </div>
                           <div>
+                            <label className="mb-0.5 block text-xs text-zinc-400">Throughput Capacity</label>
+                            <NumberInput value={prof.capacity} min={0} className="w-full"
+                              onChange={(v) => updateProfile(name, tpl, catName, { capacity: v > 0 ? v : undefined })} />
+                          </div>
+                          <div>
                             <label className="mb-0.5 block text-xs text-zinc-400">Priority (1–10)</label>
                             <NumberInput value={prof.priority} min={1} max={10} className="w-full"
                               onChange={(v) => updateProfile(name, tpl, catName, { priority: v })} />

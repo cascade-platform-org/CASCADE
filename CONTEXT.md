@@ -127,11 +127,11 @@ A logical condition on an Element determining when its Functionality degrades fr
 _Avoid_: Dependency rule, condition, constraint
 
 **Category Dependency Profile**:
-A node's per-Category guard parameters: `dependency_level` (1..N; attenuates a proposed drop by `P + (N − dependency_level)`; missing profile = N, full dependency), `backup`/`backup_duration`, optional per-Category `capacity` (max throughput, degrades with Functionality), and for SourceToDemands `demand` and `priority`. Keyed by Category name; edges carry none. See ADR-0005.
+A node's per-Category guard parameters: `dependency_level` (1..N; attenuates a proposed drop by `P + (N − dependency_level)`; missing profile = N, full dependency), `backup`/`backup_duration`, optional per-Category `capacity` — **Throughput Capacity** in the Inspector (max throughput through the node, degrades with Functionality; unset = the category's max source supply), and for SourceToDemands `demand` and `priority`. Keyed by Category name; edges carry none. See ADR-0005.
 _Avoid_: Category block, dependency block, category attributes
 
 **Edge Capacity**:
-`edge.capacity` — one number, max throughput of the single category-flow the edge carries (determined by its source node's supply). Multiple category limits = multiple edges. Unspecified capacity defaults to the category's max source supply, scaled by Functionality (ADR-0003).
+`edge.capacity` — **Throughput Capacity** in the Inspector, the same term the node's per-Category `capacity` uses, because both mean "how much passes through". One number, max throughput of the single category-flow the edge carries (determined by its source node's supply). Multiple category limits = multiple edges. Unspecified capacity defaults to the category's max source supply, scaled by Functionality (ADR-0003).
 _Avoid_: treating edge capacity as category-agnostic or multi-category
 
 **Functionality**:

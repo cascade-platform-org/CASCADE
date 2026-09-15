@@ -35,8 +35,8 @@ export function InterCanvasEdgeDialogWired() {
   // Need both an active canvas and a tail node to open this dialog meaningfully
   if (!activeCanvas || !sourceNode) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4">
+        <div className="my-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
           <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
             Select a tail node on the active canvas first, then open the inter-canvas edge dialog.
           </p>

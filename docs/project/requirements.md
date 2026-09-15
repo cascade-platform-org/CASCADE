@@ -152,6 +152,7 @@ For each category a node participates in (or receives via an incoming edge), it 
 | `dependency_level` | integer 1–N | All categories | How dependent this element is on the category. Governs how the delivered/demand ratio maps to functionality degradation (see formula below). |
 | `backup` | boolean | All categories | Whether a backup mechanism exists for this dependency |
 | `backup_duration` | integer (hours) | If `backup = true` | How long the backup sustains the element before expiry |
+| `capacity` | numeric | `SourceToDemands` only in the UI | Maximum throughput **through** this node for the category — **Throughput Capacity** in the Inspector. Scales with the element's Functionality exactly as an edge's `capacity` does; unset means the category's largest declared `supply_capacity`, which keeps it finite so a degraded node still throttles (`engine/flow.py::_throughput`, `_max_source_supply`). |
 | `demand` | numeric | `SourceToDemands` only | Resource amount requested from this category |
 | `priority` | integer 1–10 | `SourceToDemands` only | Flow allocation priority — higher means served first in case of scarcity |
 

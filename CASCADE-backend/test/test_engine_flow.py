@@ -19,6 +19,19 @@ def _consumer(nid, demand, func=3, priority=None, capacity=None):
     )
 
 
+def _relay(nid, func=3, capacity=None):
+    """An in-category node that neither supplies nor demands — it only passes
+    flow on. `capacity` is the Inspector's **Throughput Capacity**."""
+    return Node(
+        id=nid, functionality=func, node_categories=["water"],
+        category_dependency_profiles=(
+            {"water": CategoryDependencyProfile(dependency_level=3, capacity=capacity)}
+            if capacity is not None
+            else None
+        ),
+    )
+
+
 def _edge(eid, s, t, func=3, capacity=None):
     return Edge(id=eid, source=s, target=t, functionality=func, capacity=capacity)
 
@@ -92,6 +105,31 @@ def test_healthy_edge_without_capacity_does_not_throttle():
     # so no artificial bottleneck.
     nodes = [_source("s", 10), _consumer("c", 10)]
     edges = [_edge("e", "s", "c", func=3)]
+    assert _solve(nodes, edges) == {}
+
+
+def test_node_throughput_capacity_throttles_delivery():
+    # supply 10, demand 10, but the relay node itself passes at most 5
+    # (category_dependency_profiles["water"].capacity — Throughput Capacity in
+    # the Inspector) -> served 0.5 -> level 2. Same effect as an edge cap, on
+    # the node instead.
+    nodes = [_source("s", 10), _relay("r", capacity=5), _consumer("c", 10)]
+    edges = [_edge("e1", "s", "r"), _edge("e2", "r", "c")]
+    assert _solve(nodes, edges)["c"][0] == 2
+
+
+def test_degraded_relay_throttles_via_default_throughput():
+    # The relay declares no capacity, so it defaults to the max source supply
+    # (10) and then scales with its own Functionality: at func 2 on N=3 it
+    # carries (2-0.5)/3 = 50% -> 5 of the 10 demanded -> level 2.
+    nodes = [_source("s", 10), _relay("r", func=2), _consumer("c", 10)]
+    edges = [_edge("e1", "s", "r"), _edge("e2", "r", "c")]
+    assert _solve(nodes, edges)["c"][0] == 2
+
+
+def test_healthy_relay_without_capacity_does_not_throttle():
+    nodes = [_source("s", 10), _relay("r"), _consumer("c", 10)]
+    edges = [_edge("e1", "s", "r"), _edge("e2", "r", "c")]
     assert _solve(nodes, edges) == {}
 
 
