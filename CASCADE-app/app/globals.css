@@ -214,12 +214,17 @@
   --color-indigo-700: var(--color-blue-700);
   /* Violet/purple stay distinct — they only ever mark *categories*,
      where telling two categories apart is the entire job. */
+
+  /* ── Typefaces ────────────────────────────────────────────────────
+   * `font-app` is the editor's face, named here so `(product)/layout.tsx`
+   * can ask for it as a utility class instead of relying on a bare
+   * `body` rule (see the note further down about unlayered CSS).
+   * The website sets Inter through `next/font/local` — see `app/fonts.ts`.
+   * ----------------------------------------------------------------- */
+  --font-app: Arial, Helvetica, sans-serif;
 }
 
 :root {
-  --background: var(--color-zinc-50);
-  --foreground: var(--color-zinc-900);
-
   /* non-Tailwind consumers (inline styles, canvas, charts) */
   --brand-ink: var(--color-brand-ink);
   --brand-paper: var(--color-brand-paper);
@@ -230,23 +235,19 @@
   --brand-critical-soft: var(--color-brand-critical-soft);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-zinc-950);
-    --foreground: var(--color-zinc-100);
-  }
-}
+/* Page-level appearance — background, text colour, typeface, scrolling — is set
+   by each root layout as classes, never here.
+   WHY: a bare `body { … }` rule is UNLAYERED, and unlayered CSS beats every
+   `@layer utilities` declaration Tailwind emits. A rule here therefore silently
+   overrides `bg-white`, `font-…` and `overflow-…` written on <body> in a layout,
+   whatever the specificity suggests. That is how the website first shipped in
+   Arial on a zinc-50 background while its layout asked for Inter on white.
+   `(product)/layout.tsx` carries the editor's fixed, Arial shell; `(site)` and
+   `(site-it)` carry the website's scrolling, Inter one.
+   Font smoothing stays global: it is wanted on every page and collides with
+   nothing. */
 
-html,
 body {
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -284,5 +285,71 @@ body {
     box-shadow:
       0 0 0 4px color-mix(in oklab, var(--color-blue-500) 55%, transparent),
       0 0 0 9px color-mix(in oklab, var(--color-blue-500) 22%, transparent);
+  }
+}
+
+
+/* ==================================================================== *
+ * Public website — the hero's background crack.
+ *
+ * `components/site/hero-crack.tsx` draws three jagged paths (one trunk, two
+ * branches) as a full-bleed decorative layer behind the hero copy. Each path
+ * uses `pathLength="1"` so `stroke-dasharray`/`stroke-dashoffset` are
+ * normalised to the same 0–1 range regardless of the path's real length —
+ * one set of keyframes then "draws" every path at the same rate.
+ *
+ * The rhythm is real lightning's: a fast strike, one flicker, a dim afterglow,
+ * a fade, then a long dark pause before the next strike. Mostly dark is the
+ * point — a loop that is "on" more than it is "off" reads as a UI spinner
+ * rather than as weather. Colour is the danger ramp; a soft drop-shadow stands
+ * in for glow so no separate SVG filter is needed.
+ * ==================================================================== */
+
+.hero-crack-path {
+  fill: none;
+  stroke: var(--color-red-500);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 5px color-mix(in oklab, var(--color-red-500) 65%, transparent));
+  animation: hero-crack-strike 9s ease-in-out infinite;
+}
+
+@keyframes hero-crack-strike {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.9;
+  }
+  7%,
+  9% {
+    stroke-dashoffset: 0;
+    opacity: 0.4;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  30% {
+    opacity: 0.22;
+  }
+  55% {
+    opacity: 0.16;
+  }
+  70%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-crack-path {
+    animation: none;
+    opacity: 0.14;
   }
 }

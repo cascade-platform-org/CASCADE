@@ -7,17 +7,23 @@
     // =========================================================================
 
     // -------------------------------------------------------------------------
-    // Client-side React (Chrome DevTools)
+    // Client-side React (Chrome DevTools) — THE PLATFORM
     //
-    // Attaches Chrome to the already-running dev server on port 3000.
-    // Use this for breakpoints in browser-executed code (components, hooks).
-    // Prerequisite: dev server running via the compound or tasks.json.
+    // Attaches Chrome to the already-running dev server on port 3000 and opens
+    // the Canvas Editor. Use this for breakpoints in browser-executed code
+    // (components, hooks). Prerequisite: dev server running via the compound or
+    // tasks.json.
+    //
+    // The URL carries /app deliberately: the public website owns "/" (see
+    // requirements.md §17), so a bare origin would open the landing page —
+    // which is a server-rendered page with nothing to breakpoint. This is the
+    // default configuration, and the one the Full Stack compound uses.
     // -------------------------------------------------------------------------
     {
       "type": "chrome",
       "request": "launch",
       "name": "CASCADE: Frontend — Client (Chrome)",
-      "url": "http://localhost:3000",
+      "url": "http://localhost:3000/app",
       "webRoot": "${workspaceFolder}/CASCADE-app",
       "sourceMapPathOverrides": {
         "webpack://_N_E/*": "${workspaceFolder}/CASCADE-app/*"
@@ -51,6 +57,41 @@
         "${workspaceFolder}/CASCADE-app/node_modules/**"
       ],
       "preLaunchTask": "CASCADE: Start Frontend (debug)"
+    },
+
+    // =========================================================================
+    // WEBSITE — secondary
+    //
+    // The public landing page. These exist so the site can be opened on demand;
+    // nothing above pulls them in, and the Full Stack compound does not use
+    // them. Both bands are server components, so the useful debugging here is
+    // layout and copy in the browser rather than breakpoints.
+    // =========================================================================
+
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "CASCADE: Website — Landing (Chrome)",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/CASCADE-app",
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/CASCADE-app/*"
+      },
+      "userDataDir": "${workspaceFolder}/.vscode/.chrome-debug-profile",
+      "preLaunchTask": "CASCADE: Start Frontend"
+    },
+
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "CASCADE: Website — Landing IT (Chrome)",
+      "url": "http://localhost:3000/it",
+      "webRoot": "${workspaceFolder}/CASCADE-app",
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/CASCADE-app/*"
+      },
+      "userDataDir": "${workspaceFolder}/.vscode/.chrome-debug-profile",
+      "preLaunchTask": "CASCADE: Start Frontend"
     },
 
     // =========================================================================
@@ -169,7 +210,8 @@
     //
     // Starts a dev Postgres (preLaunchTask on the backend), the frontend dev
     // server (preLaunchTask on the Chrome config), and the backend under
-    // debugpy. Frontend (:3000) -> API (:8000); CORS already allows :3000.
+    // debugpy. Chrome opens the editor at :3000/app -> API (:8000); CORS
+    // already allows :3000.
     // For the FULL containerized stack incl. Zitadel, run the task
     // "CASCADE: Full Stack (Docker Compose)" instead.
     // -------------------------------------------------------------------------

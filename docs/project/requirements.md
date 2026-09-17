@@ -765,7 +765,7 @@ The File panel (F9) is four tabs — **Local** (§13.1–13.3), **Cloud** (§13.
 whether it survives clearing the browser, whether another device can see it,
 and what a delete destroys, so it selects the tab instead of being explained
 inside one. **New** re-opens the setup wizard mid-session via `ui-store`'s
-`newProjectRequested`, consumed by `app/page.tsx` (which owns the
+`newProjectRequested`, consumed by `app/(product)/app/page.tsx` (which owns the
 editor/wizard app-state transition the panel cannot reach); nothing is written
 until a wizard step completes, so cancelling returns to the untouched project.
 The Local tab shows the browser's own storage quota
@@ -918,3 +918,78 @@ without a separate validation script — the same comparison
 | Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
 | Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
+
+---
+
+## 17. Public Website (implemented)
+
+A marketing and orientation surface at the root of the deployment's domain,
+built into the same Next.js static export as the platform. It exists because the
+root URL previously served the editor's identity gate: anyone arriving from a
+paper, a talk or a search engine met a login screen, and there was no indexable
+page describing what CASCADE does.
+
+Appended after §16 so the open-questions register keeps its number, which
+CLAUDE.md §9 and ADR-0015 cite.
+
+### 17.1 Scope
+
+| | |
+|---|---|
+| **Audience** | Engineers, researchers and analysts who will open the editor themselves — the page sells the platform and its research record. |
+| **Pages** | One landing page per language. Deeper pages (platform, research, contact) are deliberately out of scope for v1; the copy layer and route groups are built so they can be added without restructuring. |
+| **Languages** | English at `/`, Italian at `/it`. Full parity: both carry every section. |
+| **Primary call to action** | "Open the platform" → `/app`. |
+| **Contact** | `mailto:` with a prefilled subject, one per enquiry kind (research collaboration, modelling session, tutoring). **No contact form**, so the website processes no personal data and `privacy-and-data-protection.md` continues to describe the deployment completely. |
+
+### 17.2 Routing
+
+The landing page owns `/`; the Canvas Editor moved to `/app`. `/admin` and
+`/auth/callback` keep their paths, so the configured OIDC redirect URI is
+unchanged. Route structure and the three-root-layout arrangement are documented
+in [architecture.md](architecture.md#routing--the-public-website-and-the-editor).
+
+### 17.3 Indexability
+
+The website is the indexable surface and the application is excluded from
+indexing, by two mechanisms that must agree:
+
+- `app/robots.ts` disallows `/app`, `/admin` and `/auth`, and names the sitemap.
+- `app/(product)/layout.tsx` sets `robots: { index: false, follow: false }`.
+
+Each landing page carries a canonical URL, `hreflang` alternates naming the
+other locale and `x-default`, Open Graph and Twitter cards, and a JSON-LD
+`SoftwareApplication` + `WebSite` block. Every URL is absolute against
+`NEXT_PUBLIC_SITE_URL`, which is a **build-time** value: a static export has
+written its `<meta>` tags before Caddy serves them.
+
+Content is server-rendered. Every band of the page is a server component, so a
+crawler reads the argument without running JavaScript.
+
+### 17.4 Content
+
+Ten bands: hero · the problem · the modelling loop (Model → Declare → Perturb →
+Read) · capabilities · the engine (propose → guard → commit) · the screen
+recording · research and validation · open-source and data posture · contact ·
+footer.
+
+Copy uses CONTEXT.md vocabulary, glossing each term in plain language on first
+use. In particular it says **Propagation** throughout and never "simulation".
+
+Copy is data, not markup: `lib/site-copy/{en,it}.ts` both satisfy `SiteCopy`,
+so a section added in one language fails the build until the other has it.
+`lib/site-copy.test.ts` additionally asserts no empty strings, equal list
+lengths, matching anchors, and that sentence-length Italian prose differs from
+the English.
+
+### 17.5 Constraints
+
+- **No hex literals**, enforced by `lib/no-hex-literals.test.ts`. Every colour is
+  a ramp class, a semantic token, or `lib/brand.ts`.
+- **No heavy imports.** The landing page must not reach into
+  `components/canvas/`, `@xyflow/react`, `maplibre-gl` or `graphology`; those
+  belong to the editor's bundle.
+- **No new runtime dependency.** The site is built from what the app already has,
+  plus a self-hosted Inter (SIL OFL).
+- **Motion is optional.** The hero's cascade figure freezes on its settled state
+  under `prefers-reduced-motion: reduce`.

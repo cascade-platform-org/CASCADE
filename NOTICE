@@ -52,6 +52,11 @@ outbound licence:
                               MPL-2.0, whose copyleft is file-level and is not
                               triggered because the files are used unmodified.
 
+The Inter typeface is redistributed in this repository as a binary font file
+(CASCADE-app/app/fonts/Inter-Variable.woff2) under the SIL Open Font License 1.1,
+whose text accompanies it in the same directory. The OFL governs the font
+software alone and places no condition on the documents or programs that use it.
+
 PostgreSQL, Caddy and Zitadel are deployed as separate container images. They are
 aggregated with this work, not derived from it or linked into it.
 

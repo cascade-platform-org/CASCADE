@@ -11,6 +11,11 @@ the cascade step by step.
 
 ![CASCADE canvas editor — building a multi-utility network and watching a failure propagate](docs/assets/CASCADE-platform.gif)
 
+The public website (landing page, English and Italian) is served from the root
+of the same deployment and the editor lives at `/app`; both are built from
+`CASCADE-app/` in one static export. See
+[architecture.md](docs/project/architecture.md#routing--the-public-website-and-the-editor).
+
 See [CONTEXT.md](CONTEXT.md) for the domain glossary and
 [CLAUDE.md](CLAUDE.md) for development guidelines.
 

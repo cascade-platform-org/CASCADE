@@ -83,8 +83,21 @@
 		# incident. `?` sets the header only where not already set above.
 		header ?Cache-Control "no-cache"
 
-		try_files {path} {path}.html /index.html
+		# A page is a real file: `/it` is it.html, `/app` is app.html. Falling
+		# back to /index.html would answer every unknown URL with the landing
+		# page under HTTP 200 — a soft 404, which a search engine reads as a
+		# duplicate of the home page rather than as a missing one.
+		try_files {path} {path}.html
 		file_server
+	}
+
+	# Anything that matched no file: Next's own 404 page, under a real 404.
+	handle_errors {
+		root * /srv
+		rewrite * /404.html
+		file_server {
+			status {err.status_code}
+		}
 	}
 }
 

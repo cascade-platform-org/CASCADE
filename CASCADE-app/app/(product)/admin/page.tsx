@@ -94,7 +94,7 @@ export default function AdminPage() {
           <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-300">
             User management requires a signed-in manager or admin account.
           </p>
-          <Link href="/" className="text-sm font-medium text-blue-600 hover:underline">
+          <Link href="/app" className="text-sm font-medium text-blue-600 hover:underline">
             Back to CASCADE
           </Link>
         </div>
@@ -108,7 +108,7 @@ export default function AdminPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              href="/"
+              href="/app"
               className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
             >
               <ArrowLeft size={16} /> Back

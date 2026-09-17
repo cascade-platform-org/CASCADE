@@ -87,3 +87,6 @@ Thumbs.db
 
 # Personal setup
 skills-lock.json
+
+## ── Business docs (not for public repo) ───────────────────────────────────────
+docs/business/*

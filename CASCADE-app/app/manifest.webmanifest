@@ -2,7 +2,7 @@
   "name": "CASCADE",
   "short_name": "CASCADE",
   "description": "Multi-canvas infrastructure failure propagation platform",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#0b1220",
   "theme_color": "#0f172a",

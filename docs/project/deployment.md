@@ -107,10 +107,36 @@ in-process, so **run a single backend instance** (see Scaling Notes).
 ```bash
 # Base origin only — the client appends /api/... itself.
 NEXT_PUBLIC_API_URL=https://api.your-domain.com
-# Public origin for absolute metadata URLs (og:image). Under Docker this comes
-# from deploy/.env's SITE_URL as a build arg, not from this file.
-NEXT_PUBLIC_SITE_URL=https://app.your-domain.com
+# Public origin for absolute metadata URLs (canonical, hreflang, og:image, and
+# the sitemap's own entries). Under Docker this comes from deploy/.env's
+# SITE_URL as a build arg, not from this file. Set it to the apex the public
+# website is served from — e.g. https://cascade-platform.org — because it is
+# the origin search engines are told to index.
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
+
+### What lives at which path
+
+One build serves both the public website and the editor:
+
+| Path | What |
+|---|---|
+| `/` | Landing page, English — indexable |
+| `/it` | Landing page, Italian — indexable |
+| `/robots.txt`, `/sitemap.xml` | Generated at build time from `NEXT_PUBLIC_SITE_URL` |
+| `/app` | The Canvas Editor (`noindex`) |
+| `/admin` | User management (`noindex`) |
+| `/auth/callback` | The OIDC callback (`noindex`) |
+| `/api/*` | Reverse-proxied to the backend |
+
+**The OIDC redirect URI does not change** when upgrading a deployment that
+predates the website: the callback keeps its path, `/auth/callback`. The
+**post-logout** URI stays `https://<domain>/` and now lands a signed-out user on
+the landing page, which is where a product site should leave them; the backend
+derives it from `OIDC_REDIRECT_URI` (`api/auth_routes.py`), so there is nothing
+to configure. Anyone who bookmarked the old editor URL — the bare origin — now
+arrives at the landing page and reaches the editor from its "Open the platform"
+button.
 
 These two are the **only** variables the frontend reads. It holds no OIDC client
 id and no map-tile URL: login is brokered entirely by the backend (the browser
@@ -120,9 +146,14 @@ MapLibre tile styles are the fixed OpenFreeMap set chosen in the geo canvas.
 ### Deployment topology (`deploy/.env`, Option 1 only)
 
 ```bash
-APP_DOMAIN=app.your-domain.com   # Caddy vhost for the frontend + /api
+APP_DOMAIN=your-domain.com       # Caddy vhost for the website, the editor and /api.
+                                 # Since the landing page is served from its root,
+                                 # this is normally the apex you want indexed.
 ID_DOMAIN=id.your-domain.com     # Caddy vhost for Zitadel
-SITE_URL=https://app.your-domain.com   # baked into the frontend image at build time
+SITE_URL=https://your-domain.com # MUST be https://$APP_DOMAIN. Baked into the
+                                 # frontend image at build time; the origin the
+                                 # website's canonical, hreflang, Open Graph and
+                                 # sitemap URLs are all built from.
 ZITADEL_VERSION=<pinned tag>     # never :latest — see the service table below
 ```
 
@@ -228,7 +259,9 @@ Do this once, after `id.<domain>` resolves and the stack is up in production.
    - Type: **Web**, auth method **PKCE** (or Code + client secret).
    - **Redirect URI:** `https://app.<domain>/auth/callback` (the frontend
      callback page — it exchanges the code with the backend and stores the session)
-   - **Post-logout URI:** `https://app.<domain>/`
+   - **Post-logout URI:** `https://<domain>/` — the landing page. Signing out
+     leaves a user on the public site, which is where a product site should
+     leave them; the backend derives this from `OIDC_REDIRECT_URI`.
 4. **Enable self-service registration** and, under the org's Login Policy,
    turn on **email verification required** and **lockout** (failed-attempt
    limits). Configure **SMTP** (Settings → Notifications) so verification mail

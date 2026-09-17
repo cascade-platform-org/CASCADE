@@ -3,6 +3,7 @@
   "entry": [
     "app/**/page.tsx",
     "app/**/layout.tsx",
+    "app/**/{robots,sitemap}.ts",
     "app/globals.css",
     "lib/schemas/*.ts"
   ],

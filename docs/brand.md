@@ -150,6 +150,17 @@ Arial, sans-serif`). Inter is SIL OFL — safe under the project's open-source r
 (CLAUDE.md §1). For assets used outside this repo, convert the wordmark to
 outlines so it renders identically without the font installed.
 
+**The public website is set in Inter too**, so the page and the mark share a
+face. The variable `woff2` is committed at
+[`CASCADE-app/app/fonts/`](../CASCADE-app/app/fonts/) with its licence beside
+it, and loaded through `next/font/local` (`app/fonts.ts`) rather than fetched
+from a font CDN: the build stays reproducible offline and a visitor's browser
+contacts nobody. The editor keeps its own face (`--font-app` in `globals.css`,
+applied by `app/(product)/layout.tsx`).
+
+The website's small-caps section labels are tracked `+0.11em` — the wordmark's
+own tracking — which is what makes a section label read as part of the mark.
+
 ---
 
 ## Logo files
@@ -220,8 +231,45 @@ Regenerate them with `docs/assets/build.py` (below) if the mark changes.
 
 [`cascade-og-card.png`](assets/cascade-og-card.png) (1200×630) — mirrored to
 `CASCADE-app/public/og.png` and referenced from
-[`app/layout.tsx`](../CASCADE-app/app/layout.tsx) `openGraph` / `twitter`
-metadata. Shown when the app or repo is shared.
+[`lib/site-metadata.ts`](../CASCADE-app/lib/site-metadata.ts) `openGraph` /
+`twitter` metadata, which every root layout reads. Shown when a page of the site
+or the repo is shared.
+
+---
+
+## The public website
+
+[`cascade-platform.org`](https://cascade-platform.org) is built from the same
+palette and the same components discipline as the platform, in the same Next.js
+build (`app/(site)` and `app/(site-it)`; see
+[architecture.md](project/architecture.md#routing--the-public-website-and-the-editor)).
+
+Three things about it are brand decisions rather than layout ones:
+
+- **The hero figure is drawn, not filmed.**
+  [`components/site/cascade-animation.tsx`](../CASCADE-app/components/site/cascade-animation.tsx)
+  is an inline SVG of a three-tier network in the mark's own fan, and a failure
+  falls through it exactly as the mark's stream does. It costs no media file and
+  stays sharp at any size. Its keyframes live in `globals.css` beside the tour
+  ring, read their colours from the ramps, and are frozen under
+  `prefers-reduced-motion` on the settled end state.
+- **Green → amber → red is the Functionality scale**, not decoration. It is the
+  only place red appears on the site, which is what keeps red meaning "something
+  has failed" there as it does on the canvas.
+- **The navigation bar is dark in both colour schemes.** The hero band is dark,
+  so a bar that matched the page would have to change on scroll. A bar that is
+  always dark reads as the platform's chrome and needs no scroll listener.
+
+### Website assets in `CASCADE-app/public/`
+
+| File | Source | Why the copy exists |
+|---|---|---|
+| `logo-horizontal.svg` | `cascade-lockup-horizontal.svg` | Footer — theme-aware, follows the visitor's scheme |
+| `logo-horizontal-ondark.svg` | `cascade-lockup-horizontal-ondark.svg` | Header — the bar is always dark, which the theme-aware file cannot see |
+| `platform.gif` | `CASCADE-platform.gif` | The "see it work" band |
+| `og.png` | `cascade-og-card.png` | Link previews |
+
+Re-copy these after `build.py` regenerates `docs/assets/`.
 
 ---
 

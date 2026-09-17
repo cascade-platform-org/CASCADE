@@ -173,7 +173,17 @@ export function FloatingWindow({
         `scale(${Math.max(0.04, a.width / c.width)})`,
       opacity: 0,
     });
-    window.setTimeout(onClose, FLIGHT_MS);
+    window.setTimeout(() => {
+      onClose();
+      // Land the flight. Without this the transform survives the close — which
+      // is invisible for a window the parent unmounts (Active Rules, the
+      // Scorecard) but not for one that stays mounted and is driven by the
+      // `open` prop (Temporal Jump): there the NEXT open would render the
+      // window scaled into its own button at zero opacity, present in the DOM
+      // and invisible on screen, and `requestClose` would refuse to run again
+      // because a flight was still "in progress".
+      setFlight(null);
+    }, FLIGHT_MS);
   }, [flight, flyToOnClose, onClose]);
 
   useEffect(() => {

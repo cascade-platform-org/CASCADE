@@ -64,7 +64,8 @@ function returnPath(): string {
   } catch {
     /* storage blocked — fall through */
   }
-  return "/";
+  // The editor, which lives at /app since the landing page took the root.
+  return "/app";
 }
 
 export default function OidcCallback() {
@@ -157,7 +158,7 @@ export default function OidcCallback() {
               {error}
             </p>
             <Link
-              href="/"
+              href="/app"
               className="text-sm font-medium text-blue-600 hover:underline"
             >
               Back to CASCADE

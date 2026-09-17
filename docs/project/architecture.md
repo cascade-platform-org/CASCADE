@@ -358,7 +358,7 @@ Entry types:
 - **Auto-save** — background save to `localStorage` after **10 seconds of inactivity, and only when the content changed** (ADR-0017). Discarded when an explicit save is made. `update_history` is included: it used to be stripped everywhere small, so undo was empty after a crash, and Graph Diffs made it small enough to keep. A history-free write is the fallback if the quota refuses.
 - **Explicit save** — downloads `project.json` + `config.json` (or a bundle; only a full bundle also adds a local Version). Up to 10 previous explicit saves retained in browser storage.
 - **Load** — Zod validation at the boundary before hydrating stores.
-- **New Project** (mid-session) — the File panel's `requestNewProject()` sets `ui-store`'s `newProjectRequested`, the one signal crossing from inside `EditorShell` up to `app/page.tsx`'s editor/wizard `AppState`. The screen writes nothing until the user commits, so `app/page.tsx` tracks a `WizardOrigin` ("startup" vs "editor") purely to route Cancel: startup → identity gate (nothing to return to), mid-session → back to the untouched editor. It is one screen: the three steps it used to have asked for a Model Configuration a dropped bundle already carries, Canvas fields that all live in the Inspector's Canvas Meta panel, and a summary of two fields typed seconds earlier. That screen is one vertical card of three hairline-headed sections, in the order the three reasons for being there occur: **New project** (the name field and Create on one row — they are a single action, and the button used to sit in a footer three sections below the field), **Platform Tutorials** (the four walkthroughs as a two-column grid, by name only), and **Open an existing project** (drop zone plus the shipped samples, last because that is the returning user's path). The Description field is folded behind a toggle: optional, and an optional field costs the same attention as a required one while it is on screen.
+- **New Project** (mid-session) — the File panel's `requestNewProject()` sets `ui-store`'s `newProjectRequested`, the one signal crossing from inside `EditorShell` up to `app/(product)/app/page.tsx`'s editor/wizard `AppState`. The screen writes nothing until the user commits, so `app/(product)/app/page.tsx` tracks a `WizardOrigin` ("startup" vs "editor") purely to route Cancel: startup → identity gate (nothing to return to), mid-session → back to the untouched editor. It is one screen: the three steps it used to have asked for a Model Configuration a dropped bundle already carries, Canvas fields that all live in the Inspector's Canvas Meta panel, and a summary of two fields typed seconds earlier. That screen is one vertical card of three hairline-headed sections, in the order the three reasons for being there occur: **New project** (the name field and Create on one row — they are a single action, and the button used to sit in a footer three sections below the field), **Platform Tutorials** (the four walkthroughs as a two-column grid, by name only), and **Open an existing project** (drop zone plus the shipped samples, last because that is the returning user's path). The Description field is folded behind a toggle: optional, and an optional field costs the same attention as a required one while it is on screen.
 - **Storage footprint** — `getStorageEstimate()` wraps `navigator.storage.estimate()` (the browser's per-origin quota over `localStorage` + IndexedDB) and `historyStorageBytes()` sizes the local save list; the Local tab shows both, since that quota is the real storage limit.
 
 ### Server Sync (opt-in)
@@ -465,6 +465,45 @@ first so nothing covers a highlighted target. `lib/tour/start-tour.ts` is the
 single launcher, and `hooks/useFirstRun.ts` owns the one-time offer
 (`localStorage` key `cascade.tour.firstRun.offered`).
 
+### Routing — the public website and the editor
+
+The same Next.js build serves two different things, split by route group:
+
+| Route | Group | What it is |
+|---|---|---|
+| `/` | `app/(site)` | The public website, English |
+| `/it` | `app/(site-it)` | The public website, Italian |
+| `/app` | `app/(product)` | The Canvas Editor |
+| `/admin` | `app/(product)` | User management |
+| `/auth/callback` | `app/(product)` | The OIDC callback |
+
+**Three root layouts, one per group.** `<html lang>` exists only in a root
+layout, so two locales need two of them; the editor needs a third because its
+body must not scroll. Removing `app/layout.tsx` is what lets each group have
+its own — everything the three would otherwise repeat lives in
+`lib/site-metadata.ts`.
+
+**The website is server-rendered and the editor is not.** Every band of the
+landing page is a server component, so its prose is in the HTML that
+`next build` writes; that is what makes the page indexable, and it is why the
+site imports nothing from `components/canvas/` (React Flow, MapLibre and
+graphology would otherwise be pulled into a marketing page's bundle). The one
+client component on the site is the header's mobile menu. `(product)` declares
+`robots: noindex`, matching the `Disallow` rules in `app/robots.ts`.
+
+**Copy is data.** `lib/site-copy/{en,it}.ts` both satisfy the `SiteCopy` type,
+so a section added to one language fails the build until the other has it too,
+and a translation never requires a component change.
+`lib/site-copy.test.ts` additionally catches empty strings, a list that lost an
+item, and prose left untranslated.
+
+**Page-level appearance belongs to the layouts.** A bare `body { … }` rule in
+`globals.css` is unlayered CSS, which beats every `@layer utilities`
+declaration Tailwind emits — a background or font-family written there silently
+overrides the same property set as a class on `<body>` in a layout. So
+`globals.css` keeps the palette and the keyframes, and each root layout sets its
+own surface, typeface and scrolling.
+
 ### Offline Capability
 
 Editing, Event application, rule authoring, topological analysis, manual Functionality edits, and Scorecard entry authoring work fully offline. The server is only needed for Propagation and optional sync.
@@ -546,7 +585,13 @@ No project data is persisted on the server during this flow unless the user has 
 ```
 CASCADE-v2/
 ├── CASCADE-app/                # Next.js frontend
-│   ├── app/                    # App Router pages (layout, page)
+│   ├── app/                    # App Router — three route groups, three root layouts
+│   │   ├── (site)/             # /            public website, English
+│   │   ├── (site-it)/it/       # /it          public website, Italian
+│   │   ├── (product)/          # /app, /admin, /auth/callback — the editor
+│   │   ├── fonts.ts            # Inter, self-hosted (website only)
+│   │   ├── robots.ts           # /robots.txt
+│   │   └── sitemap.ts          # /sitemap.xml
 │   ├── components/             # React components by domain
 │   │   ├── analysis/           # Centrality, timeline, model-based tools
 │   │   ├── auth/               # User button, anonymous banner
@@ -577,11 +622,13 @@ CASCADE-v2/
 │   │   ├── onboarding/         # New Project Wizard, guided tour, first-run prompt
 │   │   ├── rules/              # Rule editor, autocomplete, active rules panel
 │   │   ├── scorecard/          # Scorecard panels
+│   │   ├── site/               # Public website — bands, header/footer, cascade figure
 │   │   └── ui/                 # Cross-domain shells (floating-window)
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useHistoryAction.ts # Snapshot-wrap-push hook for undoable mutations
 │   ├── lib/
 │   │   ├── schemas/            # Zod schemas (network, config, api, primitives, audit)
+│   │   ├── site-copy/          # Website copy, one typed object per locale (en, it)
 │   │   └── …                   # Utilities, API client, rule parser, file I/O
 │   ├── shared/
 │   │   ├── schemas/            # Generated JSON Schema bridge files (do not edit manually)
