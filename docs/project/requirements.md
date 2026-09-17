@@ -936,8 +936,8 @@ CLAUDE.md §9 and ADR-0015 cite.
 
 | | |
 |---|---|
-| **Audience** | Engineers, researchers and analysts who will open the editor themselves — the page sells the platform and its research record. |
-| **Pages** | One landing page per language. Deeper pages (platform, research, contact) are deliberately out of scope for v1; the copy layer and route groups are built so they can be added without restructuring. |
+| **Audience** | Engineers, researchers and analysts who will open the editor themselves — a stakeholder meeting CASCADE for the first time should meet the argument and the evidence, not a feature-by-feature tour: the platform explains itself once opened. |
+| **Pages** | One landing page per language, four bands (hero, research, contact, footer). A first draft carried a platform capability tour (multi-canvas, rules, the engine's internals…) that read as a SaaS template rather than as a research group's page; it was cut. Deeper standalone pages remain out of scope for v1; the copy layer and route groups are built so they can be added without restructuring. |
 | **Languages** | English at `/`, Italian at `/it`. Full parity: both carry every section. |
 | **Primary call to action** | "Open the platform" → `/app`. |
 | **Contact** | `mailto:` with a prefilled subject, one per enquiry kind (research collaboration, modelling session, tutoring). **No contact form**, so the website processes no personal data and `privacy-and-data-protection.md` continues to describe the deployment completely. |
@@ -968,13 +968,18 @@ crawler reads the argument without running JavaScript.
 
 ### 17.4 Content
 
-Ten bands: hero · the problem · the modelling loop (Model → Declare → Perturb →
-Read) · capabilities · the engine (propose → guard → commit) · the screen
-recording · research and validation · open-source and data posture · contact ·
-footer.
+Four bands: **hero** (the pitch, a background crack animation, and the screen
+recording right under the primary CTA) · **research** (a plain publication
+list — no stats badges, no platform-validation framing, just the three papers)
+· **contact** (collaboration, modelling sessions, tutoring — each a `mailto:`
+with its own prefilled subject) · **footer**.
 
 Copy uses CONTEXT.md vocabulary, glossing each term in plain language on first
 use. In particular it says **Propagation** throughout and never "simulation".
+Prose follows the owner's standing rules against contrastive negation ("X, not
+Y") and against naming a closed list where the platform is in fact general —
+the hero deliberately does not enumerate the categories a network can be built
+from.
 
 Copy is data, not markup: `lib/site-copy/{en,it}.ts` both satisfy `SiteCopy`,
 so a section added in one language fails the build until the other has it.
@@ -991,5 +996,5 @@ the English.
   belong to the editor's bundle.
 - **No new runtime dependency.** The site is built from what the app already has,
   plus a self-hosted Inter (SIL OFL).
-- **Motion is optional.** The hero's cascade figure freezes on its settled state
-  under `prefers-reduced-motion: reduce`.
+- **Motion is optional.** The hero's background crack (`components/site/hero-crack.tsx`)
+  freezes on a dim, settled state under `prefers-reduced-motion: reduce`.

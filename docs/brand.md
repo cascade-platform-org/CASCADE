@@ -244,18 +244,19 @@ palette and the same components discipline as the platform, in the same Next.js
 build (`app/(site)` and `app/(site-it)`; see
 [architecture.md](project/architecture.md#routing--the-public-website-and-the-editor)).
 
-Three things about it are brand decisions rather than layout ones:
+Two things about it are brand decisions rather than layout ones:
 
-- **The hero figure is drawn, not filmed.**
-  [`components/site/cascade-animation.tsx`](../CASCADE-app/components/site/cascade-animation.tsx)
-  is an inline SVG of a three-tier network in the mark's own fan, and a failure
-  falls through it exactly as the mark's stream does. It costs no media file and
-  stays sharp at any size. Its keyframes live in `globals.css` beside the tour
-  ring, read their colours from the ramps, and are frozen under
-  `prefers-reduced-motion` on the settled end state.
-- **Green → amber → red is the Functionality scale**, not decoration. It is the
-  only place red appears on the site, which is what keeps red meaning "something
-  has failed" there as it does on the canvas.
+- **The hero carries a drawn atmosphere, not a diagram.**
+  [`components/site/hero-crack.tsx`](../CASCADE-app/components/site/hero-crack.tsx)
+  is an inline SVG behind the copy — a crack of failure forking down the band
+  like lightning striking, in the same "falls like a waterfall" reading the mark
+  itself carries. A first version put a literal network-of-nodes illustration
+  beside the copy; it read as a product screenshot and fought the copy for
+  attention, so it moved behind the text as pure atmosphere instead. It costs no
+  media file, stays sharp at any size, and is the only place red appears on the
+  site — which is what keeps red meaning "something has failed" there as it does
+  on the canvas. Its keyframes live in `globals.css` beside the tour ring and are
+  frozen under `prefers-reduced-motion` on a dim, settled state.
 - **The navigation bar is dark in both colour schemes.** The hero band is dark,
   so a bar that matched the page would have to change on scroll. A bar that is
   always dark reads as the platform's chrome and needs no scroll listener.
