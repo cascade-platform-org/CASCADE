@@ -109,6 +109,22 @@
 	}
 }
 
+# The domain the whole app used to be served from, before the public website
+# took over the apex and the editor moved from "/" to "/app" (see
+# docs/project/architecture.md's routing section). Left resolving and
+# permanently redirected rather than deleted outright, so old bookmarks and
+# any already-indexed links keep working instead of failing outright — a
+# visitor lands on the apex equivalent of whatever they had.
+#
+# The bare root used to BE the editor, so it is the one path that does not
+# map 1:1 — everything else (the API, /admin, /auth/callback, static assets)
+# kept its exact path under the apex, so those redirect unchanged.
+{$LEGACY_APP_DOMAIN} {
+	@root path /
+	redir @root https://{$APP_DOMAIN}/app 301
+	redir * https://{$APP_DOMAIN}{uri} 301
+}
+
 {$ID_DOMAIN} {
 	# Zitadel v3+ moved its login screen into a separate Next.js app (Login V2,
 	# github.com/zitadel/zitadel-login) reachable under /ui/v2/login. That app

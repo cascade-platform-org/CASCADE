@@ -154,6 +154,11 @@ SITE_URL=https://your-domain.com # MUST be https://$APP_DOMAIN. Baked into the
                                  # frontend image at build time; the origin the
                                  # website's canonical, hreflang, Open Graph and
                                  # sitemap URLs are all built from.
+# LEGACY_APP_DOMAIN=app.your-domain.com   # optional — set only when moving an
+                                 # existing deployment's APP_DOMAIN to the apex.
+                                 # Permanently redirects the old domain to the
+                                 # new one (root -> /app, everything else keeps
+                                 # its path+query). Unset serves nothing there.
 ZITADEL_VERSION=<pinned tag>     # never :latest — see the service table below
 ```
 

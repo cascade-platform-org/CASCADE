@@ -76,6 +76,10 @@ services:
       # HTTPS. Defaults are local HTTP ports for testing without a domain.
       APP_DOMAIN: ${APP_DOMAIN:-:80}
       ID_DOMAIN: ${ID_DOMAIN:-:8081}
+      # Optional: the domain the whole app used to be served from before the
+      # public website took the apex (see Caddyfile). Unset locally defaults to
+      # an unpublished port, so the redirect site block is inert in dev.
+      LEGACY_APP_DOMAIN: ${LEGACY_APP_DOMAIN:-:8082}
     depends_on:
       - backend
     restart: unless-stopped
