@@ -391,8 +391,15 @@ are what make `sentry_sdk.init()` (`CASCADE-backend/main.py`) and
 3. **Wire the DSNs into `deploy/.env`**:
    ```bash
    SENTRY_DSN=https://<backend-project-key>@errors.<domain>/<backend-project-id>
-   NEXT_PUBLIC_SENTRY_DSN=https://<frontend-project-key>@errors.<domain>/<frontend-project-id>
+   GLITCHTIP_FRONTEND_DSN=https://<frontend-project-key>@errors.<domain>/<frontend-project-id>
    ```
+   Note the frontend variable is named `GLITCHTIP_FRONTEND_DSN` **here** —
+   `docker-compose.yml` reads it and passes it into the `web` image's build as
+   the `NEXT_PUBLIC_SENTRY_DSN` arg (see `docker-compose.yml`'s `web.build.args`
+   and `web.Dockerfile`). `NEXT_PUBLIC_SENTRY_DSN` is the name only inside the
+   built frontend and in the manual-deployment `CASCADE-app/.env.local` case
+   above — setting `NEXT_PUBLIC_SENTRY_DSN` directly in `deploy/.env` does
+   nothing, because Compose never reads it under that name.
 4. **Rebuild and restart** — the frontend DSN is a build arg like `SITE_URL`
    (`up -d --build web`), the backend DSN is a runtime env var (`up -d
    --no-deps backend` is enough, or just restart it).
