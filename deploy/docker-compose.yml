@@ -54,8 +54,12 @@ services:
       # erasure). Without it, deletion removes only the app record.
       ZITADEL_MGMT_URL: ${ZITADEL_MGMT_URL:-}
       ZITADEL_MGMT_TOKEN: ${ZITADEL_MGMT_TOKEN:-}
-      # Error tracking (Sentry / self-hosted GlitchTip). Unset => disabled.
+      # Error tracking + performance traces (Sentry / self-hosted GlitchTip).
+      # Unset SENTRY_DSN => sentry_sdk.init() is never called (main.py), nothing
+      # leaves the box. SENTRY_TRACES_SAMPLE_RATE is read regardless but has no
+      # effect without a DSN.
       SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
     depends_on:
       db:
         condition: service_healthy
@@ -71,6 +75,10 @@ services:
         # not under `environment` — a NEXT_PUBLIC_* value set on the running
         # container arrives long after the HTML was generated. Empty locally.
         NEXT_PUBLIC_SITE_URL: ${SITE_URL:-}
+        # Browser-side error/performance reporting (self-hosted GlitchTip).
+        # Unset => Sentry.init() is never called (lib/observability.ts), so
+        # local/dev builds report nothing.
+        NEXT_PUBLIC_SENTRY_DSN: ${GLITCHTIP_FRONTEND_DSN:-}
     environment:
       # Real hostnames in production (app.<domain> / id.<domain>) => automatic
       # HTTPS. Defaults are local HTTP ports for testing without a domain.
@@ -80,6 +88,11 @@ services:
       # public website took the apex (see Caddyfile). Unset locally defaults to
       # an unpublished port, so the redirect site block is inert in dev.
       LEGACY_APP_DOMAIN: ${LEGACY_APP_DOMAIN:-:8082}
+      # Optional: Caddy vhost for GlitchTip (self-hosted error/performance
+      # tracking). Unset locally defaults to an unpublished port — dev reaches
+      # GlitchTip directly instead (docker-compose.override.yml), same pattern
+      # as zitadel's dev port.
+      ERRORS_DOMAIN: ${ERRORS_DOMAIN:-:8083}
     depends_on:
       - backend
     restart: unless-stopped
@@ -122,7 +135,48 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Self-hosted error tracking + performance traces (Sentry-protocol-compatible;
+  # CASCADE-backend/main.py and CASCADE-app/lib/observability.ts already speak
+  # it — this is only "on" once SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN are set to
+  # a project DSN created in GlitchTip's own console after first boot, see
+  # docs/project/deployment.md). `all_in_one` runs GlitchTip's web + worker +
+  # scheduler in one process — the image's own recommended shape for a single
+  # small VM (256-512 MB RAM). Uses the shared Postgres via its own
+  # least-privilege role (deploy/db-init/02-create-glitchtip-db.sh), not a
+  # dedicated database container, so it costs one more service, not two.
+  glitchtip:
+    image: glitchtip/glitchtip:6
+    environment:
+      DATABASE_URL: postgresql://glitchtip_user:${GLITCHTIP_DB_PASSWORD}@db:5432/glitchtip
+      VALKEY_URL: redis://valkey:6379
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-change-me-to-a-random-string}
+      # consolemail:// prints outbound mail to the container log instead of
+      # sending it — the operator is the only user (self-registration is off
+      # below), so no SMTP is required to stand this up. Set GLITCHTIP_EMAIL_URL
+      # once you have SMTP credentials if you want real alert emails.
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_DEFAULT_FROM_EMAIL:-errors@example.org}
+      GLITCHTIP_DOMAIN: https://${ERRORS_DOMAIN:-localhost:8090}
+      SERVER_ROLE: all_in_one
+      # Single-operator instance: nobody should be able to self-register an
+      # account on your error dashboard. The first user is created by hand
+      # (docs/project/deployment.md), same shape as CASCADE's own create_admin.py.
+      ENABLE_OPEN_USER_REGISTRATION: "False"
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - glitchtip-uploads:/code/uploads
+
+  valkey:
+    image: valkey/valkey:9-alpine
+    restart: unless-stopped
+
 volumes:
   db-data:
   caddy-data:
   caddy-config:
+  glitchtip-uploads:

@@ -11,6 +11,7 @@ import "../globals.css";
 import { inter } from "../fonts";
 import { en } from "@/lib/site-copy";
 import { siteMetadata, siteViewport } from "@/lib/site-metadata";
+import { ObservabilityInit } from "@/components/observability-init";
 
 export const metadata: Metadata = siteMetadata(en);
 export const viewport: Viewport = siteViewport;
@@ -22,6 +23,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className={`${inter.className} bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100`}
       >
+        <ObservabilityInit />
         {children}
       </body>
     </html>

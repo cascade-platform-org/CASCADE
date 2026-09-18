@@ -8,6 +8,7 @@
 #     api:      http://localhost:8000/api/health   (direct) or :8080/api/... (via Caddy)
 #     zitadel:  http://localhost:8081
 #     db:       localhost:5433
+#     glitchtip: http://localhost:8090   (error/performance tracking console)
 
 services:
   db:
@@ -25,3 +26,7 @@ services:
   zitadel:
     ports:
       - "127.0.0.1:8081:8080"
+
+  glitchtip:
+    ports:
+      - "127.0.0.1:8090:8000"

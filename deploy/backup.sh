@@ -2,10 +2,12 @@
 #
 # backup.sh — nightly backup of the CASCADE databases.
 #
-# Dumps BOTH databases in the shared Postgres:
+# Dumps every database in the shared Postgres:
 #   * the app DB (POSTGRES_DB) — user accounts, roles, entitlements
 #   * the `zitadel` DB          — ALL identity data (users, password hashes,
 #     verification state). Losing this locks every user out permanently.
+#   * the `glitchtip` DB        — optional, only if GLITCHTIP_DB_PASSWORD is
+#     set (error/performance tracking history; losing it is not an outage).
 #
 # On a single VM, backups are only safe if they leave the box, so the script
 # optionally uploads to an off-VM target (rclone). Run it from cron; see the
@@ -37,7 +39,13 @@ mkdir -p "$BACKUP_DIR"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 written=()
 
-for db in "$POSTGRES_DB" zitadel; do
+dbs=("$POSTGRES_DB" zitadel)
+# Optional: only present if GlitchTip (error/performance tracking) was set up
+# (deploy/db-init/02-create-glitchtip-db.sh). Dumping a database that was
+# never created would fail the whole run for everyone who hasn't opted in.
+[ -n "${GLITCHTIP_DB_PASSWORD:-}" ] && dbs+=(glitchtip)
+
+for db in "${dbs[@]}"; do
   out="$BACKUP_DIR/${db}_${timestamp}.sql.gz"
   # -T: no TTY (we're piping). pg_dump runs inside the db container.
   docker compose exec -T db pg_dump -U "$POSTGRES_USER" -d "$db" | gzip -9 > "$out"

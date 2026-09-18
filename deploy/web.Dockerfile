@@ -28,6 +28,12 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL=""
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
+# Browser-side error/performance reporting (lib/observability.ts), same
+# build-time-only reasoning as NEXT_PUBLIC_SITE_URL above. Empty => the SDK is
+# never initialised.
+ARG NEXT_PUBLIC_SENTRY_DSN=""
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+
 # With output:'export' in next.config.ts, `next build` writes the static site
 # to ./out.
 RUN npm run build

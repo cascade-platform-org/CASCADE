@@ -1,13 +1,15 @@
 # Caddy config for CASCADE.
 #
-# Two sites, addresses supplied by environment variables so the same file works
+# Site addresses are supplied by environment variables so the same file works
 # locally (HTTP on a port) and in production (real hostnames with automatic TLS):
-#   APP_DOMAIN — the app: static frontend + /api reverse-proxied to the backend
-#   ID_DOMAIN  — Zitadel (the identity provider)
+#   APP_DOMAIN         — the app: static frontend + /api reverse-proxied to the backend
+#   ID_DOMAIN          — Zitadel (the identity provider)
+#   LEGACY_APP_DOMAIN  — optional: redirects an old pre-website APP_DOMAIN to the apex
+#   ERRORS_DOMAIN      — optional: GlitchTip (self-hosted error/performance tracking)
 #
-# When APP_DOMAIN/ID_DOMAIN are real hostnames (e.g. app.example.org), Caddy
-# automatically provisions and renews Let's Encrypt certificates. When they are
-# ":80"/":8081" (local testing) it just serves plain HTTP.
+# When these are real hostnames (e.g. app.example.org), Caddy automatically
+# provisions and renews Let's Encrypt certificates. When they are a bare port
+# (e.g. ":80", local testing) it just serves plain HTTP.
 #
 # Optional: add an ACME contact email in production for expiry notices:
 #   { email you@example.org }
@@ -145,4 +147,11 @@
 			}
 		}
 	}
+}
+
+# GlitchTip — self-hosted error/performance tracking (docker-compose.yml,
+# docs/project/deployment.md). A Django app, like Zitadel excluded from
+# `security_headers` above: it sets its own.
+{$ERRORS_DOMAIN} {
+	reverse_proxy glitchtip:8000
 }

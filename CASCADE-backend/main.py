@@ -96,6 +96,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 # Application
 # ---------------------------------------------------------------------------
 
+_API_VERSION = "1.0.0"
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
@@ -105,10 +108,13 @@ def create_app() -> FastAPI:
 
     # Error tracking — only active when SENTRY_DSN is set (works with Sentry or a
     # self-hosted GlitchTip). No-op otherwise, so local/dev is unaffected.
+    # `release` ties every event to _API_VERSION, so a regression after a
+    # deploy shows up as a spike tagged to that release, not a generic one.
     if settings.sentry_dsn:
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
             environment=settings.env,
+            release=f"cascade-backend@{_API_VERSION}",
             traces_sample_rate=settings.sentry_traces_sample_rate,
         )
         logger.info("Sentry error tracking enabled.")
@@ -120,7 +126,7 @@ def create_app() -> FastAPI:
             "Exposes the propagation engine, RBAC-gated API routes, and optional "
             "server-side project sync."
         ),
-        version="1.0.0",
+        version=_API_VERSION,
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",

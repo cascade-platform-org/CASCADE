@@ -22,6 +22,7 @@
     "docs:manual": "node scripts/build-user-manual.mjs"
   },
   "dependencies": {
+    "@sentry/browser": "^10.75.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@xyflow/react": "^12.10.2",
     "clsx": "^2.1.1",

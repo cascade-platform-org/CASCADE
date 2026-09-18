@@ -92,8 +92,11 @@ OIDC_GOOGLE_IDP_ID=                          # optional — see "Continue with G
 ZITADEL_MGMT_URL=https://id.your-domain.com
 ZITADEL_MGMT_TOKEN=<service-account PAT with user-delete scope>
 
-# Optional error reporting. Unset = no client initialised, nothing leaves the box.
+# Optional error reporting + performance traces. Unset = no client
+# initialised, nothing leaves the box. Works with Sentry or a self-hosted
+# GlitchTip project DSN — see "GlitchTip (Error/Performance Tracking) Setup".
 SENTRY_DSN=
+SENTRY_TRACES_SAMPLE_RATE=0.0    # fraction of requests traced; no effect without a DSN
 ```
 
 Rate limiting has no env var: it is enforced per user via role Entitlements — an
@@ -113,6 +116,10 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com
 # website is served from — e.g. https://cascade-platform.org — because it is
 # the origin search engines are told to index.
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
+# Optional browser-side error/performance reporting (lib/observability.ts).
+# Under Docker this comes from deploy/.env's GLITCHTIP_FRONTEND_DSN as a build
+# arg. A SEPARATE GlitchTip project DSN from the backend's SENTRY_DSN above.
+NEXT_PUBLIC_SENTRY_DSN=
 ```
 
 ### What lives at which path
@@ -160,6 +167,9 @@ SITE_URL=https://your-domain.com # MUST be https://$APP_DOMAIN. Baked into the
                                  # new one (root -> /app, everything else keeps
                                  # its path+query). Unset serves nothing there.
 ZITADEL_VERSION=<pinned tag>     # never :latest — see the service table below
+# ERRORS_DOMAIN=errors.your-domain.com    # optional — Caddy vhost for
+                                 # GlitchTip (see "GlitchTip Setup" below).
+                                 # Unset serves nothing there.
 ```
 
 ### Backups (`deploy/.env`, consumed by `deploy/backup.sh`)
@@ -182,9 +192,11 @@ Caddy (auto-TLS, the only internet-facing process):
 | --------------- | ----------------------------------- | ------------------------------------------------ |
 | `web`           | `deploy/web.Dockerfile`            | Caddy — TLS + static frontend + reverse proxy    |
 | `backend`       | `CASCADE-backend/Dockerfile`       | FastAPI + engine (single instance — ADR-0008)    |
-| `db`            | `postgres:16`                      | Postgres — CASCADE app DB **and** the Zitadel DB |
+| `db`            | `postgres:16`                      | Postgres — CASCADE app DB, the Zitadel DB, **and** the GlitchTip DB |
 | `zitadel`       | `ghcr.io/zitadel/zitadel`          | Self-hosted OIDC identity provider (API + admin console) |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login`    | **Production only.** Zitadel v3+ split its login screen into this separate Next.js app ("Login V2"); Caddy routes `/ui/v2/login*` on `ID_DOMAIN` to it. Absent in dev (local dev keeps the classic embedded login). |
+| `glitchtip`     | `glitchtip/glitchtip:6`            | Optional, self-hosted error/performance tracking (Sentry-protocol-compatible). `all_in_one` role — web, worker and scheduler in one process. Routed via Caddy on `ERRORS_DOMAIN`, or reached directly at `localhost:8090` in dev. |
+| `valkey`        | `valkey/valkey:9-alpine`           | Cache/task queue for `glitchtip`. |
 
 `ZITADEL_VERSION` **must be pinned** in `.env` (no `:latest`) — `zitadel` and
 `zitadel-login` must run matching, tested versions. Check available tags at
@@ -211,7 +223,12 @@ cp .env.example .env
 # SITE_URL=https://<APP_DOMAIN> (baked into the frontend image at build time —
 # it is what link previews resolve og:image against).
 # Leave OIDC_* blank for now — you fill them after creating the Zitadel app
-# (see "Identity Provider (Zitadel) Setup" below). chmod 600 .env
+# (see "Identity Provider (Zitadel) Setup" below).
+# Optional: also set GLITCHTIP_DB_PASSWORD, GLITCHTIP_SECRET_KEY and
+# ERRORS_DOMAIN to stand up error/performance tracking (see "GlitchTip
+# (Error/Performance Tracking) Setup" below) — SENTRY_DSN and
+# NEXT_PUBLIC_SENTRY_DSN come after that, once you've created a project there.
+# chmod 600 .env
 ```
 
 ### Development (local, HTTP, auth disabled)
@@ -230,9 +247,10 @@ cd deploy
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-DNS must already point `app.<domain>` and `id.<domain>` at the VM's IP so Caddy
-can obtain Let's Encrypt certificates. See "Identity Provider Setup" and the
-"VM Hardening" checklist below before exposing the box.
+DNS must already point `app.<domain>` and `id.<domain>` — and `errors.<domain>`
+too, if `ERRORS_DOMAIN` is set — at the VM's IP so Caddy can obtain Let's
+Encrypt certificates. See "Identity Provider Setup" and the "VM Hardening"
+checklist below before exposing the box.
 
 ### Create the First Admin
 
@@ -351,6 +369,49 @@ rendering the gate contacts nobody).
 
 Verify: sign in with a Google account, then confirm the user appears in
 `GET /api/admin/users` with role `analyst`.
+
+---
+
+## GlitchTip (Error/Performance Tracking) Setup
+
+Optional. The `glitchtip` service (self-hosted, Sentry-protocol-compatible —
+see the service table above) runs whether or not you use it; nothing leaves
+the box until `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` are set, because those
+are what make `sentry_sdk.init()` (`CASCADE-backend/main.py`) and
+`Sentry.init()` (`CASCADE-app/lib/observability.ts`) actually run.
+
+1. **First console login.** Browse to `https://errors.<domain>` (or
+   `http://localhost:8090` in dev). GlitchTip's first account becomes an
+   organization owner; self-registration is off (`ENABLE_OPEN_USER_REGISTRATION`),
+   so this is the only account that can ever be created this way — there is no
+   admin bootstrap env var like Zitadel's, you register once, by hand.
+2. **Create two projects** (Settings → Projects): one for the backend
+   (platform: Python/FastAPI) and one for the frontend (platform: JavaScript/
+   Browser). Each project page shows its **DSN** under Settings → SDK Setup.
+3. **Wire the DSNs into `deploy/.env`**:
+   ```bash
+   SENTRY_DSN=https://<backend-project-key>@errors.<domain>/<backend-project-id>
+   NEXT_PUBLIC_SENTRY_DSN=https://<frontend-project-key>@errors.<domain>/<frontend-project-id>
+   ```
+4. **Rebuild and restart** — the frontend DSN is a build arg like `SITE_URL`
+   (`up -d --build web`), the backend DSN is a runtime env var (`up -d
+   --no-deps backend` is enough, or just restart it).
+
+Verify: trigger a client error (e.g. open the browser console on `/app` and
+run `throw new Error("test")` — GlitchTip's SDK catches uncaught errors, so a
+thrown-and-uncaught one is the honest test) and confirm it appears in the
+frontend project within a few seconds.
+
+**Privacy.** This SDK never carries project content — see
+`lib/observability.ts`'s own docstring and
+`docs/project/privacy-and-data-protection.md` §2/§4 for what it does and does
+not report, and update that document's disclosure if you change what either
+SDK captures.
+
+**Email.** `GLITCHTIP_EMAIL_URL` defaults to `consolemail://` (mail printed to
+the container log, not sent) — fine for a single-operator instance, since
+there is no self-registration flow needing it. Set real SMTP credentials if
+you want GlitchTip's own alert emails on new issues.
 
 ---
 
@@ -553,6 +614,7 @@ docker compose start backend
 ```
 
 The same pattern restores the `zitadel` database (stop the `zitadel` service
+first), and the `glitchtip` database if you opted into it (stop `glitchtip`
 first). **Test a restore before go-live** — an untested backup is not a backup.
 
 ---
@@ -580,4 +642,7 @@ Before going live, verify:
       deletion also removes the Zitadel identity
 - [ ] Audit tooling clean: `CASCADE-backend/scripts/audit.sh` and
       `npm run lint && npm run type-check && npm run audit:deadcode && npm run audit:circular`
+- [ ] (Optional) GlitchTip set up: `ERRORS_DOMAIN` resolves with a cert; a
+      backend and a frontend project created; `SENTRY_DSN` /
+      `NEXT_PUBLIC_SENTRY_DSN` set to their DSNs; a test error appears in each
       (see CLAUDE.md §8a)

@@ -13,6 +13,7 @@
 import type { Metadata, Viewport } from "next";
 import "../globals.css";
 import { productMetadata, siteViewport } from "@/lib/site-metadata";
+import { ObservabilityInit } from "@/components/observability-init";
 
 export const metadata: Metadata = productMetadata;
 export const viewport: Viewport = siteViewport;
@@ -26,6 +27,7 @@ export default function ProductLayout({ children }: { children: React.ReactNode 
         suppressHydrationWarning
         className="h-full overflow-hidden bg-zinc-50 font-app text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
       >
+        <ObservabilityInit />
         {children}
       </body>
     </html>

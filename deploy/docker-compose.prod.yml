@@ -26,6 +26,7 @@ services:
       - backend
       - zitadel
       - zitadel-login
+      - glitchtip
 
   zitadel:
     # Root, like Zitadel's reference compose: setup must write the bootstrap

@@ -50,6 +50,7 @@ users who explicitly use Server Sync.
 | `analysis_logs`: run shape and timing, no content | App DB | Capacity planning, entitlement calibration | Legitimate interest | **365 days** |
 | `activity_log_uploads`: client action metadata | App DB | Support and debugging, user-initiated | Consent | **180 days** |
 | Caddy access logs (IP, path, timestamp) | VM | Operations, abuse and rate limiting | Legitimate interest | Per your log rotation |
+| Error/performance events (JS stack traces, source file/line, page-load and navigation timing) | GlitchTip (optional, self-hosted — same VM) | Diagnose crashes and slow pages | Legitimate interest | Operator-configured in GlitchTip's own settings |
 
 **Not stored anywhere on the server:** Propagation results, hazard scenarios,
 Element names and locations, and any georeferenced content. ADR-0007 makes this
@@ -58,6 +59,12 @@ what they were. The backend keeps no IP addresses of its own; only the reverse
 proxy sees them. A speculative `batch_propagation_jobs` table would have
 persisted Propagation results; migration 006 dropped it rather than carve out an
 exception for a feature nobody had built.
+
+The same boundary holds for the optional error/performance tracking above: a
+JS stack trace names a source file and line, never a Graph, Element or
+Scenario, and there is no code path connecting the two (`lib/observability.ts`,
+`main.py`'s `sentry_sdk.init`). `sendDefaultPii` is off; the default fetch/XHR
+breadcrumb records method+URL+status, never a request or response body.
 
 The table above is the whole list, and `db/schema.sql` is where it is kept
 honest: a new table carrying a `user_id` belongs in this table, in
@@ -89,8 +96,7 @@ untrue.
 
 ## 4. Cookies and local storage
 
-No consent banner is required, because nothing here is used for tracking or
-analytics:
+No consent banner is required, because none of this is used for tracking:
 
 - `cascade_access` / `cascade_refresh` — httpOnly session cookies. Strictly
   necessary for authentication (ePrivacy exemption).
@@ -99,8 +105,11 @@ analytics:
 - `cascade.oidc.*` (sessionStorage) — single-use CSRF state and PKCE verifier,
   deleted the moment the login completes.
 
-There are no third-party cookies, no analytics, no ad or tracking scripts, and
-no external font or asset CDNs on the sign-in path.
+There are no third-party cookies, no ad or tracking scripts, and no external
+font or asset CDNs on the sign-in path. The optional error/performance
+reporting (§2) sets no cookie and writes no local storage of its own — it is a
+first-party script reporting to your own GlitchTip instance, not third-party
+analytics, and carries no cross-site identifier.
 
 ---
 
