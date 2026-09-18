@@ -29,7 +29,7 @@ export function assignElementUpdate(target: Node | Edge, update: ElementUpdate):
 }
 
 /** Apply one engine update onto an element. Pure — returns a new object. */
-export function applyElementUpdate<T extends Node | Edge>(element: T, update: ElementUpdate): T {
+function applyElementUpdate<T extends Node | Edge>(element: T, update: ElementUpdate): T {
   const copy = { ...element };
   assignElementUpdate(copy, update);
   return copy;

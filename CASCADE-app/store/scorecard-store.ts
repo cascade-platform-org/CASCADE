@@ -17,7 +17,7 @@ import type { ScorecardEntry } from "@/lib/schemas";
 // State shape
 // ---------------------------------------------------------------------------
 
-export interface ScorecardState {
+interface ScorecardState {
   /** Scorecard entries ordered by created_at ascending. */
   scorecard: ScorecardEntry[];
 }
@@ -26,7 +26,7 @@ export interface ScorecardState {
 // Actions
 // ---------------------------------------------------------------------------
 
-export interface ScorecardActions {
+interface ScorecardActions {
   addScorecardEntry: (entry: ScorecardEntry) => void;
   updateScorecardEntry: (id: string, patch: Partial<ScorecardEntry>) => void;
   removeScorecardEntry: (id: string) => void;

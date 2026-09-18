@@ -47,7 +47,7 @@ function nodeSize(importance: number | undefined): number {
 // image/SVG exports must expand the capture region by this much or long names
 // get clipped — the single source of truth for that expansion is
 // expandBoundsForLabels below, used by every canvas export path.
-export const LABEL_MAX_WIDTH = 200;
+const LABEL_MAX_WIDTH = 200;
 
 export function expandBoundsForLabels<T extends { x: number; y: number; width: number; height: number }>(
   b: T,

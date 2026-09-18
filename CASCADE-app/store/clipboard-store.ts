@@ -22,7 +22,7 @@
 import { create } from "zustand";
 import type { Node, Edge } from "../lib/schemas/network";
 
-export interface ClipboardContents {
+interface ClipboardContents {
   nodes: Node[];
   /**
    * Only edges where both source and target IDs are present in `nodes`.

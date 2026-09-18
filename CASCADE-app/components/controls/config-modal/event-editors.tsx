@@ -412,7 +412,7 @@ export function VulnerabilityLevelsEditor({ eventId }: { eventId: string }) {
 // AttributeMutationsEditor
 // ---------------------------------------------------------------------------
 
-export const KNOWN_FIELDS = [
+const KNOWN_FIELDS = [
   { value: "expected_repair_time", label: "Repair time (h)", kind: "number" },
   { value: "functionality",        label: "Functionality level", kind: "number" },
   { value: "direct_damage",        label: "Direct damage (true/false)", kind: "boolean" },
@@ -420,7 +420,7 @@ export const KNOWN_FIELDS = [
   { value: "importance",           label: "Importance", kind: "number" },
 ] as const;
 
-export function coerceValue(raw: string, fieldName: string): unknown {
+function coerceValue(raw: string, fieldName: string): unknown {
   const known = KNOWN_FIELDS.find((f) => f.value === fieldName);
   if (known?.kind === "boolean") return raw === "true";
   if (known?.kind === "number") {

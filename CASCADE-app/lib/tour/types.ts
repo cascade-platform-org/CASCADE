@@ -40,7 +40,7 @@ export const TOUR_ANCHORS = [
   "tool-inter-canvas-edge",
 ] as const;
 
-export type TourAnchor = (typeof TOUR_ANCHORS)[number];
+type TourAnchor = (typeof TOUR_ANCHORS)[number];
 
 export interface TourStep {
   /** Value of the target's `data-tour` attribute. Omit for a centred step. */

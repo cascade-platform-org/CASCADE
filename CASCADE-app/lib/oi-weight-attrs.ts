@@ -4,7 +4,7 @@
 import type { Node } from "@/lib/schemas/network";
 
 /** Schema-defined attributes always offered, even when absent from live data. */
-export const SCHEMA_NODE_ATTRS_FOR_OI = ["importance", "cost_of_disservice_per_day"] as const;
+const SCHEMA_NODE_ATTRS_FOR_OI = ["importance", "cost_of_disservice_per_day"] as const;
 
 const NON_WEIGHT_KEYS = new Set([
   "id", "type", "label", "canvas_id", "node_categories", "icon",

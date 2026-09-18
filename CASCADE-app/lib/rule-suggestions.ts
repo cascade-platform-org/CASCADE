@@ -26,9 +26,9 @@
 
 import grammar from "@/shared/rule-grammar.json";
 
-export const RULE_FUNC_NAMES: readonly string[] = grammar.function_names;
-export const RULE_OPERATORS: readonly string[] = grammar.operators;
-export const NODE_ATTRIBUTES: readonly string[] = grammar.node_attributes;
+const RULE_FUNC_NAMES: readonly string[] = grammar.function_names;
+const RULE_OPERATORS: readonly string[] = grammar.operators;
+const NODE_ATTRIBUTES: readonly string[] = grammar.node_attributes;
 
 // ---------------------------------------------------------------------------
 // Context type
@@ -38,7 +38,7 @@ export const NODE_ATTRIBUTES: readonly string[] = grammar.node_attributes;
  * What the grammar expects to see NEXT after the already-committed tokens.
  * Determines which candidate set is generated.
  */
-export type RuleContext =
+type RuleContext =
   | "start"              // blank line — expect 'if' or function name
   | "element_in_cond"    // after 'if' / 'and' / 'or' / 'not' — expect element
   | "is_or_dot"          // after element in condition — expect 'is' or '.attr'
@@ -106,7 +106,7 @@ export function getPartialToken(
  * Derive the current grammar context from the sequence of already-committed
  * tokens (everything before the current partial token).
  */
-export function detectRuleContext(settled: string[]): RuleContext {
+function detectRuleContext(settled: string[]): RuleContext {
   if (settled.length === 0) return "start";
 
   const lower = settled.map((t) => t.toLowerCase());

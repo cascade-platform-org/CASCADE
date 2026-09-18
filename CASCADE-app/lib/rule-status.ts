@@ -10,7 +10,7 @@
 import grammar from "@/shared/rule-grammar.json";
 
 /** Prefix that marks a rule string as disabled (inactive). */
-export const DISABLED_RULE_PREFIX: string = grammar.disabled_rule_prefix;
+const DISABLED_RULE_PREFIX: string = grammar.disabled_rule_prefix;
 
 /** True when the rule is disabled (commented out). */
 export function isRuleDisabled(rule: string): boolean {

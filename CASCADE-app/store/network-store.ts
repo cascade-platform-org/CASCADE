@@ -25,7 +25,7 @@ enableMapSet();
 // State shape
 // ---------------------------------------------------------------------------
 
-export interface NetworkState {
+interface NetworkState {
   /** Ids of currently selected nodes. */
   selectedNodeIds: Set<string>;
   /** Ids of currently selected edges (intra- or inter-canvas). */
@@ -42,7 +42,7 @@ export interface NetworkState {
 // Actions
 // ---------------------------------------------------------------------------
 
-export interface NetworkActions {
+interface NetworkActions {
   // Selection
   selectNode: (nodeId: string, additive?: boolean) => void;
   selectEdge: (edgeId: string, additive?: boolean) => void;
@@ -228,16 +228,3 @@ export const useNetworkStore = create<NetworkStore>()(
     },
   })),
 );
-
-// ---------------------------------------------------------------------------
-// Selectors
-// ---------------------------------------------------------------------------
-
-export const selectIsNodeSelected = (nodeId: string) => (state: NetworkStore) =>
-  state.selectedNodeIds.has(nodeId);
-
-export const selectIsEdgeSelected = (edgeId: string) => (state: NetworkStore) =>
-  state.selectedEdgeIds.has(edgeId);
-
-export const selectHasSelection = (state: NetworkStore) =>
-  state.selectedNodeIds.size > 0 || state.selectedEdgeIds.size > 0;

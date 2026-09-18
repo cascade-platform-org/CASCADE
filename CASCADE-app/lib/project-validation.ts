@@ -14,7 +14,7 @@ import type { ProjectBundle } from "./file-io";
 // Public types
 // ---------------------------------------------------------------------------
 
-export type IssueSeverity = "error" | "warning";
+type IssueSeverity = "error" | "warning";
 
 export interface ValidationIssue {
   severity: IssueSeverity;

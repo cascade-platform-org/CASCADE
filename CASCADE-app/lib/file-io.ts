@@ -350,14 +350,14 @@ export type LoadResult<T> =
   | { ok: false; error: string };
 
 /** Parse and validate a project JSON value. Returns a typed result. */
-export function parseProject(raw: unknown): LoadResult<Project> {
+function parseProject(raw: unknown): LoadResult<Project> {
   const result = ProjectSchema.safeParse(raw);
   if (result.success) return { ok: true, data: result.data };
   return { ok: false, error: formatZodError(result.error) };
 }
 
 /** Parse and validate a config JSON value. Returns a typed result. */
-export function parseConfig(raw: unknown): LoadResult<ModelConfiguration> {
+function parseConfig(raw: unknown): LoadResult<ModelConfiguration> {
   const result = ModelConfigurationSchema.safeParse(raw);
   if (result.success) return { ok: true, data: result.data };
   return { ok: false, error: formatZodError(result.error) };

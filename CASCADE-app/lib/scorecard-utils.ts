@@ -66,7 +66,7 @@ export function computeOperativityScore(snapshot: GraphSnapshot, n: number, weig
  * Map an operativity percentage to a functionality level index (1..N).
  * Uses uniform intervals: level k = ceil(P × N / 100), clamped to [1, N].
  */
-export function operativityToLevel(pct: number, n: number): number {
+function operativityToLevel(pct: number, n: number): number {
   return Math.min(n, Math.max(1, Math.ceil((pct / 100) * n)));
 }
 

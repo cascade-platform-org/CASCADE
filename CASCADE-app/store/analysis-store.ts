@@ -37,7 +37,7 @@ export type EdgeCentralityMetric =
   | "edge_betweenness"
   | "bridge_edges";
 
-export type TopologicalMetric = NodeCentralityMetric | EdgeCentralityMetric;
+type TopologicalMetric = NodeCentralityMetric | EdgeCentralityMetric;
 
 export type ReachabilityMetric =
   | "downstream_reach_count"
@@ -50,9 +50,9 @@ export type StructuralMetric =
   | "community"
   | "nofn";
 
-export type ModelBasedMetric = "vitality" | "shapley";
+type ModelBasedMetric = "vitality" | "shapley";
 
-export type AnyMetric =
+type AnyMetric =
   | TopologicalMetric
   | ReachabilityMetric
   | StructuralMetric
@@ -62,7 +62,7 @@ export type AnyMetric =
 // Model-based progress
 // ---------------------------------------------------------------------------
 
-export interface ModelBasedProgress {
+interface ModelBasedProgress {
   total: number;
   completed: number;
   /** Wall-clock time of first call completion (ms). Null until first call done. */
@@ -82,7 +82,7 @@ export interface ModelBasedProgress {
  * replaying them over the cached outcomes redraws exactly the same coalitions
  * and makes zero engine calls.
  */
-export interface ReweightBasis {
+interface ReweightBasis {
   metric: "vitality" | "shapley";
   /** The Scenario every evaluation started from. Carries the weight attributes. */
   baseline: GraphSnapshot;
@@ -94,7 +94,7 @@ export interface ReweightBasis {
   shapleyOptions?: { samples: number; kMax: number; seed: number };
 }
 
-export interface AnalysisState {
+interface AnalysisState {
   /** Whether the full-page analysis layout is open. */
   analysisPageOpen: boolean;
 
@@ -206,7 +206,7 @@ export interface AnalysisState {
 // Actions
 // ---------------------------------------------------------------------------
 
-export interface AnalysisActions {
+interface AnalysisActions {
   openAnalysisPage: () => void;
   closeAnalysisPage: () => void;
 
@@ -398,11 +398,3 @@ export const useAnalysisStore = create<AnalysisStore>()(
     },
   })),
 );
-
-// ---------------------------------------------------------------------------
-// Selectors
-// ---------------------------------------------------------------------------
-
-export const selectHeatmapActive = (s: AnalysisStore) => s.heatmapActive;
-export const selectHeatmapColors = (s: AnalysisStore) => s.heatmapColors;
-export const selectAnalysisPageOpen = (s: AnalysisStore) => s.analysisPageOpen;

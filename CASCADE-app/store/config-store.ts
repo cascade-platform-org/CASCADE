@@ -72,7 +72,7 @@ export interface ConfigState {
 // Actions
 // ---------------------------------------------------------------------------
 
-export interface ConfigActions {
+interface ConfigActions {
   // --- Draft lifecycle ---
   /** Reset draft to a fresh clone of the committed config (call when modal opens). */
   openDraft: () => void;
@@ -160,7 +160,7 @@ export interface ConfigActions {
 export type ConfigStore = ConfigState & ConfigActions;
 
 /** Summary of a mergeConfig() call — enough for the caller to build a toast. */
-export interface MergeConfigSummary {
+interface MergeConfigSummary {
   addedCategories: string[];
   skippedCategories: string[];
   addedGraphTypes: string[];

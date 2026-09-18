@@ -61,7 +61,7 @@ export interface HistoryState {
 // Actions
 // ---------------------------------------------------------------------------
 
-export interface HistoryActions {
+interface HistoryActions {
   pushUpdateEntry: (entry: AnyUpdateEntry) => void;
   /** The current Scenario Baseline, derived from history plus retired entries. */
   scenarioBaseline: () => ScenarioBaseline;

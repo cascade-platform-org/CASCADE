@@ -16,7 +16,7 @@ type IconMap = Record<string, React.FC<{ size?: number; strokeWidth?: number; co
 
 let _iconCache: IconMap | null = null;
 
-export async function loadIconsIntoCache(): Promise<IconMap> {
+async function loadIconsIntoCache(): Promise<IconMap> {
   if (_iconCache) return _iconCache;
   const { allIcons, iconsByAnyName } = await import("@/lib/lucide-all");
   _iconCache = allIcons as IconMap;
@@ -36,7 +36,7 @@ export async function loadIconsIntoCache(): Promise<IconMap> {
  * canonically — so keying favourites off the import names would silently drop
  * those two from the favourites row.
  */
-export const FAVORITE_ICON_NAMES = Object.values(ICON_REGISTRY).map(
+const FAVORITE_ICON_NAMES = Object.values(ICON_REGISTRY).map(
   (icon) => (icon as unknown as { displayName: string }).displayName,
 );
 

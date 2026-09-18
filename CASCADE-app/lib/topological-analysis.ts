@@ -28,7 +28,7 @@ export interface AnalysisGraph {
 // Scored result
 // ---------------------------------------------------------------------------
 
-export interface ElementScore {
+interface ElementScore {
   id: string;
   kind: "node" | "edge";
   score: number;
