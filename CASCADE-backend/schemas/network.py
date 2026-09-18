@@ -443,6 +443,16 @@ class AnyUpdateEntry(BaseModel):
     scope: Optional[Literal["local", "global"]] = None
     canvas_id: Optional[str] = None    # set for local-scope operations
     event_id: Optional[str] = None     # set for event_applied / event_cleared
+    temporal_jump_hours: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Set only on the event_applied entry for a Temporal Jump (event_id "
+            "starts with 'tj-'): the hours it advanced simulated time by. Read by "
+            "clear-event to tell the -Xh revert control how much elapsed time to "
+            "drop, without parsing it back out of the human-readable label."
+        ),
+    )
     reverts_to_entry_id: Optional[str] = Field(
         default=None,
         description=(

@@ -141,6 +141,25 @@ describe("clearEvent", () => {
     expect(events[0].event_id).toBe("quake"); // the older Event still stands
     expect(useCanvasStore.getState().nodes.n1.functionality).toBe(1);
   });
+
+  it("records a Temporal Jump's hours structurally, and clearEvent reads them back to drop elapsed time", () => {
+    // Regression for the regex era: temporal_jump_hours must survive on the
+    // entry itself, not be re-derived by parsing the label back apart.
+    // extendRun is the SHIPPED operation the −Xh control calls (see the
+    // "Reset and Temporal Jumps" describe block below for why that matters).
+    // endRun() first: ui-store's run state isn't reset by this file's own
+    // beforeEach, and a leftover run from another test would mask a bug here.
+    endRun();
+    extendRun(6, N);
+
+    const entry = useHistoryStore.getState().updateHistory[0];
+    expect(entry.event_id).toMatch(/^tj-/);
+    expect(entry.temporal_jump_hours).toBe(6);
+    expect(useUiStore.getState().temporalJumpElapsedHours).toBe(6);
+
+    useCanvasStore.getState().clearEvent();
+    expect(useUiStore.getState().temporalJumpElapsedHours).toBe(0);
+  });
 });
 
 describe("Reset", () => {

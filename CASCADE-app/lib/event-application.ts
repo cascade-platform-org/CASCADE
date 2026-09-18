@@ -146,10 +146,12 @@ class ElementWriter {
 export function temporalJumpEvent(hours: number): EventDefinition {
   return {
     id: `tj-${nanoid(6)}`,
-    // The `tj-` prefix and the `(+Nh)` in this label are both READ BACK by
-    // `canvas-store.clearEvent`, which has only the history entry to work from
-    // — the synthetic EventDefinition is never persisted. Change either and
-    // clearing a Temporal Jump silently stops returning its elapsed hours.
+    // The `tj-` prefix is READ BACK by `canvas-store.clearEvent` to recognise
+    // this Event as a Temporal Jump — the synthetic EventDefinition itself is
+    // never persisted, only its effects. The hours travel structurally via
+    // `duration_hours` below, recorded onto the history entry's own
+    // `temporal_jump_hours` field (see canvas-store.applyEvent), not parsed
+    // back out of this label.
     label: `Temporal Jump (+${hours}h)`,
     type: "temporal_jump",
     frequency_per_10y: 0,

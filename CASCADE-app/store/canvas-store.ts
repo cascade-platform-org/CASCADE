@@ -480,7 +480,16 @@ export const useCanvasStore = create<CanvasStore>()(
           draft.edges = snapshot.edges;
         }),
         `Apply event: ${event.label}`,
-        { updateType: "event_applied", eventId: event.id, canvasId: null },
+        {
+          updateType: "event_applied",
+          eventId: event.id,
+          canvasId: null,
+          // temporal_jump_hours carries the schema's ge=1 constraint — only set
+          // it when there is a genuine positive duration to report.
+          ...(event.type === "temporal_jump" && event.duration_hours
+            ? { extra: { temporal_jump_hours: event.duration_hours } }
+            : {}),
+        },
       );
     },
 
@@ -524,11 +533,8 @@ export const useCanvasStore = create<CanvasStore>()(
       // applyEvent), so Ctrl+R can pick one. The −Xh control tracks elapsed
       // hours separately, and left alone it would go on offering to rewind to a
       // snapshot taken before a jump that is no longer in the scenario.
-      // The hours are read back out of the label `temporalJumpEvent` builds —
-      // change one and the other stops matching, with nothing failing.
       if (eventId?.startsWith("tj-")) {
-        const hours = Number(/\(\+(\d+)h\)/.exec(entry.label)?.[1] ?? 0);
-        useUiStore.getState().dropTemporalElapsedHours(hours);
+        useUiStore.getState().dropTemporalElapsedHours(entry.temporal_jump_hours ?? 0);
       }
       return true;
     },

@@ -149,6 +149,20 @@
           "default": null,
           "title": "Event Id"
         },
+        "temporal_jump_hours": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set only on the event_applied entry for a Temporal Jump (event_id starts with 'tj-'): the hours it advanced simulated time by. Read by clear-event to tell the -Xh revert control how much elapsed time to drop, without parsing it back out of the human-readable label.",
+          "title": "Temporal Jump Hours"
+        },
         "reverts_to_entry_id": {
           "anyOf": [
             {

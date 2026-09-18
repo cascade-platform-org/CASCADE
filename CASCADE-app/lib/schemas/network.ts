@@ -321,6 +321,13 @@ export const AnyUpdateEntrySchema = z.object({
   canvas_id: z.string().optional(),
   event_id: z.string().optional(),
   /**
+   * Set only on the event_applied entry for a Temporal Jump (event_id starts
+   * with "tj-"): the hours it advanced simulated time by. Read by clearEvent
+   * to tell the −Xh revert control how much elapsed time to drop, without
+   * parsing it back out of the human-readable label.
+   */
+  temporal_jump_hours: z.number().int().min(1).optional(),
+  /**
    * Populated only on temporal_jump_revert entries: the id of the newest
    * history entry at the moment the pre-jump snapshot was taken. It marks where
    * the reverted Temporal Jumps begin, so deriveSituation can resume from the

@@ -33,9 +33,12 @@ export interface HistoryEntryOptions {
   revertsToEntryId?: string | null;
   /**
    * Fields only the mutation itself can compute — `mutation_reversal` for an
-   * Event, `propagation_meta` for a Propagation.
+   * Event, `propagation_meta` for a Propagation, `temporal_jump_hours` for a
+   * Temporal Jump's event_applied entry.
    */
-  extra?: Partial<Pick<AnyUpdateEntry, "mutation_reversal" | "propagation_meta">>;
+  extra?: Partial<
+    Pick<AnyUpdateEntry, "mutation_reversal" | "propagation_meta" | "temporal_jump_hours">
+  >;
 }
 
 /**
