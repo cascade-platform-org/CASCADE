@@ -380,6 +380,21 @@ the box until `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` are set, because those
 are what make `sentry_sdk.init()` (`CASCADE-backend/main.py`) and
 `Sentry.init()` (`CASCADE-app/lib/observability.ts`) actually run.
 
+**Upgrading an existing deployment:** `deploy/db-init/02-create-glitchtip-db.sh`
+runs **only** when the Postgres data volume is first initialised, so on a box
+that already had Postgres before GlitchTip existed it never fires, and the
+container crash-loops on `password authentication failed for user
+"glitchtip_user"`. Create the role and database by hand, once — note the two
+separate `-c` flags, because `CREATE DATABASE` cannot run inside the implicit
+transaction that one multi-statement `-c` becomes:
+
+```bash
+source .env
+docker compose exec db psql -U "$POSTGRES_USER" -d postgres \
+  -c "CREATE ROLE glitchtip_user LOGIN PASSWORD '${GLITCHTIP_DB_PASSWORD}';" \
+  -c "CREATE DATABASE glitchtip OWNER glitchtip_user;"
+```
+
 1. **First console login.** Browse to `https://errors.<domain>` (or
    `http://localhost:8090` in dev). GlitchTip's first account becomes an
    organization owner; self-registration is off (`ENABLE_OPEN_USER_REGISTRATION`),
@@ -404,10 +419,30 @@ are what make `sentry_sdk.init()` (`CASCADE-backend/main.py`) and
    (`up -d --build web`), the backend DSN is a runtime env var (`up -d
    --no-deps backend` is enough, or just restart it).
 
-Verify: trigger a client error (e.g. open the browser console on `/app` and
-run `throw new Error("test")` — GlitchTip's SDK catches uncaught errors, so a
-thrown-and-uncaught one is the honest test) and confirm it appears in the
-frontend project within a few seconds.
+**Verify — from a terminal, not a browser.** Browser testing is unreliable
+here: privacy/ad-blocker extensions match the ingest URL by pattern
+(`/api/<n>/envelope/`, `sentry_key=`) regardless of domain, so a thrown error
+is silently dropped (Chrome reports `(blocked:other)`), while the SDK's
+harmless *session* envelope still gets through and returns 200 — which reads
+as "it works" when nothing was delivered. Send a real error event instead:
+
+```bash
+curl -i -X POST \
+  "https://errors.<domain>/api/<project-id>/envelope/?sentry_version=7&sentry_key=<project-key>" \
+  -H "Content-Type: application/x-sentry-envelope" \
+  --data-binary $'{"event_id":"8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c","sent_at":"2026-01-01T00:00:00.000Z"}\n{"type":"event","content_type":"application/json"}\n{"event_id":"8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c","timestamp":"2026-01-01T00:00:00.000Z","platform":"javascript","level":"error","exception":{"values":[{"type":"Error","value":"curl test error"}]}}'
+```
+
+**Read the response body, not just the status** — the two are the diagnostic:
+`{"id": "..."}` means the envelope header carried an `event_id` and was
+processed as a real event; a bare `{}` means it had none, which is what a
+*session* envelope looks like and is silently ignored (GlitchTip does not
+support sessions). Both return 200, so the status alone tells you nothing.
+
+Because of the blocking above, expect real-user error counts to **undercount**
+by whatever share of visitors run a blocker. The fix, if that matters, is the
+SDK's `tunnel` option pointed at a first-party path proxied by Caddy, so the
+request is not pattern-matched.
 
 **Privacy.** This SDK never carries project content — see
 `lib/observability.ts`'s own docstring and
@@ -415,10 +450,53 @@ frontend project within a few seconds.
 not report, and update that document's disclosure if you change what either
 SDK captures.
 
-**Email.** `GLITCHTIP_EMAIL_URL` defaults to `consolemail://` (mail printed to
-the container log, not sent) — fine for a single-operator instance, since
-there is no self-registration flow needing it. Set real SMTP credentials if
-you want GlitchTip's own alert emails on new issues.
+### Working with it day to day
+
+Two habits, one push and one pull. They answer different questions, and only
+the first needs setting up.
+
+**Alert on new issues (push) — catches breakage you would otherwise never hear
+about.** The failure mode of a small platform is a user hitting a crash,
+giving up, and never reporting it. GlitchTip groups repeated events into one
+*issue*, so an alert on new issues stays quiet even when a single fault fires
+hundreds of times.
+
+1. Set real SMTP in `deploy/.env` — the same provider already used for
+   Zitadel's signup verification mail is fine. Without this,
+   `GLITCHTIP_EMAIL_URL` stays `consolemail://` and "sent" mail only ever
+   reaches the container log:
+   ```bash
+   GLITCHTIP_EMAIL_URL=smtp+tls://user:password@smtp.example.org:587
+   GLITCHTIP_DEFAULT_FROM_EMAIL=errors@<domain>
+   ```
+   Use `smtp+ssl://` instead for implicit TLS on port 465, and percent-encode
+   any `@ : /` in the password.
+2. `docker compose up -d --no-deps --force-recreate glitchtip`.
+3. In each project: **Alerts → new alert**, set the threshold to 1 event in 1
+   minute, and add yourself as the recipient. Send the test mail the form
+   offers — if it does not arrive, check `logs glitchtip` for the SMTP error
+   before assuming the alert is wired.
+
+**Review for direction (pull) — answers "what should we improve next".** Once
+a month, open each project and read two lists:
+
+- Issues sorted by **users affected**, not event count. One person reloading a
+  broken page fifty times is not a priority signal; five people hitting the
+  same thing once is.
+- The performance view's slowest pageloads and transactions. Backend traces
+  need `SENTRY_TRACES_SAMPLE_RATE` above its `0.0` default (start at `0.1`) or
+  that half stays empty; the frontend already samples at the rate set in
+  `lib/observability.ts`.
+
+**Resolve or ignore as you go.** The list only keeps its meaning if
+"unresolved" means something — an instance where every issue is unresolved
+forever stops being read, which is how self-hosted error tracking usually
+dies.
+
+**What it does not tell you.** GlitchTip reports faults and timings, not
+comprehension or usage — whether people understand a feature, or which ones
+they use, is product analytics, a different tool and a separate decision under
+ADR-0007, since it means recording behaviour rather than breakage.
 
 ---
 
