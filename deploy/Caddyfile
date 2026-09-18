@@ -92,7 +92,15 @@
 	}
 
 	# Anything that matched no file: Next's own 404 page, under a real 404.
+	#
+	# `handle_errors` is its own route tree, separate from the main chain above
+	# — the top-level `import security_headers` on this site block does not
+	# reach it. Without importing it again here, an error response ships with
+	# none of CSP/HSTS/X-Frame-Options/etc., and `-Server` stops suppressing
+	# the `Server: Caddy` header — caught in production by `curl -sI` on an
+	# unknown path returning a 404 with only default headers.
 	handle_errors {
+		import security_headers
 		root * /srv
 		rewrite * /404.html
 		file_server {
