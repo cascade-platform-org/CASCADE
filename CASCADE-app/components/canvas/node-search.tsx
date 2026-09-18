@@ -7,7 +7,7 @@
  * Must be used as a direct child of <ReactFlow> (needs ReactFlowProvider context).
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Search, X, ScanSearch } from "lucide-react";
 import { Panel, useReactFlow } from "@xyflow/react";
 import { useShallow } from "zustand/react/shallow";
@@ -100,8 +100,13 @@ export function NodeSearch({ nodes: nodesProp }: NodeSearchProps = {}) {
       .slice(0, 8);
   }, [query, canvasNodes]);
 
-  // Reset highlight when results change
-  useEffect(() => { setHighlightedIdx(0); }, [results]);
+  // Reset highlight when results change (adjusted during render, guarded by
+  // the memoized results reference, rather than in an effect).
+  const [prevResults, setPrevResults] = useState(results);
+  if (results !== prevResults) {
+    setPrevResults(results);
+    setHighlightedIdx(0);
+  }
 
   const handleSelect = useCallback(
     (nodeId: string) => {

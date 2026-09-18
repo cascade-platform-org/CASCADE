@@ -98,12 +98,20 @@ export function Lasso({ active, partial = true, onSelect }: LassoProps) {
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
-  useEffect(() => {
+  // Reset drawing state when lasso mode turns off. Adjusted during render
+  // (guarded by prevActive) rather than in an effect, so deactivating the
+  // lasso doesn't cost an extra render pass.
+  const [prevActive, setPrevActive] = useState(active);
+  if (active !== prevActive) {
+    setPrevActive(active);
     if (!active) {
       setDrawing(false);
       setScreenPath([]);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!active) return;
 
     let dragging = false;
 

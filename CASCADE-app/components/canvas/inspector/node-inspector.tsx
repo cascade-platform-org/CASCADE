@@ -8,7 +8,7 @@
  *           Properties · Canvas Membership
  */
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useUiStore } from "@/store/ui-store";
@@ -69,11 +69,14 @@ function SupplyCapacityEditor({
     Object.entries(supply).map(([k, v]) => [k, v]),
   );
 
+  // Re-derive rows when the caller passes different supply (adjusted during
+  // render, guarded by supplyKey, rather than in an effect).
   const supplyKey = JSON.stringify(supply);
-  useEffect(() => {
+  const [prevSupplyKey, setPrevSupplyKey] = useState(supplyKey);
+  if (supplyKey !== prevSupplyKey) {
+    setPrevSupplyKey(supplyKey);
     setRows(Object.entries(supply).map(([k, v]) => [k, v]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supplyKey]);
+  }
 
   function commit(next: [string, number][]) {
     setRows(next);

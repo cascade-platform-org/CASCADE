@@ -51,7 +51,7 @@ export default function AdminPage() {
   useEffect(() => {
     // Wait for the auth store to restore the session before probing the API.
     if (initialized && mode === "oidc" && hasPermission("can_manage_users")) {
-      void reload();
+      queueMicrotask(() => void reload());
     }
   }, [initialized, mode, hasPermission, reload]);
 

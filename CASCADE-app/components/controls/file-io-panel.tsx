@@ -195,11 +195,11 @@ export function FileIoPanel() {
 
   useEffect(() => {
     loadRecoveryDir().then((dir) => setRecoveryDirName(dir?.name ?? null));
-    refreshHistory();
+    queueMicrotask(refreshHistory);
     void getStorageEstimate().then(setStorageEstimate);
     // Re-read history every 30 s so automatic snapshots appear without reopening the panel.
     const interval = setInterval(refreshHistory, 30_000);
-    void reloadSyncVersions();
+    queueMicrotask(() => void reloadSyncVersions());
     return () => clearInterval(interval);
   }, [refreshHistory, reloadSyncVersions]);
 

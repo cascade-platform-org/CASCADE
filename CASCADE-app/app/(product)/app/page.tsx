@@ -38,9 +38,11 @@ export default function Home() {
   // entirely, not just something inside it.
   useEffect(() => {
     if (!newProjectRequested) return;
-    setWizardOrigin("editor");
-    setAppState("wizard");
-    useUiStore.getState().clearNewProjectRequest();
+    queueMicrotask(() => {
+      setWizardOrigin("editor");
+      setAppState("wizard");
+      useUiStore.getState().clearNewProjectRequest();
+    });
   }, [newProjectRequested]);
 
   // Learn auth mode + restore any saved session on first load.
@@ -51,16 +53,20 @@ export default function Home() {
   useEffect(() => {
     const buSave = getBeforeUnloadSave();
     if (buSave) {
-      setPendingSave(buSave);
-      setAppState("restore-prompt");
+      queueMicrotask(() => {
+        setPendingSave(buSave);
+        setAppState("restore-prompt");
+      });
       return;
     }
     // Fallback: check the continuous autosave (covers browser crashes where
     // beforeunload never fired).
     const asSave = loadAutosave();
     if (asSave) {
-      setPendingSave({ saved_at: new Date().toISOString(), bundle: asSave });
-      setAppState("restore-prompt");
+      queueMicrotask(() => {
+        setPendingSave({ saved_at: new Date().toISOString(), bundle: asSave });
+        setAppState("restore-prompt");
+      });
     }
   }, []);
 

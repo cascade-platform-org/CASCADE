@@ -429,11 +429,16 @@ export function ActiveRulesPanel() {
 
   // Whenever the rule text produces a new target and the user hasn't manually
   // overridden, keep targetId in sync. Falls back to canvas selection.
-  useEffect(() => {
-    if (!targetManuallySet) {
-      setTargetId(ruleTargetId || selectionTargetId);
-    }
-  }, [ruleTargetId, selectionTargetId, targetManuallySet]);
+  // Adjusted during render (guarded by prevSyncedTargetId) rather than in an
+  // effect: null while manually overridden, so a change made only to
+  // ruleTargetId/selectionTargetId during that override correctly has no
+  // effect, matching the original effect's dependency array exactly.
+  const syncedTargetId = targetManuallySet ? null : ruleTargetId || selectionTargetId;
+  const [prevSyncedTargetId, setPrevSyncedTargetId] = useState(syncedTargetId);
+  if (syncedTargetId !== prevSyncedTargetId) {
+    setPrevSyncedTargetId(syncedTargetId);
+    if (syncedTargetId !== null) setTargetId(syncedTargetId);
+  }
 
   function openAddForm() {
     setAddingRule(true);

@@ -239,20 +239,18 @@ function TemporalJumpControls({
   const [snapshotTicks, setSnapshotTicks] = useState<number[]>([]);
   const cancelRef = useRef(false);
 
-  // When popover opens: re-derive snapshot ticks from the revert snapshot if present,
-  // or from live ticks if no jumps have been applied yet. Don't reset elapsed/revert.
-  useEffect(() => {
+  // When the popover opens: re-derive snapshot ticks from the revert snapshot if
+  // present, or from live ticks if no jumps have been applied yet. Don't reset
+  // elapsed/revert. Adjusted during render (guarded by prevOpen) rather than in
+  // an effect, so opening the popover doesn't cost an extra render pass.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setManualHours("");
-      if (revertSnapshot) {
-        // Derive ticks from the pre-jump state so the full original range is visible.
-        setSnapshotTicks(remainingJumpHours(revertSnapshot));
-      } else {
-        setSnapshotTicks(liveTicks);
-      }
+      setSnapshotTicks(revertSnapshot ? remainingJumpHours(revertSnapshot) : liveTicks);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   const busy = isPropagating || isAutoAdvancing;
   // Use snapshot ticks when jumps are in progress (stable original range).

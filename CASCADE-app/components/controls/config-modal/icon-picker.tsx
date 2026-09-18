@@ -64,7 +64,11 @@ export function IconPickerButton({
 
   useEffect(() => {
     if (!open) return;
-    if (_iconCache) { setIconPool(_iconCache); return; }
+    if (_iconCache) {
+      const cache = _iconCache;
+      queueMicrotask(() => setIconPool(cache));
+      return;
+    }
     loadIconsIntoCache().then((icons) => setIconPool(icons));
   }, [open]);
 
@@ -79,8 +83,15 @@ export function IconPickerButton({
 
   useEffect(() => {
     if (open) setTimeout(() => searchRef.current?.focus(), 0);
-    else setSearch("");
   }, [open]);
+
+  // Clear the search box when the picker closes (adjusted during render,
+  // guarded by prevOpen, rather than in an effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) setSearch("");
+  }
 
   const displayNames = useMemo(() => {
     const q = search.toLowerCase().trim();

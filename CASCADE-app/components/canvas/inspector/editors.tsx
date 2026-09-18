@@ -10,7 +10,7 @@
  * only props.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
@@ -127,11 +127,14 @@ export function PropertiesEditor({
     Object.entries(properties).map(([k, v]) => [k, String(v ?? "")]),
   );
 
+  // Re-derive rows when the caller passes different properties (adjusted
+  // during render, guarded by propKey, rather than in an effect).
   const propKey = JSON.stringify(properties);
-  useEffect(() => {
+  const [prevPropKey, setPrevPropKey] = useState(propKey);
+  if (propKey !== prevPropKey) {
+    setPrevPropKey(propKey);
     setRows(Object.entries(properties).map(([k, v]) => [k, String(v ?? "")]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propKey]);
+  }
 
   function commit(next: [string, string][]) {
     setRows(next);

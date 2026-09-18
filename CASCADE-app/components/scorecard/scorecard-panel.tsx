@@ -76,9 +76,12 @@ export function ScorecardPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    setComputingGaps(true);
-    findUnsavedRuns(updateHistory, scorecard, useCanvasStore.getState().toGraphSnapshot()).then((runs) => {
-      if (!cancelled) { setUnsavedRuns(runs); setComputingGaps(false); }
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setComputingGaps(true);
+      findUnsavedRuns(updateHistory, scorecard, useCanvasStore.getState().toGraphSnapshot()).then((runs) => {
+        if (!cancelled) { setUnsavedRuns(runs); setComputingGaps(false); }
+      });
     });
     return () => { cancelled = true; };
   }, [updateHistory, scorecard]);
