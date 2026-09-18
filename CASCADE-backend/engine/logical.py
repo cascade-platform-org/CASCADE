@@ -20,9 +20,10 @@ what makes this the engine's logical heuristic — live here.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from core.aggregation import OPERATORS, attributed
+from core.rule_ast import FunctionAST, FunctionArgumentAST
 from core.utils.normalization import normalize_category_name
 from schemas.network import Edge, Node
 
@@ -221,7 +222,7 @@ def compose_categories(
 
 
 def eval_nested_func_ast(
-    func_ast: dict[str, Any],
+    func_ast: FunctionAST,
     candidates: dict[str, tuple[int, dict[str, float]]],
     nodes: dict[str, Node],
     n: int,
@@ -244,16 +245,18 @@ def eval_nested_func_ast(
     default compose.
     """
 
-    def _resolve(ast_node: dict[str, Any]) -> tuple[int, dict[str, float]]:
-        kind = ast_node.get("type")
-
-        if kind == "reference_category":
+    def _resolve(ast_node: FunctionArgumentAST) -> tuple[int, dict[str, float]]:
+        if ast_node["type"] == "reference_category":
             cat = ast_node["name"]
             if cat in candidates:
                 return candidates[cat]
             return n, {}  # category not degraded → fully operational, no blame
 
-        if kind in ("reference_node", "reference_edge", "reference_unknown"):
+        if (
+            ast_node["type"] == "reference_node"
+            or ast_node["type"] == "reference_edge"
+            or ast_node["type"] == "reference_unknown"
+        ):
             node = nodes.get(ast_node["name"])
             if node is not None:
                 for cat in (node.node_categories or []):
@@ -261,29 +264,26 @@ def eval_nested_func_ast(
                         return candidates[cat]
             return n, {}  # no matching candidate → fully operational, no blame
 
-        if kind == "function":
-            op_name = ast_node["name"]
-            if op_name not in OPERATORS:
-                # Unknown operator inside a nested rule — skip, treat as fully operational.
-                return n, {}
-            args = ast_node.get("arguments", [])
-            arg_results = [_resolve(a) for a in args]
-            # Use str indices as keys so attributed() gets unique string keys per arg.
-            levels = {str(i): r[0] for i, r in enumerate(arg_results)}
-            if not levels:
-                return n, {}
-            agg = attributed(op_name, levels)
-            # Propagate blame: weight each arg's element shares by the attribution.
-            combined: dict[str, float] = {}
-            for idx_str, weight in agg.shares.items():
-                _, shares = arg_results[int(idx_str)]
-                for elem, share in shares.items():
-                    combined[elem] = combined.get(elem, 0.0) + weight * share
-            return agg.level, combined
+        # ast_node["type"] == "function"
+        op_name = ast_node["name"]
+        if op_name not in OPERATORS:
+            # Unknown operator inside a nested rule — skip, treat as fully operational.
+            return n, {}
+        arg_results = [_resolve(a) for a in ast_node["arguments"]]
+        # Use str indices as keys so attributed() gets unique string keys per arg.
+        levels = {str(i): r[0] for i, r in enumerate(arg_results)}
+        if not levels:
+            return n, {}
+        agg = attributed(op_name, levels)
+        # Propagate blame: weight each arg's element shares by the attribution.
+        combined: dict[str, float] = {}
+        for idx_str, weight in agg.shares.items():
+            _, shares = arg_results[int(idx_str)]
+            for elem, share in shares.items():
+                combined[elem] = combined.get(elem, 0.0) + weight * share
+        return agg.level, combined
 
-        return n, {}
-
-    if func_ast.get("type") != "function":
+    if func_ast["type"] != "function":
         return None
 
     level, shares = _resolve(func_ast)

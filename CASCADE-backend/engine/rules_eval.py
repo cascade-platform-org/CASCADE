@@ -33,6 +33,7 @@ from __future__ import annotations
 from typing import Any, Callable, Optional
 
 from core.aggregation import OPERATORS
+from core.rule_ast import ConditionAST, FunctionAST, RuleAST
 from core.rule_parser import (
     RuleIgnored,
     RuleParser,
@@ -74,19 +75,16 @@ def _compare(actual: Any, expected: Any, operator: str) -> bool:
         return False
 
 
-def eval_condition(ast: dict[str, Any], resolve: Resolver) -> bool:
+def eval_condition(ast: ConditionAST, resolve: Resolver) -> bool:
     """Evaluate a specific-rule condition AST against current state."""
-    kind = ast.get("type")
-    if kind == "and":
+    if ast["type"] == "and":
         return eval_condition(ast["left"], resolve) and eval_condition(ast["right"], resolve)
-    if kind == "or":
+    if ast["type"] == "or":
         return eval_condition(ast["left"], resolve) or eval_condition(ast["right"], resolve)
-    if kind == "not":
+    if ast["type"] == "not":
         return not eval_condition(ast["operand"], resolve)
-    if kind == "attribute_condition":
-        actual = resolve(ast["node_type"], ast["name"], ast["attribute"])
-        return _compare(actual, ast["value"], ast["operator"])
-    return False
+    actual = resolve(ast["node_type"], ast["name"], ast["attribute"])
+    return _compare(actual, ast["value"], ast["operator"])
 
 
 class RuleContext:
@@ -143,18 +141,18 @@ class RuleContext:
         # evaluate True and blame a phantom id.
         self._known: set[str] = set(nodes) | {e.id for e in edges}
 
-        self.specific: list[tuple[str, dict[str, Any], int]] = []
+        self.specific: list[tuple[str, ConditionAST, int]] = []
         # Generic attribute-set consequents (ADR-0015): (target, attribute, value,
         # condition). Any consequent whose attribute is NOT `functionality` — a
         # first-class field like `direct_damage` / `expected_repair_time`, or a
         # custom property — is handled here, uniformly, rather than special-cased.
-        self.attr_assignments: list[tuple[str, str, Any, dict[str, Any]]] = []
+        self.attr_assignments: list[tuple[str, str, Any, ConditionAST]] = []
         # (target, attribute) pairs already claimed by an attribute-set rule, so a
         # second rule on the same pair can be flagged (first-firing wins, ADR-0015).
         self._attr_assigned: set[tuple[str, str]] = set()
         self.intra: dict[str, dict[str, str]] = {}          # target -> {category: operator}
         self.inter: dict[str, tuple[str, list[str]]] = {}   # target -> (operator, categories)
-        self.nested_inter: dict[str, dict[str, Any]] = {}   # target -> full nested function AST
+        self.nested_inter: dict[str, FunctionAST] = {}   # target -> full nested function AST
         self.warnings: list[str] = []
 
         for element in [*nodes.values(), *edges]:
@@ -173,9 +171,8 @@ class RuleContext:
                     continue
                 self._classify(ast, rule_text)
 
-    def _classify(self, ast: dict[str, Any], rule_text: str) -> None:
-        kind = ast["type"]
-        if kind == "specific":
+    def _classify(self, ast: RuleAST, rule_text: str) -> None:
+        if ast["type"] == "specific":
             assignment = ast["then"]["assignments"][0]
             attribute = assignment["attribute"]
 
@@ -269,7 +266,7 @@ class RuleContext:
         # rule may spell a category differently from the node's `node_categories`
         # or the config's CategoryDefinition.name. Store and look up by the
         # normalised form so the three always agree.
-        if kind == "intracategorical":
+        if ast["type"] == "intracategorical":
             for category in categories:
                 nc = normalize_category_name(category)
                 existing = self.intra.get(target, {}).get(nc)
@@ -279,7 +276,7 @@ class RuleContext:
                         f"'{target}' was already set to '{existing}'; overriding with '{operator}'."
                     )
                 self.intra.setdefault(target, {})[nc] = operator
-        elif kind == "intercategorical":
+        elif ast["type"] == "intercategorical":
             if target in self.inter:
                 self.warnings.append(
                     f"Rule ('{rule_text}'): replaces an earlier intercategorical rule on "
@@ -310,34 +307,33 @@ class RuleContext:
             return f"ambiguous display label '{name}' (rename the nodes or use the element id)"
         return f"unknown element '{name}'"
 
-    def _unknown_function_refs(self, function_ast: dict[str, Any]) -> set[str]:
+    def _unknown_function_refs(self, function_ast: FunctionAST) -> set[str]:
         """Names in a function that resolved to neither an element nor a category
         (`reference_unknown`) — i.e. typos worth surfacing."""
         unknown: set[str] = set()
-        for arg in function_ast.get("arguments", []):
-            if arg.get("type") == "function":
+        for arg in function_ast["arguments"]:
+            if arg["type"] == "function":
                 unknown |= self._unknown_function_refs(arg)
-            elif arg.get("type") == "reference_unknown":
+            elif arg["type"] == "reference_unknown":
                 unknown.add(arg["name"])
         return unknown
 
-    def _referenced_categories(self, function_ast: dict[str, Any]) -> set[str]:
+    def _referenced_categories(self, function_ast: FunctionAST) -> set[str]:
         """Collect the categories a function references — directly (category refs)
         or via the categories of referenced elements."""
         categories: set[str] = set()
-        for arg in function_ast.get("arguments", []):
-            atype = arg.get("type")
-            if atype == "function":
+        for arg in function_ast["arguments"]:
+            if arg["type"] == "function":
                 categories |= self._referenced_categories(arg)
-            elif atype == "reference_category":
+            elif arg["type"] == "reference_category":
                 categories.add(arg["name"])
-            elif atype in ("reference_node", "reference_edge", "reference_unknown"):
+            elif arg["type"] == "reference_node" or arg["type"] == "reference_edge" or arg["type"] == "reference_unknown":
                 categories |= self._element_categories.get(arg["name"], set())
         return categories
 
     # --- per-target lookups used by the engine ------------------------------
 
-    def nested_inter_ast(self, target_id: str) -> Optional[dict[str, Any]]:
+    def nested_inter_ast(self, target_id: str) -> Optional[FunctionAST]:
         """Full nested function AST for targets whose intercategorical rule contains
         sub-functions (e.g. worst_of(best_of(A, B), best_of(C, B))). Returns None
         when no such rule exists for this target."""
@@ -381,13 +377,10 @@ def _coerce_assignment_value(value: Any) -> Any:
     return value
 
 
-def _condition_elements(ast: dict[str, Any]) -> list[str]:
+def _condition_elements(ast: ConditionAST) -> list[str]:
     """Element names referenced anywhere in a condition (for responsibility)."""
-    kind = ast.get("type")
-    if kind in ("and", "or"):
+    if ast["type"] == "and" or ast["type"] == "or":
         return _condition_elements(ast["left"]) + _condition_elements(ast["right"])
-    if kind == "not":
+    if ast["type"] == "not":
         return _condition_elements(ast["operand"])
-    if kind == "attribute_condition":
-        return [ast["name"]]
-    return []
+    return [ast["name"]]

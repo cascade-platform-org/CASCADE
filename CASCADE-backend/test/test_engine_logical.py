@@ -255,3 +255,36 @@ def test_requisite_parent_category_not_swallowed_by_shared_category():
     assert junction.functionality == 1
     assert junction.responsibility_share == {"pump": 1.0}
 
+
+def test_nested_intercategorical_rule_uses_its_own_grouping_not_flat_worst_of():
+    """A rule whose outer function nests another function (e.g.
+    worst_of(best_of(A, B), C)) must evaluate that grouping, not the flat
+    (operator, categories) dispatch every other intercategorical rule uses —
+    the two disagree whenever the nested group's best_of hides a worse category.
+
+    hosp depends on three categories at levels water=3, power=1, digital=2.
+    Flat worst_of(water, power, digital) = 1. The rule instead computes
+    worst_of(best_of(water, power), digital) = worst_of(max(3, 1), 2) = 2 —
+    a distinct, verifiable result that can only come from evaluating the
+    nested grouping (engine.logical.eval_nested_func_ast), not the fallback.
+    """
+    hosp = Node(
+        id="hosp",
+        functionality=4,
+        rules=["worst_of(best_of(water, power), digital) propagates to hosp"],
+    )
+    nodes = [
+        _node("w", 3, categories=["water"]),
+        _node("p", 1, categories=["power"]),
+        _node("d", 2, categories=["digital"]),
+        hosp,
+    ]
+    edges = [_edge("ew", "w", "hosp"), _edge("ep", "p", "hosp"), _edge("ed", "d", "hosp")]
+    result = run(_request(
+        nodes, edges, {"water": "Requisite", "power": "Requisite", "digital": "Requisite"}
+    ))
+
+    assert result.warnings == []
+    updated = _updates_by_id(result)["hosp"]
+    assert updated.functionality == 2
+

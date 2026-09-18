@@ -33,8 +33,21 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
+from core.rule_ast import (
+    AndCondition,
+    AttributeCondition,
+    ConditionAST,
+    FunctionAST,
+    FunctionArgumentAST,
+    OrCondition,
+    PropagationRuleAST,
+    ReferenceAST,
+    RuleAST,
+    SpecificRuleAST,
+    ThenBlock,
+)
 from core.rule_grammar import DISABLED_RULE_PREFIX, OPERATORS as _GRAMMAR_OPERATORS
 from core.utils.normalization import (
     normalize_category_name,
@@ -149,12 +162,16 @@ def tokenize_rule(text: str) -> list[Token]:
     return tokens
 
 
-def validate_ast_structure(ast: dict[str, Any], rule_type: RuleType) -> None:
+def validate_ast_structure(ast: Mapping[str, Any], rule_type: RuleType) -> None:
     """Check that a parsed AST has the shape required for its rule kind.
 
     A cheap structural guard run after parsing: it confirms the top-level `type`
     matches and the kind-specific required fields are present, so downstream
     consumers (and the engine's evaluator) can trust the shape.
+
+    Takes the AST as a plain `Mapping` rather than `RuleAST` — this is the guard
+    that makes trusting the shape valid in the first place, so it must accept
+    whatever `parse()` built before that shape is confirmed, not assume it.
 
     - Specific rules need `condition` and a `then` block of type `then_block`.
     - Propagation rules (intra/inter) need `function` and `target_node`.
@@ -183,20 +200,22 @@ def validate_ast_structure(ast: dict[str, Any], rule_type: RuleType) -> None:
                 )
 
 
-# Reference node types the AST uses for a resolved or unresolved identifier.
 _REFERENCE_TYPES = frozenset(
-    {"reference", "reference_node", "reference_edge", "reference_category", "reference_unknown"}
+    {"reference_node", "reference_edge", "reference_category", "reference_unknown"}
 )
 
 
-def extract_function_references(func_ast: dict[str, Any]) -> list[str]:
+def extract_function_references(func_ast: Mapping[str, Any]) -> list[str]:
     """Collect every node/edge/category name referenced inside a function AST.
 
     Walks a `function` subtree recursively and returns the `name` of each
     reference leaf (in document order). Used to build the per-target rule lookup
     table and to drive semantic validation (e.g. "do all referenced categories
-    exist?"). v1 only matched the bare `reference` type; v2 matches all resolved
-    reference kinds too, so references survive type resolution.
+    exist?").
+
+    Takes a plain `Mapping` rather than `FunctionArgumentAST`: best-effort on
+    whatever shape it's handed, tolerating a node that isn't one of the AST's
+    own kinds (returns `[]` for it) rather than assuming the closed union.
     """
     refs: list[str] = []
     node_type = func_ast.get("type")
@@ -378,7 +397,7 @@ class RuleParser:
         user's verbatim spelling is recovered for matching and round-trip."""
         return token_value.replace(self._SPACE_SENTINEL, " ")
 
-    def _resolve_identifier(self, token_value: str) -> tuple[str, str, str]:
+    def _resolve_identifier(self, token_value: str) -> tuple[str, str, Literal["node", "edge"]]:
         """Resolve an identifier token to `(canonical_name, display_name, node_type)`.
 
         Exact ID first (ADR-0002), then a case-insensitive display-label fallback.
@@ -397,7 +416,7 @@ class RuleParser:
 
     # -- public API ----------------------------------------------------------
 
-    def parse(self, rule_text: str) -> dict[str, Any]:
+    def parse(self, rule_text: str) -> RuleAST:
         """Parse one rule string into a validated AST.
 
         Raises `RuleSyntaxError` for malformed input, `RuleIgnored` for a valid
@@ -454,15 +473,13 @@ class RuleParser:
         return RuleType.UNKNOWN
 
     @staticmethod
-    def _has_category_reference(ast_node: dict[str, Any]) -> bool:
-        if ast_node.get("type") == "reference_category":
-            return True
-        if ast_node.get("type") == "function":
+    def _has_category_reference(ast_node: FunctionArgumentAST) -> bool:
+        if ast_node["type"] == "function":
             return any(
                 RuleParser._has_category_reference(arg)
-                for arg in ast_node.get("arguments", [])
+                for arg in ast_node["arguments"]
             )
-        return False
+        return ast_node["type"] == "reference_category"
 
     def _resolve_category(self, name: str) -> str | None:
         """Return the canonical category name for `name`, or None if it isn't a
@@ -476,41 +493,43 @@ class RuleParser:
 
     # -- specific rules ------------------------------------------------------
 
-    def _parse_specific_rule(self) -> dict[str, Any]:
+    def _parse_specific_rule(self) -> SpecificRuleAST:
         if not self._consume_keyword("if"):
             raise RuleSyntaxError("Specific rule must start with 'if'")
         condition = self._parse_expression()
         if not self._consume_keyword("then"):
             raise RuleSyntaxError("Specific rule must contain 'then' keyword")
         then_block = self._parse_then_assignments()
-        return {"type": RuleType.SPECIFIC.value, "condition": condition, "then": then_block}
+        return {"type": "specific", "condition": condition, "then": then_block}
 
-    def _parse_expression(self) -> dict[str, Any]:
+    def _parse_expression(self) -> ConditionAST:
         return self._parse_or_expression()
 
-    def _parse_or_expression(self) -> dict[str, Any]:
-        left = self._parse_and_expression()
+    def _parse_or_expression(self) -> ConditionAST:
+        left: ConditionAST = self._parse_and_expression()
         while self._has_more_tokens() and self._get_current_token().value.lower() == "or":
             self.position += 1
             right = self._parse_and_expression()
-            left = {"type": "or", "left": left, "right": right}
+            node: OrCondition = {"type": "or", "left": left, "right": right}
+            left = node
         return left
 
-    def _parse_and_expression(self) -> dict[str, Any]:
-        left = self._parse_not_expression()
+    def _parse_and_expression(self) -> ConditionAST:
+        left: ConditionAST = self._parse_not_expression()
         while self._has_more_tokens() and self._get_current_token().value.lower() == "and":
             self.position += 1
             right = self._parse_not_expression()
-            left = {"type": "and", "left": left, "right": right}
+            node: AndCondition = {"type": "and", "left": left, "right": right}
+            left = node
         return left
 
-    def _parse_not_expression(self) -> dict[str, Any]:
+    def _parse_not_expression(self) -> ConditionAST:
         if self._has_more_tokens() and self._get_current_token().value.lower() == "not":
             self.position += 1
             return {"type": "not", "operand": self._parse_primary_expression()}
         return self._parse_primary_expression()
 
-    def _parse_primary_expression(self) -> dict[str, Any]:
+    def _parse_primary_expression(self) -> ConditionAST:
         if self._has_more_tokens() and self._get_current_token().value == "(":
             self.position += 1
             expr = self._parse_expression()
@@ -520,11 +539,11 @@ class RuleParser:
             return expr
         return self._parse_attribute_condition(is_result_part=False)
 
-    def _parse_then_assignments(self) -> dict[str, Any]:
+    def _parse_then_assignments(self) -> ThenBlock:
         assignment = self._parse_attribute_condition(is_result_part=True)
         return {"type": "then_block", "assignments": [assignment]}
 
-    def _parse_attribute_condition(self, is_result_part: bool) -> dict[str, Any]:
+    def _parse_attribute_condition(self, is_result_part: bool) -> AttributeCondition:
         """Parse `<identifier>[.attribute] is [<op>] <value>`.
 
         The default attribute is `functionality`. When the attribute is
@@ -625,7 +644,13 @@ class RuleParser:
 
     # -- propagation (intra/inter) rules -------------------------------------
 
-    def _parse_propagation_rule(self, rule_type: RuleType) -> dict[str, Any]:
+    def _parse_propagation_rule(self, rule_type: RuleType) -> PropagationRuleAST:
+        # Callers only ever reach this for the two propagation kinds; RuleType
+        # itself is broader (SPECIFIC, UNKNOWN), so the literal is derived
+        # explicitly rather than trusting `rule_type.value`'s plain `str`.
+        kind: Literal["intracategorical", "intercategorical"] = (
+            "intracategorical" if rule_type == RuleType.INTRACATEGORICAL else "intercategorical"
+        )
         function_ast = self._parse_function_expression()
         if not (self._consume_keyword("propagates") and self._consume_keyword("to")):
             raise RuleSyntaxError(f"{rule_type.value} rule must contain 'propagates to'")
@@ -643,13 +668,13 @@ class RuleParser:
                 f"Unexpected token '{self._get_current_token().value}' after target node"
             )
         return {
-            "type": rule_type.value,
+            "type": kind,
             "function": function_ast,
             "target_node": target_name,      # canonical ID (label resolved if used)
             "raw_target_node": raw_target,   # verbatim spelling, for round-trip
         }
 
-    def _parse_function_expression(self) -> dict[str, Any]:
+    def _parse_function_expression(self) -> FunctionAST:
         if not self._has_more_tokens():
             raise RuleSyntaxError("Expected function name")
         function_name = self._get_current_token().value
@@ -659,7 +684,7 @@ class RuleParser:
             raise RuleSyntaxError("Expected '(' after function name")
         self.position += 1
 
-        arguments: list[dict[str, Any]] = []
+        arguments: list[FunctionArgumentAST] = []
         while self._has_more_tokens() and self._get_current_token().value != ")":
             if (
                 self.position + 1 < len(self.tokens)
@@ -682,7 +707,7 @@ class RuleParser:
 
         return {"type": "function", "name": function_name, "arguments": arguments}
 
-    def _classify_reference(self, raw_name: str) -> dict[str, Any]:
+    def _classify_reference(self, raw_name: str) -> ReferenceAST:
         """Tag an argument token as a node / category / edge / unknown reference.
 
         Element IDs are matched exactly; categories via their normalised form.
@@ -700,8 +725,9 @@ class RuleParser:
         # Display-label fallback: resolve a human label to its canonical element ID.
         eid = self._label_to_id.get(normalize_label(display))
         if eid is not None:
-            kind = "reference_edge" if eid in self.edges else "reference_node"
-            return {"type": kind, "name": eid, "raw_name": display}
+            if eid in self.edges:
+                return {"type": "reference_edge", "name": eid, "raw_name": display}
+            return {"type": "reference_node", "name": eid, "raw_name": display}
         return {"type": "reference_unknown", "name": display, "raw_name": display}
 
     # -- token helpers -------------------------------------------------------
