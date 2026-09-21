@@ -11,6 +11,7 @@ import { betweenness, edgeBetweenness, closeness, eigenvector } from "graphology
 import louvain from "graphology-communities-louvain";
 import { singleSource } from "graphology-shortest-path/unweighted";
 
+import { NON_WEIGHT_KEYS_BASE } from "@/lib/weight-attrs";
 import type { Node, Edge, Canvas } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -82,12 +83,11 @@ export interface WeightExpressionContext {
   nodeAttrs: string[]; // raw names — prefix n_ in expressions
 }
 
-/** Node/edge keys that are never useful as numeric weights. */
-const NON_WEIGHT_KEYS = new Set([
-  "id", "source", "target", "type", "label", "canvas_id",
-  "node_categories", "icon", "direct_damage", "functionality_time",
-  "time_restored", "x", "y", "positionAbsolute",
-]);
+/** Node/edge keys that are never useful as numeric weights. The shared base,
+ *  plus the two edge endpoints — which are ids, not magnitudes. `functionality`
+ *  is deliberately NOT excluded here: it is a legitimate weight expression
+ *  attribute and appears in SCHEMA_*_ATTRS below. See `lib/weight-attrs.ts`. */
+const NON_WEIGHT_KEYS = new Set([...NON_WEIGHT_KEYS_BASE, "source", "target"]);
 
 /**
  * Schema-defined numeric attributes that are always offered as weight chips
@@ -530,25 +530,46 @@ export function computeBridgeEdges(data: AnalysisGraph): AnalysisResult {
   const bridgeGraphKeys = new Set<string>();
   let timer = 0;
 
-  function dfs(u: string, parentEdgeKey: string | null): void {
-    visited.add(u);
-    disc[u] = low[u] = ++timer;
-    G.edges(u).forEach((edgeKey) => {
-      if (edgeKey === parentEdgeKey) return;
-      const [s, t] = G.extremities(edgeKey);
-      const v = s === u ? t : s;
-      if (!visited.has(v)) {
-        dfs(v, edgeKey);
-        low[u] = Math.min(low[u], low[v]);
-        if (low[v] > disc[u]) bridgeGraphKeys.add(edgeKey);
-      } else {
-        low[u] = Math.min(low[u], disc[v]);
-      }
-    });
-  }
+  // Tarjan, with an explicit stack. Recursion here overflowed at a few
+  // thousand nodes — measured: a 5 000-node path threw RangeError, and an
+  // imported EPANET network reaches that size easily. A frame carries its own
+  // incident-edge list and cursor, so popping it is the "after dfs(v) returns"
+  // half of the recursive version.
+  for (const root of G.nodes()) {
+    if (visited.has(root)) continue;
+    visited.add(root);
+    disc[root] = low[root] = ++timer;
+    const stack: { u: string; parentEdgeKey: string | null; edges: string[]; i: number }[] = [
+      { u: root, parentEdgeKey: null, edges: G.edges(root), i: 0 },
+    ];
 
-  for (const node of G.nodes()) {
-    if (!visited.has(node)) dfs(node, null);
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      if (frame.i < frame.edges.length) {
+        const edgeKey = frame.edges[frame.i++];
+        // Skip only the exact edge we arrived on, never every edge back to the
+        // parent — a parallel edge to it is a genuine second route.
+        if (edgeKey === frame.parentEdgeKey) continue;
+        const [s, t] = G.extremities(edgeKey);
+        const v = s === frame.u ? t : s;
+        if (!visited.has(v)) {
+          visited.add(v);
+          disc[v] = low[v] = ++timer;
+          stack.push({ u: v, parentEdgeKey: edgeKey, edges: G.edges(v), i: 0 });
+        } else {
+          low[frame.u] = Math.min(low[frame.u], disc[v]);
+        }
+      } else {
+        stack.pop();
+        const parent = stack[stack.length - 1];
+        if (parent) {
+          low[parent.u] = Math.min(low[parent.u], low[frame.u]);
+          if (low[frame.u] > disc[parent.u] && frame.parentEdgeKey) {
+            bridgeGraphKeys.add(frame.parentEdgeKey);
+          }
+        }
+      }
+    }
   }
 
   // Map graphology edge keys back to original CASCADE edge IDs
@@ -646,26 +667,42 @@ function findArticulationPoints(G: Graph): Set<string> {
   const ap = new Set<string>();
   let timer = 0;
 
-  function dfs(u: string) {
-    visited.add(u);
-    disc[u] = low[u] = ++timer;
-    let childCount = 0;
-    G.neighbors(u).forEach((v) => {
-      if (!visited.has(v)) {
-        childCount++;
-        parent[v] = u;
-        dfs(v);
-        low[u] = Math.min(low[u], low[v]);
-        if (parent[u] === null && childCount > 1) ap.add(u);
-        if (parent[u] !== null && low[v] >= disc[u]) ap.add(u);
-      } else if (v !== parent[u]) {
-        low[u] = Math.min(low[u], disc[v]);
-      }
-    });
-  }
+  // Explicit stack, for the same reason as computeBridgeEdges: recursion threw
+  // RangeError on a 10 000-node path. `children` lives on the frame because the
+  // root test ("more than one DFS child") is per-node state the recursive
+  // version kept in a local.
+  for (const root of G.nodes()) {
+    if (visited.has(root)) continue;
+    parent[root] = null;
+    visited.add(root);
+    disc[root] = low[root] = ++timer;
+    const stack: { u: string; neighbors: string[]; i: number; children: number }[] = [
+      { u: root, neighbors: G.neighbors(root), i: 0, children: 0 },
+    ];
 
-  for (const node of G.nodes()) {
-    if (!visited.has(node)) { parent[node] = null; dfs(node); }
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      if (frame.i < frame.neighbors.length) {
+        const v = frame.neighbors[frame.i++];
+        if (!visited.has(v)) {
+          frame.children++;
+          parent[v] = frame.u;
+          visited.add(v);
+          disc[v] = low[v] = ++timer;
+          stack.push({ u: v, neighbors: G.neighbors(v), i: 0, children: 0 });
+        } else if (v !== parent[frame.u]) {
+          low[frame.u] = Math.min(low[frame.u], disc[v]);
+        }
+      } else {
+        stack.pop();
+        const p = stack[stack.length - 1];
+        if (p) {
+          low[p.u] = Math.min(low[p.u], low[frame.u]);
+          if (parent[p.u] === null && p.children > 1) ap.add(p.u);
+          if (parent[p.u] !== null && low[frame.u] >= disc[p.u]) ap.add(p.u);
+        }
+      }
+    }
   }
   return ap;
 }

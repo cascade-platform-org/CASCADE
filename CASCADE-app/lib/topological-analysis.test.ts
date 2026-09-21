@@ -166,6 +166,41 @@ describe("computePercolationCurve", () => {
   });
 });
 
+describe("large graphs", () => {
+  /** A path of n nodes: every edge is a bridge, every interior node an articulation point. */
+  function path(n: number): AnalysisGraph {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    for (let i = 0; i < n; i++) nodes.push(node(`n${i}`));
+    for (let i = 0; i < n - 1; i++) edges.push(edge(`e${i}`, `n${i}`, `n${i + 1}`));
+    return graph(nodes, edges);
+  }
+
+  // Both passes used to recurse once per node. Measured before the rewrite:
+  // computeBridgeEdges threw RangeError at 5 000 nodes and
+  // computeArticulationPoints at 10 000 — sizes an imported EPANET network
+  // reaches, so this was reachable rather than theoretical. The assertion is
+  // the answer as well as the absence of a throw: an explicit stack that
+  // finishes but folds `low` back wrongly would otherwise look like a pass.
+  it("walks 20 000 nodes without exhausting the call stack", () => {
+    const n = 20_000;
+    const g = path(n);
+    expect(Object.values(computeBridgeEdges(g).scores).filter((v) => v === 1)).toHaveLength(n - 1);
+    expect(
+      Object.values(computeArticulationPoints(g).scores).filter((v) => v === 1),
+    ).toHaveLength(n - 2);
+  });
+
+  it("finds no bridge and no articulation point in a cycle", () => {
+    // The complement: every node has a second route, so nothing is critical.
+    const n = 2_000;
+    const g = path(n);
+    g.edges[`e${n - 1}`] = edge(`e${n - 1}`, `n${n - 1}`, "n0");
+    expect(Object.values(computeBridgeEdges(g).scores).every((v) => v === 0)).toBe(true);
+    expect(Object.values(computeArticulationPoints(g).scores).every((v) => v === 0)).toBe(true);
+  });
+});
+
 describe("computeNofNMetrics", () => {
   const twoCanvas = () =>
     graph(
