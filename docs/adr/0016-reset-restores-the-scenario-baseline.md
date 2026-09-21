@@ -12,31 +12,29 @@ onto every in-scope Element:
 ```
 
 That is only correct on a network where every Element was already at the
-Functionality scale's maximum. Four things go wrong otherwise, and all four are
-reachable today:
+Functionality scale's maximum. Three defects follow, all reachable today:
 
-1. ~~**An authored degraded baseline is destroyed.**~~ A modeller may author an
-   Element below max as its *normal* state, and Reset promotes it to `N` with no
-   way back to what the file said. This was the original motivation for
-   reconstructing Functionality rather than asserting it — **and the owner
-   subsequently overrode it**: see *Reset guarantees a working network* below.
-   Reset now promotes such an Element deliberately. The remaining three defects
-   are what this ADR still fixes.
-2. **`expected_repair_time` survives.** An Event sets it (`default_repair_time`,
+1. **`expected_repair_time` survives.** An Event sets it (`default_repair_time`,
    `direct_damage_effects`); Reset clears `direct_damage` but leaves the repair
    time behind, so the Element reads as undamaged and still-under-repair.
-3. **Rule-written attributes survive.** Since ADR-0015 a Specific Rule may assign
+2. **Rule-written attributes survive.** Since ADR-0015 a Specific Rule may assign
    *any* attribute — a first-class field or an arbitrary custom `properties`
    key — and `lib/element-update.ts` **merges** `ElementUpdate.properties` onto
    the Element. Reset knows nothing about those writes, so a cascade's
    `properties.damaged_by` outlives the cascade that caused it. ADR-0015's
    set-once latch means a re-Propagation will not clear it either.
-4. **Nothing else can revert a Propagation.** CTRL+Z steps back one Update at a
+3. **Nothing else can revert a Propagation.** CTRL+Z steps back one Update at a
    time and Clear Event reaches only an Event's own fields, so a user who wants
    "put the cascade back" has no operation that does it.
 
-Three reverters already exist and none of them agrees with the others about what
-"put it back" means, which is the underlying problem:
+A fourth — *an authored degraded baseline is destroyed*, since Reset promotes to
+`N` an Element a modeller authored below max as its normal state — was the
+original motivation for reconstructing Functionality rather than asserting it.
+The owner **subsequently overrode it**; Reset now promotes such an Element
+deliberately. See *Reset guarantees a working network* (§4).
+
+Three reverters already exist and none agrees with the others about what "put it
+back" means, which is the underlying problem:
 
 | operation | reverts | mechanism |
 |---|---|---|
@@ -140,28 +138,24 @@ what that Update changed:
    history says happened, so the fold is simply re-run; there is no cached copy
    to invalidate.
 
-   Updates that *undo* work are skipped by the fold entirely: `event_cleared`
-   and `temporal_jump_revert`. Their diff's `before` side is a mid-scenario
-   state — the cascade just discarded — so folding one would record a degraded
-   value as "what this field looked like before the scenario", and Reset would
-   then restore the graph back **into** the cascade it was asked to remove.
-   Nothing is lost by skipping them: if the Update they reverted is still in
-   history it already contributes the correct value, and if it was removed its
-   writes are no longer in the graph.
+   Updates that *undo* work — `event_cleared`, `temporal_jump_revert` — are
+   skipped entirely. Their diff's `before` side is a mid-scenario state, so
+   folding one would record a degraded value as the pre-scenario one and Reset
+   would restore the graph back **into** the cascade it was asked to remove.
+   Nothing is lost: if the Update they reverted is still in history it already
+   contributes the right value, and if it was removed its writes are gone.
 4. **Retain past eviction** — an entry whose producing Update has been evicted
-   from the capped history (`HISTORY_LIMIT`, or ADR-0017's byte budget) is kept
-   rather than dropped. A scenario easily outlives twenty Updates, and losing the
-   ability to Reset because the user nudged twenty node positions is the bug this
-   clause exists to prevent.
+   from the capped history (`HISTORY_LIMIT`, or ADR-0017's byte budget) is kept.
+   A scenario easily outlives twenty Updates, and losing Reset because the user
+   nudged twenty node positions is the bug this clause prevents.
 5. **Clear** — Reset empties the map.
 
-Seeding is not an optimisation, it is a correctness requirement. Sample projects
-and any saved file may ship **mid-scenario**: `samples/public/IJDRR_example.json`
-carries an `event_applied` (Earthquake), the `propagation` that followed it, and a
-`manual_functionality_update` in its history, and the guided tour (requirements
-§8.5) opens on exactly that file and asks the user to press Reset as its fourth
-step. Without seeding, Reset on a freshly loaded project is a silent no-op and the
-tour walks the user onto a still-cascaded graph.
+Seeding is a correctness requirement, not an optimisation: any saved file may
+ship **mid-scenario**. `samples/public/IJDRR_example.json` carries an
+`event_applied` (Earthquake), its `propagation` and a
+`manual_functionality_update`, and the guided tour (requirements §8.5) opens on
+that file and asks for a Reset at its fourth step. Without seeding that Reset is
+a silent no-op on a still-cascaded graph.
 
 ### 3. What each reverter does
 
@@ -174,14 +168,12 @@ tour walks the user onto a still-cascaded graph.
 | a hand edit to a MODEL field a machine already wrote | (already held, first-write-wins) | if it is the newest Update | with that machine write | with that machine write |
 | nothing — an Element damaged with no Baseline entry at all | — | no | no | **yes** — half 1 needs no record |
 
-The last row is the one surprise, and it is deliberate. The Baseline records the
-pre-scenario value of a *field*, not a log of writes. If a Rule set `capacity` to
-40 and the user then corrected it to 45, Reset restores the pre-scenario 40 —
-because 45 was a correction to a number the cascade invented, and leaving it
-standing would keep a value that only means anything relative to a cascade that
-no longer exists. Once the machine write has been reverted (by an earlier Clear
-Event, say) its entry is gone and a later hand edit to that field is untracked,
-so it survives.
+The last row is the one surprise, and it is deliberate: the Baseline records a
+*field's* pre-scenario value, not a log of writes. If a Rule set `capacity` to 40
+and the user corrected it to 45, Reset restores 40 — 45 corrected a number the
+cascade invented, and only means anything relative to a cascade that no longer
+exists. Once that machine write has been reverted its entry is gone, so a later
+hand edit to the field is untracked and survives.
 
 **Undo is untouched by this ADR.** It remains positional over the update history
 and consults no Baseline. Reset and Clear Event are *semantic* reverters — "put
@@ -202,29 +194,25 @@ Two halves, and the first does not depend on the second:
    half that reaches a `capacity` a Rule assigned or a custom `properties` key a
    cascade merged (ADR-0015), which half 1 knows nothing about.
 
-A hand edit to a model field survives both: a label fixed, a node moved, or a
-capacity corrected mid-scenario is authoring work.
+A hand edit to a model field survives both — that is the authoring work the
+directive protects.
 
 #### Reset guarantees a working network, rather than reconstructing a past one
 
-Half 1 is a deliberate reversal of this ADR's original first Context bullet,
-made by the owner after a real failure: a Temporal Jump reverted *after* a Reset
-put the graph back into a cascade that the Baseline could no longer explain, and
-Reset answered "nothing to reset" on a visibly broken network.
+Half 1 reverses this ADR's original first Context defect, at the owner's
+direction after a real failure: a Temporal Jump reverted *after* a Reset put the
+graph back into a cascade the Baseline could no longer explain, and Reset
+answered "nothing to reset" on a visibly broken network.
 
-That specific hole is closed at its cause (below), but the directive was
-broader, and correct: **the Baseline is derived state, and derived state can be
-wrong.** It is folded from an update history that is capped, evicted, rewound by
-Undo, and skipped for entries that themselves undo work. Every one of those is a
-place a future change can leave the fold incomplete, and the failure mode is
-always the same — Reset silently declines to repair a damaged network. Reset is
-what a user reaches for when the model is in a state they no longer understand.
-It has to be the one operation that always works, and it cannot be the operation
-whose correctness depends on the most derived thing in the app.
-
-The price is that an Element authored below `N` as its *normal* state is
-promoted. That is a real cost and it is accepted: it is visible and immediately
-correctable, whereas a Reset that leaves damage behind is neither.
+That hole is closed at its cause (below), but the directive was broader, and
+correct: **the Baseline is derived state, and derived state can be wrong.** It is
+folded from a history that is capped, evicted, rewound by Undo and skipped for
+entries that undo work — each a place a future change can leave the fold
+incomplete, with one failure mode: Reset silently declines to repair a damaged
+network. Reset is what a user reaches for when the model is unintelligible, so it
+cannot be the operation whose correctness depends on the most derived state in
+the app. The price — an Element authored below `N` is promoted — is accepted as
+visible and correctable, where damage left behind is neither.
 
 Reset **ignores the local/global scope toggle** and always covers the whole
 project. A Situation is a project-level concept — Events reach across Canvases,
@@ -301,15 +289,11 @@ history entry they did not cause, shift the Situation, and give Ctrl+R two
 different behaviours depending on whether the server happens to be reachable.
 Clearing an Event stays a purely local, offline, deterministic operation.
 
-This is not a claim that the product never auto-propagates. It does, in exactly
-one place: the Temporal Jump popover's **auto-propagate** checkbox
-(`ui-store.temporalAutoPropagate`), which ships **on**, so every jump already
-spends an evaluation the user did not individually ask for. The difference worth
-holding is that a jump advances simulated time, which means nothing until the
-cascade is recomputed, whereas clearing an Event *removes* an input — the useful
-result is the graph without it, and recomputing is a separate question the user
-is in a position to answer. If re-propagating after a clear is ever wanted, that
-checkbox is the shape to copy, and the copy should default off.
+The product does auto-propagate in one place — the Temporal Jump popover's
+`ui-store.temporalAutoPropagate`, shipped **on** — because a jump advances
+simulated time, which means nothing until the cascade is recomputed. Clearing an
+Event instead *removes* an input, and the graph without it is already the useful
+result. If this is ever wanted, copy that checkbox, defaulting off.
 
 ## Considered options
 
@@ -318,7 +302,7 @@ checkbox is the shape to copy, and the copy should default off.
   it was scope-dependent. Forcing Functionality is now half of Reset — the half
   that guarantees a working network — but it is not the whole of it.
 - *Reconstruct Functionality from the Baseline instead of forcing it.* This was
-  the original decision here, and it was reversed (see §4): it makes the one
+  the original decision here, and it was reversed (§4): it makes the one
   operation a user reaches for when the model is unintelligible depend on the
   most derived state in the app. Rejected on robustness, at the known cost of
   promoting an authored-degraded Element.
@@ -373,41 +357,21 @@ checkbox is the shape to copy, and the copy should default off.
   affected: `samples/public/backup-defer.json`, an engine fixture whose
   `e_da_hosp` edge is authored at Functionality 1 with no history behind it.
 - **The Scorecard's gap-fill changes meaning.** `scorecard-panel.tsx`'s
-  `onRunEvent` calls Reset as "give me a clean graph to run this uncovered Event
-  against", then applies the Event and captures the result as
-  `before_propagation`. Under seeding (§2) that still clears a loaded cascade, so
-  the path keeps working — but it now depends on the Baseline reaching back far
-  enough, and it must be tested as such rather than assumed.
+  `onRunEvent` uses Reset as "give me a clean graph for this uncovered Event".
+  Seeding (§2) keeps that working, but it now depends on the Baseline reaching
+  back far enough, so it must be tested rather than assumed.
 - **Clear Event becomes undoable** and starts writing the `event_cleared` entries
   the schema has always allowed. `store/canvas-store.test.ts`'s *"reverses only
-  the Event's own fields, leaving later work standing"* simulates the cascade as a
-  direct state write, so it is tagged `manual` and would keep passing under the
-  new rule while asserting the opposite of it — its comment says "a Propagation
-  cascades" but no Propagation occurs. It is corrected to tag that write
-  `propagation`.
+  the Event's own fields"* simulates a cascade as a direct state write, so it is
+  tagged `manual` and would keep passing while asserting the opposite of the new
+  rule; it is corrected to tag that write `propagation`.
 - **The Baseline is derived, so it is not a schema field.** No Pydantic → JSON
   Schema → Zod change, and no project-file format change beyond ADR-0017's.
-- Docs carrying the superseded behaviour, to be corrected with the
-  implementation: `requirements.md` §8.5 (the tour's Reset step) and §11
-  ("cleared by Reset" — see below); `architecture.md`'s `scenario_reset` row
-  ("Functionality restored to N") and its `event_cleared` row; the guided-tour
-  step body in `lib/tour/first-run-tour.ts` ("back to full functionality"); and
-  both User Manual mirrors — `docs/project/user-manual.md` and
-  `components/help/user-manual.tsx` — whose Reset line says "returns every element
-  to `N`" and whose Ctrl+R line promises the exact opposite of §5: *"A Propagation
-  you ran after it stays — this undoes the Event, not the cascade."*
-- ~~**Pre-existing false claim, now inherited.** `requirements.md` §11 says the
-  Analysis Heatmap is "cleared by Reset". No Reset path calls `clearHeatmap` —
-  its only callers are the Analysis page's close button and `heatmap-controls`.
-  Either Reset clears it or the sentence goes; this ADR does not decide which, and
-  `CONTEXT.md` deliberately no longer repeats the claim.~~
-  **Resolved (2026-09-11):** it was resolved the first way. `resetFunctionality`
-  calls `clearHeatmap` (`lib/network-utils.ts`), so `requirements.md` §11 and
-  `CONTEXT.md` are both correct as written. The other half of the sentence is
-  also out of date: the Analysis window's close button no longer clears the
-  heatmap, because the window floats over the canvas and closing it says nothing
-  about the overlay. Clearing is the explicit **Clear heatmap** control, or
-  Reset. See ADR-0018.
+- The Analysis Heatmap is **cleared by Reset** — `resetFunctionality` calls
+  `clearHeatmap` (`lib/network-utils.ts`). The Analysis window's close button
+  does not clear it, because the window floats over the canvas and closing it
+  says nothing about the overlay; clearing is the explicit **Clear heatmap**
+  control, or Reset. Resolved 2026-09-11, see ADR-0018.
 - The Baseline gives the update history an anchor that survives eviction. It is
   the same object `deriveSituation` needs to stop returning `null` when a
   `reverts_to_entry_id` boundary ages out; that follow-up is not part of this ADR.
