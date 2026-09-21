@@ -90,3 +90,8 @@ skills-lock.json
 
 ## ── Business docs (not for public repo) ───────────────────────────────────────
 docs/business/*
+
+
+# local agent set-up
+.claude/*
+.agents/*
