@@ -363,30 +363,30 @@ Works in both georeferenced and non-georeferenced modes.
 
 ### 8.4 In-app documentation *(implemented)*
 
-Two right-edge slide-over drawers, both pure-JSX presentational components (no
-markdown dependency) that are the canonical user-facing text for their topic:
+Two right-edge slide-over drawers sharing one slot, so `ui-store` opens either
+by closing the other (`toggleUserManualPanel` / `toggleRulesManualPanel` /
+`openRulesManualPanel`).
 
 | Drawer | Opened from | Covers |
 |---|---|---|
 | **User Manual** (`components/help/`) | Topbar **Help** (`HelpCircle`) | Setting up elements and what each attribute does, rules, running a scenario, testing an intervention, what needs the server |
 | **Rules Manual** (`components/rules/rules-manual.tsx`) | Active Rules panel **Manual** (`BookOpen`), and the User Manual §2 | The rule DSL grammar and how the engine interprets it |
 
-They share the same right-edge slot, so `ui-store` opens either one by closing
-the other (`toggleUserManualPanel` / `toggleRulesManualPanel` / `openRulesManualPanel`).
-
-`docs/project/user-manual.md` mirrors the User Manual for readers outside the
-app; the Rules Manual has no `.md` twin. Change a component and its mirror
-together. The rule grammar additionally tracks `CASCADE-backend/core/rule_parser.py`.
+`docs/project/user-manual.md` is the **single source** for the User Manual:
+`npm run docs:manual` generates what the drawer renders, so the drawer holds no
+prose of its own. Edit the markdown, regenerate, commit both — pipeline and
+staleness test in [architecture.md](architecture.md). The Rules Manual is
+hand-written JSX with no `.md` twin, and tracks
+`CASCADE-backend/core/rule_parser.py`.
 
 ### 8.5 Guided tours *(implemented)*
 
-Four walkthroughs share one runner, and the split is the point: **First run** teaches how a finished model behaves, **Build a model** teaches how to author one, **Customize the Propagation** teaches how to change what the engine computes, and **Analyse and decide** teaches what the platform does with the result.
+Four walkthroughs share one runner, and the split is the point: **First run**
+teaches how a finished model behaves, **Build a model** how to author one,
+**Customize the Propagation** how to change what the engine computes, and
+**Analyse and decide** what the platform does with the result.
 
-#### First run
-
-A skippable eleven-step walkthrough of the core loop — read the network, inspect
-an element's attributes, Reset, apply an Event, Propagate, read the cascade,
-advance time — pointing at the real editor UI.
+Three properties belong to the runner, so they hold for all four:
 
 - **Action-gated.** A step that asks the user to do something advances by itself
   the moment they do it. A gate is armed *when its step appears*, so a step can
@@ -395,36 +395,41 @@ advance time — pointing at the real editor UI.
 - **Nothing is dimmed and nothing is blocked.** The user must be able to read the
   network while a step talks about it, and to click real controls outside whatever
   the step highlights. The tour draws a ring and a card, and nothing else.
-- **It runs on `samples/public/IJDRR_example.json`** — the paper's worked example.
-  Starting the tour loads that bundle, replacing what is open, so every entry
-  point says so first. The bundle ships in its post-Earthquake, post-Propagation
-  state, so the tour has the user Reset and then cause the cascade themselves.
-  Reset reaches back through the history the file ships with — the Scenario
-  Baseline is seeded from `update_history` on load (ADR-0016), without which
-  Reset on a freshly opened project would be a silent no-op.
-- **Entry points:** the New Project screen, a one-time prompt over the canvas
-  (both suppressed once offered), and "Take the guided tour" in the User Manual
-  drawer, available forever after.
-- Propagation still needs the server and `can_propagate`. The tour does not work
-  around that — the step explains the button, and a guest skips past it.
+- **Every tour discards the open project** — each loads a sample or starts an
+  empty one. The New Project screen lists all four by name and nothing else (what
+  a tour teaches is its own first card, and a second copy only goes stale); the
+  User Manual drawer, being reachable over real work, confirms first with the
+  tour's own `discards` line (`registry.ts`). The one-time canvas prompt for the
+  first-run tour is suppressed once offered.
+
+#### First run
+
+Eleven steps through the core loop — read the network, inspect an element's
+attributes, Reset, apply an Event, Propagate, read the cascade, advance time —
+pointing at the real editor UI. It runs on
+**`samples/public/IJDRR_example.json`**, the paper's worked example, which ships
+in its post-Earthquake, post-Propagation state, so the tour has the user Reset
+and then cause the cascade themselves. Reset reaches back through the history
+the file ships with — the Scenario Baseline is seeded from `update_history` on
+load (ADR-0016), without which Reset on a freshly opened project would be a
+silent no-op. Propagation still needs the server and `can_propagate`; the step
+explains the button and a guest skips past it.
 
 #### Build a model
 
-A hands-on walkthrough of fifteen actions that **starts its own empty project**
-(`lib/new-project.ts`, the same blank slate the New Project screen's "Create
-project" button makes) and loads no sample.
+Fifteen actions that **start their own empty project** (`lib/new-project.ts`,
+the same blank slate the New Project screen's "Create project" button makes).
 
 Starting from empty is not cosmetic: the early steps gate on the *shape* of the
 stores — a Category exists, a second node exists, an edge exists — so on a
 populated project they are satisfied on arrival and the tour skips itself, and
 on a half-built one the user cannot tell their own work from what the step asked
-for. Because it therefore discards what is open, both entry points say so: the
-New Project screen creates the project anyway, and the User Manual drawer — the
-one reachable over real work — asks for confirmation first, as it now does for
-the first-run tour too. It exists because the first-run tour
-covers reading and running a model and nothing covered authoring one — and the
-four mistakes that stop a hand-built model working are all invisible, in that
-the network looks correct and the cascade simply does nothing:
+for.
+
+It exists because the first-run tour covers reading and running a model and
+nothing covered authoring one — and the four mistakes that stop a hand-built
+model working are all invisible, in that the network looks correct and the
+cascade simply does nothing:
 
 1. nothing exists until it is in the Model Configuration — with no Category there
    is nothing to supply, and with no Event nothing to fear;
@@ -435,22 +440,22 @@ the network looks correct and the cascade simply does nothing:
 
 The order of the steps is dictated by the Inspector rather than by taste. Only
 the **provider** is tagged with a Category and set to Node Type Source: either
-one makes its Supply Capacity section appear, and — once the edge is drawn — what makes the
-consumer's Category Dependency Profile section appear by itself
+one makes its Supply Capacity section appear, and — once the edge is drawn —
+what makes the consumer's Category Dependency Profile section appear by itself
 (`inboundCategories` in `node-inspector.tsx`). So the consumer is never asked
 for a Category, and its Demand is asked for only after the edge exists.
 Likewise the Event is defined before the step asking for a vulnerability to it,
 since the vulnerability editor lists the configured Events.
 
-The second half is the multi-canvas one, and it is built rather than
-described: a second Canvas, a second Category with its own supplier placed on
-it, an **inter-canvas edge** from that supplier to the consumer built in the
-first half, the **All** tab where the two Canvases are finally one network, and
-a global Propagation. The two things that surprise people about Canvases are
-only visible by doing it — an ordinary edge cannot leave a Canvas (the
-Inter-Canvas Edge tool exists for that), and a Category arrives at a node over
-an edge without the node being tagged with it (the profile block appears marked
-*via parent*).
+The second half is the multi-canvas one, and it is built rather than described:
+a second Canvas, a second Category with its own supplier placed on it, an
+**inter-canvas edge** from that supplier to the consumer built in the first
+half, the **All** tab where the two Canvases are finally one network, and a
+global Propagation. The two things that surprise people about Canvases are only
+visible by doing it — an ordinary edge cannot leave a Canvas (the Inter-Canvas
+Edge tool exists for that), and a Category arrives at a node over an edge
+without the node being tagged with it (the profile block appears marked *via
+parent*).
 
 Each step gates on the store reaching that *shape* rather than on particular
 labels, so the user names their own elements. `lib/tour/build-model-tour.test.ts`
@@ -460,22 +465,20 @@ predicate reading a field that has been renamed. It also pins the step order
 above, since a tour that asked for a Supply Capacity before its Category would
 strand the user on a step the Inspector cannot satisfy.
 
-Both entry points — the New Project screen and "Build a model" in the User
-Manual window — close whatever covers the Canvas before starting.
-
 #### Customize the Propagation
 
-A walkthrough of the declarations that change engine behaviour without any code
-— the **Category Type**, the per-category **dependency profile**, and **Rules**,
-one of each of the three kinds — changing one at a time and re-running the
-Propagation after each. It opens by applying the sample's Earthquake (the sample
-ships on its baseline, so there is nothing to Reset first) and closes by handing
-over to *Analyse and decide* through the step's `nextTour`, which the runner
-renders as a button. The before/after discipline is the
-lesson, not a presentation choice: each of these is invisible on the canvas, and
-they can cancel each other out, so a change read without a Propagation after it
-teaches the wrong conclusion. `customize-propagation-tour.test.ts` asserts that
-every step which changes a declaration is followed by a Propagate step.
+The declarations that change engine behaviour without any code — the **Category
+Type**, the per-category **dependency profile**, and **Rules**, one of each of
+the three kinds — changed one at a time, re-running the Propagation after each.
+It opens by applying the sample's Earthquake (the sample ships on its baseline,
+so there is nothing to Reset first) and closes by handing over to *Analyse and
+decide* through the step's `nextTour`, which the runner renders as a button.
+
+The before/after discipline is the lesson, not a presentation choice: each of
+these is invisible on the canvas, and they can cancel each other out, so a
+change read without a Propagation after it teaches the wrong conclusion.
+`customize-propagation-tour.test.ts` asserts that every step which changes a
+declaration is followed by a Propagate step.
 
 It runs on **`IJDRR_Extended_example.json`**, not the plain IJDRR example, for a
 structural reason: that network has two substations fed by one source *and*
@@ -503,34 +506,24 @@ node receives a Requisite aggregation whatever its categories are (§7.2), so a
 critical supplier propagates under either type. The type decides how a shortfall
 is read — levels versus quantities.
 
-- **Entry points:** the New Project screen and the User Manual drawer.
-
 #### Analyse and decide
 
 What the platform does with a Scenario once the engine has produced one:
 causality (`responsibility_share`), a Temporal Jump the user actually runs, the
 Scorecard, the Analysis Module — including that the Operativity weighting
 re-scores a completed run without spending an engine evaluation (ADR-0018) — the
-Repair panel, and the File panel's saves and importer.
+Repair panel, and the File panel's saves and importer. The Repair step states
+the §10 rule plainly: only Elements with `direct_damage` are ranked, because a
+merely starved Element recovers when its supplier does.
 
-Canvases and Propagation Scope are **not** here: choosing how to layer a project
-is an authoring decision, so the build tour teaches it, at the point where the
-user has a working model to split. The Repair step states the §10 rule plainly —
-only Elements with `direct_damage` are ranked, because a merely starved Element
-recovers when its supplier does.
+Canvases and Propagation Scope are **not** here — choosing how to layer a
+project is an authoring decision, so the build tour teaches it, at the point
+where the user has a working model to split.
 
 It runs on the first-run sample in its shipped, already-propagated state,
 because most of its steps point at a result. Almost nothing gates: a guest has
 neither `can_propagate` nor engine evaluations, and `platform-tour.test.ts`
 asserts that fewer than a third of its steps wait on anything.
-
-- **Entry points:** the New Project screen and the User Manual drawer.
-
-All four tours are listed by name at the top of the New Project screen — a name
-and nothing else, since what a tour teaches is its own first card and a second
-copy of it only goes stale. Started from the User Manual drawer instead, the two
-sample-based ones ask for confirmation first: that entry point is reachable over
-real work, and loading the sample discards it.
 
 Implementation — the step/target data model, why no tour library is used, and the
 constraints that shape the ring — is documented in

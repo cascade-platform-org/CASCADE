@@ -618,7 +618,7 @@ CASCADE-v2/
 │   │   │       ├── tab-graph-types.tsx
 │   │   │       └── tab-node-defaults.tsx
 │   │   ├── geo/                # MapLibre background behind React Flow (geo-map-background)
-│   │   ├── help/               # User Manual drawer (mirrors docs/project/user-manual.md)
+│   │   ├── help/               # User Manual drawer (renders the generated manual)
 │   │   ├── onboarding/         # New Project Wizard, guided tour, first-run prompt
 │   │   ├── rules/              # Rule editor, autocomplete, active rules panel
 │   │   ├── scorecard/          # Scorecard panels
