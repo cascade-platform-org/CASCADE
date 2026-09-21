@@ -104,7 +104,7 @@ Types are defined **once** and derived everywhere else. The sequence for any sch
 
 1. Update the **Pydantic model** in `CASCADE-backend/schemas/` (Python source of truth).
 2. Run `python CASCADE-backend/scripts/export_json_schema.py` — writes JSON Schema files to `CASCADE-app/shared/schemas/`.
-3. Apply the equivalent change to the **Zod schema** in `CASCADE-app/lib/schemas/` (TypeScript source of truth). TypeScript types (`z.infer<>`) update automatically.
+3. Apply the equivalent change to the **Zod schema** in `CASCADE-app/lib/schemas/` (TypeScript source of truth). TypeScript types (`z.infer<>`) update automatically. `lib/schemas/pydantic-mirror.test.ts` fails if you forget: it compares every `$defs` entry against its Zod counterpart by property name and required-ness. A model the frontend deliberately does not mirror goes in that test's `NO_MIRROR` map with the reason.
 4. The `CASCADE-app/lib/types/*.ts` files are thin re-export wrappers — never define types there directly.
 
 **Never write a TypeScript interface that duplicates a Pydantic model.**
