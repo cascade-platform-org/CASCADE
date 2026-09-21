@@ -50,6 +50,32 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Types (pyright)
+        run: pyright
+
+      - name: Security lint (bandit)
+        run: bandit -c pyproject.toml -r .
+
+      # PYSEC-2026-1325 (ecdsa) has no fix version — it is ecdsa's documented
+      # lack of side-channel resistance, reachable only for ES* JWT algorithms,
+      # and this service signs RS256. Rationale in full in scripts/audit.sh.
+      - name: Known CVEs (pip-audit)
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325
+
+      - name: Dead code (vulture)
+        run: vulture . --config pyproject.toml
+
+      - name: Dependencies (deptry)
+        run: deptry .
+
+      # The CLAUDE.md §7 engine boundary, mechanically enforced. ADR-0009's
+      # future extraction of engine/ into a private submodule is a one-step
+      # operation only while nothing outside propagation_service imports it —
+      # which is a property that has to be checked on every change, not
+      # remembered.
+      - name: Engine isolation (import-linter, ADR-0009)
+        run: lint-imports --config pyproject.toml
+
       - name: Tests (pytest, incl. DB integration)
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
@@ -81,14 +107,48 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint (eslint)
+        run: npm run lint
+
       - name: Type-check (tsc --noEmit)
         run: npx --no-install tsc --noEmit
 
       - name: Unit tests (vitest)
         run: npm test
 
+      - name: Dead code (knip)
+        run: npm run audit:deadcode
+
+      - name: Circular imports (madge)
+        run: npm run audit:circular
+
       - name: Build (static export)
         run: npm run build
+
+  secrets:
+    name: Secrets — baseline scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets==1.5.0
+
+      # Scans EVERY tracked file, never a subset: detect-secrets rewrites the
+      # baseline from what it was given, so scanning part of the tree silently
+      # drops the audited verdicts for everything else.
+      #
+      # Only `results` is compared. The baseline also carries a `generated_at`
+      # timestamp that changes on every run, so diffing the whole file would
+      # fail on every PR regardless of findings.
+      - name: No new secrets
+        run: |
+          git ls-files | xargs detect-secrets scan --baseline .secrets.baseline
+          python .github/scripts/check_secrets_baseline.py
 
   docs:
     name: Docs — integrity + links

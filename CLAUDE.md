@@ -139,7 +139,12 @@ Concretely:
 
 ## 8a. Audit Tooling
 
-Run before considering non-trivial backend or frontend work done, and always before a deploy:
+**Every tool in this table runs in CI** (`.github/workflows/ci.yml`), so a red
+check is the same signal as a failing local run. Run them locally anyway before
+considering non-trivial work done — CI tells you after you have pushed, which is
+the slowest possible moment to learn that `vulture` found the function you just
+orphaned. The list below and the CI jobs are the same list; adding a tool to one
+means adding it to the other in the same session.
 
 | Layer | Command | Checks |
 |---|---|---|
