@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { RefreshCw, BarChart3, Layers } from "lucide-react";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useCanvasStore } from "@/store/canvas-store";

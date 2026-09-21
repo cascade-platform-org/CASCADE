@@ -192,6 +192,31 @@ describe("computeNofNMetrics", () => {
     expect(interdependencyRatio.c1).toBeCloseTo(0.5);
     expect(interdependencyRatio.c2).toBeCloseTo(0.5);
   });
+
+  it("keeps Coupling Strength off Canvases whose id merely occurs in the pair key", () => {
+    // "imp-c1" is the shape mergeImportedProject mints, and it contains "c1".
+    // The only crossing edge is yp, between c2 and imp-c1 — c1 is not part of
+    // that pair and its own edge must stay out of the pair's denominator.
+    // inter = 2 (yp counted once per endpoint Canvas); total = c2's incident
+    // edges (xy, yp) + imp-c1's (pq, yp) = 4; so 2/4. Counting c1's edge ab
+    // as well would give 2/5 and understate the coupling.
+    //
+    // c1 is listed LAST deliberately. The pair key only exists once a Canvas
+    // touching the crossing edge has been walked, so a Canvas whose id collides
+    // corrupts the count only when it is walked afterwards — the defect was
+    // invisible at any other Canvas ordering, which is how it survived.
+    const g = graph(
+      [node("a"), node("b"), node("x"), node("y"), node("p"), node("q")],
+      [edge("ab", "a", "b"), edge("xy", "x", "y"), edge("pq", "p", "q"), edge("yp", "y", "p")],
+      [
+        { id: "c2", label: "Power", graph: { graph_type: "g", node_ids: ["x", "y"], edge_ids: ["xy"] } },
+        { id: "imp-c1", label: "Imported", graph: { graph_type: "g", node_ids: ["p", "q"], edge_ids: ["pq"] } },
+        { id: "c1", label: "Water", graph: { graph_type: "g", node_ids: ["a", "b"], edge_ids: ["ab"] } },
+      ],
+    );
+    const { couplingStrength } = computeNofNMetrics(g);
+    expect(couplingStrength["c2|imp-c1"]).toBeCloseTo(0.5);
+  });
 });
 
 describe("detectAttributes", () => {

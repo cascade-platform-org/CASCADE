@@ -43,7 +43,7 @@ def _project_and_config():
 
     nodes = [Node(id="n0", label="n0", functionality=4, node_categories=["water"]),
              Node(id="n1", label="n1", functionality=4, node_categories=["water"])]
-    edges = [Edge(id="e0", source="n0", target="n1", functionality=4, edge_categories=["water"])]
+    edges = [Edge(id="e0", source="n0", target="n1", functionality=4)]
     config = ModelConfiguration(
         version="1.0",
         meta=ConfigMeta(name="t"),

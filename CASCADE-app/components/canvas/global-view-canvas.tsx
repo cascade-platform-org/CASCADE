@@ -180,6 +180,7 @@ function GlobalViewCanvas() {
     }
 
     useUiStore.getState().registerCaptureCanvas(capture);
+    return () => useUiStore.getState().registerCaptureCanvas(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // register once — capture() reads live DOM state on every call
 

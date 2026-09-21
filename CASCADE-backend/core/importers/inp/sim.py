@@ -432,39 +432,6 @@ def contingency_priorities(
     }
 
 
-def transfer_priorities(
-    priorities: dict[str, int],
-    merged_map: dict[str, list[str]],
-    original_demands: dict[str, float],
-) -> dict[str, int]:
-    """Aggregate original-network priorities onto skeleton junctions.
-
-    Retained junction priority = demand-weighted mean over itself plus every
-    original junction it absorbed (unweighted mean when all demands are zero).
-    Junctions untouched by skeletonization keep their own priority.
-    """
-    if not priorities:
-        return {}
-
-    result = dict(priorities)
-    for retained, absorbed in merged_map.items():
-        members = [retained, *absorbed]
-        weighted = [
-            (priorities[m], original_demands.get(m, 0.0))
-            for m in members
-            if m in priorities
-        ]
-        if not weighted:
-            continue
-        total_weight = sum(w for _, w in weighted)
-        if total_weight > 0:
-            mean = sum(p * w for p, w in weighted) / total_weight
-        else:
-            mean = sum(p for p, _ in weighted) / len(weighted)
-        result[retained] = min(10, max(1, round(mean)))
-    return result
-
-
 def _accumulate_profiles(
     profiles: dict[str, LinkFlowProfile],
     link_ids: set[str],

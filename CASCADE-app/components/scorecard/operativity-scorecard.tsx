@@ -272,11 +272,11 @@ export function SaveScorecardDialog({
           <div>
             <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Operativity Score preview</p>
             <div className="flex flex-wrap items-center gap-3">
-              <ScoreCard label="Before" score={scoreBefore} config={config} n={n} />
+              <ScoreCard label="Before" score={scoreBefore} config={config} />
               {scoreAfter !== null && (
                 <>
                   <span className="text-zinc-400">→</span>
-                  <ScoreCard label="After Propagation" score={scoreAfter} config={config} n={n} />
+                  <ScoreCard label="After Propagation" score={scoreAfter} config={config} />
                 </>
               )}
               {scoreAfter === null && (
@@ -342,7 +342,7 @@ export function SaveScorecardDialog({
               {scoreTemporal !== null && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-zinc-400">→</span>
-                  <ScoreCard label={`+${temporalJumpHours}h`} score={scoreTemporal} config={config} n={n} />
+                  <ScoreCard label={`+${temporalJumpHours}h`} score={scoreTemporal} config={config} />
                 </div>
               )}
             </div>
@@ -387,12 +387,10 @@ function ScoreCard({
   label,
   score,
   config,
-  n: _n,
 }: {
   label: string;
   score: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
-  n: number;
 }) {
   const color = operativityColor(score, config);
   return (

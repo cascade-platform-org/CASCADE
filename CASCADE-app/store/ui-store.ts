@@ -705,19 +705,3 @@ export const useUiStore = create<UiStore>()(
     },
   })),
 );
-
-// ---------------------------------------------------------------------------
-// Derived selectors
-// ---------------------------------------------------------------------------
-
-export const selectPropagationScope = (state: UiStore): PropagationScope =>
-  state.propagationScope;
-
-export const selectActiveTool = (state: UiStore): ActiveTool =>
-  state.activeTool;
-
-export const selectConfigModalOpen = (state: UiStore): boolean =>
-  state.configModalOpen;
-
-export const selectServerReachable = (state: UiStore): boolean =>
-  state.serverReachable;

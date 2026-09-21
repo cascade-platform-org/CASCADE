@@ -789,7 +789,12 @@ export function computeNofNMetrics(data: AnalysisGraph): NofNMetrics {
     interdependencyRatio[canvas.id] = nodesWithInterCanvas.size / nodeSet.size;
   }
 
-  const pairEdgeCounts: Record<string, { inter: number; total: number }> = {};
+  // The pair's two Canvas ids are carried on the record rather than recovered
+  // from the key. Matching a Canvas against the "a|b" key by substring counted
+  // any Canvas whose id merely OCCURS in the key — and mergeImportedProject
+  // mints ids like "imp-xxxxxx-c1" alongside a plain "c1", so an unrelated pair
+  // could inflate the denominator and silently understate Coupling Strength.
+  const pairEdgeCounts: Record<string, { a: string; b: string; inter: number; total: number }> = {};
   for (const canvas of canvases) {
     const nodeSet = canvasNodeIds[canvas.id];
     let totalEdges = 0;
@@ -798,13 +803,14 @@ export function computeNofNMetrics(data: AnalysisGraph): NofNMetrics {
     }
     for (const ice of interCanvasEdges) {
       if (ice.sourceCanvas === canvas.id || ice.targetCanvas === canvas.id) {
-        const pairKey = [ice.sourceCanvas, ice.targetCanvas].sort().join("|");
-        if (!pairEdgeCounts[pairKey]) pairEdgeCounts[pairKey] = { inter: 0, total: 0 };
+        const [a, b] = [ice.sourceCanvas, ice.targetCanvas].sort();
+        const pairKey = `${a}|${b}`;
+        if (!pairEdgeCounts[pairKey]) pairEdgeCounts[pairKey] = { a, b, inter: 0, total: 0 };
         pairEdgeCounts[pairKey].inter++;
       }
     }
-    for (const key of Object.keys(pairEdgeCounts)) {
-      if (key.includes(canvas.id)) pairEdgeCounts[key].total += totalEdges;
+    for (const pair of Object.values(pairEdgeCounts)) {
+      if (pair.a === canvas.id || pair.b === canvas.id) pair.total += totalEdges;
     }
   }
   const couplingStrength: Record<string, number> = {};

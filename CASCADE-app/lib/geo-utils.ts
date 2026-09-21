@@ -74,20 +74,6 @@ export function anchorFlowToGeo(
   });
 }
 
-/** Convert geographic coordinates to a flow-space position. Exact inverse of anchorFlowToGeo. */
-export function anchorGeoToFlow(
-  geo: { lng: number; lat: number },
-  anchor: GeoAnchor,
-): { x: number; y: number } {
-  const wpf = worldPerFlowUnit(anchor);
-  const anchorWorld = lngLatToWorld(anchor.geo);
-  const world = lngLatToWorld(geo);
-  return {
-    x: anchor.flow.x + (world.x - anchorWorld.x) / wpf,
-    y: anchor.flow.y + (world.y - anchorWorld.y) / wpf,
-  };
-}
-
 /**
  * Compute the MapLibre camera target (centre + zoom) for a given React Flow
  * viewport, so the geographic point at the RF viewport centre sits at the map

@@ -115,8 +115,6 @@ interface ConfigActions {
 
   // --- Categories (operate on draft) ---
   addCategory: (category: CategoryDefinition) => void;
-  removeCategory: (name: string) => void;
-  updateCategory: (name: string, patch: Partial<CategoryDefinition>) => void;
   removeCategoryAt: (index: number) => void;
   updateCategoryAt: (index: number, patch: Partial<CategoryDefinition>) => void;
 
@@ -124,16 +122,13 @@ interface ConfigActions {
   addEvent: (event: Omit<EventDefinition, "id">) => string;
   removeEvent: (id: string) => void;
   updateEvent: (id: string, patch: Partial<EventDefinition>) => void;
-  reorderEvents: (orderedIds: string[]) => void;
 
   // --- Graph types / algorithm pipelines (operate on draft) ---
   addGraphType: (name: string) => void;
   removeGraphType: (name: string) => void;
-  updateGraphTypeName: (oldName: string, newName: string) => void;
   addAlgorithm: (graphTypeName: string, algorithm: HeuristicConfig) => void;
   removeAlgorithm: (graphTypeName: string, algorithmId: string) => void;
   updateAlgorithm: (graphTypeName: string, algorithmId: string, patch: Partial<HeuristicConfig>) => void;
-  reorderAlgorithms: (graphTypeName: string, orderedIds: string[]) => void;
 
   // --- Node defaults (templates) ---
   addNodeDefault: (name: string) => void;
@@ -151,10 +146,7 @@ interface ConfigActions {
 
   // --- Selectors (read committed config) ---
   getFunctionalityN: () => number;
-  getLevelByLabel: (label: string) => FunctionalityScaleLevel | undefined;
   getEventById: (id: string) => EventDefinition | undefined;
-  getCategoryByName: (name: string) => CategoryDefinition | undefined;
-  getGraphTypeConfig: (name: string) => GraphTypeConfig | undefined;
 }
 
 export type ConfigStore = ConfigState & ConfigActions;
@@ -351,22 +343,6 @@ export const useConfigStore = create<ConfigStore>()(
       });
     },
 
-    removeCategory(name) {
-      set((state) => {
-        state.draft.categories = state.draft.categories.filter((c) => c.name !== name);
-        recomputeDirty(state);
-      });
-    },
-
-    updateCategory(name, patch) {
-      set((state) => {
-        const entry = state.draft.categories.find((c) => c.name === name);
-        if (!entry) return;
-        Object.assign(entry, patch);
-        recomputeDirty(state);
-      });
-    },
-
     removeCategoryAt(index) {
       set((state) => {
         state.draft.categories.splice(index, 1);
@@ -412,14 +388,6 @@ export const useConfigStore = create<ConfigStore>()(
       });
     },
 
-    reorderEvents(orderedIds) {
-      set((state) => {
-        const map = new Map(state.draft.events.map((e) => [e.id, e]));
-        state.draft.events = orderedIds.map((id) => map.get(id)!).filter(Boolean);
-        recomputeDirty(state);
-      });
-    },
-
     // -------------------------------------------------------------------------
     // Graph types / algorithm pipelines
     // -------------------------------------------------------------------------
@@ -435,15 +403,6 @@ export const useConfigStore = create<ConfigStore>()(
     removeGraphType(name) {
       set((state) => {
         state.draft.graph_types = state.draft.graph_types.filter((gt) => gt.name !== name);
-        recomputeDirty(state);
-      });
-    },
-
-    updateGraphTypeName(oldName, newName) {
-      set((state) => {
-        const gt = draftGraphType(state.draft, oldName);
-        if (!gt) return;
-        gt.name = newName;
         recomputeDirty(state);
       });
     },
@@ -473,16 +432,6 @@ export const useConfigStore = create<ConfigStore>()(
         const alg = gt.heuristics.find((h) => h.id === algorithmId);
         if (!alg) return;
         Object.assign(alg, patch);
-        recomputeDirty(state);
-      });
-    },
-
-    reorderAlgorithms(graphTypeName, orderedIds) {
-      set((state) => {
-        const gt = draftGraphType(state.draft, graphTypeName);
-        if (!gt) return;
-        const map = new Map(gt.heuristics.map((h) => [h.id, h]));
-        gt.heuristics = orderedIds.map((id) => map.get(id)!).filter(Boolean);
         recomputeDirty(state);
       });
     },
@@ -557,21 +506,10 @@ export const useConfigStore = create<ConfigStore>()(
       return get().config.functionality_scale.length;
     },
 
-    getLevelByLabel(label) {
-      return get().config.functionality_scale.find((l) => l.label === label);
-    },
-
     getEventById(id) {
       return get().config.events.find((e) => e.id === id);
     },
 
-    getCategoryByName(name) {
-      return get().config.categories.find((c) => c.name === name);
-    },
-
-    getGraphTypeConfig(name) {
-      return get().config.graph_types.find((gt) => gt.name === name);
-    },
   })),
 );
 

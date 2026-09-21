@@ -35,8 +35,7 @@ def _project_and_config(num_nodes: int):
     ]
     # A chain, so failing an upstream node has something downstream to reach.
     edges = [
-        Edge(id=f"e{i}", source=f"n{i}", target=f"n{i + 1}", functionality=4,
-             edge_categories=["water"])
+        Edge(id=f"e{i}", source=f"n{i}", target=f"n{i + 1}", functionality=4)
         for i in range(num_nodes - 1)
     ]
     config = ModelConfiguration(

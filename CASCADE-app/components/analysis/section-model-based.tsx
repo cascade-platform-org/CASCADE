@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw, Zap, X, Download } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useAnalysisStore } from "@/store/analysis-store";

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import type { PercolationPoint } from "@/lib/topological-analysis";
 import { brandColor } from "@/lib/brand";
 

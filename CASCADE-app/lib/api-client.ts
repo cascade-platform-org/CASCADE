@@ -69,20 +69,6 @@ function refreshOnce(): Promise<boolean> {
   return _refreshInFlight;
 }
 
-/**
- * fetch for session-protected endpoints; on a 401, transparently rotate the
- * session cookies once (shared across concurrent callers) and retry.
- */
-async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const send = () => fetch(url, init);
-  let res = await send();
-  if (res.status === 401 && _refresher) {
-    const refreshed = await refreshOnce();
-    if (refreshed) res = await send(); // the rotated cookie rides automatically
-  }
-  return res;
-}
-
 /** fetch with an abort-based timeout, so no request can hang the caller. */
 async function fetchWithTimeout(
   url: string,
@@ -96,6 +82,40 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Comfortably above the backend's own ENGINE_TIMEOUT_SECONDS (30 s, see
+// services/propagation_service.py), so a slow Propagation surfaces the server's
+// error rather than a client-side abort that says nothing about what went wrong.
+const DEFAULT_TIMEOUT_MS = 45_000;
+
+// The EPANET importer runs a skeletonization plus a hydraulic sweep; on a large
+// network that legitimately outlives DEFAULT_TIMEOUT_MS.
+const IMPORT_TIMEOUT_MS = 180_000;
+
+/**
+ * fetch for session-protected endpoints; on a 401, transparently rotate the
+ * session cookies once (shared across concurrent callers) and retry.
+ *
+ * Bounded by the same abort-based timeout as the unauthenticated calls. It used
+ * to be unbounded, which meant every Propagation, batch Propagation, import and
+ * sync — the long calls — were the ones that could hang forever, while only the
+ * short auth pings had a deadline. Each attempt gets its own budget: an
+ * AbortController cannot be reused once it has fired, and the post-refresh retry
+ * deserves a full timeout rather than the remainder of the first one.
+ */
+async function authedFetch(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const send = () => fetchWithTimeout(url, init, timeoutMs);
+  let res = await send();
+  if (res.status === 401 && _refresher) {
+    const refreshed = await refreshOnce();
+    if (refreshed) res = await send(); // the rotated cookie rides automatically
+  }
+  return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -280,18 +300,15 @@ const HEALTH_TIMEOUT_MS = 5_000;
  * the timeout, false on any network error or non-2xx status.
  */
 export async function checkServerHealth(): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE}/api/health`, {
-      method: "GET",
-      signal: controller.signal,
-    });
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/health`,
+      { method: "GET" },
+      HEALTH_TIMEOUT_MS,
+    );
     return res.ok;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -543,7 +560,7 @@ export async function importInp(
       capacity_margin: knobs.capacityMargin,
       max_velocity: knobs.maxVelocity,
     }),
-  });
+  }, IMPORT_TIMEOUT_MS);
   if (!res.ok) {
     let detail = "";
     try {

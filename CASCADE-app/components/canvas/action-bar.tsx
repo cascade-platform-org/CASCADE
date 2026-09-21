@@ -162,7 +162,10 @@ export function ActionBar() {
                 {overflowEvents.map((ev) => (
                   <button
                     key={ev.id}
-                    onClick={() => { setMoreOpen(false); }}
+                    onClick={() => {
+                      setMoreOpen(false);
+                      applyEventFromActionBar(ev, pushToast);
+                    }}
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-700"
                   >
                     <EventIcon type={ev.type} icon={ev.icon} size={13} />
@@ -556,6 +559,41 @@ function TimelineSlider({
 }
 
 // ---------------------------------------------------------------------------
+// Event application
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply one Event to the active Canvas and report how many Elements it reached.
+ *
+ * Module-level rather than a closure inside EventButton because the "More ▼"
+ * overflow menu applies Events too — when this lived inside the button, the
+ * overflow entries had no way to call it and silently applied nothing.
+ */
+function applyEventFromActionBar(
+  event: EventDefinition,
+  pushToast: ReturnType<typeof useUiStore.getState>["pushToast"],
+) {
+  const storeState = useCanvasStore.getState();
+  if (!storeState.activeCanvasId) return;
+
+  const N = useConfigStore.getState().getFunctionalityN();
+  const snapshotBefore = storeState.toGraphSnapshot();
+
+  storeState.applyEvent(event, N);
+
+  const snapshotAfter = useCanvasStore.getState().toGraphSnapshot();
+  const affected = countChangedElements(snapshotBefore, snapshotAfter);
+
+  pushToast({
+    message: affected > 0
+      ? `${event.label} applied — ${affected} element${affected > 1 ? "s" : ""} affected`
+      : `${event.label} applied — no elements matched this event`,
+    variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
+    durationMs: 3500,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Event button
 // ---------------------------------------------------------------------------
 
@@ -570,30 +608,9 @@ function EventButton({
   const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
   useEffect(() => subscribeIconsReady(forceRender), []);
 
-  function applyEvent() {
-    const storeState = useCanvasStore.getState();
-    if (!storeState.activeCanvasId) return;
-
-    const N = useConfigStore.getState().getFunctionalityN();
-    const snapshotBefore = storeState.toGraphSnapshot();
-
-    storeState.applyEvent(event, N);
-
-    const snapshotAfter = useCanvasStore.getState().toGraphSnapshot();
-    const affected = countChangedElements(snapshotBefore, snapshotAfter);
-
-    pushToast({
-      message: affected > 0
-        ? `${event.label} applied — ${affected} element${affected > 1 ? "s" : ""} affected`
-        : `${event.label} applied — no elements matched this event`,
-      variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
-      durationMs: 3500,
-    });
-  }
-
   return (
     <ActionButton
-      onClick={applyEvent}
+      onClick={() => applyEventFromActionBar(event, pushToast)}
       title={`Apply: ${event.label} (Ctrl+R to clear)`}
       className={cn(
         "gap-1",

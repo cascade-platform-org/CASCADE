@@ -8,7 +8,7 @@
  * AttributeMutationsEditor  — dot-notation attribute mutation map for an event.
  */
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "./primitives";
 import { NumberInput } from "./primitives";

@@ -33,7 +33,6 @@ from core.importers.inp.sim import (
     link_flow_profiles,
     contingency_priorities,
     scarcity_priorities,
-    transfer_priorities,
 )
 from core.importers.inp.skeleton import SkeletonError, skeletonize_to_target
 
@@ -61,7 +60,6 @@ __all__ = [
     "link_flow_profiles",
     "contingency_priorities",
     "scarcity_priorities",
-    "transfer_priorities",
     "SkeletonError",
     "skeletonize_to_target",
 ]

@@ -184,7 +184,6 @@ export function ScorecardPanel() {
               uncoveredEvents={uncoveredEvents}
               loading={computingGaps}
               serverReachable={serverReachable}
-              config={config}
               onSaveRun={(run) => openSaveDialog({
                 beforeSnapshot: run.beforeSnapshot,
                 afterSnapshot: run.afterSnapshot,
@@ -297,7 +296,6 @@ interface GapsSectionProps {
   uncoveredEvents: UncoveredEvent[];
   loading: boolean;
   serverReachable: boolean;
-  config: ReturnType<typeof useConfigStore.getState>["config"];
   onSaveRun: (run: UnsavedRun) => void;
   onComputeEntry: (entry: PropagationScorecardEntry) => Promise<void>;
   onRunEvent: (ev: UncoveredEvent) => void;
@@ -619,11 +617,11 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
 
         {/* Score pills */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <ScorePill label="Before" value={scoreBefore} config={config} n={n} />
+          <ScorePill label="Before" value={scoreBefore} config={config} />
           {scoreAfter !== null && (
             <>
               <span className="text-xs text-zinc-400">→</span>
-              <ScorePill label="After" value={scoreAfter} config={config} n={n} />
+              <ScorePill label="After" value={scoreAfter} config={config} />
               {delta !== null && (
                 <span className={cn(
                   "ml-1 text-xs font-medium",
@@ -639,7 +637,7 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
           {scoreTemporal !== null && (
             <>
               <span className="text-xs text-zinc-400 ml-1">+{entry.temporal_jump_hours}h→</span>
-              <ScorePill label="Temporal" value={scoreTemporal} config={config} n={n} />
+              <ScorePill label="Temporal" value={scoreTemporal} config={config} />
             </>
           )}
         </div>
@@ -689,29 +687,23 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
             <SnapshotMiniGraph
               label={eventLabel}
               snapshot={entry.before_propagation}
-              imageDataUrl={entry.before_propagation_image}
               score={scoreBefore}
               config={config}
-              n={n}
             />
             {entry.after_propagation && (
               <SnapshotMiniGraph
                 label="After Propagation"
                 snapshot={entry.after_propagation}
-                imageDataUrl={entry.after_propagation_image}
                 score={scoreAfter ?? 0}
                 config={config}
-                n={n}
               />
             )}
             {entry.after_temporal_jump && (
               <SnapshotMiniGraph
                 label={`+${entry.temporal_jump_hours ?? "?"}h Temporal Jump`}
                 snapshot={entry.after_temporal_jump}
-                imageDataUrl={entry.after_temporal_jump_image}
                 score={scoreTemporal ?? 0}
                 config={config}
-                n={n}
               />
             )}
           </div>
@@ -738,12 +730,10 @@ function ScorePill({
   label,
   value,
   config,
-  n: _n,
 }: {
   label: string;
   value: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
-  n: number;
 }) {
   const color = operativityColor(value, config);
   return (
@@ -769,10 +759,8 @@ function SnapshotMiniGraph({
 }: {
   label: string;
   snapshot: GraphSnapshot;
-  imageDataUrl?: string; // kept for API compat (ZIP export), not displayed
   score: number;
   config: ReturnType<typeof useConfigStore.getState>["config"];
-  n: number;
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">

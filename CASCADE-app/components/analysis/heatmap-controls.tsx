@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { Palette, X } from "lucide-react";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { buildColorMap } from "@/lib/analysis-legend";

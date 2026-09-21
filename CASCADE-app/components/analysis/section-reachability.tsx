@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { RefreshCw, Workflow } from "lucide-react";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useCanvasStore } from "@/store/canvas-store";
