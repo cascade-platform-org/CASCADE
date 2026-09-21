@@ -569,7 +569,8 @@ All Canvases are operationally interdependent — inter-canvas edges exist in th
    - **Local scope**: includes only the active Canvas's `node_ids` and the edges whose both endpoints are within that Canvas. Inter-canvas edges are physically absent from the payload.
    - **Global scope**: includes the full `Project` — all nodes, all edges, all Canvases.
    - Both scopes strip engine-irrelevant bookkeeping (`update_history`, `scorecard`, and `source_inp_content` on non-EPANET canvases) — history snapshots and Scorecard PNGs would otherwise blow past the edge's 10MB body cap.
-5. `api-client` sends `POST /api/propagate` with the payload and the user's JWT.
+5. `api-client` sends `POST /api/propagate` with the payload. The session's
+   httpOnly cookie carries the JWT — the client never holds or attaches one.
 6. The server validates the token and checks `can_propagate`.
 7. `propagation_service` passes the validated payload to `engine.propagation`.
 8. The engine computes `PropagationResult` — an `ElementUpdate` list with updated `functionality`, `functionality_time`, `direct_damage`, `responsibility_share` — and returns it.

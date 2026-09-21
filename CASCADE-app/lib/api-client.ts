@@ -3,8 +3,18 @@
  *
  * The ONLY place that talks to the backend: every endpoint call lives here so
  * the base URL, error handling, and response validation (Zod at the boundary)
- * are defined once. When auth lands (Slice 4), the Authorization header is
- * added here and every caller gets it for free.
+ * are defined once.
+ *
+ * Every endpoint goes through `request()`, which owns the whole round trip —
+ * timeout, 401-rotate-and-retry, failure-detail extraction, Zod parse — and
+ * returns an `ApiResult`. Endpoints then pick ONE of three named wrappers to
+ * decide what their caller sees. Before, each of the 23 endpoints made that
+ * decision for itself, and four incompatible conventions grew up side by side:
+ * `Promise<string | null>` meant "the logout URL" in one function and "the
+ * error message" in another, and `null` meant failure, success, and
+ * legitimately-absent in three more. The conventions are still three, because
+ * callers genuinely want different things, but they are now named and chosen
+ * rather than reinvented per endpoint.
  */
 import { z } from "zod";
 import {
@@ -69,20 +79,30 @@ function refreshOnce(): Promise<boolean> {
   return _refreshInFlight;
 }
 
-/** fetch with an abort-based timeout, so no request can hang the caller. */
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit = {},
-  timeoutMs = 5_000,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+// ---------------------------------------------------------------------------
+// One result shape
+// ---------------------------------------------------------------------------
+
+/** Why a call did not produce data. Reached through `ApiResult`, never named alone. */
+interface ApiFailure {
+  ok: false;
+  /** HTTP status, or 0 when the request never got an answer (network, timeout). */
+  status: number;
+  /** The server's own detail where it sent one, else a short reason. */
+  detail: string;
+  /**
+   * A stable machine-readable code from a structured FastAPI detail, else "".
+   * Callers branch on this rather than on `detail` prose, which is free to
+   * change and is sometimes the IdP's words rather than ours.
+   */
+  code: string;
 }
+
+export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
+
+/** Timeouts. Short for the auth pings, long for the calls that do real work. */
+const AUTH_TIMEOUT_MS = 5_000;
+const TOKEN_TIMEOUT_MS = 15_000;
 
 // Comfortably above the backend's own ENGINE_TIMEOUT_SECONDS (30 s, see
 // services/propagation_service.py), so a slow Propagation surfaces the server's
@@ -94,28 +114,160 @@ const DEFAULT_TIMEOUT_MS = 45_000;
 const IMPORT_TIMEOUT_MS = 180_000;
 
 /**
- * fetch for session-protected endpoints; on a 401, transparently rotate the
- * session cookies once (shared across concurrent callers) and retry.
+ * Read a failed response's body ONCE and pull out the best detail available.
  *
- * Bounded by the same abort-based timeout as the unauthenticated calls. It used
- * to be unbounded, which meant every Propagation, batch Propagation, import and
- * sync — the long calls — were the ones that could hang forever, while only the
- * short auth pings had a deadline. Each attempt gets its own budget: an
- * AbortController cannot be reused once it has fired, and the post-refresh retry
- * deserves a full timeout rather than the remainder of the first one.
+ * Once, because a `Response` body is a single-use stream: the previous code
+ * tried `res.json()` and fell back to `res.text()` in the catch, but by then the
+ * stream was consumed and the fallback could only ever yield `statusText`. So a
+ * non-JSON error body — the one case the fallback existed for — was the one case
+ * it could not report.
+ *
+ * FastAPI wraps `HTTPException(detail=…)` as `{ detail: … }`, where ours is
+ * sometimes an object carrying `code`. A plain string, or a non-JSON body,
+ * simply yields no code.
  */
-async function authedFetch(
-  url: string,
-  init: RequestInit = {},
-  timeoutMs = DEFAULT_TIMEOUT_MS,
-): Promise<Response> {
-  const send = () => fetchWithTimeout(url, init, timeoutMs);
-  let res = await send();
-  if (res.status === 401 && _refresher) {
-    const refreshed = await refreshOnce();
-    if (refreshed) res = await send(); // the rotated cookie rides automatically
+async function readFailure(res: Response): Promise<{ detail: string; code: string }> {
+  const raw = await res.text().catch(() => "");
+  if (!raw) return { detail: res.statusText || `HTTP ${res.status}`, code: "" };
+  try {
+    const body = JSON.parse(raw) as { detail?: unknown };
+    const d = body.detail;
+    if (typeof d === "string") return { detail: d, code: "" };
+    if (d && typeof d === "object") {
+      const o = d as { code?: unknown; message?: unknown };
+      return {
+        detail: typeof o.message === "string" ? o.message : raw,
+        code: typeof o.code === "string" ? o.code : "",
+      };
+    }
+  } catch {
+    /* not JSON — the raw text is the best detail we have */
   }
-  return res;
+  return { detail: raw, code: "" };
+}
+
+interface RequestOptions<T> {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** Serialised as JSON with the matching Content-Type. */
+  body?: unknown;
+  /** Validates the success body at the boundary. Omit for an empty response. */
+  schema?: z.ZodType<T>;
+  timeoutMs?: number;
+  /**
+   * Statuses to treat as success with `data` left null — a 404 that means
+   * "there is none", not "something went wrong".
+   */
+  absentOn?: number[];
+  /** Skip the 401-rotate-and-retry, for the calls that establish the session. */
+  noRetry?: boolean;
+}
+
+/**
+ * One round trip: timeout, 401-rotate-and-retry, failure extraction, Zod parse.
+ *
+ * Every attempt gets its own timeout budget — an AbortController cannot be
+ * reused once it has fired, and the post-refresh retry deserves a full timeout
+ * rather than the remainder of the first one. The timeout applies to ALL calls:
+ * it used to apply only to the unauthenticated auth pings, which left every
+ * Propagation, batch Propagation, import and sync — the long ones — able to
+ * hang forever.
+ */
+async function request<T>(
+  path: string,
+  opts: RequestOptions<T> = {},
+): Promise<ApiResult<T>> {
+  const {
+    method = "GET",
+    body,
+    schema,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    absentOn = [],
+    noRetry = false,
+  } = opts;
+
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+
+  async function send(): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(`${API_BASE}${path}`, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  let res: Response;
+  try {
+    res = await send();
+    if (res.status === 401 && !noRetry && _refresher) {
+      const refreshed = await refreshOnce();
+      if (refreshed) res = await send(); // the rotated cookie rides automatically
+    }
+  } catch {
+    // Abort (timeout) and genuine network failures are indistinguishable here
+    // and equally actionable: nothing was learned about the server's state.
+    return { ok: false, status: 0, detail: "Network error or timeout.", code: "network_error" };
+  }
+
+  if (absentOn.includes(res.status)) return { ok: true, data: null as T };
+
+  if (!res.ok) {
+    const { detail, code } = await readFailure(res);
+    return { ok: false, status: res.status, detail, code };
+  }
+
+  if (!schema) return { ok: true, data: null as T };
+
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    return {
+      ok: false,
+      status: res.status,
+      detail: "The server's reply was not valid JSON.",
+      code: "invalid_response",
+    };
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: res.status,
+      detail: "The server's reply did not match the expected shape.",
+      code: "invalid_response",
+    };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+// ---------------------------------------------------------------------------
+// The three things a caller can want. Named, so an endpoint picks one instead
+// of inventing a convention.
+// ---------------------------------------------------------------------------
+
+/** Failure is exceptional and the caller shows the message: throw. */
+function unwrap<T>(result: ApiResult<T>, prefix: string): T {
+  if (result.ok) return result.data;
+  const where = result.status ? ` (${result.status})` : "";
+  throw new Error(`${prefix}${where}: ${result.detail}`);
+}
+
+/** Failure is ordinary and the reason does not matter: null. */
+function orNull<T>(result: ApiResult<T>): T | null {
+  return result.ok ? result.data : null;
+}
+
+/** The caller renders the reason inline: the message, or null on success. */
+function errorOrNull(result: ApiResult<unknown>, prefix: string): string | null {
+  if (result.ok) return null;
+  const where = result.status ? ` (${result.status})` : "";
+  return `${prefix}${where}: ${result.detail}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,24 +281,24 @@ async function authedFetch(
  * auth_enabled to a guest).
  */
 export async function fetchAuthConfig(): Promise<AuthConfig | null> {
-  try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/auth/config`);
-    if (!res.ok) return null;
-    return AuthConfigSchema.parse(await res.json());
-  } catch {
-    return null;
-  }
+  return orNull(
+    await request("/api/auth/config", {
+      schema: AuthConfigSchema,
+      timeoutMs: AUTH_TIMEOUT_MS,
+      noRetry: true,
+    }),
+  );
 }
 
 /** GET /api/auth/me — current identity (session cookie carries the auth). */
 export async function fetchMe(): Promise<MeResponse | null> {
-  try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/auth/me`);
-    if (!res.ok) return null;
-    return MeResponseSchema.parse(await res.json());
-  } catch {
-    return null;
-  }
+  return orNull(
+    await request("/api/auth/me", {
+      schema: MeResponseSchema,
+      timeoutMs: AUTH_TIMEOUT_MS,
+      noRetry: true,
+    }),
+  );
 }
 
 /** The URL that starts the OIDC (Zitadel) login redirect. `state` is the
@@ -180,85 +332,80 @@ export function oidcLoginUrl(
  *  httpOnly session cookies on success (no tokens in the body — JS never sees
  *  them). `codeVerifier` is the PKCE verifier generated before the redirect.
  *
- *  Returns `{ ok: true }` on success, or `{ ok: false, status, code }` so the
- *  callback page can branch on a STABLE code rather than pattern-matching the
- *  message prose. `code` is `"email_not_verified"` for the one failure a user
- *  can fix; `""` when the backend sent no structured detail. */
+ *  The failure branch carries `code`, a STABLE identifier the callback page
+ *  branches on rather than pattern-matching the message prose — it is
+ *  `"email_not_verified"` for the one failure a user can fix. */
 export async function exchangeOidcCode(
   code: string,
   codeVerifier: string,
-): Promise<{ ok: true } | { ok: false; status: number; code: string }> {
-  try {
-    const params = new URLSearchParams({ code, code_verifier: codeVerifier });
-    const res = await fetchWithTimeout(
-      `${API_BASE}/api/auth/callback?${params.toString()}`,
-      {},
-      15_000,
-    );
-    if (res.ok) return { ok: true };
-    let errorCode = "";
-    try {
-      // FastAPI wraps HTTPException(detail=…) as { detail: … }; ours is an
-      // object carrying `code`. Older/other errors send a plain string, which
-      // simply yields no code and falls through to the generic message.
-      const body = (await res.json()) as { detail?: { code?: string } | string };
-      if (body.detail && typeof body.detail === "object") {
-        errorCode = body.detail.code ?? "";
-      }
-    } catch {
-      /* not JSON — no code available */
-    }
-    return { ok: false, status: res.status, code: errorCode };
-  } catch {
-    return { ok: false, status: 0, code: "network_error" };
-  }
+): Promise<ApiResult<null>> {
+  const params = new URLSearchParams({ code, code_verifier: codeVerifier });
+  return request<null>(`/api/auth/callback?${params.toString()}`, {
+    timeoutMs: TOKEN_TIMEOUT_MS,
+    noRetry: true,
+  });
 }
 
 /** Rotate the session cookies via the refresh cookie. false => must re-login. */
 export async function refreshSession(): Promise<boolean> {
-  try {
-    const res = await fetchWithTimeout(
-      `${API_BASE}/api/auth/refresh`,
-      { method: "POST" },
-      15_000,
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
+  // noRetry: this IS the retry path — a 401 here means the refresh cookie is
+  // spent, and recursing would deadlock on the single-flight promise.
+  const res = await request("/api/auth/refresh", {
+    method: "POST",
+    timeoutMs: TOKEN_TIMEOUT_MS,
+    noRetry: true,
+  });
+  return res.ok;
 }
+
+const LogoutSchema = z.object({ logout_url: z.string().nullish() });
 
 /** POST /api/auth/logout — clears the session cookies; returns the IdP's
  *  end_session URL the browser must visit to kill the SSO session too (null
- *  when auth is off or the IdP exposes none). */
+ *  when auth is off, the IdP exposes none, or the call failed). */
 export async function logoutSession(): Promise<string | null> {
-  try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/auth/logout`, { method: "POST" });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { logout_url?: string | null };
-    return body.logout_url ?? null;
-  } catch {
-    return null;
-  }
+  const res = await request("/api/auth/logout", {
+    method: "POST",
+    schema: LogoutSchema,
+    timeoutMs: AUTH_TIMEOUT_MS,
+    noRetry: true,
+  });
+  return res.ok ? (res.data.logout_url ?? null) : null;
 }
 
 /** GET /api/auth/me/export — download the caller's own data export (GDPR
  *  Art. 15/20). Returns an error message, or null once the save is triggered.
  *
- *  Fetched through `authedFetch` rather than a plain navigation: navigating
- *  away replaces the running app, so an expired access cookie (they last about
- *  an hour) would land the user on a raw JSON 401 page and discard whatever
- *  local-first work was open. Going through authedFetch means a 401 silently
- *  rotates the session and retries, and a failure leaves the page untouched. */
+ *  This one does not go through `request()`: it wants the raw bytes, not a
+ *  parsed body. It still goes through the session transport for the reason
+ *  below — navigating away replaces the running app, so an expired access
+ *  cookie (they last about an hour) would land the user on a raw JSON 401 page
+ *  and discard whatever local-first work was open. Going through the retry
+ *  means a 401 silently rotates the session, and a failure leaves the page
+ *  untouched. */
 export async function downloadMyData(): Promise<string | null> {
+  // Each attempt gets its own controller and budget, as in `request()`: a fired
+  // AbortController cannot be reused, so sharing one would make the retry abort
+  // immediately.
+  async function send(): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    try {
+      return await fetch(`${API_BASE}/api/auth/me/export`, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   let res: Response;
   try {
-    res = await authedFetch(`${API_BASE}/api/auth/me/export`);
+    res = await send();
+    if (res.status === 401 && _refresher && (await refreshOnce())) res = await send();
   } catch {
     return "Export failed: network error.";
   }
   if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
+    const { detail } = await readFailure(res);
     return `Export failed (${res.status}): ${detail}`;
   }
   const blob = await res.blob();
@@ -280,16 +427,8 @@ export async function downloadMyData(): Promise<string | null> {
 /** DELETE /api/auth/me — self-service GDPR account erasure (app DB + IdP).
  *  Returns an error message, or null on success. */
 export async function deleteMyAccount(): Promise<string | null> {
-  try {
-    const res = await authedFetch(`${API_BASE}/api/auth/me`, { method: "DELETE" });
-    if (res.ok) return null;
-    const detail = await res.text().catch(() => res.statusText);
-    return `Deletion failed (${res.status}): ${detail}`;
-  } catch {
-    return "Deletion failed: network error.";
-  }
+  return errorOrNull(await request("/api/auth/me", { method: "DELETE" }), "Deletion failed");
 }
-const HEALTH_TIMEOUT_MS = 5_000;
 
 // ---------------------------------------------------------------------------
 // Health check
@@ -300,16 +439,8 @@ const HEALTH_TIMEOUT_MS = 5_000;
  * the timeout, false on any network error or non-2xx status.
  */
 export async function checkServerHealth(): Promise<boolean> {
-  try {
-    const res = await fetchWithTimeout(
-      `${API_BASE}/api/health`,
-      { method: "GET" },
-      HEALTH_TIMEOUT_MS,
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
+  const res = await request("/api/health", { timeoutMs: AUTH_TIMEOUT_MS, noRetry: true });
+  return res.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -318,22 +449,18 @@ export async function checkServerHealth(): Promise<boolean> {
 
 /**
  * POST /api/propagate — send a PropagationRequest, return the validated result.
- * Throws an Error with the server detail on non-2xx responses, and a ZodError
- * if the response does not match PropagationResultSchema.
+ * Throws an Error carrying the server detail on any failure, including a
+ * response that does not match PropagationResultSchema.
  */
 export async function postPropagate(payload: PropagationRequest): Promise<PropagationResult> {
-  const response = await authedFetch(`${API_BASE}/api/propagate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => response.statusText);
-    throw new Error(`Server returned ${response.status}: ${detail}`);
-  }
-
-  return PropagationResultSchema.parse(await response.json());
+  return unwrap(
+    await request("/api/propagate", {
+      method: "POST",
+      body: payload,
+      schema: PropagationResultSchema,
+    }),
+    "Propagation failed",
+  );
 }
 
 /**
@@ -347,32 +474,27 @@ export async function postPropagate(payload: PropagationRequest): Promise<Propag
 export async function postPropagateBatch(
   payload: BatchPropagationRequest,
 ): Promise<PropagationResult[]> {
-  const response = await authedFetch(`${API_BASE}/api/propagate/batch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => response.statusText);
-    throw new Error(`Server returned ${response.status}: ${detail}`);
-  }
-
-  return BatchPropagationResultSchema.parse(await response.json()).results;
+  const parsed = unwrap(
+    await request("/api/propagate/batch", {
+      method: "POST",
+      body: payload,
+      schema: BatchPropagationResultSchema,
+    }),
+    "Batch propagation failed",
+  );
+  return parsed.results;
 }
 
 // ---------------------------------------------------------------------------
 // Engine metadata
 // ---------------------------------------------------------------------------
 
-/**
- * GET /api/engine/algorithms — graph types and heuristics the engine supports.
- * Throws on non-2xx responses or schema mismatch.
- */
+/** GET /api/engine/algorithms — graph types and heuristics the engine supports. */
 export async function getEngineAlgorithms(): Promise<EngineAlgorithms> {
-  const response = await authedFetch(`${API_BASE}/api/engine/algorithms`);
-  if (!response.ok) throw new Error(`Server returned ${response.status}`);
-  return EngineAlgorithmsSchema.parse(await response.json());
+  return unwrap(
+    await request("/api/engine/algorithms", { schema: EngineAlgorithmsSchema }),
+    "Could not load engine algorithms",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -393,40 +515,39 @@ const AdminRoleSchema = z.object({
 });
 export type AdminRole = z.infer<typeof AdminRoleSchema>;
 
-/** GET /api/admin/users — all accounts. Throws on non-2xx. */
+/** GET /api/admin/users — all accounts. */
 export async function adminListUsers(): Promise<AdminUser[]> {
-  const res = await authedFetch(`${API_BASE}/api/admin/users`);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  return z.array(AdminUserSchema).parse(await res.json());
+  return unwrap(
+    await request("/api/admin/users", { schema: z.array(AdminUserSchema) }),
+    "Could not load users",
+  );
 }
 
-/** GET /api/admin/roles — role names + permissions. Throws on non-2xx. */
+/** GET /api/admin/roles — role names + permissions. */
 export async function adminListRoles(): Promise<AdminRole[]> {
-  const res = await authedFetch(`${API_BASE}/api/admin/roles`);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  return z.array(AdminRoleSchema).parse(await res.json());
+  return unwrap(
+    await request("/api/admin/roles", { schema: z.array(AdminRoleSchema) }),
+    "Could not load roles",
+  );
 }
 
 /** PATCH /api/admin/users/{id}/role. Returns error message or null. */
 export async function adminSetRole(userId: string, role: string): Promise<string | null> {
-  const res = await authedFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(userId)}/role`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role }),
-  });
-  if (res.ok) return null;
-  const detail = await res.text().catch(() => res.statusText);
-  return `Role change failed (${res.status}): ${detail}`;
+  return errorOrNull(
+    await request(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
+      method: "PATCH",
+      body: { role },
+    }),
+    "Role change failed",
+  );
 }
 
 /** DELETE /api/admin/users/{id} — full account erasure. Error message or null. */
 export async function adminDeleteUser(userId: string): Promise<string | null> {
-  const res = await authedFetch(`${API_BASE}/api/admin/users/${encodeURIComponent(userId)}`, {
-    method: "DELETE",
-  });
-  if (res.ok) return null;
-  const detail = await res.text().catch(() => res.statusText);
-  return `Deletion failed (${res.status}): ${detail}`;
+  return errorOrNull(
+    await request(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" }),
+    "Deletion failed",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -442,31 +563,33 @@ export async function syncSaveProject(
   description: string | null,
   data: ProjectBundle,
 ): Promise<ProjectVersionSummary> {
-  const res = await authedFetch(`${API_BASE}/api/projects`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, description, data }),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Save failed (${res.status}): ${detail}`);
-  }
-  return ProjectVersionSummarySchema.parse(await res.json());
+  return unwrap(
+    await request("/api/projects", {
+      method: "POST",
+      body: { name, description, data },
+      schema: ProjectVersionSummarySchema,
+    }),
+    "Save failed",
+  );
 }
 
 /** GET /api/projects — this user's saved versions, newest first, no bundle
- *  data (kept light — a version list, not a bulk download). Throws on non-2xx. */
+ *  data (kept light — a version list, not a bulk download). Throws on failure. */
 export async function syncListProjects(): Promise<ProjectVersionSummary[]> {
-  const res = await authedFetch(`${API_BASE}/api/projects`);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  return z.array(ProjectVersionSummarySchema).parse(await res.json());
+  return unwrap(
+    await request("/api/projects", { schema: z.array(ProjectVersionSummarySchema) }),
+    "Could not load cloud saves",
+  );
 }
 
-/** GET /api/projects/{id} — one version's full bundle, for Load. Throws on non-2xx. */
+/** GET /api/projects/{id} — one version's full bundle, for Load. Throws on failure. */
 export async function syncLoadProject(versionId: string): Promise<ProjectVersionDetail> {
-  const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  return ProjectVersionDetailSchema.parse(await res.json());
+  return unwrap(
+    await request(`/api/projects/${encodeURIComponent(versionId)}`, {
+      schema: ProjectVersionDetailSchema,
+    }),
+    "Load failed",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -484,41 +607,52 @@ export async function syncPutWorkingCopy(
   name: string,
   data: ProjectBundle,
 ): Promise<WorkingCopyDetail> {
-  const res = await authedFetch(`${API_BASE}/api/projects/autosave`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, data }),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Auto-save failed (${res.status}): ${detail}`);
-  }
-  return WorkingCopyDetailSchema.parse(await res.json());
+  return unwrap(
+    await request("/api/projects/autosave", {
+      method: "PUT",
+      body: { name, data },
+      schema: WorkingCopyDetailSchema,
+    }),
+    "Auto-save failed",
+  );
 }
 
-/** GET /api/projects/autosave — the Working Copy for one project name, or null
- *  when there is none (404 is the normal answer, not an error). */
-export async function syncGetWorkingCopy(name: string): Promise<WorkingCopyDetail | null> {
-  const res = await authedFetch(
-    `${API_BASE}/api/projects/autosave?name=${encodeURIComponent(name)}`,
-  );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  return WorkingCopyDetailSchema.parse(await res.json());
+/**
+ * GET /api/projects/autosave — the Working Copy for one project name.
+ *
+ * Returns the full result rather than a bare value, because "there is no
+ * Working Copy" (a 404, the normal answer) and "we could not find out" are
+ * different facts and the caller must be able to tell them apart. It used to
+ * return null for the first and throw for the second, which pushed callers into
+ * `.catch(() => null)` — collapsing a server error into "no auto-save exists"
+ * and showing the user nothing at all.
+ *
+ * `ok: true, data: null` means there is none; `ok: false` means we do not know.
+ */
+export async function syncGetWorkingCopy(
+  name: string,
+): Promise<ApiResult<WorkingCopyDetail | null>> {
+  return request(`/api/projects/autosave?name=${encodeURIComponent(name)}`, {
+    schema: WorkingCopyDetailSchema.nullable(),
+    absentOn: [404],
+  });
 }
 
 /** DELETE /api/projects/autosave — drop the stored copy when the user opts a
- *  project out. Opting out must REMOVE the network, not merely stop writing. */
+ *  project out. Opting out must REMOVE the network, not merely stop writing.
+ *  A 404 is success: there was nothing stored. */
 export async function syncDeleteWorkingCopy(name: string): Promise<void> {
-  const res = await authedFetch(
-    `${API_BASE}/api/projects/autosave?name=${encodeURIComponent(name)}`,
-    { method: "DELETE" },
+  unwrap(
+    await request(`/api/projects/autosave?name=${encodeURIComponent(name)}`, {
+      method: "DELETE",
+      absentOn: [404],
+    }),
+    "Could not remove the cloud auto-save",
   );
-  if (!res.ok && res.status !== 404) throw new Error(`Server returned ${res.status}`);
 }
 
 // ---------------------------------------------------------------------------
-// EPANET .inp import (requirements §13.5)
+// EPANET .inp import (ADR-0012)
 // ---------------------------------------------------------------------------
 
 export interface ImportInpKnobs {
@@ -547,39 +681,30 @@ export async function importInp(
   content: string,
   knobs: ImportInpKnobs = {},
 ): Promise<ImportInpResponse> {
-  const res = await authedFetch(`${API_BASE}/api/import/inp`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      filename,
-      content,
-      target_nodes: knobs.targetNodes,
-      source_crs: knobs.sourceCrs,
-      demand_mode: knobs.demandMode,
-      n_levels: knobs.nLevels,
-      capacity_margin: knobs.capacityMargin,
-      max_velocity: knobs.maxVelocity,
+  return unwrap(
+    await request("/api/import/inp", {
+      method: "POST",
+      body: {
+        filename,
+        content,
+        target_nodes: knobs.targetNodes,
+        source_crs: knobs.sourceCrs,
+        demand_mode: knobs.demandMode,
+        n_levels: knobs.nLevels,
+        capacity_margin: knobs.capacityMargin,
+        max_velocity: knobs.maxVelocity,
+      },
+      schema: ImportInpResponseSchema,
+      timeoutMs: IMPORT_TIMEOUT_MS,
     }),
-  }, IMPORT_TIMEOUT_MS);
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const parsed = (await res.json()) as { detail?: string };
-      detail = parsed.detail ?? "";
-    } catch {
-      detail = await res.text().catch(() => res.statusText);
-    }
-    throw new Error(`Import failed (${res.status}): ${detail}`);
-  }
-  return ImportInpResponseSchema.parse(await res.json());
+    "Import failed",
+  );
 }
 
 /** DELETE /api/projects/{id}. Returns an error message, or null on success. */
 export async function syncDeleteProject(versionId: string): Promise<string | null> {
-  const res = await authedFetch(`${API_BASE}/api/projects/${encodeURIComponent(versionId)}`, {
-    method: "DELETE",
-  });
-  if (res.ok) return null;
-  const detail = await res.text().catch(() => res.statusText);
-  return `Delete failed (${res.status}): ${detail}`;
+  return errorOrNull(
+    await request(`/api/projects/${encodeURIComponent(versionId)}`, { method: "DELETE" }),
+    "Delete failed",
+  );
 }

@@ -181,7 +181,13 @@ export function FileIoPanel() {
       // offering an older auto-save would just be noise.
       const name = useCanvasStore.getState().projectMeta.name;
       setAutoSaveOn(isWorkingCopyEnabled(name));
-      const copy = await syncGetWorkingCopy(name).catch(() => null);
+      const copyResult = await syncGetWorkingCopy(name);
+      // A failure here is reported rather than folded into "there is none": the
+      // version list above did load, so the panel stays usable, but the user is
+      // told the auto-save could not be checked instead of being shown a panel
+      // that silently claims there is no Working Copy.
+      if (!copyResult.ok) setSyncError(`Could not check the cloud auto-save: ${copyResult.detail}`);
+      const copy = copyResult.ok ? copyResult.data : null;
       const newestVersion = versions
         .filter((v) => v.name === name)
         .reduce<string | null>((acc, v) => (acc && acc > v.created_at ? acc : v.created_at), null);
