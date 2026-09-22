@@ -1,5 +1,5 @@
 """
-scripts/validate_faithfulness.py — how closely does CASCADE's engine output
+experiments/aqueducts/validate_faithfulness.py — how closely does CASCADE's engine output
 match real WNTR hydraulics, for randomly generated stress situations?
 
 For each situation (a random combination of structural failures and/or a
@@ -87,10 +87,10 @@ ground-truth solve uses (20m/0m by default) — that threshold alone decides
 which junctions WNTR calls "critical," so a fidelity claim that only holds at
 one arbitrary pressure choice would be a weaker claim than it looks.
 
-    python scripts/validate_faithfulness.py
-    python scripts/validate_faithfulness.py --networks Net1,Net3 --seed 1
-    python scripts/validate_faithfulness.py --n-levels 5
-    python scripts/validate_faithfulness.py --required-pressure 15 --minimum-pressure 5
+    python experiments/aqueducts/validate_faithfulness.py
+    python experiments/aqueducts/validate_faithfulness.py --networks Net1,Net3 --seed 1
+    python experiments/aqueducts/validate_faithfulness.py --n-levels 5
+    python experiments/aqueducts/validate_faithfulness.py --required-pressure 15 --minimum-pressure 5
 """
 from __future__ import annotations
 
@@ -107,10 +107,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-# Allow `python scripts/validate_faithfulness.py` from CASCADE-backend/ by
-# putting the backend package root on sys.path (same pattern as
-# scripts/export_json_schema.py / scripts/benchmark_engine.py).
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# This harness lives outside the backend (it never runs in production, and
+# keeping it out is what lets the import-linter contract drop its carve-out),
+# so it puts the backend package root on sys.path itself — the same thing
+# CASCADE-backend/scripts/* do, one directory further up.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "CASCADE-backend"))
 
 import networkx as nx  # noqa: E402
 import wntr  # noqa: E402
@@ -692,7 +693,7 @@ def main() -> None:
         help="How junction priorities are derived. 'contingency' (DEFAULT, 2026-07-22) = "
              "contingency_priorities' deterministic cycle-aware severity ranking (demand-weighted "
              "unmet-service deficit over cycle-trunk singles/pairs/triplets) — cuts false positives "
-             "~44%, precision ~+48% over 'none' at a small recall cost; 'sweep' = scarcity_priorities' "
+             "~44%%, precision ~+48%% over 'none' at a small recall cost; 'sweep' = scarcity_priorities' "
              "demand-multiplier failure order (legacy, ablated ~null on FMS); 'none' = engine default "
              "priority everywhere (fast baseline, precision ~0.34 on the new setup).",
     )

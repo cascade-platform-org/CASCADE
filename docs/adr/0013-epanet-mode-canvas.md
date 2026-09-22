@@ -16,7 +16,7 @@ infrastructure routinely produce) they can select *different* tied-optimal
 solutions, disagreeing on which specific junction receives the water. This
 was invisible to aggregate validation metrics and was only caught by
 comparing individual scenarios against real WNTR/EPANET hydraulics in a
-Python harness (`scripts/validate_faithfulness.py`).
+Python harness (`experiments/aqueducts/validate_faithfulness.py`).
 
 The owner wants to see this same comparison live, inside the CASCADE app,
 without leaving the UI or writing a script: import a `.inp` network, let
@@ -76,7 +76,7 @@ Three sub-decisions, each with a real constraint driving it:
    maps to closing its own `.inp` link id directly; a non-link element
    (`junction`/`reservoir`/`tank`) maps to closing every link touching it —
    generalizing the same mechanism
-   `scripts/validate_faithfulness.py::_tank_situations` already established
+   `experiments/aqueducts/validate_faithfulness.py::_tank_situations` already established
    for "how do you fully take a non-link element out of service." An element
    with **no** `properties.inp_id` (a CASCADE-only addition with no EPANET
    counterpart, e.g. a manually added node) cannot be represented in an
@@ -156,6 +156,6 @@ warning, to an arbitrary internal circulation that reads "fully served"
 (discovered benchmarking the engine — `experiments/aqueducts/ATTEMPTS.md` §6). An
 epanet-mode Propagation on such a scenario therefore shows healthy junctions
 that physically receive nothing; the normal engine path marks them critical
-correctly. `scripts/validate_faithfulness.py` already applies the
+correctly. `experiments/aqueducts/validate_faithfulness.py` already applies the
 source-reachability correction (`_severed_junctions`); porting the same
 correction into `services/epanet_solve_service.py` is the pending fix.

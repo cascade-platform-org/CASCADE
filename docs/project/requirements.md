@@ -872,7 +872,7 @@ falls through to the normal engine.
 Motivation: lets a user directly compare "what CASCADE's engine says" against
 "what real hydraulics says" for the same intervention, inside the app,
 without a separate validation script — the same comparison
-`scripts/validate_faithfulness.py` performs offline, made interactive.
+`experiments/aqueducts/validate_faithfulness.py` performs offline, made interactive.
 
 ---
 

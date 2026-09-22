@@ -30,7 +30,6 @@ BACKEND = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CASCADE-backend"
 )
 sys.path.insert(0, BACKEND)
-sys.path.insert(0, os.path.join(BACKEND, "scripts"))
 
 import wntr  # noqa: E402
 

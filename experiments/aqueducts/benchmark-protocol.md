@@ -6,7 +6,7 @@ collect **every known issue** so nothing is silently load-bearing. Read this
 before the final run.
 
 Everything below was re-derived from the code this session
-(`scripts/validate_faithfulness.py`, `core/importers/inp/*`, `engine/*`), not
+(`experiments/aqueducts/validate_faithfulness.py`, `core/importers/inp/*`, `engine/*`), not
 from memory. Where a value is a default that matters, it is named.
 
 ---
