@@ -51,6 +51,14 @@ describe("applyCoalition", () => {
     const before = snapshot();
     const after = applyCoalition(before, []);
     expect(after.nodes.n1).toBe(before.nodes.n1);
+    // The Scenario object itself, not just its Elements: the empty coalition is
+    // the Shapley baseline, evaluated once per permutation.
+    expect(after).toBe(before);
+  });
+
+  it("returns the same Scenario when every id names nothing", () => {
+    const before = snapshot();
+    expect(applyCoalition(before, ["ghost", "phantom"])).toBe(before);
   });
 });
 
