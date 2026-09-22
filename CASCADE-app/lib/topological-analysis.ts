@@ -603,7 +603,7 @@ export function computeDownstreamReachability(data: AnalysisGraph, sourceId: str
     }
     coneScores[sourceId] = 2;
   }
-  return toResult("downstream_reachability", coneScores);
+  return toResult("downstream_cone", coneScores);
 }
 
 /** Upstream reachability cone: highlights all nodes that can reach `targetId`. */
@@ -623,7 +623,7 @@ export function computeUpstreamReachability(data: AnalysisGraph, targetId: strin
     for (const id of Object.keys(paths)) coneScores[id] = 1;
     coneScores[targetId] = 2;
   }
-  return toResult("upstream_reachability", coneScores);
+  return toResult("upstream_cone", coneScores);
 }
 
 /** Per-node downstream reachability count (all nodes, no single source). */

@@ -12,12 +12,13 @@
  * list instead of carrying their own, so the Analysis page can only ever offer a
  * metric that is fully defined.
  *
- * The legend side is NOT yet folded in: `analysis-legend.ts` still keys
- * `buildColorMap` / `buildLegend` on `result.metric` string literals, and for
- * the two cone metrics that string (`"downstream_reachability"`) differs from
- * this registry's `id` (`"downstream_cone"`) and from the store union — a third
- * namespace. Unifying the three is a follow-up; until then a new metric that
- * wants a non-gradient palette must also be added to `analysis-legend.ts`.
+ * There is now ONE spelling of a metric id. The analysis functions stamp
+ * `result.metric` with the id below, the store union uses it, and
+ * `analysis-legend.ts` keys on it — the cone metrics used to be stamped
+ * `"downstream_reachability"` against a registry id of `"downstream_cone"`, so
+ * the same metric had three names. A metric that wants a non-gradient palette
+ * still has to be added to `analysis-legend.ts` as well, but it is added under
+ * the id it already has here rather than a second one.
  *
  * **What is deliberately NOT here**: the model-based metrics (Vitality
  * Centrality, Shapley Values). They are engine calls — async, metered against
