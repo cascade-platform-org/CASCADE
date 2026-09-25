@@ -22,7 +22,7 @@ aqueducts, across four failure families.
 | §3.4 Flow module (priority-tiered max-min fairness, the auxiliary graph, node splitting)              | [`CASCADE-backend/engine/flow.py`](../CASCADE-backend/engine/flow.py)                                                                      |
 | §3.5 Guards (dependency level, backup deferral) and the shared propose → guard → commit rule        | [`guards.py`](../CASCADE-backend/engine/guards.py), [`propagation.py`](../CASCADE-backend/engine/propagation.py)                          |
 | §4 The EPANET importer (orientation from flow sign, design-velocity capacity, the pump-fed tank rule) | [`CASCADE-backend/core/importers/inp/`](../CASCADE-backend/core/importers/inp/) — `sim.py` runs the sweeps, `map.py` builds the model |
-| §5 Validation protocol, FMS, the four failure families, the two baselines                             | [`CASCADE-backend/scripts/validate_faithfulness.py`](../CASCADE-backend/scripts/validate_faithfulness.py)                                  |
+| §5 Validation protocol, FMS, the four failure families, the two baselines                             | [`experiments/aqueducts/validate_faithfulness.py`](../experiments/aqueducts/validate_faithfulness.py)                                  |
 | §5 Table 1 and the headline numbers                                                                   | [`experiments/aqueducts/paper_numbers.py`](../experiments/aqueducts/paper_numbers.py)                                                      |
 
 ### Reproducing the numbers
