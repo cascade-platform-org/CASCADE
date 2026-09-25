@@ -27,16 +27,6 @@ import { ModelConfigurationSchema } from "./config";
  */
 export const UserRoleSchema = z.enum(["viewer", "analyst", "manager", "admin"]);
 
-export const AuthUserSchema = z.object({
-  /** Stable subject identifier from the OIDC provider. */
-  sub: z.string(),
-  email: z.string().email(),
-  display_name: z.string(),
-  roles: z.array(UserRoleSchema),
-  /** users.id UUID (as text); absent in local-only mode. Mirrors AuthUser.db_id. */
-  db_id: z.string().nullable().optional(),
-});
-
 // TokenPair was removed on both sides of the boundary when tokens moved into
 // httpOnly cookies (backend schemas/auth.py has the matching note): /callback
 // and /refresh now return {"ok": true} and set cookies, so there is no token
@@ -210,7 +200,6 @@ export const EngineAlgorithmsSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
-export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
 export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
 export type WorkingCopyDetail = z.infer<typeof WorkingCopyDetailSchema>;

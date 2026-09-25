@@ -54,14 +54,14 @@ ignore_imports = [
     # private submodule/service touches only this file (ADR-0009).
     "services.propagation_service -> engine.*",
     # Benchmarks the engine's raw performance directly, bypassing the API —
-    # a deliberate, pre-existing exception for a dev-only ops script, not
-    # part of the request path CLAUDE.md §7 protects.
+    # a deliberate exception for an ops script, not part of the request path
+    # CLAUDE.md §7 protects. It stays inside the backend, and therefore inside
+    # this contract, because it is run IN the deployed container to recalibrate
+    # entitlements on the real VM (deployment.md; migration 003's note says to
+    # re-run it there). The paper's validate_faithfulness.py had the same
+    # carve-out and lost it by moving to experiments/aqueducts/, which is where
+    # a harness that never runs in production belongs.
     "scripts.benchmark_engine -> engine.*",
-    # Validates engine+importer output against real WNTR hydraulics — needs
-    # the engine's REAL propagation call and its REAL ratio->level rule
-    # (engine.flow._ratio_to_level), not a reimplementation of either; a dev-
-    # only validation harness, same category as benchmark_engine.py above.
-    "scripts.validate_faithfulness -> engine.*",
 ]
 
 [tool.pyright]

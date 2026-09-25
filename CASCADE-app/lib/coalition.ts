@@ -31,10 +31,16 @@ export function applyCoalition(
 ): GraphSnapshot {
   const nodes = { ...snapshot.nodes };
   const edges = { ...snapshot.edges };
+  let changed = false;
   for (const id of ids) {
-    if (id in nodes) nodes[id] = { ...nodes[id], functionality: 1 };
-    else if (id in edges) edges[id] = { ...edges[id], functionality: 1 };
+    if (id in nodes) { nodes[id] = { ...nodes[id], functionality: 1 }; changed = true; }
+    else if (id in edges) { edges[id] = { ...edges[id], functionality: 1 }; changed = true; }
   }
+  // The Scenario itself comes back by reference when nothing was written, as it
+  // does from mergeUpdatesIntoSnapshot, forceOperational and applyBaselineEntries.
+  // The empty coalition is the Shapley baseline and is evaluated once per
+  // permutation, so this is the common case, not an edge one.
+  if (!changed) return snapshot;
   return { ...snapshot, nodes, edges };
 }
 

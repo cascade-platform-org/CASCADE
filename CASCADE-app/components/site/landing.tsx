@@ -73,13 +73,21 @@ function Hero({ copy }: { copy: SiteCopy }) {
 
         <figure className="relative mt-16">
           <div className="overflow-hidden rounded-lg border border-zinc-100/10">
-            {/* eslint-disable-next-line @next/next/no-img-element -- an animated GIF has nothing for next/image to optimise */}
-            <img
-              src="/platform.gif"
-              alt={copy.hero.demoCaption}
-              loading="eager"
-              decoding="async"
-              className="w-full"
+            {/* A muted looping video: a quarter of the GIF it replaced, for
+                the same frames. The poster is a still of the first frame, so
+                the band has its final size and picture before the video loads. */}
+            <video
+              src="/platform.mp4"
+              poster="/platform-poster.webp"
+              aria-label={copy.hero.demoCaption}
+              width={1862}
+              height={926}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              className="h-auto w-full"
             />
           </div>
           <figcaption className="mt-4 text-sm text-zinc-500">{copy.hero.demoCaption}</figcaption>

@@ -104,7 +104,7 @@ Types are defined **once** and derived everywhere else. The sequence for any sch
 
 1. Update the **Pydantic model** in `CASCADE-backend/schemas/` (Python source of truth).
 2. Run `python CASCADE-backend/scripts/export_json_schema.py` — writes JSON Schema files to `CASCADE-app/shared/schemas/`.
-3. Apply the equivalent change to the **Zod schema** in `CASCADE-app/lib/schemas/` (TypeScript source of truth). TypeScript types (`z.infer<>`) update automatically.
+3. Apply the equivalent change to the **Zod schema** in `CASCADE-app/lib/schemas/` (TypeScript source of truth). TypeScript types (`z.infer<>`) update automatically. `lib/schemas/pydantic-mirror.test.ts` fails if you forget: it compares every `$defs` entry against its Zod counterpart by property name and required-ness. A model the frontend deliberately does not mirror goes in that test's `NO_MIRROR` map with the reason.
 4. The `CASCADE-app/lib/types/*.ts` files are thin re-export wrappers — never define types there directly.
 
 **Never write a TypeScript interface that duplicates a Pydantic model.**
@@ -139,7 +139,12 @@ Concretely:
 
 ## 8a. Audit Tooling
 
-Run before considering non-trivial backend or frontend work done, and always before a deploy:
+**Every tool in this table runs in CI** (`.github/workflows/ci.yml`), so a red
+check is the same signal as a failing local run. Run them locally anyway before
+considering non-trivial work done — CI tells you after you have pushed, which is
+the slowest possible moment to learn that `vulture` found the function you just
+orphaned. The list below and the CI jobs are the same list; adding a tool to one
+means adding it to the other in the same session.
 
 | Layer | Command | Checks |
 |---|---|---|
@@ -151,7 +156,7 @@ Run before considering non-trivial backend or frontend work done, and always bef
 | Frontend | `npm run audit:circular` | madge (circular imports) |
 | Both | `git ls-files \| xargs detect-secrets scan --baseline .secrets.baseline` | secrets in tracked files |
 
-`import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` / `scripts/validate_faithfulness.py` dev exceptions) imports `engine.*`. Both are dev-only harnesses, not shipped product code, that need the engine's REAL logic (not a reimplementation of it) to measure the engine rather than their own drift — any new dev script with the same need is a candidate for the same carve-out, added to `[tool.importlinter]` and to this sentence in the same session. Prefer consuming a product artifact over gaining a carve-out: `scripts/paper_shapley_vs_centrality.py` gave its up by reading the Analysis page's exported Shapley result instead of re-implementing the estimator.
+`import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` ops exception) imports `engine.*`. `benchmark_engine.py` keeps its carve-out because it is run INSIDE the deployed container to recalibrate entitlements on the real VM (deployment.md; migration 003 says to re-run it there), so it is shipped code and has to stay in the backend. The paper's `validate_faithfulness.py` had the same carve-out and lost it by moving to `experiments/aqueducts/` — a harness that never runs in production does not belong in the image or in this contract, which is the better answer whenever it is available. Prefer consuming a product artifact over gaining a carve-out: `scripts/paper_shapley_vs_centrality.py` gave its up by reading the Analysis page's exported Shapley result instead of re-implementing the estimator.
 
 `.secrets.baseline` (repo root) is the reviewed set of known non-secret matches (local-dev credentials in docs/examples, content hashes in `skills-lock.json`). Re-run `detect-secrets scan --baseline .secrets.baseline $(git ls-files)` after adding new tracked files; a genuinely new finding needs `detect-secrets audit .secrets.baseline` to classify before it's safe to commit.
 

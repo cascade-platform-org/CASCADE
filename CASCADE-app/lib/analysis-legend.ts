@@ -96,8 +96,29 @@ export function formatScore(value: number): string {
  * `buildColorMap` in topological-analysis.ts — that decides the colours, this
  * decides how they are explained, and a metric added to one needs the other.
  */
+/**
+ * The metric id an entry was scored under, as this module keys on it.
+ *
+ * The two cone metrics used to be stamped `"downstream_reachability"` while the
+ * registry and the store called them `"downstream_cone"` — a third namespace
+ * for the same metric, which is why a new metric wanting a non-gradient palette
+ * had to be added here as well as to the registry. The stamp is now the
+ * registry id everywhere; this maps the old spelling forward, because
+ * `AnalysisScorecardEntry.metric` is a persisted free string and project files
+ * saved by earlier builds still carry it.
+ */
+const LEGACY_METRIC_IDS: Record<string, string> = {
+  downstream_reachability: "downstream_cone",
+  upstream_reachability: "upstream_cone",
+};
+
+function canonicalMetric(metric: string): string {
+  return LEGACY_METRIC_IDS[metric] ?? metric;
+}
+
 export function buildLegend(result: AnalysisResult): Legend {
-  const { metric, scores } = result;
+  const { scores } = result;
+  const metric = canonicalMetric(result.metric);
   switch (metric) {
     case "articulation_points":
       return {
@@ -115,7 +136,7 @@ export function buildLegend(result: AnalysisResult): Legend {
           { color: brandColor("neutral", 400), label: "Non-bridge" },
         ],
       };
-    case "downstream_reachability":
+    case "downstream_cone":
       return {
         type: "swatches",
         items: [
@@ -124,7 +145,7 @@ export function buildLegend(result: AnalysisResult): Legend {
           { color: brandColor("neutral", 200), label: "Outside cone" },
         ],
       };
-    case "upstream_reachability":
+    case "upstream_cone":
       return {
         type: "swatches",
         items: [
@@ -218,14 +239,15 @@ const CATEGORICAL_METRICS = new Set([
   "community",
   "articulation_points",
   "bridge_edges",
-  "downstream_reachability",
-  "upstream_reachability",
+  "downstream_cone",
+  "upstream_cone",
   "k_core",
 ]);
 
 function buildCategoricalColorMap(result: AnalysisResult): Record<string, string> {
   const map: Record<string, string> = {};
-  const { scores, metric } = result;
+  const { scores } = result;
+  const metric = canonicalMetric(result.metric);
 
   if (metric === "community") {
     const uniqueVals = [...new Set(Object.values(scores))].sort((a, b) => a - b);
@@ -237,7 +259,7 @@ function buildCategoricalColorMap(result: AnalysisResult): Record<string, string
     for (const [id, score] of Object.entries(scores)) {
       map[id] = score === 1 ? brandColor("danger", 500) : brandColor("neutral", 400);
     }
-  } else if (metric === "downstream_reachability" || metric === "upstream_reachability") {
+  } else if (metric === "downstream_cone" || metric === "upstream_cone") {
     for (const [id, score] of Object.entries(scores)) {
       if (score === 2) map[id] = brandColor("accent", 800);
       else if (score === 1) map[id] = brandColor("accent", 400);
@@ -255,7 +277,7 @@ function buildCategoricalColorMap(result: AnalysisResult): Record<string, string
 
 /** Build a colour map. Categorical metrics use discrete palettes; others use the blue gradient. */
 export function buildColorMap(result: AnalysisResult): Record<string, string> {
-  if (CATEGORICAL_METRICS.has(result.metric)) return buildCategoricalColorMap(result);
+  if (CATEGORICAL_METRICS.has(canonicalMetric(result.metric))) return buildCategoricalColorMap(result);
   const { min, max, scores } = result;
   const range = max - min || 1;
   const map: Record<string, string> = {};

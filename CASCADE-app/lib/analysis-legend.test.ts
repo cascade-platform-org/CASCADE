@@ -137,8 +137,8 @@ describe("which metrics get swatches", () => {
     for (const metric of [
       "articulation_points",
       "bridge_edges",
-      "downstream_reachability",
-      "upstream_reachability",
+      "downstream_cone",
+      "upstream_cone",
       "community",
       "k_core",
     ]) {
@@ -191,10 +191,23 @@ describe("the legend agrees with the colours actually painted", () => {
     expect(legend.items[1].color).toBe(colors.plain);
   });
 
+  it("still explains a cone saved under its old metric name", () => {
+    // `AnalysisScorecardEntry.metric` is a persisted free string, and project
+    // files written before the id was unified carry "downstream_reachability"
+    // where the registry now says "downstream_cone". Without the forward map
+    // an archived entry would silently fall through to the plain gradient.
+    const scores = { src: 2, inCone: 1, outside: 0 };
+    const legacy = buildLegend(result("downstream_reachability", scores));
+    const current = buildLegend(result("downstream_cone", scores));
+    expect(legacy).toEqual(current);
+    expect(buildColorMap(result("upstream_reachability", scores)))
+      .toEqual(buildColorMap(result("upstream_cone", scores)));
+  });
+
   it("names the three tiers a reachability cone assigns", () => {
     const scores = { src: 2, inCone: 1, outside: 0 };
-    const colors = buildColorMap(result("downstream_reachability", scores));
-    const legend = buildLegend(result("downstream_reachability", scores));
+    const colors = buildColorMap(result("downstream_cone", scores));
+    const legend = buildLegend(result("downstream_cone", scores));
     if (legend.type !== "swatches") throw new Error("expected swatches");
     expect(legend.items.map((i) => i.color)).toEqual([
       colors.src, colors.inCone, colors.outside,

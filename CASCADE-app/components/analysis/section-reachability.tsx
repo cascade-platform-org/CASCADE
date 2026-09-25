@@ -103,8 +103,6 @@ export function SectionReachability() {
       {result && (
         <div className="space-y-4">
           <HeatmapControls
-            // Not a `result.metric` lookup: the cone metrics are selected as
-            // "downstream_cone" but scored as "downstream_reachability".
             // Switching metric clears the result (see the selector above), so
             // the active definition always describes what is on screen.
             title={currentDef?.label ?? result.metric}

@@ -193,7 +193,7 @@ Unreachable demand junctions (a real import defect — permanently critical
 regardless of hazards), count of fallback-capacity pipes, count of
 full-duplex splits, negative-demand junctions imported as wells.
 
-### Faithfulness benchmark (`scripts/validate_faithfulness.py`)
+### Faithfulness benchmark (`experiments/aqueducts/validate_faithfulness.py`)
 
 Dev-only harness reducing "does the engine match real hydraulics?" to one
 number: per generated situation, (1) the identical intervention is applied to

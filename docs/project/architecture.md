@@ -489,7 +489,8 @@ landing page is a server component, so its prose is in the HTML that
 site imports nothing from `components/canvas/` (React Flow, MapLibre and
 graphology would otherwise be pulled into a marketing page's bundle). The one
 client component on the site is the header's mobile menu. `(product)` declares
-`robots: noindex`, matching the `Disallow` rules in `app/robots.ts`.
+`robots: noindex`, and `app/robots.ts` leaves those routes crawlable so a
+crawler can read it (a disallowed page's `noindex` is never seen).
 
 **Copy is data.** `lib/site-copy/{en,it}.ts` both satisfy the `SiteCopy` type,
 so a section added to one language fails the build until the other has it too,

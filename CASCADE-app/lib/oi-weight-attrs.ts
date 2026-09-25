@@ -2,15 +2,16 @@
  * Helpers for discovering numeric node attributes that can serve as OI weights.
  */
 import type { Node } from "@/lib/schemas/network";
+import { NON_WEIGHT_KEYS_BASE } from "@/lib/weight-attrs";
 
 /** Schema-defined attributes always offered, even when absent from live data. */
 const SCHEMA_NODE_ATTRS_FOR_OI = ["importance", "cost_of_disservice_per_day"] as const;
 
-const NON_WEIGHT_KEYS = new Set([
-  "id", "type", "label", "canvas_id", "node_categories", "icon",
-  "direct_damage", "functionality_time", "time_restored",
-  "x", "y", "positionAbsolute", "functionality",
-]);
+/** The shared base, plus `functionality`: the Operativity Score is a weighted
+ *  mean OF functionality, so offering it as its own weight would be circular.
+ *  Weight expressions compute something else and do offer it — the difference
+ *  is intended, and `lib/weight-attrs.ts` says why. */
+const NON_WEIGHT_KEYS = new Set([...NON_WEIGHT_KEYS_BASE, "functionality"]);
 
 /**
  * Return all numeric node attribute names available as OI weight candidates.

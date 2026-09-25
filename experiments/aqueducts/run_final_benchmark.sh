@@ -26,7 +26,7 @@ NETWORKS="Net1 Net2 Net3 \
 
 for net in $NETWORKS; do
   echo "=== $(date +%H:%M) starting $net ===" | tee -a "$LOG"
-  python3 scripts/validate_faithfulness.py --networks "$net" --seed 1 \
+  python3 $EXP/validate_faithfulness.py --networks "$net" --seed 1 \
     --contingency-exhaustive-trunk --priority-mode none \
     --demand-mode peak_hour --csv "$CSV" >>"$LOG" 2>&1 \
     || echo "  FAILED: $net" | tee -a "$LOG"
