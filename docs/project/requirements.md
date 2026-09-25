@@ -945,10 +945,14 @@ in [architecture.md](architecture.md#routing--the-public-website-and-the-editor)
 ### 17.3 Indexability
 
 The website is the indexable surface and the application is excluded from
-indexing, by two mechanisms that must agree:
+indexing:
 
-- `app/robots.ts` disallows `/app`, `/admin` and `/auth`, and names the sitemap.
-- `app/(product)/layout.tsx` sets `robots: { index: false, follow: false }`.
+- `app/(product)/layout.tsx` sets `robots: { index: false, follow: false }` on
+  `/app`, `/admin` and `/auth`.
+- `app/robots.ts` allows every path and names the sitemap. It deliberately does
+  **not** disallow the application: a crawler barred from a page never reads its
+  `noindex`, and the landing page's link to `/app` would then get the URL
+  indexed as a bare "blocked by robots.txt" entry.
 
 Each landing page carries a canonical URL, `hreflang` alternates naming the
 other locale and `x-default`, Open Graph and Twitter cards, and a JSON-LD

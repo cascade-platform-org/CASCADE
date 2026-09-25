@@ -166,6 +166,9 @@ SITE_URL=https://your-domain.com # MUST be https://$APP_DOMAIN. Baked into the
                                  # Permanently redirects the old domain to the
                                  # new one (root -> /app, everything else keeps
                                  # its path+query). Unset serves nothing there.
+# WWW_DOMAIN=www.your-domain.com # optional — permanently redirects www to
+                                 # APP_DOMAIN, path+query kept. Needs a DNS A
+                                 # record for www. Unset serves nothing there.
 ZITADEL_VERSION=<pinned tag>     # never :latest — see the service table below
 # ERRORS_DOMAIN=errors.your-domain.com    # optional — Caddy vhost for
                                  # GlitchTip (see "GlitchTip Setup" below).

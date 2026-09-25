@@ -88,6 +88,9 @@ services:
       # public website took the apex (see Caddyfile). Unset locally defaults to
       # an unpublished port, so the redirect site block is inert in dev.
       LEGACY_APP_DOMAIN: ${LEGACY_APP_DOMAIN:-:8082}
+      # Optional: www.<apex>, permanently redirected to APP_DOMAIN. Same inert
+      # unpublished-port default as above.
+      WWW_DOMAIN: ${WWW_DOMAIN:-:8084}
       # Optional: Caddy vhost for GlitchTip (self-hosted error/performance
       # tracking). Unset locally defaults to an unpublished port — dev reaches
       # GlitchTip directly instead (docker-compose.override.yml), same pattern

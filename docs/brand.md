@@ -267,10 +267,18 @@ Two things about it are brand decisions rather than layout ones:
 |---|---|---|
 | `logo-horizontal.svg` | `cascade-lockup-horizontal.svg` | Footer — theme-aware, follows the visitor's scheme |
 | `logo-horizontal-ondark.svg` | `cascade-lockup-horizontal-ondark.svg` | Header — the bar is always dark, which the theme-aware file cannot see |
-| `platform.gif` | `CASCADE-platform.gif` | The "see it work" band |
+| `platform.mp4`, `platform-poster.webp` | `CASCADE-platform.gif` (via ffmpeg, below) | The "see it work" band — a video is a quarter of the GIF's weight |
 | `og.png` | `cascade-og-card.png` | Link previews |
 
-Re-copy these after `build.py` regenerates `docs/assets/`.
+Re-copy these after `build.py` regenerates `docs/assets/`. The video and its
+poster are re-encoded from the GIF instead of copied:
+
+```bash
+cd CASCADE-app/public
+ffmpeg -i ../../docs/assets/CASCADE-platform.gif -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p" \
+  -c:v libx264 -preset veryslow -tune animation -crf 32 -movflags +faststart -an platform.mp4
+ffmpeg -i ../../docs/assets/CASCADE-platform.gif -vframes 1 -c:v libwebp -quality 80 platform-poster.webp
+```
 
 ---
 

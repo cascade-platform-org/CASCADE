@@ -5,6 +5,7 @@
 #   APP_DOMAIN         — the app: static frontend + /api reverse-proxied to the backend
 #   ID_DOMAIN          — Zitadel (the identity provider)
 #   LEGACY_APP_DOMAIN  — optional: redirects an old pre-website APP_DOMAIN to the apex
+#   WWW_DOMAIN         — optional: redirects www.<apex> to the apex
 #   ERRORS_DOMAIN      — optional: GlitchTip (self-hosted error/performance tracking)
 #
 # When these are real hostnames (e.g. app.example.org), Caddy automatically
@@ -125,6 +126,13 @@
 	@root path /
 	redir @root https://{$APP_DOMAIN}/app 301
 	redir * https://{$APP_DOMAIN}{uri} 301
+}
+
+# The www spelling of the apex. People type it, and a search engine treats
+# www and the apex as two sites, so it answers with a permanent redirect to the
+# one canonical origin instead of serving a second copy of the website.
+{$WWW_DOMAIN} {
+	redir https://{$APP_DOMAIN}{uri} 308
 }
 
 {$ID_DOMAIN} {

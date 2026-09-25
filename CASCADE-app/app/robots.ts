@@ -1,11 +1,12 @@
 /**
  * /robots.txt, generated at build time (Next writes it into the static export).
  *
- * The landing pages are open to crawlers; the application is closed to them.
- * `/app`, `/admin` and `/auth` render nothing a search result could usefully
- * show, and indexing them would put a login screen in front of anyone searching
- * for what the platform does. The `noindex` header in `(product)/layout.tsx`
- * says the same thing to a crawler that arrives at the page directly.
+ * Everything is crawlable, and the application is kept out of search results by
+ * the `noindex` in `(product)/layout.tsx` instead. The two cannot be combined: a
+ * crawler that is disallowed from `/app` never downloads it, so it never reads
+ * the `noindex`, and a URL the landing page links to then gets indexed anyway
+ * as a bare "blocked by robots.txt" entry. Letting it crawl is what lets the
+ * `noindex` take the application out of the index.
  */
 
 import type { MetadataRoute } from "next";
@@ -15,7 +16,7 @@ export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/app", "/admin", "/auth"] },
+    rules: { userAgent: "*", allow: "/" },
     sitemap: `${SITE_ORIGIN}/sitemap.xml`,
   };
 }

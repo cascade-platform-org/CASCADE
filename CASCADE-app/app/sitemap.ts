@@ -4,6 +4,10 @@
  * Two entries, each naming the other as its translation, which is how a search
  * engine learns the pages are a pair rather than duplicates competing for the
  * same query.
+ *
+ * No `lastmod`: the only date a build knows is its own, and a `lastmod` that
+ * moves on every deploy whether or not the copy changed teaches a search engine
+ * to ignore the field. `changefreq` and `priority` are ignored by Google.
  */
 
 import type { MetadataRoute } from "next";
@@ -17,21 +21,8 @@ const LANGUAGES = {
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
-  return [
-    {
-      url: `${SITE_ORIGIN}/`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 1,
-      alternates: { languages: LANGUAGES },
-    },
-    {
-      url: `${SITE_ORIGIN}/it`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.8,
-      alternates: { languages: LANGUAGES },
-    },
-  ];
+  return Object.values(LANGUAGES).map((url) => ({
+    url,
+    alternates: { languages: LANGUAGES },
+  }));
 }
