@@ -910,6 +910,7 @@ without a separate validation script — the same comparison
 | Exact scorecard layout and visual design | To be defined during UI design |
 | Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
 | Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |
+| Multi-period temporal simulation: a saved replayable Timeline, diff-based run recording with custom metrics, and per-category stocks | **Proposed, not accepted** — `temporal-simulation-design.md`. Generalises Temporal Jump, which is already a step loop hardcoded for one stock (`functionality_time`). Needs an ADR; the stock capability is `core/`-only, and exposing `served_ratio` + `utilisation` amends ADR-0003 |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 
 ---
