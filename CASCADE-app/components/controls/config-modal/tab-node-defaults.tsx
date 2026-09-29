@@ -38,6 +38,22 @@ export function TabNodeDefaults() {
     updateNodeDefault(tplName, { node_categories: next, category_dependency_profiles: profiles });
   }
 
+  /** Throughput lives on the node, not the profile, so a template sets it
+   *  beside `supply_capacity` rather than inside `category_dependency_profiles`. */
+  function updateThroughput(
+    tplName: string,
+    tpl: Partial<Node>,
+    catName: string,
+    value: number | undefined,
+  ) {
+    const next = { ...(tpl.throughput_capacity ?? {}) };
+    if (value !== undefined && value > 0) next[catName] = value;
+    else delete next[catName];
+    updateNodeDefault(tplName, {
+      throughput_capacity: Object.keys(next).length > 0 ? next : undefined,
+    });
+  }
+
   function updateProfile(
     tplName: string,
     tpl: Partial<Node>,
@@ -147,8 +163,8 @@ export function TabNodeDefaults() {
                           </div>
                           <div>
                             <label className="mb-0.5 block text-xs text-zinc-400">Throughput Capacity</label>
-                            <NumberInput value={prof.capacity} min={0} className="w-full"
-                              onChange={(v) => updateProfile(name, tpl, catName, { capacity: v > 0 ? v : undefined })} />
+                            <NumberInput value={tpl.throughput_capacity?.[catName]} min={0} className="w-full"
+                              onChange={(v) => updateThroughput(name, tpl, catName, v)} />
                           </div>
                           <div>
                             <label className="mb-0.5 block text-xs text-zinc-400">Priority (1–10)</label>

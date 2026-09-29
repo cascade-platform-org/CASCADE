@@ -81,11 +81,16 @@ class CategoryDependencyProfile(BaseModel):
     N = full dependency (drop passes unattenuated); 1 = no dependency
     (shift of N−1 neutralises any possible drop entirely). Intermediate values
     reduce the drop linearly by (N − dependency_level) levels.
-    capacity: maximum throughput for this category — degrades proportionally with Functionality.
     demand and priority are SourceToDemands-only; leave absent for Requisite.
+
+    Throughput used to live here as `capacity`. It moved to
+    `Node.throughput_capacity` because it answers "how much can this node pass
+    on", which is the question `supply_capacity` answers — the Inspector has
+    always grouped the two under "Capacities", away from the dependency fields.
+    Projects written before the move are migrated on load by
+    `Node._migrate_legacy_throughput`.
     """
     dependency_level: int = Field(..., ge=1)
-    capacity: Optional[float] = Field(default=None, ge=0, description="Maximum throughput for this category.")
     backup: Optional[bool] = None
     backup_duration: Optional[int] = Field(default=None, ge=0, description="Hours. Applies when backup is true.")
     demand: Optional[float] = Field(default=None, ge=0, description="Resource amount requested. SourceToDemands only.")
@@ -116,6 +121,11 @@ class Node(BaseModel):
     # the two independently, so the node enters that category's flow graph as a
     # source AND a consumer. The frontend Inspector flags it for the modeller.
     supply_capacity: Optional[dict[str, float]] = None
+    # Keyed by category. How much this node can PASS ON, as opposed to produce.
+    # Effective throughput = throughput_capacity[cat] × (functionality / N);
+    # absent means the category's largest declared supply (engine/flow.py,
+    # `_max_source_supply`), or unbounded when the category has no source.
+    throughput_capacity: Optional[dict[str, float]] = None
     category_dependency_profiles: Optional[dict[str, CategoryDependencyProfile]] = None
     vulnerability_levels: Optional[VulnerabilityLevels] = Field(
         default=None,
@@ -137,6 +147,32 @@ class Node(BaseModel):
     # Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine.
     rules: Optional[list[str]] = None
     properties: Optional[dict[str, Any]] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_throughput(cls, data: Any) -> Any:
+        """Lift pre-move throughput out of the dependency profiles.
+
+        Throughput was `category_dependency_profiles[cat].capacity` until it
+        moved beside `supply_capacity`. A project written before that carries
+        the old shape, and rejecting it would strand every saved file, so the
+        old key is read once on load. An explicit `throughput_capacity` wins —
+        a file that has both was written after the move and its profile entry
+        is a leftover.
+        """
+        if not isinstance(data, dict):
+            return data
+        profiles = data.get("category_dependency_profiles")
+        if not isinstance(profiles, dict):
+            return data
+        legacy = {
+            cat: profile["capacity"]
+            for cat, profile in profiles.items()
+            if isinstance(profile, dict) and profile.get("capacity") is not None
+        }
+        if not legacy:
+            return data
+        return {**data, "throughput_capacity": {**legacy, **(data.get("throughput_capacity") or {})}}
 
 
 # ---------------------------------------------------------------------------

@@ -9,8 +9,8 @@ supply, and map each consumer's served ratio to a proposed Functionality level.
 
 Shared construction (ADR-0003 → Flow proposal):
   - every member node is split in→out with an internal edge capped by its
-    per-category throughput (`category_dependency_profiles[g].capacity`,
-    unbounded if absent), scaled by the node's Functionality;
+    per-category throughput (`throughput_capacity[g]`, unbounded if absent),
+    scaled by the node's Functionality;
   - a super-source feeds each source node's `in` with its effective supply
     (`supply_capacity[g]` scaled by Functionality);
   - each demanding node's `in` drains to a super-sink capped by its `demand`;
@@ -345,8 +345,9 @@ def _effective_supply(node: Node, category: str, func: int, n: int) -> int | Non
 def _throughput(
     node: Node, category: str, func: int, n: int, default_cap: float | None
 ) -> int:
-    profile = (node.category_dependency_profiles or {}).get(category)
-    cap = profile.capacity if profile is not None and profile.capacity is not None else default_cap
+    cap = (node.throughput_capacity or {}).get(category)
+    if cap is None:
+        cap = default_cap
     if cap is None:
         return INF_CAP
     return _scaled(cap * _func_ratio(func, n))

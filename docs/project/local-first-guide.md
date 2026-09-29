@@ -71,6 +71,7 @@ Inter-canvas edges are **not** a special type — they are stored as regular edg
       "cost_of_disservice_per_day": 200000,
       "position": { "x": 500, "y": 300 },
       "geo": { "lng": 13.318, "lat": 45.901 },
+      "throughput_capacity": { "water": 120 },
       "category_dependency_profiles": {
         "water": {
           "dependency_level": 3,
@@ -213,6 +214,7 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 | `importance` | `number` | Weight for Scorecard aggregation. |
 | `cost_of_disservice_per_day` | `number` | Economic impact when below full functionality. |
 | `supply_capacity` | `{ [category]: number }` | Source nodes only. Effective supply = `supply_capacity[cat] × (functionality / N)`. |
+| `throughput_capacity` | `{ [category]: number }` | How much this node can **pass on** — **Throughput Capacity** in the Inspector, offered for `SourceToDemands` categories. Effective throughput = `throughput_capacity[cat] × (functionality / N)`; unset means the category's largest declared supply, or unbounded when it has no source. Lived on the dependency profile as `capacity` until it moved beside `supply_capacity`; files written before the move are migrated on load. |
 | `category_dependency_profiles` | `{ [category]: profile }` | Per-category dependency attributes (see below). Absent on Source nodes for categories they supply. |
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Sensitivity to each defined Event. Higher = more vulnerable; 0 = immune (same as absent). |
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
@@ -224,7 +226,6 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 | Field | Required for | Description |
 | --- | --- | --- |
 | `dependency_level` | All categories | 1–N. N = fully dependent (strict thresholds). 1 = barely dependent (high tolerance). |
-| `capacity` | Optional, all categories | Max throughput for this category on this node — **Throughput Capacity** in the Inspector, offered for `SourceToDemands` categories. Degrades proportionally with Functionality; unset means the category's largest declared supply. |
 | `backup` | All categories | Whether a backup mechanism exists. |
 | `backup_duration` | All (if `backup: true`) | Hours (integer) the backup can sustain the element. |
 | `demand` | `SourceToDemands` only | Resource amount requested. |

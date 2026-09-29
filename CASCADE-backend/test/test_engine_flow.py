@@ -24,11 +24,7 @@ def _relay(nid, func=3, capacity=None):
     flow on. `capacity` is the Inspector's **Throughput Capacity**."""
     return Node(
         id=nid, functionality=func, node_categories=["water"],
-        category_dependency_profiles=(
-            {"water": CategoryDependencyProfile(dependency_level=3, capacity=capacity)}
-            if capacity is not None
-            else None
-        ),
+        throughput_capacity={"water": capacity} if capacity is not None else None,
     )
 
 
@@ -110,9 +106,8 @@ def test_healthy_edge_without_capacity_does_not_throttle():
 
 def test_node_throughput_capacity_throttles_delivery():
     # supply 10, demand 10, but the relay node itself passes at most 5
-    # (category_dependency_profiles["water"].capacity — Throughput Capacity in
-    # the Inspector) -> served 0.5 -> level 2. Same effect as an edge cap, on
-    # the node instead.
+    # (throughput_capacity["water"] — Throughput Capacity in the Inspector)
+    # -> served 0.5 -> level 2. Same effect as an edge cap, on the node instead.
     nodes = [_source("s", 10), _relay("r", capacity=5), _consumer("c", 10)]
     edges = [_edge("e1", "s", "r"), _edge("e2", "r", "c")]
     assert _solve(nodes, edges)["c"][0] == 2
@@ -263,3 +258,39 @@ def test_demandless_member_keeps_requisite_floor():
     ]
     edges = [_edge("e", "s", "c")]
     assert _run_water(nodes, edges)["c"].functionality == 1
+
+
+# --- throughput moved from the dependency profile to the node ---------------
+
+def test_legacy_profile_capacity_is_migrated_to_throughput_capacity():
+    """Throughput used to live at `category_dependency_profiles[cat].capacity`.
+    Every project file written before the move still carries that shape, so it
+    is lifted on load rather than rejected."""
+    node = Node.model_validate({
+        "id": "r", "functionality": 3, "node_categories": ["water"],
+        "category_dependency_profiles": {"water": {"dependency_level": 3, "capacity": 5.0}},
+    })
+    assert node.throughput_capacity == {"water": 5.0}
+
+
+def test_migrated_throughput_throttles_exactly_as_the_new_field_does():
+    """The migration is only worth having if a legacy file produces the same
+    Propagation as its migrated equivalent — assert the behaviour, not the
+    field."""
+    legacy = Node.model_validate({
+        "id": "r", "functionality": 3, "node_categories": ["water"],
+        "category_dependency_profiles": {"water": {"dependency_level": 3, "capacity": 5.0}},
+    })
+    edges = [_edge("e1", "s", "r"), _edge("e2", "r", "c")]
+    assert _solve([_source("s", 10), legacy, _consumer("c", 10)], edges)["c"][0] == 2
+
+
+def test_explicit_throughput_capacity_wins_over_a_leftover_profile_entry():
+    """A file carrying both was written after the move; the profile entry is a
+    leftover and must not override what the current field says."""
+    node = Node.model_validate({
+        "id": "r", "functionality": 3, "node_categories": ["water"],
+        "throughput_capacity": {"water": 5.0},
+        "category_dependency_profiles": {"water": {"dependency_level": 3, "capacity": 99.0}},
+    })
+    assert node.throughput_capacity == {"water": 5.0}

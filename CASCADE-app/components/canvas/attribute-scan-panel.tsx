@@ -185,12 +185,15 @@ export function AttributeScanPanel() {
       group: "vuln" as const,
       extractNode: (n: Node) => {
         const p = n.category_dependency_profiles?.[cat.name];
-        if (!p) return null;
+        // Throughput sits on the node, not the profile, so a node can carry one
+        // without a profile for the category at all.
+        const cap = n.throughput_capacity?.[cat.name];
+        if (!p) return cap !== undefined ? `cap:${cap}` : null;
         const parts: string[] = [`dep:${p.dependency_level}`];
         if (p.backup_duration !== undefined) parts.push(`backup:${p.backup_duration}h`);
         if (p.demand !== undefined) parts.push(`demand:${p.demand}`);
         if (p.priority !== undefined) parts.push(`priority:${p.priority}`);
-        if (p.capacity !== undefined) parts.push(`cap:${p.capacity}`);
+        if (cap !== undefined) parts.push(`cap:${cap}`);
         return parts.join(", ");
       },
       extractEdge: null,

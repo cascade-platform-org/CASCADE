@@ -444,26 +444,12 @@
       "type": "object"
     },
     "CategoryDependencyProfile": {
-      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N (N = len(functionality_scale)). Acts as a GUARD that\nattenuates a proposed Functionality drop by a linear shift:\n    P' = min(current, P + (N \u2212 dependency_level))\nN = full dependency (drop passes unattenuated); 1 = no dependency\n(shift of N\u22121 neutralises any possible drop entirely). Intermediate values\nreduce the drop linearly by (N \u2212 dependency_level) levels.\ncapacity: maximum throughput for this category \u2014 degrades proportionally with Functionality.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.",
+      "description": "Dependency attributes a node carries for one specific Category.\n\ndependency_level: 1..N (N = len(functionality_scale)). Acts as a GUARD that\nattenuates a proposed Functionality drop by a linear shift:\n    P' = min(current, P + (N \u2212 dependency_level))\nN = full dependency (drop passes unattenuated); 1 = no dependency\n(shift of N\u22121 neutralises any possible drop entirely). Intermediate values\nreduce the drop linearly by (N \u2212 dependency_level) levels.\ndemand and priority are SourceToDemands-only; leave absent for Requisite.\n\nThroughput used to live here as `capacity`. It moved to\n`Node.throughput_capacity` because it answers \"how much can this node pass\non\", which is the question `supply_capacity` answers \u2014 the Inspector has\nalways grouped the two under \"Capacities\", away from the dependency fields.\nProjects written before the move are migrated on load by\n`Node._migrate_legacy_throughput`.",
       "properties": {
         "dependency_level": {
           "minimum": 1,
           "title": "Dependency Level",
           "type": "integer"
-        },
-        "capacity": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Maximum throughput for this category.",
-          "title": "Capacity"
         },
         "backup": {
           "anyOf": [
@@ -1482,6 +1468,21 @@
           ],
           "default": null,
           "title": "Supply Capacity"
+        },
+        "throughput_capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Throughput Capacity"
         },
         "category_dependency_profiles": {
           "anyOf": [

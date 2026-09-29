@@ -42,8 +42,6 @@ export const CategoryDependencyProfileSchema = z.object({
    * Inverse of the Functionality scale: high dependency_level → fails hard on upstream degradation.
    */
   dependency_level: z.number().int().min(1),
-  /** Maximum throughput for this category. Degrades proportionally with Functionality. */
-  capacity: z.number().min(0).optional(),
   backup: z.boolean().optional(),
   /** Hours the backup can sustain the element. SourceToDemands only. */
   backup_duration: z.number().int().min(0).optional(),
@@ -86,6 +84,15 @@ export const NodeSchema = z.object({
    * SupplyDemandConflictWarning); it is a modelling slip, not a schema error.
    */
   supply_capacity: z.record(z.string(), z.number()).optional(),
+  /**
+   * Keyed by category. How much this node can PASS ON, as opposed to produce.
+   * Effective throughput = throughput_capacity[cat] × (functionality / N);
+   * absent means the category's largest declared supply, or unbounded when the
+   * category has no source. Lived on the dependency profile as `capacity`
+   * until it moved beside `supply_capacity`; the backend migrates old files on
+   * load (`Node._migrate_legacy_throughput`).
+   */
+  throughput_capacity: z.record(z.string(), z.number().min(0)).optional(),
   category_dependency_profiles: z.record(z.string(), CategoryDependencyProfileSchema).optional(),
   /**
    * Per-Event vulnerability: keyed by EventId, value 0..N−1. Higher = more

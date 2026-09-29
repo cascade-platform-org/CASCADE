@@ -138,7 +138,7 @@ Additional **node-only** attributes:
 | Attribute | Applies to | Description |
 |---|---|---|
 | `supply_capacity` | Source nodes | `{ [category]: number }` — maximum resource supply per category the node provides. |
-| `category_dependency_profiles[cat].capacity` | All nodes (per category) | Maximum throughput for that specific category dependency. Degrades proportionally with Functionality. |
+| `throughput_capacity[cat]` | All nodes (per category) | Maximum throughput for that category — how much the node can pass on. Degrades proportionally with Functionality. Sits beside `supply_capacity`; was on the dependency profile until it moved, and old files are migrated on load. |
 | `capacity` | Edges | Single number — caps the flow of the one category carried by the edge. An edge carries exactly one category-flow, determined by its source node's supply category. To model different capacity limits for different categories on the same connection, use separate edges (one per category).|
 
 ### 5.4 Per-Category Dependency Block

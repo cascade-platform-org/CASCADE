@@ -400,7 +400,6 @@ export function NodeInspector({ node }: { node: Node }) {
               quantities, so a throughput limit would read as a live control
               that does nothing. */}
           {throughputCategories.map((cat) => {
-            const profile = node.category_dependency_profiles?.[cat];
             const fallback = defaultThroughput(cat);
             return (
               <Field
@@ -413,23 +412,20 @@ export function NodeInspector({ node }: { node: Node }) {
                 }
               >
                 <NumberInput
-                  value={profile?.capacity}
+                  value={node.throughput_capacity?.[cat]}
                   min={0}
                   placeholder={fallback === null ? "unlimited" : String(fallback)}
-                  onChange={(v) =>
+                  onChange={(v) => {
+                    // 0 is how the field comes back when it is cleared, and
+                    // "passes nothing" is not what clearing means — drop the
+                    // key instead so the default applies again.
+                    const next = { ...(node.throughput_capacity ?? {}) };
+                    if (v > 0) next[cat] = v;
+                    else delete next[cat];
                     patch({
-                      category_dependency_profiles: {
-                        ...(node.category_dependency_profiles ?? {}),
-                        // 0 is how the field comes back when it is cleared, and
-                        // "passes nothing" is not what clearing means — drop the
-                        // key instead so the default applies again.
-                        [cat]: {
-                          ...(profile ?? { dependency_level: n }),
-                          capacity: v > 0 ? v : undefined,
-                        },
-                      },
-                    })
-                  }
+                      throughput_capacity: Object.keys(next).length > 0 ? next : undefined,
+                    });
+                  }}
                 />
               </Field>
             );
