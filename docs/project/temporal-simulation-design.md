@@ -56,7 +56,7 @@ Timeline
   steps: [ Step, … ]
 
 Step
-  advance_hours: elapsed hours — what `functionality_time` counts down (§4.4)
+  advance_hours: elapsed hours — what `functionality_time` counts down (§4.7)
   label:         the period this step represents, e.g. "2023-03"
   events:        [ EventDefinition id, … ]   applied before propagating
   propagate:     bool                        (some steps only set up state)
@@ -95,9 +95,8 @@ That is a stronger rule than it looks, and it buys three things:
   full semantics today (history entry, undo, Clear Event, Scorecard trigger).
 
 Replaying from step *n* needs the state at step *n−1*, which is a forward walk of the
-diffs from the baseline. That is the **same primitive** §3.1 needs for metrics, so one
-mechanism serves both; periodic keyframes are the obvious optimisation if mid-Timeline
-edits turn out to be frequent.
+diffs from the baseline — the **same primitive** §3.1 uses to show a step on request. One
+mechanism serves both.
 
 Interaction is an open question (§7). Dragging Events onto a track is one option; so is
 a plain editable table of steps, which is cheaper and probably clearer for 44 monthly
@@ -154,23 +153,22 @@ ADR-0018 set the same precedent independently: it kept a per-evaluation *delta*
 every evaluation of a Shapley run would be hundreds of megabytes."* Two ADRs have
 now chosen deltas over snapshots for the same reason. A third case should follow.
 
-**The cost of diffs is reconstruction, and it constrains the architecture.** A diff
-holds only what changed, but a metric at step 30 needs the *whole* state at step 30 —
-which is a walk of 30 diffs from the baseline. Recomputing that per chart point makes a
-44-step series quadratic.
+**Reconstruction is the cost of diffs, and it is affordable.** A diff holds only what
+changed, so the whole state at step 30 is a walk of 30 diffs from the baseline. Timelines
+are short — tens of steps, not thousands — so that walk is cheap and needs no keyframes,
+no caching layer and no cleverness.
 
-So the rule is: **metrics are computed in a single forward walk**, emitting every
-metric for every step as the walk passes through it. One O(n) pass, not n passes.
+Two things follow, and the first is a *semantic* rule rather than a performance one:
 
-Two consequences worth stating rather than discovering:
-
-- **A metric may not depend on the future.** Anything needing a later step's value —
-  a centred moving average, a normalisation against the run's own maximum — cannot be
-  computed in the forward pass and needs a second pass over the emitted series (cheap,
-  since that series is small) rather than over the diffs.
-- **Periodic keyframes** are the escape hatch if random access to a middle step ever
-  matters, which it does for the mid-Timeline edits of §2.1. Full state every *k* steps
-  bounds the walk to *k*.
+- **A metric at step *t* is computed from step *t* and the steps before it.** Nothing
+  later. That is what a metric on a running simulation means — at step 12 the run has not
+  happened yet past 12 — so a centred moving average or a normalisation against the run's
+  own final maximum is not a step metric at all. It is a post-hoc summary over the
+  finished series, and belongs wherever the finished series is presented.
+- **State is reconstructed on request, not stored.** No snapshot per step. A step's row
+  carries a control that rebuilds and shows the full graph state at that step when
+  someone asks for it — which is the case worth supporting (inspecting one interesting
+  period) without paying for the case that is not (keeping all of them).
 
 ### 3.2 Metrics: standard plus custom, evaluated at read time
 
@@ -181,6 +179,10 @@ That means **any metric is available after the fact**, provided the recorded sta
 contains its inputs — and it is the same principle ADR-0018 established for the
 Operativity weighting: *how a result is read is not a property of how it was
 computed.*
+
+A metric defined this way is shown **at every step** of a Timeline run, alongside the
+standard ones — that is the point of defining it, and it costs nothing extra because the
+forward walk passes through every step anyway.
 
 So a **custom metric is a view definition**, living in Client Configuration:
 
@@ -221,13 +223,10 @@ separately from the ones that answer *"how does it depend on others"* — the no
 Inspector has a **Capacities** section holding **Supply Capacity** and **Throughput
 Capacity** side by side, distinct from the dependency fields.
 
-Storage does not match that grouping: throughput is physically kept in
-`CategoryDependencyProfile.capacity` while supply sits in `Node.supply_capacity`.
-That split is a pre-existing wart — the Inspector's own comment records that
-throughput *"used to exist in the schema and in the engine with no field anywhere in
-the UI, so it could only be set by importing or hand-editing JSON."* **The UI grouping
-is the authority on intent; the storage location is an accident, and not a pattern to
-imitate.**
+Storage now matches that grouping: `Node.throughput_capacity` sits beside
+`Node.supply_capacity`, both keyed by category. It used to live on
+`CategoryDependencyProfile.capacity`, which put a "how much can it deliver" answer
+among the "how does it depend" fields; that was moved rather than imitated.
 
 A stock belongs in the **Capacities** family: it describes what the node holds and can
 therefore deliver, not how it depends on anything.
@@ -268,7 +267,7 @@ parallel dicts, mirroring `category_dependency_profiles`' shape.
 model authored against them (§6.1 explains what forces the decision):
 
 1. **`level` is what is on hand, and `min`/`max` bound that** — never a total that includes
-   amounts in transit or on order. §4.2's `capacity = R + (level − min)` already assumes
+   amounts in transit or on order. §4.3's `capacity = R + (level − min)` already assumes
    it: you cannot draw on stock that has not arrived. A bound on *total commitment* is a
    different concept (a credit limit) and would be its own field, not a redefinition of
    this one.
@@ -279,97 +278,111 @@ model authored against them (§6.1 explains what forces the decision):
    firing is either physics or a modelling error, and the two are impossible to tell apart
    if the amount disappears.
 
-### 4.2 The engine needs no stock awareness at all
+### 4.2 What a stock does, in order
 
-The first sketch had the engine update the stock from the demand/supply gap. Working
-through it, the engine should not **write** stocks, and on a second pass it turns out
-it need not **read** them either. Both conclusions shrink the change.
+One step, start to finish. Everything about stocks happens in the two shaded rows;
+the engine's row is unchanged from today.
 
-**Why it must not write.** `POST /api/propagate/batch` takes **one Project and up to
-50 coalitions**, running a Propagation per coalition over unchanged input; Vitality
-Centrality and Shapley Values run hundreds of these. If a Propagation mutated stocks,
-every coalition evaluation would move them and an Analysis run would silently corrupt
-the model state it was measuring. Re-running a scenario, undo and Clear Event rest on
-the same property. (Secondary: propagation is an iterative fixpoint, so an in-loop
-update would fire several times per run.)
+| # | Who | Does what | Touches the stock? |
+|---|---|---|---|
+| 1 | Step operator | Load the period's exogenous inputs from the profile | no |
+| 2 | **Step operator** | **Turn each stock's level into a capacity the engine can use** | **reads** |
+| 3 | Engine | Propagate. Sees capacities and demands, exactly as today | **no** |
+| 4 | **Step operator** | **Integrate the returned flows back into each level** | **writes** |
+| 5 | Step operator | Record the step | no |
 
-**Why it need not read.** A stock does have to constrain the allocation — a reservoir
-below dead storage cannot supply, a balance at its ceiling cannot accept more inflow, a
-depleted parts stock removes a repair path. The instinct that this belongs *inside* the
-allocation is right: clipping afterwards gives a different and wrong answer, because the
-allocator would have routed differently had it known.
+So a stock is **read once before the run and written once after it**, by the step
+operator, and the engine never sees one. That is the whole role. §4.3 gives the two
+formulas; §4.4 and §4.5 say why the engine is absent from both.
 
-But a stock is a **level** and a capacity is a **rate**, so something has to reconcile
-them. **The engine is period-agnostic and should stay that way**, so the step operator
-does it *before* the run:
+The same division already exists for the one stock the product has:
+`functionality_time` is *set* by the engine as a level and *decremented* by the
+Temporal Jump. Propagation proposes; the step integrates.
+
+### 4.3 The two formulas
+
+With `R` the declared per-period rate (`supply_capacity`, or an edge's capacity),
+`L` the level, `[m, M]` its bounds and `D` what the engine reported delivered:
 
 ```
-pre-step   stock level  ──(within bounds)──►  supply_capacity / edge capacity
-run        the engine sees only capacities, exactly as today
-post-step  delivered flows  ──────────────►  stock level
+step 2   capacity handed to the engine  =  R + (L − m)
+step 4   new level                      =  clamp( a·L + n·R − D + arrivals(t),  m,  M )
 ```
 
-**And the reconciliation is free, provided rates are declared per period.** If
-`supply_capacity` means "units per step" and the stock is in "units", the conversion
-factor is 1 and there is no Δt anywhere. This is not a new convention: the engine is
-already **dimensionless** — `_effective_supply` and `_demand` return bare numbers,
+`a` is `retention`, `n` is `efficiency`, and `arrivals(t)` is whatever `pending`
+schedules for this step (§6). All three default to 1.0 / empty, so the ordinary case
+is `capacity = R + (L − m)` and `L' = clamp(L + R − D, m, M)`.
+
+**The rule is fixed, not declarative.** A declaration supplies only *which attributes
+play `R` and `D`* — each either an exogenous profile attribute (§2) or a returned flow
+(`served_ratio × demand`). No expression language: that covers every case in §5, and a
+fixed rule is the difference between a schema field and a parser.
+
+Read step 2 as: **a stock is spendable**. This period can deliver more than the rate
+by drawing the level down toward its floor. And step 4 as: **delivering less than the
+rate refills it**, up to the ceiling. That is what makes a stock a buffer rather than
+a ceiling, which is the point of having one.
+
+Two checks that it is the right shape:
+
+- **The banca ore ledger.** With `R` = contract hours and `D` = hours worked,
+  `L' = L + contract − worked`. That is the observed recurrence, verified on 1,372 of
+  1,372 worker-years.
+- **A reservoir.** `L` is the tank level, `m` is dead storage, `R` the catchment
+  inflow; capacity is the inflow plus whatever is usably stored, and a dry period
+  draws the level down.
+
+**`min` and `max` are the policy instrument, not safety clamps.** "Cap the balance at
+X" *is* `max`; "never draw below dead storage" *is* `min`. They are what a scenario
+varies.
+
+### 4.4 Why the engine never writes a stock
+
+**It would break idempotency, and that breaks Analysis.** `POST /api/propagate/batch`
+takes **one Project and up to 50 coalitions**, running a Propagation per coalition over
+unchanged input; Vitality Centrality and Shapley Values run hundreds. A Propagation
+that mutated stocks would move them on every coalition evaluation, so an Analysis run
+would silently corrupt the very model state it was measuring. Re-running a scenario,
+undo and Clear Event rest on the same property.
+
+Secondary: propagation is an iterative fixpoint, so an in-loop write would fire several
+times per run and "once, after convergence" is a special case bolted onto the core loop.
+
+### 4.5 Why the engine never reads one either
+
+A stock **does** have to constrain the allocation — a reservoir below dead storage
+cannot supply, a balance at its ceiling cannot accept more, a depleted parts stock
+removes a repair path. Clipping *after* the run gives a different and wrong answer,
+because the allocator would have routed differently had it known.
+
+Step 2 is what satisfies that without the engine knowing anything: the constraint is
+**baked into the capacity the engine is handed**. It allocates against a number that
+already accounts for the stock.
+
+The reason it has to be step 2 rather than a read inside the engine is dimensional. A
+stock is a **level** and a capacity is a **rate**; reconciling them is a per-period
+question, and **the engine is period-agnostic and should stay that way**.
+
+That reconciliation is free provided rates are declared **per period**: if
+`supply_capacity` means "units per step" and the level is in "units", the factor is 1
+and no Δt appears anywhere. This is not a new convention — the engine is already
+**dimensionless**. `_effective_supply` and `_demand` return bare numbers,
 `served_ratio = delivered / demand` cancels the unit, and nothing in `flow.py` names a
 time unit. Declaring rates per period makes explicit what the code already does.
 
-One caveat. That holds while every step covers the same span; a Timeline with **uneven**
-steps — a month, then a quarter — would break it, since a quarter's contract hours are not
-a month's. It resolves itself, because the profile already supplies values **per step**
-(§2), so an uneven step simply carries its own rate. Still no Δt: the unevenness lives in
-the data rather than in a conversion.
+One caveat: that holds while every step covers the same span. A Timeline with **uneven**
+steps — a month, then a quarter — would break it, since a quarter's contract hours are
+not a month's. It resolves itself, because the profile supplies values **per step**
+(§2), so an uneven step carries its own rate. The unevenness lives in the data rather
+than in a conversion.
 
-See §4.4 for why this must not be folded into the Temporal Jump's hours.
+See §4.7 for why none of this may be folded into the Temporal Jump's hours.
 
-**The stock is drawn on to meet demand, not merely used as a ceiling.** With rate `R`
-(the declared per-period capacity), level `L`, bounds `[m, M]` and delivered `D`:
 
-```
-capacity handed to the engine   =  R + (L − m)
-integration after the run       =  L' = clamp( a·L + n·R − D + arrivals(t),  m,  M )
-```
+### 4.6 The sign is not universal, so it must be declared
 
-with `a` = `retention`, `n` = `efficiency`, and `arrivals(t)` whatever `pending` schedules
-for this step. Every default is 1.0 or empty, so this reduces to `L + R − D` unless a model
-asks for more; §6.0 says why all three are in from the start rather than retrofitted.
-
-So a period can deliver **more** than the rate by drawing the stock down toward `m`,
-and delivering **less** than the rate refills it up to `M`. The stock is the buffer
-that absorbs oscillation, which is the point of having one.
-
-Check it against the banca ore ledger: with `R` = contract hours and `D` = hours
-worked, `L' = L + contract − worked`. That is the ledger recurrence exactly.
-
-| Case | Pre-step capacity |
-|---|---|
-| reservoir with usable storage | `R + (level − dead storage)` |
-| stock at its floor | falls back to `R` alone |
-| stock at its ceiling | delivery below `R` no longer refills it |
-| depleted parts remove a path | that edge's `capacity = 0` |
-
-So the allocator does know about the stock — its drawable content is baked into the
-capacity it is handed — and the engine is unchanged. **Capability C is a `core/` concern
-plus one result field** (§4.5). Nothing about stocks enters `engine/`.
-
-**`min` and `max` are therefore not safety clamps — they are the policy instrument.**
-"Cap the balance at X" is `Stock.max`; "never let the reservoir go below dead storage"
-is `Stock.min`. The bounds are what a scenario varies.
-
-| | Reads stocks | Writes stocks |
-|---|---|---|
-| **Engine** | no | never |
-| **Step operator** (`core/` + `services/`) | yes | yes, once per step |
-
-The step operator belongs in `core/`: time integration is not propagation, and CLAUDE.md
-§7 describes `core/` as the home for open, auditable graph logic.
-
-### 4.3 The sign is not universal, so the coupling must be declared
-
-The formula in §4.2 assumes a positive level means **more** can be delivered. That holds
-for a reservoir, an inventory and a budget. It does not hold everywhere:
+§4.3 assumes a positive level means **more** can be delivered. True for a reservoir, an
+inventory and a budget. Not true everywhere:
 
 | Stock | A positive level means | Effect on capacity |
 |---|---|---|
@@ -377,30 +390,24 @@ for a reservoir, an inventory and a budget. It does not hold everywhere:
 | banca ore, conventional sign | the worker is owed time off | **lowers** it — a liability |
 | repair backlog | work is waiting | adds to **demand**, not supply |
 
-So a single formula needs the coupling stated somehow. The candidate — **not in the
-`Stock` model above, because it may not be needed** — is one more field:
+The candidate for stating it — **not in the `Stock` model of §4.1, because it may not be
+needed** — is one more field:
 
 ```python
-couples: Literal["supply", "demand", "none"] = "supply"   # candidate, see below
+couples: Literal["supply", "demand", "none"] = "supply"   # candidate
 ```
 
 where `none` records the stock without letting it constrain anything, which is what a
 consequence-only quantity wants.
 
-For a liability the modeller has two options, and the choice belongs to the model, not
-to the platform: declare it `demand`-coupled (owed time is demand for release), or store
-the inverted sign and flip it for display. Leaving it implicit produces a model that runs
-and is wrong.
+**The first case worked through did not need it.** Storing the *negative* of a banca ore
+balance — positive when workers owe the company — makes §4.3's formulas reproduce that
+ledger's verified recurrence **and** its accrual cap with no special case: the cap
+`B ≤ B_max` is simply `min = −B_max`, and capacity falls to `R` exactly when the cap
+binds. See `Coop-Noncello/period-simulation-design.md` §2.9. So a liability can be
+expressed by choosing the sign, and `couples` waits for a case that cannot.
 
-**The first case to be worked through chose the inverted sign, and it came out clean.**
-Storing the *negative* of a banca ore balance — positive when workers owe the company —
-makes §4.2's formula reproduce that ledger's verified recurrence **and** its accrual cap
-with no special case: the cap `B ≤ B_max` is simply `min = −B_max`, and the capacity then
-falls to `R` exactly when the cap binds. See `Coop-Noncello/period-simulation-design.md`
-§2.9. That is the strongest evidence so far that this formula is the right shape, and it
-weakens the case for a `couples` flag.
-
-### 4.4 Elapsed time and period quantity are two different numbers
+### 4.7 Elapsed time and period quantity are two different numbers
 
 A step therefore carries **two independent quantities**, and collapsing them is a real
 trap:
@@ -431,7 +438,7 @@ The two mechanisms only interact in a model that uses backup countdowns **and** 
 stocks. Keeping them as two fields now means that decision can be made properly when
 such a model appears, instead of being frozen by the first one that does not need it.
 
-### 4.5 What the engine must return
+### 4.8 What the engine must return
 
 To integrate a stock the step needs the **flows in physical units**, and Functionality
 cannot supply them: it is quantised (`_ratio_to_level` is `max(1, min(n, ceil(ratio·n)))`)
@@ -493,22 +500,12 @@ A specific-rule override or a backup deferral can make `functionality` disagree 
 a served ratio is the immediate *cause* of a Functionality level, while the per-edge
 assignment stays internal. That line belongs in the ADR, not in an assumption.
 
-### 4.6 The integration rule is fixed, not declarative
-
-§4.2 gives it: `L' = clamp(a·L + n·R − D + arrivals(t), min, max)`, all per period. What a
-declaration supplies is only **which attributes play `R` and `D`** — each either an
-exogenous profile attribute (§2) or a returned flow (`served_ratio × demand`,
-`utilisation × supply_capacity`, once that field exists).
-
-No expression language. That covers every case in §5, and a fixed rule is the difference
-between a schema field and a parser. Revisit when a real case does not fit, not before.
-
-### 4.7 Two hard invariants
+### 4.9 Two hard invariants
 
 1. **A stock is never written by a Rule.** ADR-0015's generic attribute-set consequents
    are a *set-once latch* — first writer wins, never overwritten — which would freeze a
    stock after the first step.
-2. **A stock is never written by the engine** (§4.2), or Analysis corrupts it.
+2. **A stock is never written by the engine** (§4.4), or Analysis corrupts it.
 
 ---
 
@@ -710,6 +707,9 @@ a boundary is better than letting someone discover it halfway through building o
   run get its own record type? Migration touches ADR-0006's discriminated union.
 - Which standard metrics ship? Operativity Score already exists; coverage and stock
   level are the obvious additions once `served_ratio` and stocks exist.
+- Where do post-hoc summaries over a finished run live (§3.1) — beside the step series,
+  or only in an export? They are not step metrics and should not be offered as if they
+  were.
 
 **Capability C**
 - Delayed return (§6.1) is resolved as far as it needs to be: the field is deferred, the
@@ -717,12 +717,12 @@ a boundary is better than letting someone discover it halfway through building o
   label-keyed dict. Nothing further blocks v1.
 - Source-side fairness (§6.4) — schedule it against the second real model rather than
   treating it as an optimisation.
-- `advance_hours` per step (§4.4): real hours per calendar month, or a flat 730? Only
+- `advance_hours` per step (§4.7): real hours per calendar month, or a flat 730? Only
   matters for a model using both backups and stocks; decide when one exists.
 - Does a stock ever need to be per-edge rather than per-node? The in-transit case that
   motivated the question is now covered by `pending` on the destination (§6.1), so nothing
   outstanding requires it.
-- Is `couples` (§4.3) needed at all? The first real case was expressible with the
+- Is `couples` (§4.6) needed at all? The first real case was expressible with the
   inverted sign alone. A backlog (`demand`-coupled) is the case that would still need it,
   and no concrete backlog model has been written yet.
 
