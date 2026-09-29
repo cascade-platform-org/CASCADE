@@ -139,6 +139,19 @@ class ModelConfiguration(BaseModel):
     version: str
     meta: ConfigMeta
     functionality_scale: list[FunctionalityScaleLevel] = Field(..., min_length=2)
+    flow_ratio_thresholds: Optional[list[float]] = Field(
+        default=None,
+        description=(
+            "Served-ratio → Functionality level table for the flow pass (ADR-0003). "
+            "N−1 ascending upper bounds in [0, 1] for an N-level scale: entry k is "
+            "the highest delivered/demand ratio that still reads as level k+1. None "
+            "means the linear split max(1, ceil(ratio · N)), which the table "
+            "[k/N for k in 1..N−1] reproduces exactly. Sits beside "
+            "functionality_scale because it says what those levels MEAN, and is "
+            "validated against them by the engine — a table whose length does not "
+            "match the scale is ignored and reported in the run's warnings."
+        ),
+    )
     categories: list[CategoryDefinition]
     events: list[EventDefinition] = Field(
         default_factory=list,

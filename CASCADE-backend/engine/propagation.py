@@ -27,7 +27,13 @@ from datetime import datetime, timezone
 
 from core.topology import build_incoming_index
 from engine import guards
-from engine.flow import ALLOCATIONS, DEFAULT_ALLOCATION, flow_category_candidates, is_flow_consumer
+from engine.flow import (
+    ALLOCATIONS,
+    DEFAULT_ALLOCATION,
+    flow_category_candidates,
+    is_flow_consumer,
+    parse_ratio_thresholds,
+)
 from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
 from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
@@ -58,6 +64,35 @@ def _resolve_flow_allocation(request: PropagationRequest) -> str:
             if allocation in ALLOCATIONS:
                 return allocation
     return DEFAULT_ALLOCATION
+
+
+def _resolve_ratio_thresholds(
+    request: PropagationRequest, scale_size: int
+) -> tuple[list[float] | None, list[str]]:
+    """Served-ratio → Functionality level table for this run (ADR-0003).
+
+    Read straight off the Model Configuration, beside the Functionality scale
+    it is expressed in terms of. Unlike `allocation` — which is genuinely
+    per-graph-type, since two networks may ration scarcity differently — this
+    table says what a *level* means, and a level means one thing across the
+    project or the Operativity Score averages unlike things.
+
+    Returns `(table, warnings)`. None means the linear split. A malformed table
+    is **warned about** rather than silently defaulted: its required length
+    depends on the scale, so falling back in silence would look like it had
+    been applied.
+    """
+    raw = request.config.flow_ratio_thresholds
+    if raw is None:
+        return None, []
+    table = parse_ratio_thresholds(raw, scale_size)
+    if table is None:
+        return None, [
+            f"flow_ratio_thresholds ignored (linear split used): expected "
+            f"{scale_size - 1} ascending values in [0, 1] for a "
+            f"{scale_size}-level scale"
+        ]
+    return table, []
 
 
 def run(request: PropagationRequest) -> PropagationResult:
@@ -101,6 +136,9 @@ def run(request: PropagationRequest) -> PropagationResult:
         (lvl.level for lvl in request.config.functionality_scale), default=1
     )
     max_rounds = (len(nodes) + 1) * scale_size + 5
+
+    # Level table is validated against the scale, so it resolves after N.
+    ratio_thresholds, config_warnings = _resolve_ratio_thresholds(request, scale_size)
 
     # For each node, precompute which SourceToDemands categories to skip in the
     # Requisite pass. A category is skipped only when BOTH hold:
@@ -147,6 +185,7 @@ def run(request: PropagationRequest) -> PropagationResult:
             for nid, candidate in flow_category_candidates(
                 category, nodes, edges, node_func, edge_func, scale_size,
                 allocation=flow_allocation,
+                ratio_thresholds=ratio_thresholds,
             ).items():
                 flow_candidates.setdefault(nid, {})[category] = candidate
 
@@ -334,7 +373,7 @@ def run(request: PropagationRequest) -> PropagationResult:
 
     updates: list[ElementUpdate] = list(acc.values())
 
-    warnings: list[str] = list(rules.warnings)
+    warnings: list[str] = list(rules.warnings) + config_warnings
     if not converged:
         warnings.append("convergence not reached")
 

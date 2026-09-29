@@ -310,6 +310,22 @@
           "title": "Functionality Scale",
           "type": "array"
         },
+        "flow_ratio_thresholds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Served-ratio \u2192 Functionality level table for the flow pass (ADR-0003). N\u22121 ascending upper bounds in [0, 1] for an N-level scale: entry k is the highest delivered/demand ratio that still reads as level k+1. None means the linear split max(1, ceil(ratio \u00b7 N)), which the table [k/N for k in 1..N\u22121] reproduces exactly. Sits beside functionality_scale because it says what those levels MEAN, and is validated against them by the engine \u2014 a table whose length does not match the scale is ignored and reported in the run's warnings.",
+          "title": "Flow Ratio Thresholds"
+        },
         "categories": {
           "items": {
             "$ref": "#/$defs/CategoryDefinition"

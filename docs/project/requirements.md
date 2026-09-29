@@ -289,7 +289,12 @@ For nodes with `demand > 0` in at least one `SourceToDemands`-typed category, th
   strict triage, winner-take-all among equals). Selected via the
   `source-to-demands-flow` heuristic's `allocation` param on the graph type.
 - Sources combined jointly; `capacity` on infrastructure and edges constrains throughput.
-- Service node functionality set from delivered/demand ratio via a configurable threshold table (`dependency_level` guard applies afterwards).
+- Service node functionality set from delivered/demand ratio via a configurable
+  threshold table (ADR-0003, implemented): `ModelConfiguration.flow_ratio_thresholds`,
+  `N − 1` ascending ratios in `[0, 1]`, project-wide and edited beside the
+  Functionality scale. Unset gives the linear split `max(1, ceil(ratio · N))`;
+  a malformed table is ignored and reported in the run's warnings.
+  (`dependency_level` guard applies afterwards.)
 - The flow candidate `P_flow` is merged into `P` via `worst_of` alongside the Requisite candidate.
 
 Nodes without demand are unaffected by this pass.

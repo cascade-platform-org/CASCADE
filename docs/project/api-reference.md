@@ -127,6 +127,10 @@ param so far: `allocation` (enum `tiered_fair_share` — the default — or
 (ADR-0014). Set it on the matching `GraphTypeConfig.heuristics` entry in the
 model configuration; Propagation resolves it from the request's canvases.
 
+The served-ratio → Functionality level table is **not** a heuristic param: it
+is `ModelConfiguration.flow_ratio_thresholds`, project-wide, beside the
+Functionality scale it is expressed in terms of (ADR-0003).
+
 ---
 
 ## Auth

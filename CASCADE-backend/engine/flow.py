@@ -71,6 +71,7 @@ def flow_category_candidates(
     edge_func: dict[str, int],
     n: int,
     allocation: str = DEFAULT_ALLOCATION,
+    ratio_thresholds: list[float] | None = None,
 ) -> dict[str, tuple[int, dict[str, float]]]:
     """Flow proposal for one `SourceToDemands` category.
 
@@ -79,6 +80,8 @@ def flow_category_candidates(
     (they impose no constraint). Responsibility uses the provisional v1
     uniform-blame rule (ADR-0003). `allocation` picks how scarcity is shared
     (see ALLOCATIONS above); both strategies solve over the same graph.
+    `ratio_thresholds` is the validated level table (`parse_ratio_thresholds`);
+    None means the linear split.
     """
     # sorted: node iteration order decides edge-insertion order into the
     # solver graph, and an unsorted set's order depends on the per-process
@@ -132,7 +135,7 @@ def flow_category_candidates(
         # "fully served". `demand` is truthy for every consumers[] entry.
         demand = _demand(nodes[nid], category)
         served_ratio = delivered.get(nid, 0) / SCALE / demand if demand else 1.0
-        level = _ratio_to_level(served_ratio, n)
+        level = _ratio_to_level(served_ratio, n, ratio_thresholds)
         if level >= n:
             continue  # fully (or near-fully) served — no degradation proposed
         candidates[nid] = (level, _blame(nid, category, nodes, edges, node_func, edge_func, n))
@@ -370,10 +373,51 @@ def _edge_capacity(edge: Edge, func: int, n: int, default_cap: float | None) -> 
     return _scaled(cap * _func_ratio(func, n))
 
 
-def _ratio_to_level(served_ratio: float, n: int) -> int:
-    """Map served ratio to an integer level. Default linear split (ADR-0003):
-    `max(1, ceil(ratio · N))`. Configurable thresholds land in a later revision."""
-    return max(1, min(n, math.ceil(served_ratio * n)))
+def parse_ratio_thresholds(raw: list[float] | None, n: int) -> list[float] | None:
+    """Validate a configured threshold table against the Functionality scale.
+
+    Returns the table when usable, or None when it is absent or malformed —
+    the caller then falls back to the linear split, the same tolerate-and-
+    default discipline `allocation` uses for an unknown strategy.
+
+    A table is `n - 1` **ascending upper bounds** in [0, 1]: entry k is the
+    highest served ratio that still reads as level k+1, and level `n` is
+    whatever exceeds the last one. `[k / n for k in 1..n-1]` reproduces the
+    linear default exactly, which is what makes the default expressible in
+    the same terms rather than a special case.
+
+    Only the three things the schema layer cannot check are checked here.
+    `ModelConfiguration.flow_ratio_thresholds` is typed `list[float]`, so
+    element types are already settled; the **length** depends on the project's
+    Functionality scale, and **range** and **ascent** are relations between
+    entries.
+
+    Non-strict ascent is allowed on purpose: two equal bounds make the level
+    between them unreachable, which is a legitimate way to say "no consumer
+    should ever be reported at that level".
+    """
+    if raw is None or len(raw) != n - 1:
+        return None
+    if any(not 0.0 <= value <= 1.0 for value in raw):
+        return None
+    if any(b < a for a, b in zip(raw, raw[1:])):
+        return None
+    return [float(value) for value in raw]
+
+
+def _ratio_to_level(
+    served_ratio: float, n: int, thresholds: list[float] | None = None
+) -> int:
+    """Map served ratio to an integer level.
+
+    With a threshold table (ADR-0003), the level is one plus however many
+    bounds the ratio has passed. Without one, the linear split
+    `max(1, ceil(ratio · N))`.
+    """
+    if thresholds is None:
+        return max(1, min(n, math.ceil(served_ratio * n)))
+    level = 1 + sum(1 for bound in thresholds if bound < served_ratio)
+    return max(1, min(n, level))
 
 
 # --- responsibility (provisional v1 uniform-blame, ADR-0003) ----------------

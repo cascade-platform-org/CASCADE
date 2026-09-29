@@ -112,6 +112,12 @@ interface ConfigActions {
    * stay put and the labels and colours move between them.
    */
   reorderScaleLevels: (orderedLevels: number[]) => void;
+  /**
+   * Served-ratio → Functionality level table (ADR-0003). `null` clears it,
+   * restoring the linear split. Lives beside the scale because it says what
+   * those levels mean; the engine validates the length against the scale.
+   */
+  setFlowRatioThresholds: (thresholds: number[] | null) => void;
 
   // --- Categories (operate on draft) ---
   addCategory: (category: CategoryDefinition) => void;
@@ -316,6 +322,14 @@ export const useConfigStore = create<ConfigStore>()(
         const entry = state.draft.functionality_scale.find((l) => l.level === level);
         if (!entry) return;
         Object.assign(entry, patch);
+        recomputeDirty(state);
+      });
+    },
+
+    setFlowRatioThresholds(thresholds) {
+      set((state) => {
+        if (thresholds === null) delete state.draft.flow_ratio_thresholds;
+        else state.draft.flow_ratio_thresholds = thresholds;
         recomputeDirty(state);
       });
     },

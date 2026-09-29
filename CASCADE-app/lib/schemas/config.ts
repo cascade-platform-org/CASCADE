@@ -135,6 +135,15 @@ export const ModelConfigurationSchema = z.object({
   }),
   /** Ordered 1..N. Index 0 = worst (critical), last = best (operational). */
   functionality_scale: z.array(FunctionalityScaleLevelSchema).min(2),
+  /**
+   * Served-ratio → Functionality level table for the flow pass (ADR-0003).
+   * N−1 ascending upper bounds in [0, 1]; entry k is the highest
+   * delivered/demand ratio that still reads as level k+1. Absent means the
+   * linear split. Beside `functionality_scale` because it says what those
+   * levels mean; the engine validates it against them and reports a
+   * mismatched table in the run's warnings.
+   */
+  flow_ratio_thresholds: z.array(z.number()).optional(),
   categories: z.array(CategoryDefinitionSchema),
   /** Hazard and Disservice definitions. Both types are Events. */
   events: z.array(EventDefinitionSchema).default([]),
