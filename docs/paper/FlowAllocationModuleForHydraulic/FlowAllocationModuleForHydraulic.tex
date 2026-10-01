@@ -80,7 +80,7 @@ quantity-aware categories plug in dedicated mechanisms---here, a max-min fair-sh
 module for water distribution. Both share one discrete functionality scale and a
 monotonic update algorithm guaranteeing convergence in finitely many rounds. 
 We assess the flow module by comparing its results with those we get from preexisting
-pressure-driven WNTR simulation on eight realistic networks across four failure families (clustered damage, capacity-targeted attack, source failure,
+pressure-driven simulation with WNTR (Water Network Tool for Resilience) on eight realistic networks across four failure families (clustered damage, capacity-targeted attack, source failure,
 tank loss). Under capacity-targeted attack and source failure a topological-reachability baseline misses
 46\% of the truly critical junctions, where the flow module misses 10\% and 8\% at an average critical-class precision of
 0.73.\footnote{Supplementary materials, code and results are available at:
@@ -96,7 +96,7 @@ critical infrastructure, amplifying initial damage well beyond the
 footprint of the initiating event---from Hurricane Maria's long-lasting
 multi-system service crisis in Puerto Rico~\cite{hurricane_maria} to the
 April 2025 Iberian blackout's national-scale propagation into transport
-and digital services~\cite{panel2025grid}. The UNDRR's resilient-infrastructure handbook
+and digital services~\cite{panel2025grid}. The UN Office for Disaster Risk Reduction (UNDRR) resilient-infrastructure handbook
 calls for tools that capture ``the interdependent nature of infrastructure and services
 [\ldots] and the cascading impacts''~\cite{UNDRR2023Handbook}.
 
@@ -124,7 +124,7 @@ For consumable resources, a plug-in flow module allocates finite supply
 among demand nodes using priority-tiered max-min fairness. Both
 mechanisms share the same functionality scale and monotonic update rule,
 which guarantees finite convergence. We instantiate the flow module for
-water distribution, automatically importing EPANET networks and
+water distribution, automatically importing EPANET (the standard open hydraulic solver) networks and
 comparing the resulting functionality estimates with pressure-driven
 WNTR simulations. The module is intended as a light-data approximation,
 not as a replacement for detailed hydraulic analysis.
@@ -469,7 +469,8 @@ a per-node functionality estimate.
     \qquad
     \mathrm{recall} = \frac{|M \cap W|}{|W|}.
   \]
-  Recall asks what share of the genuinely critical junctions were found by the module; precision asks
+  Precision and recall are the standard classification measures applied to the critical class, and FMS is the
+  demand-weighted level disagreement defined above. Recall asks what share of the genuinely critical junctions were found by the module; precision asks
   what share of the module's critical flags were real. Both are computed \emph{per situation} and then
   averaged over situations. A
   fifth of our situations are ones in which the network's redundancy absorbs the
@@ -594,7 +595,7 @@ propagation rules with multiple experts.
 experimental protocol and metric conventions, S3 the required inputs,
 S4 the per-network results, S5 the capacity and priority analyses, S6
 the ground-truth sensitivity analysis, S7 unsuccessful alternatives,
-and S8 the computational-cost measurements.
+S8 the computational-cost measurements, and S9 one failure drawn on Net3.
 
 
 % ============================================================================

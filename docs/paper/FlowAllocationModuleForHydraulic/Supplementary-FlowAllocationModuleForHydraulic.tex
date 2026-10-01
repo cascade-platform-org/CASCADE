@@ -6,13 +6,13 @@
 %
 % Content moved here from the main paper's appendices (2026-07-17) to meet
 % the venue's 12-page cap. Distributed alongside the released code, not
-% submitted as part of the proceedings paper. Sections are numbered S1-S8
+% submitted as part of the proceedings paper. Sections are numbered S1-S9
 % and referenced from the main text as "Supp. Mat. SN".
 %
 % ORDER (reset 2026-08-17): the sections now follow the main paper's own
 % narrative — setup (S1 importer, S2 protocol, S3 inputs), then results
 % (S4 extended validation, S5 ablations, S6 sensitivity), then what did not
-% work (S7), then cost (S8). Any renumbering here MUST be mirrored in every
+% work (S7), then cost (S8), then a worked example (S9). Any renumbering here MUST be mirrored in every
 % "Supp. Mat. SN" string in complenet.tex — those are plain text, not \ref.
 %
 % STYLE: setup + numbers + take-home message. Tables carry the evidence;
@@ -58,7 +58,7 @@ Services with a Flow-Allocation Module Validated Against Hydraulic Simulation}
 \noindent This document specifies the setup behind the main paper's results
 (Sec.~\ref{app:importer}--\ref{app:inputs}), reports them in full
 (Sec.~\ref{app:extended}--\ref{app:sensitivity}), records what did not work
-(Sec.~\ref{app:negative}), and measures cost (Sec.~\ref{app:cost}). Main-paper
+(Sec.~\ref{app:negative}), measures cost (Sec.~\ref{app:cost}), and draws one failure in full (Sec.~\ref{app:snapshot}). Main-paper
 sections are cited as ``main paper, Sec.~$n$''. The critical-class detection
 figures share the main paper's Table~1 with the per-family FMS and are not
 repeated here.
@@ -764,5 +764,28 @@ magnitude, with individual situations taking tens of seconds.
 The architecture's case is the input requirements of
 Sec.~\ref{app:inputs} --- what it models without hydraulic data, and what it
 composes --- not speed. 
+
+% ============================================================================
+\section{A Worked Failure on Net3}\label{app:snapshot}
+
+Figure~\ref{fig:snapshot} draws one situation of the \emph{targeted} family on Net3
+(situation \texttt{targeted\#41} of the benchmark, seed $1$) three ways: the
+pressure-driven WNTR reference, the flow module, and the reachability baseline. The attack
+closes three large mains, among the largest-diameter pipes and pumps the family selects from
+(Sec.~\ref{app:extended}); each junction is coloured by its functionality level at $N=3$.
+No junction is disconnected from a source, so reachability sees nothing and flags no junction.
+WNTR reports ten critical junctions, all of them in the area the closed mains fed. The module flags seven of those ten, misses three, and adds eleven
+false alarms: the over-warning of the main paper's discussion, here visible as
+critical junctions in the same area that WNTR leaves degraded or operational. The counts equal
+this situation's row of \texttt{final\_benchmark.csv}. The figure is produced by
+\texttt{experiments/aqueducts/figure\_snapshot.py}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{fig_net3_snapshot_targeted41}
+\caption{One capacity-targeted failure on Net3. Crosses mark the three closed mains; line
+width follows pipe diameter. (a)~WNTR pressure-driven reference, (b)~flow module,
+(c)~reachability baseline.}\label{fig:snapshot}
+\end{figure}
 
 \end{document}
