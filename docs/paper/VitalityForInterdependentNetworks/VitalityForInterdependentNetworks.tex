@@ -249,7 +249,7 @@ round from the previous state, so $f_{n+1} \le f_n$ pointwise and a node that fa
 stays failed. A round that switches nothing off leaves every later round unchanged,
 and any other round switches off at least one of the $|V|$ nodes, so the sequence
 $f_0, f_1, f_2, \dots$ reaches a fixed point after at most $|V|$ rounds. Write
-$f_\infty$ for the fixed-point\emph{propagated state} it reaches, $N(D)$ for the number of
+$f_\infty$ for the \emph{propagated state}, the fixed point it reaches, and $N(D)$ for the number of
 nodes $f_\infty$ leaves operational.
 
 \paragraph{What the model assumes.}
@@ -403,9 +403,11 @@ tie-breaks, evaluated in closed form.
 \subsection{Relabelling a Fixed Graph}
 \label{sec:ablation}
 This experiment holds one graph topology fixed and varies only the number of service labels.
-Results are means over $20$ replicates, each interval below a $95\%$ percentile bootstrap over those
-replicates.
+Results are means over $20$ replicates; the bracketed intervals in the text are $95\%$ percentile
+bootstrap intervals over those replicates.
 
+In every replicate a link $u \to v$ makes $\sigma(u)$ a requirement of $v$ (Eq.~(\ref{eq:requires})),
+so a node receiving a link from a supplier of service $X$ depends on $X$.
 Each replicate draws one random acyclic graph on $n = 60$ nodes with some $109$
 links and holds it fixed\footnote{The generator is in
 \texttt{experiments/centrality/category\_ablation.py} of the repository named in
@@ -612,7 +614,11 @@ suppliers; the labels group those suppliers into the services the node requires,
 and that grouping decides, for every link entering the node, whether the link is a
 series element or a parallel one, and through that the vitality of the node: on one
 fixed graph topology, relabelling the services moves three fifths of the top-$10\%$
-nodes. Ranking the nodes worth protecting begins with defining what each node provides.
+nodes. For system reliability, the labels decide which links are single points of failure:
+a link is one when its supplier is the only provider of its service to the node it enters.
+The same graph therefore tolerates more or fewer single failures depending on the labels,
+and $\Omega$, the mean share of the system lost to one failure, rises from $0.023$ to
+$0.114$. Ranking the nodes worth protecting begins with defining what each node provides.
 
 
 \paragraph{Data and code availability.}

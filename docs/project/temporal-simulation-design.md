@@ -10,6 +10,20 @@ uses these capabilities lives with the case, not here.
 
 ---
 
+## Contents
+
+1. What exists today
+2. Capability A — a composable time simulation
+3. Capability B — recording a run
+4. Capability C — stocks (4.0 constraints to check first · 4.1 schema · 4.2 order of
+   operations · 4.3 the two formulas · 4.4–4.5 why the engine is excluded · 4.6 sign ·
+   4.7 elapsed vs. period time · 4.8 what the engine must return · 4.9 invariants)
+5. What this buys, beyond the first use case
+6. Stress-testing the abstraction against other domains
+7. Open questions
+
+---
+
 ## 1. What exists today
 
 CASCADE can already run time forward, for exactly one stock, hardcoded.
@@ -68,6 +82,15 @@ by hand defeats the purpose:
 ```
   every: N steps → apply events [ … ]
 ```
+
+**This schema is known not to fit the first real case as written**, and is left
+unresolved rather than patched silently — see the open question in §7. The banca ore
+model (`Coop-Noncello/period-simulation-design.md` §2.4) needs an Event to fire
+*between* two Propagations within one period (release supplement capacity after
+seeing what contract hours alone delivered), but a Step has exactly one `propagate`
+after all its events. §7's cross-cutting entitlement estimate already counts "two
+Propagations" per step for that model, which the schema above cannot express — that
+arithmetic is ahead of the schema it is estimating.
 
 Two properties matter and neither is free today:
 
@@ -212,6 +235,28 @@ conclusion.
 
 ## 4. Capability C — stocks
 
+### 4.0 Constraints a v1 stock model must respect
+
+The schema and formulas below are shaped entirely by six constraints. Each is argued
+for in full where cited; this list is for checking the shape, not deriving it.
+
+- **The engine never reads or writes a stock.** It is read once, by the step operator,
+  into a capacity handed to the engine; it is written once, by the step operator, from
+  the flows the engine returned. The engine sees a stock only as a number already baked
+  into `supply_capacity` (§4.4, §4.5).
+- **`level` is on-hand only** — never a total that includes amounts in transit or on
+  order. `min`/`max` bound on-hand, not total commitment (§4.1, pinned further by §6.1).
+- **A clamp is always reported, never silent.** `max` or `min` truncating a step emits
+  `spilled` or `unmet` as a result rather than absorbing the amount (§4.1).
+- **A stock is never written by a Rule.** ADR-0015 consequents are a set-once latch;
+  applied to a stock, that would freeze it after its first write (§4.9).
+- **A supply-side stock needs exactly one source.** Source outflow is only determinate
+  when sources do not share consumers; a shared-consumer topology — most real supply
+  chains — is out of v1's reach until source-side fairness exists (§4.8, §6.4).
+- **Rates and levels are per period; `advance_hours` is a separate, elapsed-time
+  quantity that only `functionality_time` reads.** Conflating the two under-drains
+  backup countdowns by roughly the labour/calendar ratio (§4.7).
+
 ### 4.1 Where a stock belongs: with the capacities, without being one
 
 A **stock** is a value that persists across steps, in contrast to derived state which
@@ -259,6 +304,12 @@ class Node(BaseModel):
     stocks: Optional[dict[str, Stock]] = None   # keyed by category. None = no stock
 ```
 
+Three of these fields are inert by default and only earn their keep in §6:
+`retention` and `efficiency` are coefficients, justified in §6.2 and §6.3 respectively;
+`pending` is the one *shape* change admitted into v1, justified in §6.1. All three
+default to identity (1.0, 1.0, empty), so a model that never reads §6 sees only the
+plain `L' = clamp(L + R − D, m, M)` of §4.3 and nothing else.
+
 Signed, unlike `functionality_time` — a balance, a reservoir drawdown and a backlog
 all go negative or need a floor that is not zero. One dict of models rather than three
 parallel dicts, mirroring `category_dependency_profiles`' shape.
@@ -302,7 +353,8 @@ Temporal Jump. Propagation proposes; the step integrates.
 ### 4.3 The two formulas
 
 With `R` the declared per-period rate (`supply_capacity`, or an edge's capacity),
-`L` the level, `[m, M]` its bounds and `D` what the engine reported delivered:
+`L` the level, `[m, M]` its bounds (the Stock fields `min`/`max` above) and `D` what
+the engine reported delivered:
 
 ```
 step 2   capacity handed to the engine  =  R + (L − m)
@@ -390,22 +442,14 @@ inventory and a budget. Not true everywhere:
 | banca ore, conventional sign | the worker is owed time off | **lowers** it — a liability |
 | repair backlog | work is waiting | adds to **demand**, not supply |
 
-The candidate for stating it — **not in the `Stock` model of §4.1, because it may not be
-needed** — is one more field:
-
-```python
-couples: Literal["supply", "demand", "none"] = "supply"   # candidate
-```
-
-where `none` records the stock without letting it constrain anything, which is what a
-consequence-only quantity wants.
-
-**The first case worked through did not need it.** Storing the *negative* of a banca ore
-balance — positive when workers owe the company — makes §4.3's formulas reproduce that
-ledger's verified recurrence **and** its accrual cap with no special case: the cap
-`B ≤ B_max` is simply `min = −B_max`, and capacity falls to `R` exactly when the cap
-binds. See `Coop-Noncello/period-simulation-design.md` §2.9. So a liability can be
-expressed by choosing the sign, and `couples` waits for a case that cannot.
+**The first case worked through did not need a new field.** Storing the *negative* of
+a banca ore balance — positive when workers owe the company — makes §4.3's formulas
+reproduce that ledger's verified recurrence **and** its accrual cap with no special
+case: the cap `B ≤ B_max` is simply `min = −B_max`, and capacity falls to `R` exactly
+when the cap binds. See `Coop-Noncello/period-simulation-design.md` §2.9. So a
+liability is expressed by choosing the sign alone, **not in the `Stock` model of §4.1,
+because it may not be needed** — whether a case exists that the sign trick cannot
+reach, and what field it would need, is an open question argued in §7.
 
 ### 4.7 Elapsed time and period quantity are two different numbers
 
@@ -579,12 +623,13 @@ Applied to what §6 found:
 The integration rule therefore settles as
 
 ```
-L' = clamp( a*L + n*R - D + arrivals(t),  min,  max )
+L' = clamp( a*L + n*R - D + arrivals(t),  m,  M )
 ```
 
-with `a = retention` (default 1.0), `n = efficiency` (default 1.0), and `arrivals(t)`
-empty unless a pipeline is in use. All three defaults make it identical to the simple
-form, so nothing pays for generality it does not use.
+using §4.3's `m, M` for the `min`/`max` fields, with `a = retention` (default 1.0),
+`n = efficiency` (default 1.0), and `arrivals(t)` empty unless a pipeline is in use.
+All three defaults make it identical to the simple form, so nothing pays for
+generality it does not use.
 
 ### 6.1 Delay is the primitive most often missing
 
@@ -691,6 +736,13 @@ a boundary is better than letting someone discover it halfway through building o
 ## 7. Open questions
 
 **Capability A**
+- **A Step's `events → propagate` order is too rigid, and the first real case already
+  needs more.** The banca ore model needs Propagate → Event → Propagate within one
+  period (§2). Candidate fix: a Step carries a list of `(events, propagate)` phases
+  instead of one flat pair — but that changes what "one step = one period" means for
+  capability B's per-step metrics and for `advance_hours`, so it is not a drop-in
+  widening of the field. Blocks P2 of the banca ore model, which is the first thing
+  that would exercise this schema for real.
 - Is a Timeline authored as a track with draggable Events, or as an editable table of
   steps? The table is cheaper and likely clearer at tens of periods. Either way the Event
   is the only edit handle (§2.1).
@@ -712,6 +764,16 @@ a boundary is better than letting someone discover it halfway through building o
   were.
 
 **Capability C**
+- **Neither write mechanism covers a stock-conditioned policy write.** §4.3's
+  integration rule is one fixed shape (`L' = clamp(a·L + n·R − D + arrivals(t), m, M)`)
+  and an Event is a static declared `attribute_mutations` set — neither can express
+  "write half of the current level" or "write 0 once the level crosses a threshold."
+  The banca ore model's liquidation rule needs exactly that, and its own design
+  (`Coop-Noncello/period-simulation-design.md` §7.3) resolves it by placing the rule in
+  client-side script code that never touches a Stock, an Event, or the engine — i.e.
+  the actual governance policy sits outside every one of the three capabilities. If a
+  second model needs the same kind of write, this needs a real primitive rather than a
+  second bespoke escape hatch.
 - Delayed return (§6.1) is resolved as far as it needs to be: the field is deferred, the
   semantics of `level`/`max` are pinned in §4.1, and the shape when it lands is a
   label-keyed dict. Nothing further blocks v1.
@@ -722,12 +784,24 @@ a boundary is better than letting someone discover it halfway through building o
 - Does a stock ever need to be per-edge rather than per-node? The in-transit case that
   motivated the question is now covered by `pending` on the destination (§6.1), so nothing
   outstanding requires it.
-- Is `couples` (§4.6) needed at all? The first real case was expressible with the
-  inverted sign alone. A backlog (`demand`-coupled) is the case that would still need it,
-  and no concrete backlog model has been written yet.
+- Is `couples` (§4.6) needed at all? Candidate shape:
+  ```python
+  couples: Literal["supply", "demand", "none"] = "supply"   # candidate
+  ```
+  where `none` would record a stock without letting it constrain anything — what a
+  consequence-only quantity wants. The first real case (banca ore) needed no such
+  field: storing the balance's negative made §4.3's formulas reproduce the ledger's
+  accrual cap for free (§4.6). The queue-length case in §6's stress test (`fits, and it
+  is the missing couples: demand example`) is the one that would still need it, and no
+  concrete backlog model has been written yet.
 
 **Cross-cutting**
 - `ENGINE_TIMEOUT_SECONDS` is 30 per Propagation (ADR-0008). A Timeline of 44 steps
   with two Propagations each is 88 sequential calls, each metered against the role's
   Engine Evaluation budget. A batch path for a Timeline may be needed, and the
   entitlement accounting for one needs deciding.
+- **New vocabulary, if accepted.** None of **Timeline**, **Step** (as a Timeline
+  element — distinct from any existing use of the word), **Stock**, or `couples`
+  (above) exist in CONTEXT.md today; accepting this proposal means adding entries for
+  whichever of them ship, alongside the ADR (CLAUDE.md §4). `EventDefinition` already
+  exists (`CASCADE-backend/schemas/config.py`) and needs no new entry.
