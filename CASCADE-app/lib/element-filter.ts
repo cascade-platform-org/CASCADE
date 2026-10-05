@@ -31,9 +31,13 @@ function canvasMembers(model: FilterableModel, ref: string, kind: "node" | "edge
   return new Set(kind === "node" ? canvas.graph.node_ids : canvas.graph.edge_ids);
 }
 
-function propertyMatches(props: Record<string, unknown> | undefined, f: NonNullable<ElementFilter["property"]>): boolean {
-  if (!props || !(f.key in props)) return false;
-  return f.equals === undefined || String(props[f.key]) === String(f.equals);
+/** What `label_contains` reads, and what the window lists. */
+export function elementLabel(id: string, model: Pick<FilterableModel, "nodes" | "edges">): string {
+  const n = model.nodes[id];
+  if (n) return n.label || n.id;
+  const e = model.edges[id];
+  if (!e) return id;
+  return `${model.nodes[e.source]?.label || e.source} → ${model.nodes[e.target]?.label || e.target}`;
 }
 
 /** Ids of the Elements `filter` selects, sorted. */
@@ -41,19 +45,18 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
   const kind = filter.kind ?? "node";
   const members = filter.canvas !== undefined ? canvasMembers(model, filter.canvas, kind) : null;
   if (filter.canvas !== undefined && members === null) return [];
-  const ids = filter.ids ? new Set(filter.ids) : null;
+  const excluded = new Set(filter.exclude ?? []);
   const needle = filter.label_contains ? lower(filter.label_contains) : null;
 
-  const common = (id: string, label: string | undefined, props: Record<string, unknown> | undefined) =>
+  const common = (id: string) =>
     (!members || members.has(id)) &&
-    (!ids || ids.has(id)) &&
-    (!needle || lower(label ?? id).includes(needle)) &&
-    (!filter.property || propertyMatches(props, filter.property));
+    !excluded.has(id) &&
+    (!needle || lower(elementLabel(id, model)).includes(needle));
 
   if (kind === "node") {
     return Object.values(model.nodes)
       .filter((n) =>
-        common(n.id, n.label, n.properties) &&
+        common(n.id) &&
         (filter.node_type === undefined || lower(n.node_type ?? "") === lower(filter.node_type)) &&
         (filter.category === undefined || nodeCategories(n).has(filter.category)),
       )
@@ -62,9 +65,7 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
   }
   return Object.values(model.edges)
     .filter((e) =>
-      common(e.id, undefined, e.properties) &&
-      (filter.from === undefined || e.source === filter.from) &&
-      (filter.to === undefined || e.target === filter.to) &&
+      common(e.id) &&
       (filter.category === undefined || filter.category in (model.nodes[e.source]?.supply_capacity ?? {})),
     )
     .map((e) => e.id)
@@ -73,9 +74,5 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
 
 /** Conditions that cannot apply to the filter's kind — reported, never silently ignored. */
 export function filterMisuse(filter: ElementFilter): string[] {
-  const kind = filter.kind ?? "node";
-  const out: string[] = [];
-  if (kind === "edge" && filter.node_type !== undefined) out.push("node_type applies to nodes only");
-  if (kind === "node" && (filter.from !== undefined || filter.to !== undefined)) out.push("from/to apply to edges only");
-  return out;
+  return (filter.kind ?? "node") === "edge" && filter.node_type !== undefined ? ["node_type applies to nodes only"] : [];
 }

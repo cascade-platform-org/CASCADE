@@ -2,6 +2,7 @@
 
 import { CalendarPlus, Plus, Trash2, X } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
+import { cn } from "@/lib/utils";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
@@ -21,6 +22,7 @@ import {
   explainUnit,
 } from "@/lib/temporal-simulation-explainers";
 import { Field, SmallButton, inputCls } from "./fields";
+import { TimelineStrip } from "./timeline-strip";
 
 const UNITS: CalendarUnit[] = ["day", "week", "month", "quarter", "year", "none"];
 
@@ -69,6 +71,8 @@ export function TimelineTab() {
           <CalendarPlus size={11} /> Create Event
         </SmallButton>
       </div>
+
+      <TimelineStrip />
 
       {timeline.steps.map((step, si) => {
         const lastPropagating = step.phases.map((p) => p.propagate).lastIndexOf(true);
@@ -135,55 +139,37 @@ export function TimelineTab() {
 
             <div className="mt-3 space-y-2">
               {step.phases.map((phase, pi) => (
-                <div key={pi} className="rounded-md bg-zinc-50 p-2 dark:bg-zinc-800/60">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Phase {pi + 1}</span>
-                    <label className="flex items-center gap-1 text-xs text-zinc-500">
-                      <input
-                        type="checkbox"
-                        checked={phase.propagate}
-                        onChange={(e) => {
-                          const on = e.target.checked;
-                          update((t) => { t.steps[si].phases[pi].propagate = on; });
-                          const flags = step.phases.map((p, i) => (i === pi ? on : p.propagate));
-                          explain(explainPropagate(on, flags.lastIndexOf(true) === pi));
-                        }}
-                      />
-                      then Propagate
-                    </label>
-                    {pi === lastPropagating && (
-                      <span
-                        className="cursor-help rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        onClick={() => explain(explainPropagate(true, true))}
-                      >
-                        Stocks integrate after this Phase
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    <select
-                      className={`${inputCls} w-40`}
-                      value=""
+                <div key={pi} className="flex items-center gap-2 rounded-md bg-zinc-50 px-2 py-1.5 dark:bg-zinc-800/60">
+                  <span className="w-14 shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-300">Phase {pi + 1}</span>
+                  <label className="flex shrink-0 items-center gap-1 text-xs text-zinc-500">
+                    <input
+                      type="checkbox"
+                      checked={phase.propagate}
                       onChange={(e) => {
-                        const id = e.target.value;
-                        if (!id) return;
-                        update((t) => { t.steps[si].phases[pi].events.push(id); });
-                        explain(explainPhaseEvent(eventLabel(id), true, jumpHours(id)));
+                        const on = e.target.checked;
+                        update((t) => { t.steps[si].phases[pi].propagate = on; });
+                        const flags = step.phases.map((p, i) => (i === pi ? on : p.propagate));
+                        explain(explainPropagate(on, flags.lastIndexOf(true) === pi));
                       }}
-                    >
-                      <option value="">+ add Event…</option>
-                      <EventOptions events={events} />
-                    </select>
-                    <button
-                      type="button"
-                      title="Remove Phase"
-                      className="text-zinc-400 hover:text-red-600"
-                      onClick={() => { update((t) => { t.steps[si].phases.splice(pi, 1); }); explain(EXPLAIN_REMOVE_PHASE); }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {phase.events.length === 0 && <span className="text-[11px] italic text-zinc-400">No Events{events.length === 0 ? " — use Create Event first" : ""}</span>}
+                    />
+                    then Propagate
+                  </label>
+                  <span
+                    title={pi === lastPropagating ? "Stocks integrate after this Phase" : undefined}
+                    className={cn("w-3 shrink-0 cursor-help text-xs font-semibold text-blue-700 dark:text-blue-300", pi !== lastPropagating && "invisible")}
+                    onClick={() => explain(explainPropagate(true, true))}
+                  >
+                    ∫
+                  </span>
+                  <button
+                    type="button"
+                    title="Remove Phase"
+                    className="shrink-0 text-zinc-400 hover:text-red-600"
+                    onClick={() => { update((t) => { t.steps[si].phases.splice(pi, 1); }); explain(EXPLAIN_REMOVE_PHASE); }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 border-l border-zinc-200 pl-2 dark:border-zinc-700">
                     {phase.events.map((id, ei) => (
                       <span key={ei} className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow-sm dark:bg-zinc-700 dark:text-zinc-200">
                         {eventLabel(id)}
@@ -196,6 +182,19 @@ export function TimelineTab() {
                         </button>
                       </span>
                     ))}
+                    <select
+                      className="max-w-40 rounded-md border border-dashed border-zinc-300 bg-transparent px-1.5 py-0.5 text-[11px] text-zinc-500 focus:border-blue-400 focus:outline-none dark:border-zinc-600"
+                      value=""
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (!id) return;
+                        update((t) => { t.steps[si].phases[pi].events.push(id); });
+                        explain(explainPhaseEvent(eventLabel(id), true, jumpHours(id)));
+                      }}
+                    >
+                      <option value="">{events.length === 0 ? "+ Event (use Create Event)" : "+ add Event…"}</option>
+                      <EventOptions events={events} />
+                    </select>
                   </div>
                 </div>
               ))}

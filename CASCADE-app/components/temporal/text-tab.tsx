@@ -29,6 +29,7 @@ export function TextTab() {
   const { timeline, profile, metrics } = useTemporalSimulationStore(useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics })));
   const { explain, replaceDraft } = useTemporalSimulationStore.getState();
   const events = useConfigStore((s) => s.config.events);
+  const config = useConfigStore((s) => s.config);
   const currentText = useMemo(() => serializeDoc(draftToDoc({ timeline, profile, metrics })), [timeline, profile, metrics]);
   const [text, setText] = useState(currentText);
   const [result, setResult] = useState<{ errors: string[]; warnings: string[]; applied: boolean } | null>(null);
@@ -64,7 +65,7 @@ export function TextTab() {
     <div className="flex h-full flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton onClick={() => { void copy(text); explain(EXPLAIN_COPY); }}><ClipboardCopy size={11} /> Copy</SmallButton>
-        <SmallButton onClick={() => { void copy(llmContext(draftToDoc({ timeline, profile, metrics }), events, model())); explain(EXPLAIN_COPY_LLM); }}>
+        <SmallButton onClick={() => { void copy(llmContext(draftToDoc({ timeline, profile, metrics }), config, model())); explain(EXPLAIN_COPY_LLM); }}>
           <Bot size={11} /> Copy with context for an LLM
         </SmallButton>
         <span className="flex-1" />

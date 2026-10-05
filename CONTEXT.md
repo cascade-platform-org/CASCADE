@@ -119,7 +119,7 @@ An entry in an Event's `attribute_operations` (or a Timeline profile): `(element
 _Avoid_: "mutation" (that is the literal-overwrite `attribute_mutations`), "formula", "expression"
 
 **Element Filter** *(proposed)*:
-A selection of Elements by what they are — kind (node or edge), Canvas, Node Type, Category, edge endpoints, a `properties` key (and value), a label substring — every given condition holding. Resolved when used, against the model at that moment, in Element-id order. The target of an **Attribute Operation** (`where`) and of a Temporal Simulation Metric. ADR-0021.
+A selection of Elements by what they are — kind (node or edge), Canvas, Node Type, Category, a label substring — every given condition holding, minus the matches unticked by hand (`exclude`). Resolved when used, against the model at that moment, in Element-id order. The target of an **Attribute Operation** (`where`) and of a Temporal Simulation Metric. ADR-0021.
 _Avoid_: "selector", "query", "group" (a filter is re-resolved each time; it stores no membership)
 
 **Node Type**:

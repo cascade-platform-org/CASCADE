@@ -189,7 +189,7 @@ static arithmetic on one value — so they are not Rules and CLAUDE.md §7 is un
 
 What an operation cannot express is a *conditional* ("do A if B else C"). An operation
 reaches one Element (`element`) or every Element an **Element Filter** selects (`where`:
-kind, canvas, Node Type, Category, edge endpoints, a property, a label substring), resolved
+kind, canvas, Node Type, Category, a label substring, minus any unticked match), resolved
 when it runs. A policy over 19 activities is one entry.
 
 ### 2.4 Recovery, backups and repair between periods

@@ -33,12 +33,14 @@ class ElementFilter(BaseModel):                          # every given condition
     canvas: Optional[str] = None                         # Canvas id or label
     node_type: Optional[str] = None                      # nodes only
     category: Optional[str] = None                       # nodes: tagged/supplied/demanded; edges: source's supply
-    from_: Optional[str] = None  # "from"                # edges only: source node id
-    to: Optional[str] = None                             # edges only: target node id
-    property: Optional[PropertyMatch] = None             # {key, equals?}
-    label_contains: Optional[str] = None                 # case-insensitive
-    ids: Optional[list[str]] = None
+    label_contains: Optional[str] = None                 # case-insensitive; an edge reads "source → target"
+    exclude: Optional[list[str]] = None                  # matches unticked by hand
 ```
+
+The window narrows by these conditions, then lists every match with a tick box; unticking
+adds the Element to `exclude`. Matching by a `properties` key, by edge endpoints or by an
+explicit id list was tried and dropped: the tick list covers hand-picking with fewer
+concepts, and keeping the unticked set (instead of the ticked one) keeps the filter live.
 
 - **Exactly one of `element` or `where`.** A filter is resolved when the operation runs,
   against the model at that moment, and the operation applies to each match in Element-id

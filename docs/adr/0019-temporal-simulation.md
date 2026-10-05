@@ -185,9 +185,11 @@ schema whether it is edited in the window or pasted as JSON. Objects are strict,
 misspelt key is an error; a reference this project cannot satisfy (an unknown Event id, a
 missing Element, a filter matching nothing) is a warning, and the text still applies.
 Pasting accepts bare JSON or a whole LLM reply (the first fenced `json` block). **Copy with
-context** produces a self-contained prompt: the format reference, this project's Events,
-Canvases, Node Types, Categories and property keys, the Element list up to 300 Elements,
-and the current definition. Text is the bulk and LLM route; the window remains the route
+context** produces a prompt an LLM can act on from zero: a primer (what CASCADE models,
+how a run executes, which field paths an operation can reach, how filters and Metrics
+work), the format reference, a worked example that the test suite validates, this
+project's Functionality scale, Categories, Events and Canvases, the Element list with
+current supplies, demands and capacities (up to 300 Elements), and the current definition. Text is the bulk and LLM route; the window remains the route
 that explains each control.
 
 ## Consequences

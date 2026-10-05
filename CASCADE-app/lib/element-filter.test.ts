@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterMisuse, matchElements, type FilterableModel } from "./element-filter";
+import { elementLabel, filterMisuse, matchElements, type FilterableModel } from "./element-filter";
 import type { Canvas, Edge, Node } from "./schemas/network";
 
 const node = (id: string, extra: Partial<Node> = {}): Node => ({ id, functionality: 4, ...extra }) as Node;
@@ -31,20 +31,25 @@ describe("matchElements", () => {
     expect(matchElements({ kind: "node", category: "hours" }, model)).toEqual(["a1", "a2", "pool"]);
     expect(matchElements({ kind: "node", category: "water" }, model)).toEqual(["t"]);
   });
-  it("selects edges by source and by the source's supply Category", () => {
-    expect(matchElements({ kind: "edge", from: "pool" }, model)).toEqual(["e1", "e2"]);
+  it("selects edges by the source's supply Category, and reads an edge's label as its endpoints", () => {
     expect(matchElements({ kind: "edge", category: "hours" }, model)).toEqual(["e1", "e2"]);
+    expect(elementLabel("e1", model)).toBe("Worker pool → Kitchen");
+    expect(matchElements({ kind: "edge", label_contains: "laundry" }, model)).toEqual(["e2"]);
   });
-  it("ANDs conditions: canvas, property and label", () => {
-    expect(matchElements({ kind: "node", canvas: "Workforce", property: { key: "area", equals: "food" } }, model)).toEqual(["a1"]);
+  it("ANDs canvas, label and Node Type", () => {
+    expect(matchElements({ kind: "node", canvas: "Workforce", node_type: "Service", label_contains: "kit" }, model)).toEqual(["a1"]);
     expect(matchElements({ kind: "node", label_contains: "TANK" }, model)).toEqual(["t"]);
-    expect(matchElements({ kind: "edge", canvas: "c1", property: { key: "area" } }, model)).toEqual(["e1"]);
+  });
+  it("drops hand-unticked matches, and still includes an Element that starts matching later", () => {
+    const f = { kind: "node" as const, node_type: "Service", exclude: ["a2"] };
+    expect(matchElements(f, model)).toEqual(["a1"]);
+    const later: FilterableModel = { ...model, nodes: { ...model.nodes, a3: node("a3", { node_type: "Service" }) } };
+    expect(matchElements(f, later)).toEqual(["a1", "a3"]);
   });
   it("selects nothing for an unknown canvas", () => {
     expect(matchElements({ kind: "node", canvas: "nope" }, model)).toEqual([]);
   });
   it("reports conditions that do not apply to the kind", () => {
     expect(filterMisuse({ kind: "edge", node_type: "Service" })).toEqual(["node_type applies to nodes only"]);
-    expect(filterMisuse({ kind: "node", from: "pool" })).toEqual(["from/to apply to edges only"]);
   });
 });

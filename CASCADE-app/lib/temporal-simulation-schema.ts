@@ -19,7 +19,9 @@ export type CalendarUnit = z.infer<typeof CalendarUnitSchema>;
 /**
  * Selects Elements by what they are. Every given condition must hold; an
  * absent one does not constrain. Resolved when the operation runs, against the
- * model at that moment, and applied in Element-id order.
+ * model at that moment, and applied in Element-id order. `exclude` removes
+ * hand-unticked matches by id, so an Element that starts matching later is
+ * still included.
  */
 const ElementFilterSchema = z
   .object({
@@ -30,18 +32,10 @@ const ElementFilterSchema = z
     node_type: z.string().optional(),
     /** Nodes: tagged, supplied or demanded Category. Edges: the source's supply Category. */
     category: z.string().optional(),
-    /** Edges only: source node id. */
-    from: z.string().optional(),
-    /** Edges only: target node id. */
-    to: z.string().optional(),
-    /** `properties[key]` exists, and equals `equals` when given. */
-    property: z
-      .object({ key: z.string().min(1), equals: z.union([z.string(), z.number(), z.boolean()]).optional() })
-      .strict()
-      .optional(),
-    /** Case-insensitive substring of the label (or the id, when there is no label). */
+    /** Case-insensitive substring of the label; an edge reads as "source label → target label". */
     label_contains: z.string().optional(),
-    ids: z.array(z.string()).optional(),
+    /** Matches unticked by hand. */
+    exclude: z.array(z.string()).optional(),
   })
   .strict();
 export type ElementFilter = z.infer<typeof ElementFilterSchema>;

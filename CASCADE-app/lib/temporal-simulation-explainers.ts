@@ -252,22 +252,21 @@ export function explainProfileOp(label: string, op: AttributeOperation, labelUse
   };
 }
 
-export function explainFilter(filter: ElementFilter, matches: number, misuse: string[]): Explanation {
+export function explainFilter(filter: ElementFilter, selected: number, candidates: number, misuse: string[]): Explanation {
   const kind = filter.kind ?? "node";
   const conds = [
     filter.canvas && `on canvas ${filter.canvas}`,
     filter.node_type && `of type ${filter.node_type}`,
     filter.category && (kind === "node" ? `in Category ${filter.category}` : `carrying ${filter.category}`),
-    filter.from && `from ${filter.from}`,
-    filter.to && `to ${filter.to}`,
-    filter.property && (filter.property.equals === undefined ? `with property ${filter.property.key}` : `with ${filter.property.key} = ${String(filter.property.equals)}`),
     filter.label_contains && `whose label contains "${filter.label_contains}"`,
   ].filter(Boolean);
+  const unticked = filter.exclude?.length ?? 0;
   return {
     title: "Element Filter",
     lines: [
-      `Selects every ${kind}${conds.length ? " " + conds.join(", ") : ""}: ${matches} match${matches === 1 ? "" : "es"} in the current model.`,
-      "Every given condition must hold; leave a field empty not to constrain it. One filter replaces one row per Element.",
+      `Selects every ${kind}${conds.length ? " " + conds.join(", ") : ""}: ${candidates} match${candidates === 1 ? "" : "es"}${unticked ? `, ${unticked} unticked` : ""} → ${selected} selected in the current model.`,
+      "Every given condition must hold; leave a field on “any” or empty not to constrain it. Untick a match to leave it out.",
+      "The filter is resolved again each time the operation runs: an unticked Element stays out, and an Element that starts matching later (added, re-typed, renamed) is included.",
       ...misuse.map((m) => `Ignored: ${m}.`),
     ],
     refs: ["ADR-0021"],
@@ -328,6 +327,16 @@ export function explainSelectPeriod(p: PlannedPeriod, eventLabel: (id: string) =
     refs: ["ADR-0019 §3"],
   };
 }
+
+export const EXPLAIN_STRIP: Explanation = {
+  title: "Timeline at a glance",
+  lines: [
+    "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, clock = a time jump (the only way time passes).",
+    "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events. ∫ marks where Stocks integrate: after the period's last propagating Phase.",
+    "Periodic rules appear in the periods they fire in. Click a period for exactly what runs in it.",
+  ],
+  refs: ["ADR-0019 §1", "ADR-0019 §2"],
+};
 
 export const EXPLAIN_SHOW_STATE: Explanation = {
   title: "Show full state",
@@ -446,7 +455,7 @@ export const EXPLAIN_COPY: Explanation = {
 export const EXPLAIN_COPY_LLM: Explanation = {
   title: "Copy with context for an LLM",
   lines: [
-    "Copies a self-contained prompt: what to do, the full format reference, this project's Events, canvases, Node Types, Categories, property keys and (for models up to 300 Elements) the Element list, then the current definition.",
+    "Copies a self-contained prompt: what to do, the full format reference, a primer on CASCADE and on how a run executes, the field paths an operation can reach, a worked example, this project's Functionality scale, Categories, Events, canvases and (up to 300 Elements) the Element list with current supplies and demands, then the current definition.",
     "Paste the LLM's whole reply back: the first ```json block is extracted, validated and shown before anything is applied.",
   ],
   refs: ["ADR-0019 §7"],

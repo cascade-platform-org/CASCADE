@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { docToDraft, docWarnings, draftToDoc, extractJson, parseDocText, serializeDoc } from "./temporal-simulation-text";
+import { EXAMPLE_DOC, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
 import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulationDoc } from "./temporal-simulation-schema";
 import type { FilterableModel } from "./element-filter";
 import type { Node } from "./schemas/network";
@@ -82,5 +82,21 @@ describe("docWarnings", () => {
     expect(w).toMatch(/"2024-12" is not a period/);
     expect(w).toMatch(/no Element "ghost"/);
     expect(w).toMatch(/matches no Element/);
+  });
+});
+
+describe("LLM context", () => {
+  it("ships a worked example that the schema accepts", () => {
+    const r = parseDocText(serializeDoc(EXAMPLE_DOC));
+    expect(r.ok ? r.doc : r.errors).toEqual(EXAMPLE_DOC);
+  });
+  it("is self-contained: primer, format, example, this project and the current definition", () => {
+    const text = llmContext(doc, { events: [], categories: [{ name: "hours", category_type: "SourceToDemands" }], functionality_scale: [{ level: 1, label: "critical", color: "x" }, { level: 2, label: "ok", color: "x" }] }, model);
+    for (const part of ["What CASCADE models", "What a \"path\" can reach", "## Format", "Worked example", "Functionality scale (N = 2)", "hours (SourceToDemands)", "## Current definition"]) {
+      expect(text).toContain(part);
+    }
+    // The last fenced block is the current definition, and it parses.
+    const last = text.slice(text.lastIndexOf("```json"));
+    expect(parseDocText(last).ok).toBe(true);
   });
 });
