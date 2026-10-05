@@ -34,6 +34,8 @@ class Stock(BaseModel):
 ```
 
 A bare number stays a plain rate, so **every existing project and sample stays valid**.
+An absent `min` is 0 (the draw stops at an empty stock, and the floor clamp is at 0); an
+absent `max` is no ceiling. A liability or an overdraft declares its negative `min`.
 `level` is what is **on hand**, and `min`/`max` bound that; a bound on total commitment would
 be a different field. **A clamp is reported**: the truncated amount is emitted as `spilled`
 (above `max`) or `unmet` (below `min`). `pending` (delayed arrivals) is left out of the v1

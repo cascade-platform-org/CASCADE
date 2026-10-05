@@ -20,6 +20,7 @@ import { ScorecardPanel } from "@/components/scorecard/scorecard-panel";
 import { InterventionPanel } from "@/components/canvas/intervention-panel";
 import { AttributeScanPanel } from "@/components/canvas/attribute-scan-panel";
 import { AnalysisPage } from "@/components/analysis/analysis-page";
+import { TemporalSimulationWindow } from "@/components/temporal/temporal-simulation-window";
 import { ToastContainer } from "./toast-container";
 import { AnonymousBanner } from "@/components/auth/AnonymousBanner";
 import { useAuthStore } from "@/store/auth-store";
@@ -162,6 +163,7 @@ export function EditorShell() {
         <SaveScorecardDialog onClose={closeScorecardSaveDialog} />
       )}
       <AnalysisPage />
+      <TemporalSimulationWindow />
 
       <GuidedTour />
       <ToastContainer />

@@ -597,6 +597,8 @@ When a Hazard sets `direct_damage = true`, `expected_repair_time` records estima
 
 A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable run over many periods. Mechanics: ADR-0019 (Timeline, period sequence, recording), ADR-0020 (Stocks, `served_ratio`), ADR-0021 (Attribute Operations); reasoning: `temporal-simulation-design.md`. This section states what the product must do.
 
+*UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run and explains each interaction. It never touches the model, the history or the engine. The plan (`lib/timeline-plan.ts`) and the Stock formulas (`lib/stock-math.ts`) are the real logic; the types are local until the schema exists.
+
 **Timeline.**
 - A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it), `advance_hours` (elapsed hours, read only by backup reserves) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
 - A periodic form, "every *N* periods apply these Events in Phase *k*", removes hand-unrolling.

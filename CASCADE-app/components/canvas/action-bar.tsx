@@ -7,16 +7,17 @@
  * Divider
  * Event zone: [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
  * Divider
- * Temporal:   [⏱ Time ▾]
+ * Temporal:   [⏱ Time ▾] [Simulate] (prototype)
  */
 
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2 } from "lucide-react";
+import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2, CalendarClock } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
-import { TEMPORAL_ANCHOR_ID } from "@/lib/ui-anchors";
+import { TEMPORAL_ANCHOR_ID, TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -41,6 +42,7 @@ import { ScopeSplitButton } from "./scope-split-button";
 // snapshot-tick refresh).
 export function ActionBar() {
   const openAnalysisPage = useAnalysisStore((s) => s.openAnalysisPage);
+  const openTemporalSimulation = useTemporalSimulationStore((s) => s.openWindow);
   const analysisScope = useAnalysisStore((s) => s.scope);
   const setAnalysisScope = useAnalysisStore((s) => s.setScope);
   const heatmapActive = useAnalysisStore((s) => s.heatmapActive);
@@ -194,6 +196,17 @@ export function ActionBar() {
       <span data-tour="temporal" className="flex items-center">
         <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
       </span>
+
+      {/* Temporal Simulation — prototype window (ADR-0019) */}
+      <ActionButton
+        id={TEMPORAL_SIMULATION_ANCHOR_ID}
+        onClick={openTemporalSimulation}
+        title="Temporal Simulation (prototype): a saved, replayable run over many periods"
+        className="text-zinc-600 dark:text-zinc-400"
+      >
+        <CalendarClock size={13} />
+        <span>Simulate</span>
+      </ActionButton>
 
       {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
       {revertSnapshot && elapsedHours > 0 && (

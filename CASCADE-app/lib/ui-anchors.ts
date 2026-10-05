@@ -16,6 +16,9 @@ export const SCORECARD_ANCHOR_ID = "cascade-scorecard-anchor";
 /** The Action Bar's "Time" button — home of the Temporal Jump window. */
 export const TEMPORAL_ANCHOR_ID = "cascade-temporal-anchor";
 
+/** The Action Bar's "Simulate" button — home of the Temporal Simulation window (prototype). */
+export const TEMPORAL_SIMULATION_ANCHOR_ID = "cascade-temporal-simulation-anchor";
+
 /** The Topbar's "Help" button — home of the User Manual window. */
 export const HELP_ANCHOR_ID = "cascade-help-anchor";
 
