@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { Play, RotateCcw, Undo2, Eraser, Eye, Save, AlertTriangle } from "lucide-react";
+import { Play, RotateCcw, Undo2, Eraser, Eye, Save, AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConfigStore } from "@/store/config-store";
 import { runKey, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { planTimeline } from "@/lib/timeline-plan";
+import { docErrors, draftToDoc } from "@/lib/temporal-simulation-text";
 import {
   EXPLAIN_CLEAR_RUN,
   EXPLAIN_RESET_RUN,
@@ -17,7 +17,7 @@ import {
   explainRun,
   explainSelectPeriod,
 } from "@/lib/temporal-simulation-explainers";
-import { Segmented, SmallButton } from "./fields";
+import { Segmented, SmallButton, useEventLookup } from "./fields";
 
 /** Default Level Scale bands. Tailwind ramps are brand-driven (CLAUDE.md §5). */
 const LEVEL_BANDS = [
@@ -37,19 +37,21 @@ export function RunTab() {
   const reading = useTemporalSimulationStore((s) => s.levelReading);
   const metrics = useTemporalSimulationStore((s) => s.metrics);
   const { explain, markRun, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
-  const events = useConfigStore((s) => s.config.events);
-  const eventLabel = (id: string) => events.find((e) => e.id === id)?.label ?? id;
+  const { eventLabel } = useEventLookup();
 
   const plan = useMemo(() => planTimeline(timeline), [timeline]);
+  // The same schema check the Text tab's Apply runs; a draft that fails it cannot run.
+  const errors = useMemo(() => docErrors(draftToDoc({ timeline, profile, metrics })), [timeline, profile, metrics]);
   const hasRun = lastRunKey !== null;
-  const stale = hasRun && lastRunKey !== runKey({ timeline, profile });
+  const currentKey = useMemo(() => runKey({ timeline, profile }), [timeline, profile]);
+  const stale = hasRun && lastRunKey !== currentKey;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={plan.periods.length === 0}
+          disabled={plan.periods.length === 0 || errors.length > 0}
           onClick={() => {
             explain(explainRun(plan, eventLabel));
             if (plan.warnings.length === 0) markRun();
@@ -65,6 +67,12 @@ export function RunTab() {
         <SmallButton disabled={!hasRun} onClick={() => explain(EXPLAIN_CLEAR_RUN)} title="Ctrl+R"><Eraser size={11} /> Clear run</SmallButton>
         <SmallButton disabled={!hasRun} onClick={() => explain(EXPLAIN_RESET_RUN)}><RotateCcw size={11} /> Reset</SmallButton>
       </div>
+
+      {errors.length > 0 && (
+        <ul className="space-y-1 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+          {errors.map((e, i) => <li key={i} className="flex gap-1.5"><XCircle size={12} className="mt-0.5 shrink-0" />{e}</li>)}
+        </ul>
+      )}
 
       {plan.warnings.length > 0 && (
         <ul className="space-y-1 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">

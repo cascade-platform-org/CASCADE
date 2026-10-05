@@ -159,6 +159,16 @@ export function temporalJumpEvent(hours: number): EventDefinition {
   };
 }
 
+/** A Temporal Jump degrades nothing by vulnerability, so it gets no vulnerability slider. */
+export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type !== "temporal_jump";
+
+/** Events a user fires by hand. Temporal-Simulation-only Events live in Timelines (ADR-0019). */
+export const isScenarioEvent = (e: EventDefinition): boolean => !e.temporal_simulation_only;
+
+/** Hours a Temporal Jump advances; undefined for any other Event. */
+export const temporalJumpHours = (e: EventDefinition): number | undefined =>
+  e.type === "temporal_jump" ? e.duration_hours ?? 0 : undefined;
+
 /**
  * Apply one Event to a Scenario.
  *
@@ -213,7 +223,7 @@ export function applyEventToSnapshot(
   // Only Elements already holding on backup (Functionality Time > 0) move; on
   // expiry the reserve is spent and the Element drops to 1 (requirements §9.2).
   if (event.type === "temporal_jump") {
-    const hours = event.duration_hours ?? 0;
+    const hours = temporalJumpHours(event) ?? 0;
     for (const { id, el } of writer.all()) {
       const ft = el.functionality_time ?? 0;
       if (ft <= 0) continue;

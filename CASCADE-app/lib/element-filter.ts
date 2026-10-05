@@ -7,6 +7,7 @@
  */
 
 import type { Canvas, Edge, Node } from "@/lib/schemas/network";
+import { elementLabel } from "@/lib/coalition";
 import type { ElementFilter } from "@/lib/temporal-simulation-schema";
 
 export interface FilterableModel {
@@ -31,18 +32,13 @@ function canvasMembers(model: FilterableModel, ref: string, kind: "node" | "edge
   return new Set(kind === "node" ? canvas.graph.node_ids : canvas.graph.edge_ids);
 }
 
-/** What `label_contains` reads, and what the window lists. */
-export function elementLabel(id: string, model: Pick<FilterableModel, "nodes" | "edges">): string {
-  const n = model.nodes[id];
-  if (n) return n.label || n.id;
-  const e = model.edges[id];
-  if (!e) return id;
-  return `${model.nodes[e.source]?.label || e.source} → ${model.nodes[e.target]?.label || e.target}`;
-}
+/** What `label_contains` reads, and what the window lists: an edge reads "source → target". */
+export const filterLabel = (id: string, model: Pick<FilterableModel, "nodes" | "edges">): string =>
+  elementLabel(model, id, " → ");
 
 /** Ids of the Elements `filter` selects, sorted. */
 export function matchElements(filter: ElementFilter, model: FilterableModel): string[] {
-  const kind = filter.kind ?? "node";
+  const { kind } = filter;
   const members = filter.canvas !== undefined ? canvasMembers(model, filter.canvas, kind) : null;
   if (filter.canvas !== undefined && members === null) return [];
   const excluded = new Set(filter.exclude ?? []);
@@ -51,7 +47,7 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
   const common = (id: string) =>
     (!members || members.has(id)) &&
     !excluded.has(id) &&
-    (!needle || lower(elementLabel(id, model)).includes(needle));
+    (!needle || lower(filterLabel(id, model)).includes(needle));
 
   if (kind === "node") {
     return Object.values(model.nodes)
@@ -74,5 +70,5 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
 
 /** Conditions that cannot apply to the filter's kind — reported, never silently ignored. */
 export function filterMisuse(filter: ElementFilter): string[] {
-  return (filter.kind ?? "node") === "edge" && filter.node_type !== undefined ? ["node_type applies to nodes only"] : [];
+  return filter.kind === "edge" && filter.node_type !== undefined ? ["node_type applies to nodes only"] : [];
 }

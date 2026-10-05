@@ -28,31 +28,26 @@ import { SmallButton } from "./fields";
 export function TextTab() {
   const { timeline, profile, metrics } = useTemporalSimulationStore(useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics })));
   const { explain, replaceDraft } = useTemporalSimulationStore.getState();
-  const events = useConfigStore((s) => s.config.events);
-  const config = useConfigStore((s) => s.config);
-  const currentText = useMemo(() => serializeDoc(draftToDoc({ timeline, profile, metrics })), [timeline, profile, metrics]);
+  // Config and the model are read when a button is used; this tab does not re-render on their changes.
+  const doc = useMemo(() => draftToDoc({ timeline, profile, metrics }), [timeline, profile, metrics]);
+  const currentText = useMemo(() => serializeDoc(doc), [doc]);
   const [text, setText] = useState(currentText);
   const [result, setResult] = useState<{ errors: string[]; warnings: string[]; applied: boolean } | null>(null);
   const [showRef, setShowRef] = useState(false);
   const dirty = text !== currentText;
 
-  const model = () => {
-    const s = useCanvasStore.getState();
-    return { nodes: s.nodes, edges: s.edges, canvases: s.canvases };
-  };
-
   function check(apply: boolean) {
     const parsed = parseDocText(text);
     if (!parsed.ok) {
       setResult({ errors: parsed.errors, warnings: [], applied: false });
-      explain(explainApply(false, parsed.errors.length, 0));
+      explain(explainApply(parsed.errors.length, 0));
       return;
     }
-    const warnings = docWarnings(parsed.doc, events, model());
+    const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState());
     if (apply) {
       replaceDraft(docToDraft(parsed.doc, nanoid));
       setText(serializeDoc(parsed.doc));
-      explain(explainApply(true, 0, warnings.length));
+      explain(explainApply(0, warnings.length));
     }
     setResult({ errors: [], warnings, applied: apply });
   }
@@ -65,7 +60,7 @@ export function TextTab() {
     <div className="flex h-full flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton onClick={() => { void copy(text); explain(EXPLAIN_COPY); }}><ClipboardCopy size={11} /> Copy</SmallButton>
-        <SmallButton onClick={() => { void copy(llmContext(draftToDoc({ timeline, profile, metrics }), config, model())); explain(EXPLAIN_COPY_LLM); }}>
+        <SmallButton onClick={() => { void copy(llmContext(doc, useConfigStore.getState().config, useCanvasStore.getState())); explain(EXPLAIN_COPY_LLM); }}>
           <Bot size={11} /> Copy with context for an LLM
         </SmallButton>
         <span className="flex-1" />

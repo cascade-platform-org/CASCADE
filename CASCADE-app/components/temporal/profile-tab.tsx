@@ -6,14 +6,12 @@ import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { planTimeline } from "@/lib/timeline-plan";
-import { matchElements } from "@/lib/element-filter";
+import { filterLabel, matchElements } from "@/lib/element-filter";
 import { explainProfileOp } from "@/lib/temporal-simulation-explainers";
-import type { AttributeOperation } from "@/lib/temporal-simulation-schema";
+import { OperationKindSchema, type AttributeOperation } from "@/lib/temporal-simulation-schema";
 import type { ProfileEntry } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
 import { Field, Segmented, SmallButton, TextBackedInput, formatPath, inputCls, parsePath, parseValue } from "./fields";
-
-const OPS: AttributeOperation["op"][] = ["set", "add", "mul", "at_most", "at_least"];
 
 export function ProfileTab() {
   const timeline = useTemporalSimulationStore((s) => s.timeline);
@@ -24,11 +22,13 @@ export function ProfileTab() {
   const edges = useCanvasStore((s) => s.edges);
 
   const labels = useMemo(() => planTimeline(timeline).periods.map((p) => p.label), [timeline]);
+  // Built once per model change and shared by every "One Element" select.
   const elementOptions = useMemo(
-    () => [
-      ...Object.values(nodes).map((n) => ({ id: n.id, label: `${n.label || n.id} (node)` })),
-      ...Object.values(edges).map((e) => ({ id: e.id, label: `${nodes[e.source]?.label || e.source} → ${nodes[e.target]?.label || e.target} (edge)` })),
-    ].sort((a, b) => a.label.localeCompare(b.label)),
+    () =>
+      [...Object.keys(nodes), ...Object.keys(edges)]
+        .map((id) => ({ id, label: `${filterLabel(id, { nodes, edges })} (${id in nodes ? "node" : "edge"})` }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map((o) => <option key={o.id} value={o.id}>{o.label}</option>),
     [nodes, edges],
   );
 
@@ -87,10 +87,11 @@ export function ProfileTab() {
               {mode === "element" ? (
                 <select className={inputCls} value={entry.op.element ?? ""} onChange={(e) => edit(i, { op: { element: e.target.value } })}>
                   <option value="">— choose an Element —</option>
-                  {elementOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  {elementOptions}
                 </select>
               ) : (
-                <FilterEditor value={entry.op.where ?? { kind: "node" }} onChange={(where) => edit(i, { op: { where } })} />
+                // FilterEditor explains its own change, so this skips `describe`.
+                <FilterEditor value={entry.op.where ?? { kind: "node" }} onChange={(where) => update((rows) => { rows[i].op.where = where; })} />
               )}
             </div>
 
@@ -105,7 +106,7 @@ export function ProfileTab() {
               </Field>
               <Field label="Op">
                 <select className={inputCls} value={entry.op.op} onChange={(e) => edit(i, { op: { op: e.target.value as AttributeOperation["op"] } })}>
-                  {OPS.map((o) => <option key={o} value={o}>{o}</option>)}
+                  {OperationKindSchema.options.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </Field>
               <Field label="Value">

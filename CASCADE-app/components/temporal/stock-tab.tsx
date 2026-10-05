@@ -3,6 +3,7 @@
 import { useTemporalSimulationStore, type StockPreview } from "@/store/temporal-simulation-store";
 import { integrateStock, stockSupply } from "@/lib/stock-math";
 import { explainStockField } from "@/lib/temporal-simulation-explainers";
+import { NumberInput } from "@/components/ui/number-input";
 import { Field, inputCls, numOrUndef } from "./fields";
 
 type NumKey = keyof StockPreview;
@@ -66,10 +67,10 @@ export function StockTab() {
 
       <div className="grid grid-cols-2 gap-2">
         <Field label="D — delivered by the last propagating Phase">
-          <input type="number" className={inputCls} value={stock.delivered} onFocus={() => explain(explainStockField("delivered"))} onChange={(e) => updateStock({ delivered: Number(e.target.value) || 0 })} />
+          <NumberInput className={inputCls} value={stock.delivered} onFocus={() => explain(explainStockField("delivered"))} onChange={(v) => updateStock({ delivered: v })} />
         </Field>
         <Field label="φ — Functionality-to-capacity ratio">
-          <input type="number" step={0.125} min={0} max={1} className={inputCls} value={stock.phi} onFocus={() => explain(explainStockField("phi"))} onChange={(e) => updateStock({ phi: Math.min(1, Math.max(0, Number(e.target.value) || 0)) })} />
+          <NumberInput step={0.125} min={0} max={1} className={inputCls} value={stock.phi} onFocus={() => explain(explainStockField("phi"))} onChange={(v) => updateStock({ phi: Math.min(1, Math.max(0, v)) })} />
         </Field>
       </div>
       {overDelivered && <p className="text-[11px] text-amber-700 dark:text-amber-400">D exceeds what was offered ({fmt(offered)}); the engine could not deliver that much.</p>}

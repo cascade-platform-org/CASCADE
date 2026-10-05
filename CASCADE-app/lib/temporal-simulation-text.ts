@@ -9,6 +9,10 @@
 
 import type { ZodError } from "zod";
 import {
+  AggregateSchema,
+  CalendarUnitSchema,
+  ComparisonSchema,
+  OperationKindSchema,
   TEMPORAL_SIMULATION_FORMAT,
   TemporalSimulationDocSchema,
   type AttributeOperation,
@@ -95,6 +99,12 @@ export function parseDocText(text: string): ParseResult {
   return parsed.success ? { ok: true, doc: parsed.data } : { ok: false, errors: formatIssues(parsed.error) };
 }
 
+/** Schema errors in a document, worded as `parseDocText` words them: the tabs' edits get the check pasted text gets. */
+export function docErrors(doc: TemporalSimulationDoc): string[] {
+  const parsed = TemporalSimulationDocSchema.safeParse(doc);
+  return parsed.success ? [] : formatIssues(parsed.error);
+}
+
 /** Problems a valid document can still have against THIS project. Reported; applying is still allowed. */
 export function docWarnings(doc: TemporalSimulationDoc, events: EventDefinition[], model: FilterableModel): string[] {
   const out: string[] = [];
@@ -126,6 +136,9 @@ export function docWarnings(doc: TemporalSimulationDoc, events: EventDefinition[
   return out;
 }
 
+/** `"a"|"b"|"c"`, from a schema enum, so the reference cannot drift from it. */
+const alternatives = (options: readonly string[]) => options.map((o) => `"${o}"`).join("|");
+
 export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON, strict (unknown keys are errors).
 
 {
@@ -134,7 +147,7 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
     "name": string,
     "steps": [                         // run in order
       { "label": string,               // first period: day YYYY-MM-DD | week YYYY-Www | month YYYY-MM | quarter YYYY-Qn | year YYYY | none: any text
-        "unit": "day"|"week"|"month"|"quarter"|"year"|"none",
+        "unit": ${alternatives(CalendarUnitSchema.options)},
         "repeat": int >= 1,            // consecutive periods; the label advances by the unit (none: label#2, label#3…)
         "phases": [                    // run in order inside each period
           { "events": [                // applied in order
@@ -150,21 +163,21 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
       { "element": ElementId            // exactly one of "element" or "where"
         "where": Filter,
         "path": ["supply_capacity", "<category>", "rate"],   // field path as a list
-        "op": "set"|"add"|"mul"|"at_most"|"at_least",        // at_most caps at value; at_least raises to value
+        "op": ${alternatives(OperationKindSchema.options)},        // at_most caps at value; at_least raises to value
         "value": number (string/bool only with "set") }
     ]
   },
   "metrics": [
     { "name": string, "target": Filter, "path": [..],
       "read": "state"|"change",        // end-of-period value, or after − before
-      "phase": k (optional, change only), "aggregate": "sum"|"mean"|"min"|"max"|"count"|"share_where"|"percentile",
-      "percentile": 0–100 (optional), "value_filter": { "cmp": "<"|"<="|">"|">="|"=="|"!=", "value": number } (optional) }
+      "phase": k (optional, change only), "aggregate": ${alternatives(AggregateSchema.options)},
+      "percentile": 0–100 (optional), "value_filter": { "cmp": ${alternatives(ComparisonSchema.options)}, "value": number } (optional) }
   ]
 }
 
 Filter (every given condition must hold; resolved again each time it is used):
   { "kind": "node"|"edge", "canvas": id or label, "category": string,
-    "node_type": "Source"|"Infrastructure"|"Service"|"Personnel" (nodes only),
+    "node_type": string (nodes only; this project's Node Types are listed with it),
     "label_contains": string (an edge reads as "source label → target label"),
     "exclude": [ElementId…] (matches to leave out) }
 

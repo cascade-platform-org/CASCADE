@@ -142,7 +142,7 @@ export function explainUnit(unit: CalendarUnit): Explanation {
     title: "Calendar unit",
     lines: [
       `Repeats advance the label by one ${unit === "none" ? "number" : unit}. Label format: ${LABEL_FORMATS[unit]}.`,
-      "The unit only names periods. A period has no duration: time passes only through Temporal Jump Events you place in a Phase or a Periodic rule.",
+      "The unit only names periods. A period has no duration: time passes only through Temporal Jump Events you place in a Phase.",
     ],
     refs: ["ADR-0019 §1"],
   };
@@ -258,7 +258,7 @@ export function explainProfileOp(label: string, op: AttributeOperation, labelUse
 }
 
 export function explainFilter(filter: ElementFilter, selected: number, candidates: number, misuse: string[]): Explanation {
-  const kind = filter.kind ?? "node";
+  const { kind } = filter;
   const conds = [
     filter.canvas && `on canvas ${filter.canvas}`,
     filter.node_type && `of type ${filter.node_type}`,
@@ -466,8 +466,8 @@ export const EXPLAIN_COPY_LLM: Explanation = {
   refs: ["ADR-0019 §7"],
 };
 
-export function explainApply(ok: boolean, errors: number, warnings: number): Explanation {
-  return ok
+export function explainApply(errors: number, warnings: number): Explanation {
+  return errors === 0
     ? {
         title: "Applied",
         lines: [

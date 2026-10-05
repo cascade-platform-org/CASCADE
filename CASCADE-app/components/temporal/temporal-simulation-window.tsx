@@ -11,9 +11,7 @@
  * (`lib/stock-math.ts`), which the built feature keeps.
  */
 
-import React, { useEffect } from "react";
-import { useConfigStore } from "@/store/config-store";
-import { explainPhaseEvent } from "@/lib/temporal-simulation-explainers";
+import React from "react";
 import { CalendarClock, ListOrdered, Table2, Play, Sigma, Database, Info, Braces } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -37,29 +35,33 @@ const TABS: { id: SimTab; label: string; icon: React.ReactNode }[] = [
   { id: "text", label: "Text", icon: <Braces size={15} /> },
 ];
 
+/** "What this will do": the only subscriber to `explanation`, so explaining re-renders this panel alone. */
+function ExplanationPanel() {
+  const explanation = useTemporalSimulationStore((s) => s.explanation);
+  return (
+    <section
+      aria-live="polite"
+      className="max-h-[40%] shrink-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60"
+    >
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+        <Info size={13} className="text-blue-600" /> What this will do — {explanation.title}
+      </p>
+      <ul className="list-disc space-y-0.5 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
+        {explanation.lines.map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+      {explanation.refs.length > 0 && (
+        <p className="mt-1.5 text-[10px] text-zinc-400">Specified in: {explanation.refs.join(" · ")}</p>
+      )}
+    </section>
+  );
+}
+
 export function TemporalSimulationWindow() {
   const open = useTemporalSimulationStore((s) => s.open);
   const tab = useTemporalSimulationStore((s) => s.tab);
-  const explanation = useTemporalSimulationStore((s) => s.explanation);
   // The window floats above modals; step aside while Config is open ("Create
-  // Event" opens it) and come back when it closes.
+  // new Event" opens it) and come back when it closes.
   const configModalOpen = useUiStore((s) => s.configModalOpen);
-
-  // "Create new Event" from a Phase: once Config closes, a saved new Event
-  // joins that Phase; a cancelled one leaves the Phase as it was.
-  useEffect(() => {
-    if (configModalOpen) return;
-    const { pendingEventTarget: target, setPendingEventTarget, updateTimeline } = useTemporalSimulationStore.getState();
-    if (!target) return;
-    setPendingEventTarget(null);
-    const id = useUiStore.getState().configModalCreatedEventId;
-    const ev = id ? useConfigStore.getState().config.events.find((e) => e.id === id) : undefined;
-    if (!ev) return;
-    updateTimeline((t) => { t.steps[target.step]?.phases[target.phase]?.events.push({ event: ev.id, every: 1 }); });
-    useTemporalSimulationStore.getState().explain(
-      explainPhaseEvent(ev.label, true, ev.type === "temporal_jump" ? ev.duration_hours ?? 1 : undefined),
-    );
-  }, [configModalOpen]);
   const { closeWindow, setTab, explain } = useTemporalSimulationStore.getState();
 
   return (
@@ -104,20 +106,7 @@ export function TemporalSimulationWindow() {
           {tab === "stock" && <StockTab />}
           {tab === "text" && <TextTab />}
         </div>
-        <section
-          aria-live="polite"
-          className="max-h-[40%] shrink-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60"
-        >
-          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-            <Info size={13} className="text-blue-600" /> What this will do — {explanation.title}
-          </p>
-          <ul className="list-disc space-y-0.5 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
-            {explanation.lines.map((l, i) => <li key={i}>{l}</li>)}
-          </ul>
-          {explanation.refs.length > 0 && (
-            <p className="mt-1.5 text-[10px] text-zinc-400">Specified in: {explanation.refs.join(" · ")}</p>
-          )}
-        </section>
+        <ExplanationPanel />
       </div>
     </FloatingWindow>
   );

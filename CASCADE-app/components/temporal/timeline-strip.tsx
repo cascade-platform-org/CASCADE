@@ -10,21 +10,22 @@
 import { useMemo } from "react";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { planTimeline, type PlannedPeriod } from "@/lib/timeline-plan";
 import { EXPLAIN_STRIP, explainSelectPeriod } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
+import { useEventLookup } from "./fields";
 
 const MAX_MARKERS = 3;
 
-function EventMarker({ ev }: { ev: EventDefinition | undefined }) {
-  if (ev?.type === "temporal_jump") return <Clock size={9} className="shrink-0 text-blue-600 dark:text-blue-400" />;
+/** One Event in the strip and in its legend; an unknown Event is grey. */
+function EventMarker({ type }: { type: EventDefinition["type"] | undefined }) {
+  if (type === "temporal_jump") return <Clock size={9} className="shrink-0 text-blue-600 dark:text-blue-400" />;
   return (
     <span
       className={cn(
         "h-[7px] w-[7px] shrink-0 rounded-full",
-        ev?.type === "hazard" ? "bg-red-500" : ev?.type === "disservice" ? "bg-amber-500" : "bg-zinc-400",
+        type === "hazard" ? "bg-red-500" : type === "disservice" ? "bg-amber-500" : "bg-zinc-400",
       )}
     />
   );
@@ -33,11 +34,8 @@ function EventMarker({ ev }: { ev: EventDefinition | undefined }) {
 export function TimelineStrip() {
   const timeline = useTemporalSimulationStore((s) => s.timeline);
   const explain = useTemporalSimulationStore((s) => s.explain);
-  const events = useConfigStore((s) => s.config.events);
   const plan = useMemo(() => planTimeline(timeline), [timeline]);
-
-  const byId = useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
-  const eventLabel = (id: string) => byId.get(id)?.label ?? id;
+  const { byId, eventLabel } = useEventLookup();
   const jumps = plan.periods.reduce((n, p) => n + p.phases.reduce((m, ph) => m + ph.events.filter((id) => byId.get(id)?.type === "temporal_jump").length, 0), 0);
   const labelEvery = Math.max(1, Math.ceil(plan.periods.length / 12));
 
@@ -79,7 +77,7 @@ export function TimelineStrip() {
                   <span className="flex h-[30px] items-end gap-px">
                     {p.phases.map((ph) => (
                       <span key={ph.index} className="flex flex-1 flex-col-reverse items-center gap-px">
-                        {ph.events.slice(0, MAX_MARKERS).map((id, i) => <EventMarker key={i} ev={byId.get(id)} />)}
+                        {ph.events.slice(0, MAX_MARKERS).map((id, i) => <EventMarker key={i} type={byId.get(id)?.type} />)}
                         {ph.events.length > MAX_MARKERS && <span className="text-[8px] leading-none text-zinc-500">+{ph.events.length - MAX_MARKERS}</span>}
                       </span>
                     ))}
@@ -111,9 +109,9 @@ export function TimelineStrip() {
       </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-zinc-500">
-        <span className="flex items-center gap-1"><span className="h-[7px] w-[7px] rounded-full bg-red-500" />hazard</span>
-        <span className="flex items-center gap-1"><span className="h-[7px] w-[7px] rounded-full bg-amber-500" />disservice</span>
-        <span className="flex items-center gap-1"><Clock size={9} className="text-blue-600" />time jump</span>
+        <span className="flex items-center gap-1"><EventMarker type="hazard" />hazard</span>
+        <span className="flex items-center gap-1"><EventMarker type="disservice" />disservice</span>
+        <span className="flex items-center gap-1"><EventMarker type="temporal_jump" />time jump</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-green-500" />Phase + Propagation</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm border border-zinc-300 dark:border-zinc-600" />Phase, Events only</span>
         <span className="flex items-center gap-1"><span className="font-semibold text-blue-700 dark:text-blue-300">∫</span>Stocks integrate</span>

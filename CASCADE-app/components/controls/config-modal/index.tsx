@@ -36,7 +36,9 @@ export function ConfigModal() {
   const isDirty = useConfigStore((s) => s.isDirty);
   const openDraft = useConfigStore((s) => s.openDraft);
   const addEvent = useConfigStore((s) => s.addEvent);
-  const setCreatedEventId = useUiStore((s) => s.setConfigModalCreatedEventId);
+  const setFocusEventId = useUiStore((s) => s.setConfigModalFocusEventId);
+  /** The Event `configModalNewEvent` added to this draft. */
+  const newEventId = useRef<string | null>(null);
   const commitDraft = useConfigStore((s) => s.commitDraft);
   const discardDraft = useConfigStore((s) => s.discardDraft);
 
@@ -44,17 +46,12 @@ export function ConfigModal() {
     openDraft();
     // Acted on here, after the draft exists: a child tab's effect would run
     // first and write into the draft openDraft is about to replace.
-    if (useUiStore.getState().configModalIntent === "new-temporal-simulation-event") {
-      const id = addEvent({
-        label: "New Temporal Simulation Event",
-        type: "disservice",
-        frequency_per_10y: 0,
-        temporal_simulation_only: true,
-        attribute_mutations: {},
-      });
-      setCreatedEventId(id);
+    const request = useUiStore.getState().configModalNewEvent;
+    if (request) {
+      newEventId.current = addEvent(request.template);
+      setFocusEventId(newEventId.current);
     }
-  }, [openDraft, addEvent, setCreatedEventId]);
+  }, [openDraft, addEvent, setFocusEventId]);
 
   // Tracks whether a mouse press STARTED on the backdrop itself. A bare
   // `e.target === e.currentTarget` check on the click handler is not enough:
@@ -75,6 +72,11 @@ export function ConfigModal() {
 
   function handleSave() {
     commitDraft();
+    // The new Event may have been deleted before Save; report only a saved one.
+    const id = newEventId.current;
+    if (id && useConfigStore.getState().config.events.some((e) => e.id === id)) {
+      useUiStore.getState().configModalNewEvent?.onSaved(id);
+    }
     closeConfigModal();
   }
 

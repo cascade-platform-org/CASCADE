@@ -32,6 +32,8 @@ export function NumberInput({
   step,
   placeholder,
   className,
+  disabled,
+  onFocus,
 }: {
   value: number | undefined;
   onChange: (v: number) => void;
@@ -41,6 +43,8 @@ export function NumberInput({
   /** Shown while the field is empty — use it for the value that applies then. */
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
+  onFocus?: () => void;
 }) {
   /** What the user is typing. `null` = show the number we were given. */
   const [draft, setDraft] = useState<string | null>(null);
@@ -50,6 +54,8 @@ export function NumberInput({
       type="number"
       value={draft ?? value ?? ""}
       placeholder={placeholder}
+      disabled={disabled}
+      onFocus={onFocus}
       min={min}
       max={max}
       step={step ?? 1}

@@ -6,13 +6,11 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { matchElements } from "@/lib/element-filter";
 import { explainMetric } from "@/lib/temporal-simulation-explainers";
-import type { Metric } from "@/lib/temporal-simulation-schema";
+import { AggregateSchema, ComparisonSchema, type Metric } from "@/lib/temporal-simulation-schema";
 import type { MetricEntry } from "@/lib/temporal-simulation-text";
+import { NumberInput } from "@/components/ui/number-input";
 import { FilterEditor } from "./filter-editor";
 import { Field, SmallButton, TextBackedInput, formatPath, inputCls, numOrUndef, parsePath } from "./fields";
-
-const AGGREGATES: Metric["aggregate"][] = ["sum", "mean", "min", "max", "count", "share_where", "percentile"];
-const CMPS = ["<", "<=", ">", ">=", "==", "!="] as const;
 
 export function MetricsTab() {
   const metrics = useTemporalSimulationStore((s) => s.metrics);
@@ -40,7 +38,8 @@ export function MetricsTab() {
             </Field>
             <SmallButton tone="danger" onClick={() => update((ms) => { ms.splice(i, 1); })}><Trash2 size={11} /></SmallButton>
           </div>
-          <FilterEditor value={m.target} onChange={(target) => edit(i, { target })} />
+          {/* FilterEditor explains its own change, so this skips `describe`. */}
+          <FilterEditor value={m.target} onChange={(target) => update((ms) => { ms[i].metric.target = target; })} />
           <div className="grid grid-cols-4 gap-2">
             <Field label="Read">
               <select className={inputCls} value={m.read} onChange={(e) => edit(i, { read: e.target.value as Metric["read"], phase: undefined })}>
@@ -61,12 +60,12 @@ export function MetricsTab() {
             </Field>
             <Field label="Aggregate">
               <select className={inputCls} value={m.aggregate} onChange={(e) => edit(i, { aggregate: e.target.value as Metric["aggregate"] })}>
-                {AGGREGATES.map((a) => <option key={a} value={a}>{a}</option>)}
+                {AggregateSchema.options.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
             </Field>
             {m.aggregate === "percentile" ? (
               <Field label="Percentile">
-                <input type="number" min={0} max={100} className={inputCls} value={m.percentile ?? 50} onChange={(e) => edit(i, { percentile: numOrUndef(e.target.value) })} />
+                <NumberInput min={0} max={100} className={inputCls} value={m.percentile ?? 50} onChange={(v) => edit(i, { percentile: v })} />
               </Field>
             ) : <span />}
             <Field label="Keep values (optional)" className="col-span-2">
@@ -74,17 +73,16 @@ export function MetricsTab() {
                 <select
                   className={`${inputCls} w-16`}
                   value={m.value_filter?.cmp ?? ""}
-                  onChange={(e) => edit(i, { value_filter: e.target.value ? { cmp: e.target.value as (typeof CMPS)[number], value: m.value_filter?.value ?? 0 } : undefined })}
+                  onChange={(e) => edit(i, { value_filter: e.target.value ? { cmp: ComparisonSchema.parse(e.target.value), value: m.value_filter?.value ?? 0 } : undefined })}
                 >
                   <option value="">all</option>
-                  {CMPS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {ComparisonSchema.options.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <input
-                  type="number"
+                <NumberInput
                   className={inputCls}
                   disabled={!m.value_filter}
-                  value={m.value_filter?.value ?? ""}
-                  onChange={(e) => m.value_filter && edit(i, { value_filter: { cmp: m.value_filter.cmp, value: Number(e.target.value) || 0 } })}
+                  value={m.value_filter?.value}
+                  onChange={(v) => m.value_filter && edit(i, { value_filter: { cmp: m.value_filter.cmp, value: v } })}
                 />
               </div>
             </Field>

@@ -24,7 +24,9 @@ export type EventId = string;
 /** "local" = current Canvas only; "global" = full multi-canvas */
 export type PropagationScope = "local" | "global";
 
-export type NodeType = "Source" | "Infrastructure" | "Service" | "Personnel";
+/** The built-in Node Types; `node_type` itself is a free string. */
+export const NODE_TYPES = ["Source", "Infrastructure", "Service", "Personnel"] as const;
+export type NodeType = (typeof NODE_TYPES)[number];
 
 /** Discriminates between the two Event subtypes. */
 export type EventKind = "hazard" | "disservice";

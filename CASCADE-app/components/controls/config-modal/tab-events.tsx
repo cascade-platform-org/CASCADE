@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import type { EventDefinition } from "@/lib/schemas/config";
+import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, NumberInput, ColBtn, CollapsibleSection } from "./primitives";
 import { IconPickerButton } from "./icon-picker";
@@ -20,15 +21,12 @@ export function TabEvents() {
   const removeEvent = useConfigStore((s) => s.removeEvent);
   const updateEvent = useConfigStore((s) => s.updateEvent);
   const focusEventId = useUiStore((s) => s.configModalFocusEventId);
-  const setFocusEventId = useUiStore((s) => s.setConfigModalFocusEventId);
 
-  // "Create Event" from the Temporal Simulation window lands here: bring the
-  // new Event into view once, then forget it.
+  // "Create new Event" from the Temporal Simulation window lands here: bring
+  // the new Event into view.
   useEffect(() => {
-    if (!focusEventId) return;
-    document.querySelector(`[data-event-id="${CSS.escape(focusEventId)}"]`)?.scrollIntoView({ block: "center" });
-    setFocusEventId(null);
-  }, [focusEventId, setFocusEventId]);
+    if (focusEventId) document.querySelector(`[data-event-id="${CSS.escape(focusEventId)}"]`)?.scrollIntoView({ block: "center" });
+  }, [focusEventId]);
 
   return (
     <div>
@@ -111,7 +109,7 @@ export function TabEvents() {
                 </div>
               )}
               {/* Frequency is not meaningful for a Temporal Jump (schema). */}
-              {ev.type !== "temporal_jump" && (
+              {isVulnerabilityEvent(ev) && (
                 <div>
                   <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y</label>
                   <NumberInput
@@ -136,7 +134,7 @@ export function TabEvents() {
               )}
             </div>
 
-            {ev.type !== "temporal_jump" && (
+            {isVulnerabilityEvent(ev) && (
               <CollapsibleSection
                 label="Vulnerability levels"
                 badgeFromStore={ev.id}

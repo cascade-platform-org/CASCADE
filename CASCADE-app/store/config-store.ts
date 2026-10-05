@@ -25,6 +25,7 @@ import type {
 import type { Node } from "@/lib/schemas/network";
 import type { EngineAlgorithms } from "@/lib/schemas/api";
 import { brandColor } from "@/lib/brand";
+import { isScenarioEvent } from "@/lib/event-application";
 
 // ---------------------------------------------------------------------------
 // Default configuration — N=3, no categories, no events
@@ -543,12 +544,7 @@ export const selectScaleLevels = (state: ConfigStore): FunctionalityScaleLevel[]
 export const selectLevelColor = (level: number) => (state: ConfigStore): string =>
   state.config.functionality_scale.find((l) => l.level === level)?.color ?? brandColor("neutral", 400);
 
-/** A Temporal Jump degrades nothing by vulnerability, so it gets no vulnerability slider. */
-export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type !== "temporal_jump";
-
-/** Events a user fires by hand. Temporal-Simulation-only Events live in Timelines (ADR-0019). */
-const scenarioEvents = (state: ConfigStore): EventDefinition[] =>
-  state.config.events.filter((e) => !e.temporal_simulation_only);
+const scenarioEvents = (state: ConfigStore): EventDefinition[] => state.config.events.filter(isScenarioEvent);
 
 /** First 5 scenario events shown in the Action Bar. */
 export const selectActionBarEvents = (state: ConfigStore): EventDefinition[] =>

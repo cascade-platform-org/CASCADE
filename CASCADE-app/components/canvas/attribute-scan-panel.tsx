@@ -6,7 +6,8 @@ import { useShallow } from "zustand/react/shallow";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
-import { useConfigStore, isVulnerabilityEvent } from "@/store/config-store";
+import { useConfigStore } from "@/store/config-store";
+import { isVulnerabilityEvent } from "@/lib/event-application";
 import type { Node, Edge } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------

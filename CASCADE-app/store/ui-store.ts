@@ -7,6 +7,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { useNetworkStore } from "@/store/network-store";
 
 // ---------------------------------------------------------------------------
@@ -23,6 +24,12 @@ export type ConfigModalTab =
   | "events"
   | "graph-types"
   | "node-defaults";
+
+/** See `configModalNewEvent`. */
+export interface ConfigModalNewEvent {
+  template: Omit<EventDefinition, "id">;
+  onSaved: (id: string) => void;
+}
 
 // ---------------------------------------------------------------------------
 // State
@@ -50,20 +57,15 @@ export interface UiState {
   configModalOpen: boolean;
   configModalTab: ConfigModalTab;
   /**
-   * One-shot request read by the Config modal right after it opens its draft:
-   * "new-temporal-simulation-event" appends a Temporal-Simulation-only Event
-   * (the Temporal Simulation window's "Create Event"). Cleared when the modal
-   * closes — not when acted on, because the modal's mount effect can run twice
-   * (React StrictMode) and the second run re-opens the draft.
+   * Config opened to create one Event (the Temporal Simulation window's
+   * "Create new Event"): the modal adds `template` to its draft and, on Save,
+   * passes the new id to `onSaved`. Cleared when the modal closes, not when
+   * acted on, because the modal's mount effect can run twice (React
+   * StrictMode) and the second run re-opens the draft.
    */
-  configModalIntent: "new-temporal-simulation-event" | null;
-  /** Event the Events tab scrolls to once, after the intent above created it. */
+  configModalNewEvent: ConfigModalNewEvent | null;
+  /** Event the Events tab scrolls into view (the one `configModalNewEvent` created). */
   configModalFocusEventId: string | null;
-  /**
-   * The Event the intent created during the last Config session. Survives the
-   * close (whoever asked reads it then, and checks it was saved); reset on open.
-   */
-  configModalCreatedEventId: string | null;
 
   // --- File I/O panel ---
   fileIoPanelOpen: boolean;
@@ -226,10 +228,8 @@ export interface UiActions {
   setActiveTool: (tool: ActiveTool) => void;
 
   // --- Config modal ---
-  openConfigModal: (tab?: ConfigModalTab, intent?: "new-temporal-simulation-event") => void;
+  openConfigModal: (tab?: ConfigModalTab, newEvent?: ConfigModalNewEvent) => void;
   setConfigModalFocusEventId: (id: string | null) => void;
-  /** Record the Event the intent created (also focuses it). */
-  setConfigModalCreatedEventId: (id: string) => void;
   closeConfigModal: () => void;
   setConfigModalTab: (tab: ConfigModalTab) => void;
 
@@ -340,9 +340,8 @@ const initialState: UiState = {
   activeTool: "select",
   configModalOpen: false,
   configModalTab: "functionality-scale",
-  configModalIntent: null,
+  configModalNewEvent: null,
   configModalFocusEventId: null,
-  configModalCreatedEventId: null,
   fileIoPanelOpen: false,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
@@ -426,19 +425,11 @@ export const useUiStore = create<UiStore>()(
     // Config modal
     // -------------------------------------------------------------------------
 
-    openConfigModal(tab = "functionality-scale", intent) {
+    openConfigModal(tab = "functionality-scale", newEvent) {
       set((state) => {
         state.configModalOpen = true;
         state.configModalTab = tab;
-        state.configModalIntent = intent ?? null;
-        state.configModalCreatedEventId = null;
-      });
-    },
-
-    setConfigModalCreatedEventId(id) {
-      set((state) => {
-        state.configModalCreatedEventId = id;
-        state.configModalFocusEventId = id;
+        state.configModalNewEvent = newEvent ?? null;
       });
     },
 
@@ -449,7 +440,7 @@ export const useUiStore = create<UiStore>()(
     closeConfigModal() {
       set((state) => {
         state.configModalOpen = false;
-        state.configModalIntent = null;
+        state.configModalNewEvent = null;
         state.configModalFocusEventId = null;
       });
     },

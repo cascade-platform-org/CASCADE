@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { advanceLabel } from "@/lib/timeline-plan";
-import type { CalendarUnit } from "@/lib/temporal-simulation-schema";
+import { advanceLabel, lastPropagatingIndex } from "@/lib/timeline-plan";
+import { isScenarioEvent, temporalJumpHours } from "@/lib/event-application";
+import { CalendarUnitSchema } from "@/lib/temporal-simulation-schema";
 import {
   EXPLAIN_ADD_PHASE,
   EXPLAIN_CREATE_EVENT,
@@ -21,16 +22,27 @@ import {
   explainRepeat,
   explainUnit,
 } from "@/lib/temporal-simulation-explainers";
-import { Field, SmallButton, inputCls } from "./fields";
+import { NumberInput } from "@/components/ui/number-input";
+import { Field, SmallButton, inputCls, useEventLookup } from "./fields";
 import { TimelineStrip } from "./timeline-strip";
 
-const UNITS: CalendarUnit[] = ["day", "week", "month", "quarter", "year", "none"];
+/** What "Create new Event" adds to Config → Events. */
+const NEW_EVENT: Omit<EventDefinition, "id"> = {
+  label: "New Temporal Simulation Event",
+  type: "disservice",
+  frequency_per_10y: 0,
+  temporal_simulation_only: true,
+  attribute_mutations: {},
+};
 
 /** Event picker: Temporal-Simulation-only Events first, then scenario Events. */
 function EventOptions({ events }: { events: EventDefinition[] }) {
-  const only = events.filter((e) => e.temporal_simulation_only);
-  const scenario = events.filter((e) => !e.temporal_simulation_only);
-  const label = (e: EventDefinition) => (e.type === "temporal_jump" ? `${e.label} (+${e.duration_hours ?? 1} h)` : e.label);
+  const only = events.filter((e) => !isScenarioEvent(e));
+  const scenario = events.filter(isScenarioEvent);
+  const label = (e: EventDefinition) => {
+    const hours = temporalJumpHours(e);
+    return hours === undefined ? e.label : `${e.label} (+${hours} h)`;
+  };
   return (
     <>
       {only.length > 0 && <optgroup label="Temporal Simulation only">{only.map((e) => <option key={e.id} value={e.id}>{label(e)}</option>)}</optgroup>}
@@ -45,18 +57,30 @@ export function TimelineTab() {
   const explain = useTemporalSimulationStore((s) => s.explain);
   const events = useConfigStore((s) => s.config.events);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
-  const setPendingEventTarget = useTemporalSimulationStore((s) => s.setPendingEventTarget);
-  const eventLabel = (id: string) => events.find((e) => e.id === id)?.label ?? id;
+  const { byId, eventLabel } = useEventLookup();
   const jumpHours = (id: string) => {
-    const ev = events.find((e) => e.id === id);
-    return ev?.type === "temporal_jump" ? ev.duration_hours ?? 1 : undefined;
+    const ev = byId.get(id);
+    return ev && temporalJumpHours(ev);
   };
 
   function addStep() {
     const last = timeline.steps[timeline.steps.length - 1];
-    const label = last ? advanceLabel(last.label, last.unit, Math.max(1, last.repeat)) ?? "2024-01" : "2023-01";
-    update((t) => { t.steps.push({ ...newStep(label), unit: last?.unit ?? "month" }); });
+    const label = last ? advanceLabel(last.label, last.unit, last.repeat) ?? "2024-01" : "2023-01";
+    update((t) => { t.steps.push(newStep(label, last?.unit ?? "month")); });
     explain(explainAddStep(label));
+  }
+
+  /** Create an Event in Config → Events; on Save it joins Phase `pi` of Step `si`. */
+  function createEvent(si: number, pi: number) {
+    explain(EXPLAIN_CREATE_EVENT);
+    openConfigModal("events", {
+      template: NEW_EVENT,
+      onSaved: (id) => {
+        update((t) => { t.steps[si]?.phases[pi]?.events.push({ event: id, every: 1 }); });
+        const ev = useConfigStore.getState().config.events.find((e) => e.id === id);
+        if (ev) explain(explainPhaseEvent(ev.label, true, temporalJumpHours(ev)));
+      },
+    });
   }
 
   return (
@@ -68,7 +92,7 @@ export function TimelineTab() {
       <TimelineStrip />
 
       {timeline.steps.map((step, si) => {
-        const lastPropagating = step.phases.map((p) => p.propagate).lastIndexOf(true);
+        const lastPropagating = lastPropagatingIndex(step.phases);
         const labelValid = advanceLabel(step.label, step.unit, 0) !== null;
         return (
           <div key={si} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
@@ -106,23 +130,22 @@ export function TimelineTab() {
                   value={step.unit}
                   onFocus={() => explain(explainUnit(step.unit))}
                   onChange={(e) => {
-                    const u = e.target.value as CalendarUnit;
+                    const u = CalendarUnitSchema.parse(e.target.value);
                     update((t) => { t.steps[si].unit = u; });
                     explain(explainUnit(u));
                   }}
                 >
-                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  {CalendarUnitSchema.options.map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
               </Field>
               <Field label="repeat">
-                <input
-                  type="number"
+                <NumberInput
                   min={1}
                   className={inputCls}
                   value={step.repeat}
                   onFocus={() => explain(explainRepeat(step.repeat))}
-                  onChange={(e) => {
-                    const r = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                  onChange={(v) => {
+                    const r = Math.max(1, Math.floor(v));
                     update((t) => { t.steps[si].repeat = r; });
                     explain(explainRepeat(r));
                   }}
@@ -141,8 +164,8 @@ export function TimelineTab() {
                       onChange={(e) => {
                         const on = e.target.checked;
                         update((t) => { t.steps[si].phases[pi].propagate = on; });
-                        const flags = step.phases.map((p, i) => (i === pi ? on : p.propagate));
-                        explain(explainPropagate(on, flags.lastIndexOf(true) === pi));
+                        const flags = step.phases.map((p, i) => ({ propagate: i === pi ? on : p.propagate }));
+                        explain(explainPropagate(on, lastPropagatingIndex(flags) === pi));
                       }}
                     />
                     then Propagate
@@ -172,18 +195,17 @@ export function TimelineTab() {
                         {step.repeat > 1 && (
                           <label className="flex items-center gap-0.5 text-[10px] text-zinc-400" title="Fires on this Step's periods N, 2N, 3N…">
                             every
-                            <input
-                              type="number"
+                            <NumberInput
                               min={1}
                               max={step.repeat}
                               value={pe.every}
                               onFocus={() => explain(explainEventEvery(eventLabel(pe.event), pe.every, step.repeat))}
-                              onChange={(e) => {
-                                const n = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                              onChange={(v) => {
+                                const n = Math.max(1, Math.floor(v));
                                 update((t) => { t.steps[si].phases[pi].events[ei].every = n; });
                                 explain(explainEventEvery(eventLabel(pe.event), n, step.repeat));
                               }}
-                              className="w-8 rounded border border-zinc-200 bg-transparent px-0.5 text-center text-[10px] text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-600 dark:text-zinc-200"
+                              className="w-8 rounded border border-zinc-200 bg-transparent py-0 px-0.5 dark:bg-transparent text-center text-[10px] text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-600 dark:text-zinc-200"
                             />
                           </label>
                         )}
@@ -213,11 +235,7 @@ export function TimelineTab() {
                       type="button"
                       title="Create a Temporal-Simulation-only Event in Config → Events; it joins this Phase when you save"
                       className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                      onClick={() => {
-                        setPendingEventTarget({ step: si, phase: pi });
-                        explain(EXPLAIN_CREATE_EVENT);
-                        openConfigModal("events", "new-temporal-simulation-event");
-                      }}
+                      onClick={() => createEvent(si, pi)}
                     >
                       <CalendarPlus size={11} /> Create new Event
                     </button>

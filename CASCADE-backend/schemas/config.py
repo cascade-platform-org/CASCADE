@@ -65,9 +65,9 @@ class EventDefinition(BaseModel):
     temporal_simulation_only: bool = Field(
         default=False,
         description=(
-            "True for an Event used only inside a Temporal Simulation (a Phase or a Periodic "
-            "rule): it is hidden from the Action Bar and from the Scorecard's uncovered-Event "
-            "list. Any type may be Temporal-Simulation-only, a Temporal Jump included. "
+            "True for an Event used only inside a Temporal Simulation Phase: it is hidden "
+            "from the Action Bar and from the Scorecard's uncovered-Event list. Any type may "
+            "be Temporal-Simulation-only, a Temporal Jump included. "
             "Client-side only; the engine never reads it."
         ),
     )

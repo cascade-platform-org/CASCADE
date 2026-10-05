@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXAMPLE_DOC, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
+import { EXAMPLE_DOC, docErrors, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
 import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulationDoc } from "./temporal-simulation-schema";
 import type { FilterableModel } from "./element-filter";
 import type { Node } from "./schemas/network";
@@ -44,12 +44,6 @@ describe("Phase Events", () => {
     const r = parseDocText(text);
     expect(r.ok && r.doc.timeline.steps[0].phases[0].events).toEqual([{ event: "settle", every: 1 }, { event: "audit", every: 2 }]);
   });
-  it("reject the old top-level Periodic rules", () => {
-    const old = JSON.parse(serializeDoc(doc));
-    old.timeline.every = [];
-    const r = parseDocText(JSON.stringify(old));
-    expect(r.ok ? "" : r.errors.join()).toMatch(/every/);
-  });
 });
 
 describe("parseDocText", () => {
@@ -79,6 +73,14 @@ describe("parseDocText", () => {
   it("explains invalid JSON", () => {
     const r = parseDocText("{ not json");
     expect(r.ok ? "" : r.errors[0]).toMatch(/Not valid JSON/);
+  });
+});
+
+describe("docErrors", () => {
+  it("checks a draft the way Apply checks text", () => {
+    expect(docErrors(doc)).toEqual([]);
+    const bad: TemporalSimulationDoc = { ...doc, profile: { "2023-01": [{ element: "pool", path: [], op: "add", value: "x" }] } };
+    expect(docErrors(bad).join("\n")).toMatch(/profile\.2023-01\.0/);
   });
 });
 

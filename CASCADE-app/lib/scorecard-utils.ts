@@ -6,6 +6,7 @@
  */
 
 import { materialiseAround } from "@/lib/graph-diff";
+import { isScenarioEvent, isVulnerabilityEvent } from "@/lib/event-application";
 import type { GraphSnapshot, ScorecardEntry, PropagationScorecardEntry, AnyUpdateEntry } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import JSZip from "jszip";
@@ -226,7 +227,7 @@ export function findUncoveredEvents(
 ): UncoveredEvent[] {
   const coveredIds = new Set(scorecard.filter(isPropagationEntry).flatMap((e) => e.event_ids));
   return (config.events ?? [])
-    .filter((ev) => ev.type !== "temporal_jump" && !ev.temporal_simulation_only && !coveredIds.has(ev.id))
+    .filter((ev) => isVulnerabilityEvent(ev) && isScenarioEvent(ev) && !coveredIds.has(ev.id))
     .map((ev) => ({ eventId: ev.id, eventLabel: ev.label, eventType: ev.type }));
 }
 

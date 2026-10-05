@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { useConfigStore, isVulnerabilityEvent } from "@/store/config-store";
+import { useConfigStore } from "@/store/config-store";
+import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
 import { cn, NumberInput, ColBtn } from "./primitives";
 import type { Node, CategoryDependencyProfiles, CategoryDependencyProfile } from "@/lib/schemas/network";

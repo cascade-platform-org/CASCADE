@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { elementLabel, filterMisuse, matchElements, type FilterableModel } from "./element-filter";
+import { filterLabel, filterMisuse, matchElements, type FilterableModel } from "./element-filter";
 import type { Canvas, Edge, Node } from "./schemas/network";
 
 const node = (id: string, extra: Partial<Node> = {}): Node => ({ id, functionality: 4, ...extra }) as Node;
@@ -33,7 +33,7 @@ describe("matchElements", () => {
   });
   it("selects edges by the source's supply Category, and reads an edge's label as its endpoints", () => {
     expect(matchElements({ kind: "edge", category: "hours" }, model)).toEqual(["e1", "e2"]);
-    expect(elementLabel("e1", model)).toBe("Worker pool → Kitchen");
+    expect(filterLabel("e1", model)).toBe("Worker pool → Kitchen");
     expect(matchElements({ kind: "edge", label_contains: "laundry" }, model)).toEqual(["e2"]);
   });
   it("ANDs canvas, label and Node Type", () => {

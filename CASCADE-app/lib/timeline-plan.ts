@@ -103,37 +103,44 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
   }
 }
 
+/** Index of the last propagating Phase — Stocks integrate after it (ADR-0019 §2); -1 if none. */
+export const lastPropagatingIndex = (phases: { propagate: boolean }[]): number =>
+  phases.map((p) => p.propagate).lastIndexOf(true);
+
 /** Unroll Steps × repeat, resolve each Event's `every`, and count engine calls. */
 export function planTimeline(timeline: Timeline): TimelinePlan {
   const periods: PlannedPeriod[] = [];
   const warnings: string[] = [];
 
   timeline.steps.forEach((step, stepIndex) => {
-    const repeat = Math.max(1, Math.floor(step.repeat || 1));
     if (step.phases.length === 0) {
       warnings.push(`Step ${stepIndex + 1} ("${step.label}") has no Phase, so its periods apply only their profile operations.`);
     }
-    for (let r = 0; r < repeat; r++) {
+    step.phases.forEach((ph, pi) =>
+      ph.events.forEach((e) => {
+        if (e.every > step.repeat) {
+          warnings.push(`Step ${stepIndex + 1}, Phase ${pi + 1}: "${e.event}" every ${e.every} periods never fires in a Step of ${step.repeat}.`);
+        }
+      }),
+    );
+    const lastPropagating = lastPropagatingIndex(step.phases);
+    for (let r = 0; r < step.repeat; r++) {
       const label = advanceLabel(step.label, step.unit, r);
       if (label === null) {
         warnings.push(`Step ${stepIndex + 1}: "${step.label}" is not a valid ${step.unit} label.`);
         return;
       }
-      const number = periods.length + 1;
-      const lastPropagating = step.phases.map((p) => p.propagate).lastIndexOf(true);
       periods.push({
-        number,
+        number: periods.length + 1,
         label,
         stepIndex,
         repetition: r,
-        phases: step.phases.map((phase, index) => {
-          return {
-            index,
-            events: phase.events.filter((e) => (r + 1) % e.every === 0).map((e) => e.event),
-            propagate: phase.propagate,
-            integratesAfter: index === lastPropagating,
-          };
-        }),
+        phases: step.phases.map((phase, index) => ({
+          index,
+          events: phase.events.filter((e) => (r + 1) % e.every === 0).map((e) => e.event),
+          propagate: phase.propagate,
+          integratesAfter: index === lastPropagating,
+        })),
       });
     }
   });
@@ -143,16 +150,6 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
     if (seen.has(p.label)) warnings.push(`Label "${p.label}" appears twice; the profile cannot tell those periods apart.`);
     seen.add(p.label);
   }
-  timeline.steps.forEach((step, si) =>
-    step.phases.forEach((ph, pi) =>
-      ph.events.forEach((e) => {
-        if (e.every > Math.max(1, step.repeat)) {
-          warnings.push(`Step ${si + 1}, Phase ${pi + 1}: "${e.event}" every ${e.every} periods never fires in a Step of ${step.repeat}.`);
-        }
-      }),
-    ),
-  );
-
   const engineCalls = periods.reduce((n, p) => n + p.phases.filter((ph) => ph.propagate).length, 0);
   return { periods, engineCalls, warnings };
 }

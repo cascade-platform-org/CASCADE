@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 
-const CalendarUnitSchema = z.enum(["day", "week", "month", "quarter", "year", "none"]);
+export const CalendarUnitSchema = z.enum(["day", "week", "month", "quarter", "year", "none"]);
 export type CalendarUnit = z.infer<typeof CalendarUnitSchema>;
 
 /**
@@ -40,7 +40,7 @@ const ElementFilterSchema = z
   .strict();
 export type ElementFilter = z.infer<typeof ElementFilterSchema>;
 
-const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_least"]);
+export const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_least"]);
 
 /** ADR-0021: one operation, on one Element (`element`) or on every match of `where`. */
 const AttributeOperationSchema = z
@@ -98,7 +98,8 @@ const TimelineSchema = z
   .strict();
 export type Timeline = z.infer<typeof TimelineSchema>;
 
-const AggregateSchema = z.enum(["sum", "mean", "min", "max", "count", "share_where", "percentile"]);
+export const AggregateSchema = z.enum(["sum", "mean", "min", "max", "count", "share_where", "percentile"]);
+export const ComparisonSchema = z.enum(["<", "<=", ">", ">=", "==", "!="]);
 
 /** ADR-0019 §4: a view definition, evaluated at read time over the run record. */
 const MetricSchema = z
@@ -114,7 +115,7 @@ const MetricSchema = z
     percentile: z.number().min(0).max(100).optional(),
     /** Keeps only values passing the comparison (and is the predicate of `share_where`). */
     value_filter: z
-      .object({ cmp: z.enum(["<", "<=", ">", ">=", "==", "!="]), value: z.number() })
+      .object({ cmp: ComparisonSchema, value: z.number() })
       .strict()
       .optional(),
   })

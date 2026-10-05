@@ -9,7 +9,8 @@
 
 import { useCallback } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore, selectN, selectScaleLevels, isVulnerabilityEvent } from "@/store/config-store";
+import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
+import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { Edge } from "@/lib/schemas/network";

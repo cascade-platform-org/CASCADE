@@ -6,8 +6,10 @@
  * shows "what this will do" for the control being used.
  */
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useConfigStore } from "@/store/config-store";
+import type { EventDefinition } from "@/lib/schemas/config";
 
 export const inputCls =
   "w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
@@ -85,7 +87,7 @@ export const numOrUndef = (v: string): number | undefined => (v.trim() === "" ||
 
 /** A path list shown as "a, b, c"; typed back the same way. */
 export const formatPath = (path: string[]): string => path.join(", ");
-export const parsePath = (text: string): string[] => text.split(",").map((p) => p.trim());
+export const parsePath = (text: string): string[] => text.split(",").map((p) => p.trim()).filter(Boolean);
 
 /** Numbers and booleans are typed as text and read back as their type; anything else stays a string. */
 export function parseValue(text: string): number | boolean | string {
@@ -122,4 +124,13 @@ export function TextBackedInput({
       onChange={(e) => { setText(e.target.value); onCommit(e.target.value); }}
     />
   );
+}
+
+/** The committed Events by id, and an id's label (the id itself when unknown). */
+export function useEventLookup(): { byId: Map<string, EventDefinition>; eventLabel: (id: string) => string } {
+  const events = useConfigStore((s) => s.config.events);
+  return useMemo(() => {
+    const byId = new Map(events.map((e) => [e.id, e]));
+    return { byId, eventLabel: (id: string) => byId.get(id)?.label ?? id };
+  }, [events]);
 }

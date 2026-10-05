@@ -12,16 +12,15 @@ import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { elementLabel, filterMisuse, matchElements } from "@/lib/element-filter";
+import { filterLabel, filterMisuse, matchElements } from "@/lib/element-filter";
 import { explainFilter } from "@/lib/temporal-simulation-explainers";
 import type { ElementFilter } from "@/lib/temporal-simulation-schema";
+import { NODE_TYPES } from "@/lib/schemas/primitives";
 import { Field, inputCls } from "./fields";
-
-const NODE_TYPES = ["Source", "Infrastructure", "Service", "Personnel"];
 
 /** Drop emptied fields so they stop constraining. */
 function clean(f: ElementFilter): ElementFilter {
-  const out: ElementFilter = { kind: f.kind ?? "node" };
+  const out: ElementFilter = { kind: f.kind };
   if (f.canvas) out.canvas = f.canvas;
   if (f.category) out.category = f.category;
   if (f.node_type && out.kind === "node") out.node_type = f.node_type;
@@ -34,21 +33,28 @@ export function FilterEditor({ value, onChange }: { value: ElementFilter; onChan
   const explain = useTemporalSimulationStore((s) => s.explain);
   const { nodes, edges, canvases } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges, canvases: s.canvases })));
   const categories = useConfigStore(useShallow((s) => s.config.categories.map((c) => c.name)));
-  const kind = value.kind ?? "node";
+  const { kind } = value;
   const excluded = useMemo(() => new Set(value.exclude ?? []), [value.exclude]);
+  // The built-in Node Types plus any custom one the model uses.
+  const nodeTypes = useMemo(
+    () => [...new Set([...NODE_TYPES, ...Object.values(nodes).flatMap((n) => (n.node_type ? [n.node_type] : []))])],
+    [nodes],
+  );
 
   // Every match of the conditions, ticked or not — the list the user picks from.
   const candidates = useMemo(
     () => matchElements({ ...value, exclude: undefined }, { nodes, edges, canvases }),
     [value, nodes, edges, canvases],
   );
-  const selected = candidates.filter((id) => !excluded.has(id));
+  const selected = useMemo(() => candidates.filter((id) => !excluded.has(id)), [candidates, excluded]);
 
   const commit = (patch: Partial<ElementFilter>) => {
     const next = clean({ ...value, ...patch });
     onChange(next);
-    const model = useCanvasStore.getState();
-    explain(explainFilter(next, matchElements(next, model).length, matchElements({ ...next, exclude: undefined }, model).length, filterMisuse(next)));
+    // One scan: the candidates, then the ticked ones among them.
+    const all = matchElements({ ...next, exclude: undefined }, useCanvasStore.getState());
+    const out = new Set(next.exclude ?? []);
+    explain(explainFilter(next, all.filter((id) => !out.has(id)).length, all.length, filterMisuse(next)));
   };
   const showExplain = () => explain(explainFilter(value, selected.length, candidates.length, filterMisuse(value)));
   const toggle = (id: string) =>
@@ -78,7 +84,7 @@ export function FilterEditor({ value, onChange }: { value: ElementFilter; onChan
         <Field label="Node Type">
           <select className={inputCls} disabled={kind === "edge"} value={value.node_type ?? ""} onChange={(e) => commit({ node_type: e.target.value })}>
             <option value="">any</option>
-            {NODE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {nodeTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
         <Field label="Label contains">
@@ -99,7 +105,7 @@ export function FilterEditor({ value, onChange }: { value: ElementFilter; onChan
           {candidates.map((id) => (
             <label key={id} className="flex min-w-0 items-center gap-1.5 py-0.5 text-[11px] text-zinc-700 dark:text-zinc-300">
               <input type="checkbox" checked={!excluded.has(id)} onChange={() => toggle(id)} />
-              <span className="truncate" title={id}>{elementLabel(id, { nodes, edges })}</span>
+              <span className="truncate" title={id}>{filterLabel(id, { nodes, edges })}</span>
             </label>
           ))}
         </div>
