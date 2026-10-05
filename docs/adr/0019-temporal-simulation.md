@@ -51,7 +51,10 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   profile is input, roughly model-sized (~40 KB for banca ore), and ADR-0017's
   single-downloadable-file principle applies.
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
-  is not ruled out later.
+  is not ruled out later. The profile is a **grid on the same period columns**: one row
+  per operation (target, path, op), one cell per period. A written value stays in later
+  periods, so an empty cell of a `set` row shows the carried value; a value over several
+  periods is several filled cells, and a profile entry has no period range.
 - **An Event used only in Timelines is marked `temporal_simulation_only`** (an additive
   `EventDefinition` field, any type). It is hidden from the Action Bar and from the
   Scorecard's uncovered-Event list, and only such an Event may be a Temporal Jump in the

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CalendarPlus, Plus, Trash2, X } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,8 @@ import {
 } from "@/lib/temporal-simulation-explainers";
 import { NumberInput } from "@/components/ui/number-input";
 import { Field, SmallButton, inputCls, useEventLookup } from "./fields";
-import { TimelineStrip } from "./timeline-strip";
+import { TimelineGrid } from "./timeline-grid";
+import { ProfileRowEditor } from "./profile-row-editor";
 
 /** What "Create new Event" adds to Config → Events. */
 const NEW_EVENT: Omit<EventDefinition, "id"> = {
@@ -58,6 +60,10 @@ export function TimelineTab() {
   const events = useConfigStore((s) => s.config.events);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
   const { byId, eventLabel } = useEventLookup();
+  const profile = useTemporalSimulationStore((s) => s.profile);
+  /** The profile row whose target, path and op are being edited. */
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
+  const row = profile.find((r) => r.id === selectedRow);
   const jumpHours = (id: string) => {
     const ev = byId.get(id);
     return ev && temporalJumpHours(ev);
@@ -89,7 +95,10 @@ export function TimelineTab() {
         <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
       </Field>
 
-      <TimelineStrip />
+      <TimelineGrid selectedRow={row ? selectedRow : null} onSelectRow={setSelectedRow} />
+      {row && <ProfileRowEditor row={row} onClose={() => setSelectedRow(null)} onSelect={setSelectedRow} />}
+
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Steps</h3>
 
       {timeline.steps.map((step, si) => {
         const lastPropagating = lastPropagatingIndex(step.phases);

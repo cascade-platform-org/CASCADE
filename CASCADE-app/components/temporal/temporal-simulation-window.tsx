@@ -12,7 +12,7 @@
  */
 
 import React from "react";
-import { CalendarClock, ListOrdered, Table2, Play, Sigma, Database, Info, Braces } from "lucide-react";
+import { CalendarClock, ListOrdered, Play, Sigma, Database, Info, Braces } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
@@ -20,7 +20,6 @@ import { useTemporalSimulationStore, type SimTab } from "@/store/temporal-simula
 import { useUiStore } from "@/store/ui-store";
 import { EXPLAIN_TAB } from "@/lib/temporal-simulation-explainers";
 import { TimelineTab } from "./timeline-tab";
-import { ProfileTab } from "./profile-tab";
 import { RunTab } from "./run-tab";
 import { MetricsTab } from "./metrics-tab";
 import { StockTab } from "./stock-tab";
@@ -28,7 +27,6 @@ import { TextTab } from "./text-tab";
 
 const TABS: { id: SimTab; label: string; icon: React.ReactNode }[] = [
   { id: "timeline", label: "Timeline", icon: <ListOrdered size={15} /> },
-  { id: "profile", label: "Profile", icon: <Table2 size={15} /> },
   { id: "run", label: "Run", icon: <Play size={15} /> },
   { id: "metrics", label: "Metrics", icon: <Sigma size={15} /> },
   { id: "stock", label: "Stock", icon: <Database size={15} /> },
@@ -100,7 +98,6 @@ export function TemporalSimulationWindow() {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {tab === "timeline" && <TimelineTab />}
-          {tab === "profile" && <ProfileTab />}
           {tab === "run" && <RunTab />}
           {tab === "metrics" && <MetricsTab />}
           {tab === "stock" && <StockTab />}

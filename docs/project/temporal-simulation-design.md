@@ -145,7 +145,12 @@ walk of the diffs from the run's start — the **same primitive** §3.1 uses to 
 on request.
 
 The Timeline is authored as an **editable table** of Steps and Phases, which is clearer
-than a draggable track at tens of periods. A track is not ruled out later.
+than a draggable track at tens of periods. A track is not ruled out later. The profile sits
+under the Timeline on the same period columns, as a spreadsheet of known inputs: one row
+per operation, one cell per period. Because a written value stays until something changes
+it, a period range would only repeat a `set`, or need a revert rule that would also undo
+an Event's change to that field; filled cells, with the carried value shown in empty ones,
+say the same thing with no new rule.
 
 ### 2.2 A Timeline stores inputs; a run is a cache
 

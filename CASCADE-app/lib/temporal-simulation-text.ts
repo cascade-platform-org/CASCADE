@@ -24,12 +24,16 @@ import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element
 import { planTimeline } from "@/lib/timeline-plan";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
 
-/** One profile operation as the window lists it: the period it belongs to, and the operation. */
-export interface ProfileEntry {
+/**
+ * One row of the profile grid: one operation (target, path, op) and its value in
+ * each period that applies it; a label absent from `values` applies nothing.
+ * Rows are how the window shows the profile; the document keeps
+ * `{label: [operations]}`.
+ */
+export type ProfileRow = Omit<AttributeOperation, "value"> & {
   id: string;
-  label: string;
-  op: AttributeOperation;
-}
+  values: Record<string, AttributeOperation["value"]>;
+};
 
 export interface MetricEntry {
   id: string;
@@ -38,20 +42,64 @@ export interface MetricEntry {
 
 export interface SimulationDraft {
   timeline: Timeline;
-  profile: ProfileEntry[];
+  profile: ProfileRow[];
   metrics: MetricEntry[];
 }
 
-export function draftToDoc(d: SimulationDraft): TemporalSimulationDoc {
+/** The operation a row applies in one period. */
+export function rowOperation(row: ProfileRow, value: AttributeOperation["value"]): AttributeOperation {
+  const target = row.where !== undefined ? { where: row.where } : { element: row.element };
+  return { ...target, path: row.path, op: row.op, value };
+}
+
+/** Rows → `{label: [operations]}`: a period's operations follow row order; labels in Timeline order, unknown ones after. */
+function rowsToProfile(rows: ProfileRow[], timeline: Timeline): Record<string, AttributeOperation[]> {
+  const labels = new Set([...planTimeline(timeline).periods.map((p) => p.label), ...rows.flatMap((r) => Object.keys(r.values))]);
   const profile: Record<string, AttributeOperation[]> = {};
-  for (const e of d.profile) (profile[e.label] ??= []).push(e.op);
-  return { format: TEMPORAL_SIMULATION_FORMAT, timeline: d.timeline, profile, metrics: d.metrics.map((m) => m.metric) };
+  for (const label of labels) {
+    const ops = rows.filter((r) => label in r.values).map((r) => rowOperation(r, r.values[label]));
+    if (ops.length > 0) profile[label] = ops;
+  }
+  return profile;
+}
+
+/**
+ * `{label: [operations]}` → rows. An operation joins an existing row with the
+ * same target, path and op when that keeps its period's order; otherwise it
+ * starts a row. So rows → document gives back exactly the lists it came from.
+ */
+function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () => string): ProfileRow[] {
+  const rows: ProfileRow[] = [];
+  const keys: string[] = [];
+  for (const [label, ops] of Object.entries(profile)) {
+    let previous = -1;
+    for (const { value, ...op } of ops) {
+      const key = JSON.stringify([op.element, op.where, op.path, op.op]);
+      let i = keys.findIndex((k, j) => j > previous && k === key && !(label in rows[j].values));
+      if (i < 0) {
+        i = rows.push({ ...op, id: newId(), values: {} }) - 1;
+        keys.push(key);
+      }
+      rows[i].values[label] = value;
+      previous = i;
+    }
+  }
+  return rows;
+}
+
+export function draftToDoc(d: SimulationDraft): TemporalSimulationDoc {
+  return {
+    format: TEMPORAL_SIMULATION_FORMAT,
+    timeline: d.timeline,
+    profile: rowsToProfile(d.profile, d.timeline),
+    metrics: d.metrics.map((m) => m.metric),
+  };
 }
 
 export function docToDraft(doc: TemporalSimulationDoc, newId: () => string): SimulationDraft {
   return {
     timeline: doc.timeline,
-    profile: Object.entries(doc.profile).flatMap(([label, ops]) => ops.map((op) => ({ id: newId(), label, op }))),
+    profile: profileToRows(doc.profile, newId),
     metrics: doc.metrics.map((metric) => ({ id: newId(), metric })),
   };
 }

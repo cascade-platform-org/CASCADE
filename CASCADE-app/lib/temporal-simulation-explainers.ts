@@ -34,19 +34,11 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
     title: "Timeline",
     lines: [
       "The Timeline is the saved input: an ordered table of Steps, each with ordered Phases holding Events (each firing every period, or every N periods of its Step).",
+      "Under the overview sits the profile: the known inputs per period (rates, inflows, demands), one row per operation and one cell per period, applied at the start of the period before any Phase.",
       "It stores inputs only. Results live in a run record, a cache that can always be recomputed.",
       "Editing a Step in the middle replays the run forward from that period; earlier periods keep their recorded diffs.",
     ],
     refs: ["ADR-0019 §1", "ADR-0019 §3"],
-  },
-  profile: {
-    title: "Profile",
-    lines: [
-      "The profile holds the per-period exogenous inputs (rates, inflows, demands) as Attribute Operations keyed by period label.",
-      "Each period applies its profile operations first, before any Phase Event or Propagation reads them.",
-      "It is the same mechanism as an Event's Attribute Operations, so it is validated and recorded the same way.",
-    ],
-    refs: ["ADR-0019 §1", "ADR-0021"],
   },
   run: {
     title: "Run",
@@ -239,9 +231,7 @@ export function explainEventEvery(label: string, every: number, repeat: number):
 // ---------------------------------------------------------------------------
 
 export function explainProfileOp(label: string, op: AttributeOperation, labelUsed: boolean, matches: number | null): Explanation {
-  const target = op.element !== undefined
-    ? `Element ${op.element || "(none chosen)"}`
-    : `each of the ${matches ?? 0} Element${matches === 1 ? "" : "s"} the filter selects (in id order)`;
+  const target = describeTarget(op, matches);
   return {
     title: "Profile operation",
     lines: [
@@ -254,6 +244,43 @@ export function explainProfileOp(label: string, op: AttributeOperation, labelUse
         : "No period of the Timeline has this label, so this entry never applies; it is flagged unused.",
     ],
     refs: ["ADR-0019 §1", "ADR-0021"],
+  };
+}
+
+/** Who a profile row or operation acts on. */
+function describeTarget(op: Pick<AttributeOperation, "element" | "where">, matches: number | null): string {
+  return op.element !== undefined
+    ? `Element ${op.element || "(none chosen)"}`
+    : `each of the ${matches ?? 0} Element${matches === 1 ? "" : "s"} the filter selects (in id order)`;
+}
+
+export function explainProfileRow(row: Omit<AttributeOperation, "value">, matches: number | null, periods: number): Explanation {
+  return {
+    title: "Profile row",
+    lines: [
+      `One operation: ${describeOp(row.op)} at ${row.path.join(" › ") || "(path)"} on ${describeTarget(row, matches)}, at the start of each period whose cell holds a value (${periods} now).`,
+      row.op === "set"
+        ? "A written value stays until a later cell, an Event or another row changes it; an empty cell shows the value carried into it in grey."
+        : "An empty cell applies nothing. → on a filled cell repeats its value into the following empty cells, so a monthly mul 1.02 compounds.",
+      "Paste a series copied from a spreadsheet into a cell to fill it and the following periods.",
+    ],
+    refs: ["ADR-0019 §1", "ADR-0021"],
+  };
+}
+
+/** An empty profile cell: no operation in that period. */
+export function explainProfileCarry(label: string, op: AttributeOperation["op"], carried: string | undefined): Explanation {
+  return {
+    title: `Profile cell — ${label}`,
+    lines: [
+      op !== "set"
+        ? `No operation in "${label}". A value here would apply ${op} in this period only.`
+        : carried !== undefined
+          ? `No operation in "${label}": the ${carried} written earlier stays. A value here changes it from this period on.`
+          : `No operation yet: the field keeps the model's own value. A value here sets it from this period on.`,
+      "Paste a series (tab, newline or ; separated) to fill this cell and the following periods.",
+    ],
+    refs: ["ADR-0019 §2"],
   };
 }
 
@@ -339,6 +366,7 @@ export const EXPLAIN_STRIP: Explanation = {
     "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, clock = a time jump (the only way time passes).",
     "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events. ∫ marks where Stocks integrate: after the period's last propagating Phase.",
     "An Event set to every N periods shows only in the periods it fires in. Click a period for exactly what runs in it.",
+    "Below, each profile row is one operation with a cell per period. A written value stays in later periods until something changes it, so an empty cell of a set row shows the carried value in grey.",
   ],
   refs: ["ADR-0019 §1", "ADR-0019 §2"],
 };

@@ -606,7 +606,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 - A **profile** gives per-period inputs as Attribute Operations keyed by period label.
 - A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase, with the hours they choose.
 - **Running a Timeline first performs a Reset**, so every run starts from the authored model with every Element operational. Initial damage is an Event in the first Step.
-- The Timeline is authored as an editable table of Steps and Phases. Editing mid-run means changing an Event or profile entry at a Step; the run replays forward from that period. On the same build, the same Timeline produces the same result.
+- The Timeline is authored as an editable table of Steps and Phases, with the profile as a grid under it on the same period columns (one row per operation, one cell per period; an empty `set` cell shows the value carried into it). Editing mid-run means changing an Event or profile entry at a Step; the run replays forward from that period. On the same build, the same Timeline produces the same result.
 - The step operator runs client-side and calls `POST /api/propagate` once per propagating Phase.
 
 **Between periods.**

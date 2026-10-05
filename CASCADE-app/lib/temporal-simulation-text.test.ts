@@ -30,9 +30,32 @@ describe("text round-trip", () => {
   it("draft → doc → text → doc → draft keeps every operation in order", () => {
     let n = 0;
     const draft = docToDraft(doc, () => `id${n++}`);
-    expect(draft.profile.map((e) => e.label)).toEqual(["2023-01", "2023-01", "2023-02"]);
     const parsed = parseDocText(serializeDoc(draftToDoc(draft)));
     expect(parsed.ok && parsed.doc).toEqual(doc);
+  });
+});
+
+describe("profile rows", () => {
+  const ids = () => { let n = 0; return () => `r${n++}`; };
+  const pool = (op: "set" | "add", value: number) => ({ element: "pool", path: ["supply_capacity", "hours", "rate"], op, value });
+  const water = (value: number) => ({ element: "pool", path: ["supply_capacity", "water"], op: "set" as const, value });
+
+  it("one operation over several periods is one row with a value per period", () => {
+    const rows = docToDraft({ ...doc, profile: { "2023-01": [pool("set", 160)], "2023-02": [pool("set", 120)] } }, ids()).profile;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].values).toEqual({ "2023-01": 160, "2023-02": 120 });
+  });
+
+  it("keeps each period's order when grouping would swap it", () => {
+    const d: TemporalSimulationDoc = { ...doc, profile: { "2023-01": [pool("add", 1), water(2)], "2023-02": [water(3), pool("add", 4)] } };
+    const draft = docToDraft(d, ids());
+    expect(draft.profile).toHaveLength(3);
+    expect(draftToDoc(draft).profile).toEqual(d.profile);
+  });
+
+  it("writes periods in Timeline order", () => {
+    const rows = docToDraft({ ...doc, profile: { "2023-02": [pool("set", 1)], "2023-01": [pool("set", 2)] } }, ids()).profile;
+    expect(Object.keys(draftToDoc({ timeline: doc.timeline, profile: rows, metrics: [] }).profile)).toEqual(["2023-01", "2023-02"]);
   });
 });
 

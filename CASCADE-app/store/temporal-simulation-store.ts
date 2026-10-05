@@ -11,11 +11,11 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CalendarUnit, Timeline, TimelinePhase, TimelineStep } from "@/lib/temporal-simulation-schema";
-import type { MetricEntry, ProfileEntry, SimulationDraft } from "@/lib/temporal-simulation-text";
+import { draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import type { StockDraft } from "@/lib/stock-math";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
-export type SimTab = "timeline" | "profile" | "run" | "metrics" | "stock" | "text";
+export type SimTab = "timeline" | "run" | "metrics" | "stock" | "text";
 
 export interface StockPreview extends StockDraft {
   delivered: number;
@@ -26,7 +26,7 @@ interface TemporalSimulationState {
   open: boolean;
   tab: SimTab;
   timeline: Timeline;
-  profile: ProfileEntry[];
+  profile: ProfileRow[];
   metrics: MetricEntry[];
   stock: StockPreview;
   /** Snapshot of the Timeline the last dry run planned; differs → stale. */
@@ -41,7 +41,7 @@ interface TemporalSimulationState {
   setTab: (tab: SimTab) => void;
   explain: (e: Explanation) => void;
   updateTimeline: (fn: (t: Timeline) => void) => void;
-  updateProfile: (fn: (rows: ProfileEntry[]) => void) => void;
+  updateProfile: (fn: (rows: ProfileRow[]) => void) => void;
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
@@ -74,8 +74,8 @@ const EXAMPLE_TIMELINE: Timeline = {
 };
 
 /** What a run depends on in the draft; a change after a run marks it stale. */
-export const runKey = (s: { timeline: Timeline; profile: ProfileEntry[] }) =>
-  JSON.stringify([s.timeline, s.profile.map((e) => [e.label, e.op])]);
+export const runKey = (s: { timeline: Timeline; profile: ProfileRow[] }) =>
+  JSON.stringify(draftToDoc({ timeline: s.timeline, profile: s.profile, metrics: [] }));
 
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
   immer((set, get) => ({
