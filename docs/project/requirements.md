@@ -137,9 +137,9 @@ Additional **node-only** attributes:
 
 | Attribute | Applies to | Description |
 |---|---|---|
-| `supply_capacity` | Source nodes | `{ [category]: number }` — maximum resource supply per category the node provides. |
+| `supply_capacity` | Source nodes | `{ [category]: number }` — maximum resource supply per category the node provides. *Proposed (§9.6, ADR-0020):* a value may also be a **Stock** object, the richer form of a rate that persists across periods; a bare number is unchanged. |
 | `throughput_capacity[cat]` | All nodes (per category) | Maximum throughput for that category — how much the node can pass on. Degrades proportionally with Functionality. Sits beside `supply_capacity`; was on the dependency profile until it moved, and old files are migrated on load. |
-| `capacity` | Edges | Single number — caps the flow of the one category carried by the edge. An edge carries exactly one category-flow, determined by its source node's supply category. To model different capacity limits for different categories on the same connection, use separate edges (one per category).|
+| `capacity` | Edges | *Proposed (§9.6, ADR-0020):* may also be a **Stock**, so a single source can feed consumers that each keep their own balance. Otherwise a single number — caps the flow of the one category carried by the edge. An edge carries exactly one category-flow, determined by its source node's supply category. To model different capacity limits for different categories on the same connection, use separate edges (one per category).|
 
 ### 5.4 Per-Category Dependency Block
 
@@ -238,6 +238,7 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 | `default_repair_time` | integer (hours)? | Fallback `expected_repair_time` for affected Elements with no `direct_damage_effects` entry; hazards only. |
 | `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
 | `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
+| `attribute_operations` | list\<{element, path, op, value}\>? | *Proposed (§9.6, ADR-0021).* Operations on the value a field holds when the Event fires — `op` is `set`, `add`, `mul`, `at_most` or `at_least`; `path` is a list, so it can reach `supply_capacity.<category>.level`. Run after `attribute_mutations`. |
 
 There is no explicit `affected` set on the event definition. The affected set is **implicit**: any Element with `vulnerability_levels[event.id] > 0` is affected. The imposed Functionality level is `N − vulnerability_level` (clamped to 1), applied only if it worsens the current level.
 
@@ -592,6 +593,48 @@ The user may also trigger a Temporal Jump with a custom duration — useful for 
 
 When a Hazard sets `direct_damage = true`, `expected_repair_time` records estimated repair duration. Detailed recovery mechanics are deferred; the data model reserves these fields.
 
+### 9.6 Temporal Simulation *(proposed — not implemented)*
+
+A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable run over many periods. Mechanics: ADR-0019 (Timeline, period sequence, recording), ADR-0020 (Stocks, `served_ratio`), ADR-0021 (Attribute Operations); reasoning: `temporal-simulation-design.md`. This section states what the product must do.
+
+**Timeline.**
+- A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it), `advance_hours` (elapsed hours, read only by backup reserves) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
+- A periodic form, "every *N* periods apply these Events in Phase *k*", removes hand-unrolling.
+- A **profile** gives per-period inputs as Attribute Operations keyed by period label.
+- A Timeline carries no Temporal Jump Events; each Step's `advance_hours` advances time.
+- **Running a Timeline first performs a Reset**, so every run starts from the authored model with every Element operational. Initial damage is an Event in the first Step.
+- The Timeline is authored as an editable table of Steps and Phases. Editing mid-run means changing an Event or profile entry at a Step; the run replays forward from that period. On the same build, the same Timeline produces the same result.
+- The step operator runs client-side and calls `POST /api/propagate` once per propagating Phase.
+
+**Between periods.**
+- **Shortage is recomputed every Propagation**: Functionality and Responsibility Share return to what Events imposed in this run before each Propagation. `direct_damage`, `expected_repair_time`, Rule-set attributes and Stocks stand.
+- **A backup reserve drains only while its Element is in shortage**, by the period's `advance_hours` at the period's end. A reserve reaching 0 is spent (Functionality 1) and is not re-granted until a period without shortage refills it.
+- **Repair is an Event** in the Step where it completes; nothing counts `expected_repair_time` down.
+
+**Stocks.**
+- A **Stock** persists across periods: `rate`, `inflow` (credited in integration; defaults to `rate`), `level` (signed, as typed), `min`, `max`, `max_draw`, `retention`, `efficiency`, and optional `level_reference` / `change_reference`, inside `supply_capacity` per Category or an edge `capacity` (§5.3). An edge Stock adds edge capacity and no supply.
+- Every engine call (Propagate, Analysis, Scorecard, Timeline) sends a Stock as its current supply number; the engine never receives a `Stock`.
+- A node Stock requires its node to be the only source of its Category; an edge Stock requires its target to have exactly one incoming flow edge. Otherwise that Stock is not integrated and a warning is shown.
+- When an edge Stock's `rate` exceeds its `inflow` (capacity lent by others, e.g. cross-training), coverage is reported and the period's balance is flagged attribution-invalid.
+- Before each propagating Phase a Stock contributes `rate + min(max_draw, max(0, retention·level + efficiency·inflow − rate − min))` to supply (scaled by Functionality like any supply). Right after the period's last propagating Phase the level is integrated once from what that Phase delivered (ADR-0020 §2). The engine never reads or writes a Stock, and a Rule never writes one.
+- `max` or `min` truncating a period reports the amount (`spilled`, `unmet`).
+- Reset restores every Stock to its pre-run level and ends the run; a hand edit of a Stock field survives Reset.
+- The Propagation result exposes `served_ratio` per consumer and Category.
+- Limits in v1: supply-side only; one source per node Stock.
+
+**Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. A result outside a field's valid range is rejected with a warning.
+
+**Recording and metrics.**
+- A run record stores the start state, one Graph Diff per Phase and one closing diff per period, no image per period; the full state of any period is rebuilt on request. It is a cache: stale when the model, Timeline or profile changes, and re-runnable. The Timeline, its profile and the run record are part of the project file.
+- A whole run is **one** entry in the undo history (`temporal_simulation_run`, its net change). CTRL+Z undoes the whole run; Clear Event (Ctrl+R) treats the run as one Event; Reset restores every Stock. The Situation shows a run as one item.
+- Standard Metrics (Operativity Score, coverage, stock level) and user-defined ones (target filter, attribute, read `state` or `change` = after − before, aggregate, optional filter) are evaluated at read time from recorded state and shown at every period. A metric at period *t* reads only periods up to *t*.
+
+**Level Mode.** A **Level Scale** in Client Configuration (bands over `value / reference`, each with a label and a brand colour) shows a Stock's level, orthogonal to Functionality. While a Temporal Simulation is open, **Level Mode** recolours the canvas by it as Analysis Mode does by a score, switchable with Functionality colours and between a Stock's level and its change over the period. The reference defaults to the Stock's own bound and can be overridden on the Stock (`level_reference`, `change_reference`). Display only: it feeds no Rule, Operativity Score or Recovery Value. A Scorecard entry saved from a simulation stores the per-element values it shows and repaints in Level Mode later.
+
+**UI.** The supply editor is offered on every Node Type; a non-blocking warning appears on a Service node with any `supply_capacity` entry, and on a Category that holds a Stock while an edge or throughput capacity in it is undeclared. The Stock's level is labelled "positive = available to draw". The existing warning for a node with both supply and demand of one Category is unchanged, so a Stock sits on a supplying node or on a consumer's single incoming edge.
+
+**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; Engine Evaluation accounting for a run (88 Propagations for 44 periods × 2 Phases); backlog Stocks (`couples`); per-source `utilisation` and source-side fairness; automatic repair; per-Category reserve draining.
+
 ---
 
 ## 10. Intervention Prioritisation
@@ -914,8 +957,8 @@ without a separate validation script — the same comparison
 | Additional category types beyond `SourceToDemands` and `Requisite` | Extensibility confirmed; types TBD |
 | Exact scorecard layout and visual design | To be defined during UI design |
 | Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
-| Detailed recovery mechanics for `direct_damage` nodes | Deferred to timeline module design |
-| Multi-period temporal simulation: a saved replayable Timeline, diff-based run recording with custom metrics, and per-category stocks | **Proposed, not accepted** — `temporal-simulation-design.md`. Generalises Temporal Jump, which is already a step loop hardcoded for one stock (`functionality_time`). Needs an ADR; the stock capability is `core/`-only, and exposing `served_ratio` + `utilisation` amends ADR-0003 |
+| Detailed recovery mechanics for `direct_damage` nodes | Deferred. *Proposed* Temporal Simulation (§9.6) repairs only through an Event; automatic repair from `advance_hours` stays open |
+| Temporal Simulation: a saved replayable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Specified, not built** — §9.6; ADR-0019/0020/0021 (proposed); working design `temporal-simulation-design.md`. Exposing `served_ratio` amends ADR-0003; `utilisation` (per source) is deferred. Open: Scorecard entry type, Engine Evaluation accounting, backlog stocks (`couples`), automatic repair, per-Category reserve draining |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 
 ---

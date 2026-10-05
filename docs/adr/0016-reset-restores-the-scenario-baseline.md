@@ -1,6 +1,6 @@
 # ADR-0016 — Reset, Clear Event and Undo: three reverters over one Scenario Baseline
 
-**Status:** accepted (2026-09-10)
+**Status:** accepted (2026-09-10). Proposed amendments: ADR-0019 adds a fourth source tag, `simulation`, for a whole Temporal Simulation run (Reset's second half reverts it; Clear Event treats a run as one Event); ADR-0020 §4 keys a Stock field by its full path.
 
 ## Context
 
