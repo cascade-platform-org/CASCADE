@@ -24,8 +24,6 @@ export interface TimelinePhase {
 export interface TimelineStep {
   label: string;
   unit: CalendarUnit;
-  /** Elapsed hours per period; read only by backup reserves. */
-  advance_hours: number;
   repeat: number;
   phases: TimelinePhase[];
 }
@@ -61,7 +59,6 @@ export interface PlannedPeriod {
   stepIndex: number;
   /** 0-based repetition inside its Step. */
   repetition: number;
-  advanceHours: number;
   phases: PlannedPhase[];
 }
 
@@ -145,7 +142,7 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
   timeline.steps.forEach((step, stepIndex) => {
     const repeat = Math.max(1, Math.floor(step.repeat || 1));
     if (step.phases.length === 0) {
-      warnings.push(`Step ${stepIndex + 1} ("${step.label}") has no Phase, so its periods only advance time.`);
+      warnings.push(`Step ${stepIndex + 1} ("${step.label}") has no Phase, so its periods apply only their profile operations.`);
     }
     for (let r = 0; r < repeat; r++) {
       const label = advanceLabel(step.label, step.unit, r);
@@ -160,7 +157,6 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
         label,
         stepIndex,
         repetition: r,
-        advanceHours: step.advance_hours,
         phases: step.phases.map((phase, index) => {
           const periodicEvents = timeline.every
             .filter((p) => p.every >= 1 && number % p.every === 0 && p.phase === index)

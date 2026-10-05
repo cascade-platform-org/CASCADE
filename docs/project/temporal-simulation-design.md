@@ -13,9 +13,9 @@ The stock mechanism runs in the client: the step operator and `buildPropagationP
 which amends ADR-0003.
 
 **Temporal Simulation** is the name of this module (CONTEXT.md). A **Temporal Jump** stays
-what it is today, one Event kind fired by hand. A Temporal Simulation is a saved sequence of
-periods; each period advances time by its own `advance_hours`, so a Timeline carries no
-Temporal Jump Events.
+what it is today, one Event kind. A Temporal Simulation is a saved sequence of periods. A
+period has no duration of its own: simulated time passes only where the modeller places a
+Temporal Jump Event, in a Phase or a Periodic rule, with the hours they choose.
 
 This document is about the **platform**. Its running example is a workforce banca ore
 model, the first concrete use case; that case's own design notes live with the case, outside
@@ -28,14 +28,14 @@ the repository.
 1. What exists today
 2. Capability A — a composable time simulation
    (2.1 the Event is the only edit handle · 2.2 inputs and the run cache ·
-   2.3 Events carry operations · 2.4 recovery, reserves and repair between periods ·
+   2.3 Events carry operations · 2.4 recovery, backups and repair between periods ·
    2.5 one period, in order)
 3. Capability B — recording a run
    (3.1 storage · 3.2 metrics · 3.3 Level Scale and Level Mode)
 4. Capability C — stocks
    (4.0 constraints · 4.1 where a stock belongs · 4.2 the step operator's role ·
    4.3 the two formulas · 4.4–4.5 why the engine is excluded · 4.6 sign ·
-   4.7 elapsed vs. period time · 4.8 what the engine must return · 4.9 writers ·
+   4.7 time is an Event · 4.8 what the engine must return · 4.9 writers ·
    4.10 Reset)
 5. What this buys, beyond the first use case
 6. Stress-testing the abstraction against other domains
@@ -79,7 +79,7 @@ jumps and Events by hand, and auto-advance chains jumps by the minimum remaining
 
 **Proposed**: a **Timeline**, an ordered, saved, replayable list of Steps. The schema is
 ADR-0019 §1. In short: a **Step** is one period (or the same period `repeat`ed) with a
-`label`, a calendar `unit`, `advance_hours` and an ordered list of **Phases**; a Phase
+`label`, a calendar `unit` and an ordered list of **Phases**; a Phase
 applies its Events and then optionally runs one Propagation; a **Periodic** entry adds
 Events to every N-th period; and a **profile** holds the per-period exogenous inputs.
 
@@ -108,7 +108,7 @@ every Element operational. An initial condition — an earthquake before a twelv
 recovery — is an Event in the first Step. This is what makes a re-run reproducible: the
 start state depends on the model alone.
 
-**A period is the unit of metrics and of `advance_hours`.** Recording is per Phase (§3.1),
+**A period is the unit of metrics.** Recording is per Phase (§3.1),
 so a Metric can read one Phase's change, but every Metric is reported per period. The
 entitlement arithmetic is *propagating Phases × periods*.
 
@@ -190,54 +190,47 @@ static arithmetic on one value — so they are not Rules and CLAUDE.md §7 is un
 What an operation cannot express is a *conditional* ("do A if B else C"). Which Elements an
 operation reaches is explicit, one entry per Element (§7).
 
-### 2.4 Recovery, reserves and repair between periods
+### 2.4 Recovery, backups and repair between periods
 
 A Propagation only worsens Functionality (ADR-0003's commit), and ADR-0003 puts
 improvement in the timeline. Checked against the engine: a consumer degraded by a short
 Phase stays degraded when the next Propagation runs with ample supply, and recovers only if
-its Functionality is restored first. Three rules make shortage, reserves and damage behave
-over many periods.
+its Functionality is restored first.
 
 **Shortage is recomputed every Propagation.** The step operator keeps an **imposed layer**:
 for each Element, the Functionality and Responsibility Share last written by an Event in this
-run (its vulnerability, a mutation or an operation), or the post-Reset value when no Event
-wrote one. Before every Propagation it resets both fields to the imposed layer. Everything
-else stands: `direct_damage`, `expected_repair_time`, Rule-set attributes (ADR-0015's latch
-means "the fault occurred") and every Stock. A shortage in March therefore ends with March,
-and an Event's damage stays until a later Event changes it.
+run (its vulnerability, a mutation, an operation, or a Temporal Jump's expiry), or the
+post-Reset value when no Event wrote one. Before every Propagation it resets both fields to
+the imposed layer. Everything else stands: `direct_damage`, `expected_repair_time`,
+`functionality_time`, Rule-set attributes (ADR-0015's latch means "the fault occurred") and
+every Stock. A shortage in March therefore ends with March, and an Event's damage stays until
+a later Event changes it.
 
 This needs no provenance lookup. The Scenario Baseline keeps only each field's *first*
 write, so it cannot tell "the value before the last Propagation" when an Event and a
 Propagation both wrote the same field; the step operator tracks the imposed layer itself as
 it applies each Event.
 
-**A reserve drains only while it is in use, and is not re-granted once spent.** The engine
-never clears `functionality_time`: an already-running countdown is held or tightened
-(`propagation.py`, backup guard). Carrying that field across periods would drain a reserve
-after its shortage ended and fail a node that is fully supplied. So the step operator keeps
-**reserve state** per (Element, backed Category) in the run, outside the graph:
+**Time is an Event.** A period has no duration. A Temporal Jump Event in a Phase (or a
+Periodic rule) advances simulated time by the hours its definition says, with exactly
+today's semantics: it subtracts its hours from every positive `functionality_time` and
+expires a countdown reaching 0 to Functionality 1. The modeller decides how much time a
+period represents for backups, and a model without backups needs no jump at all. The jump is
+an Event, so an expiry joins the imposed layer: the Element stays at Functionality 1 until a
+later Event restores it, and the backup guard does not re-grant a reserve to an Element that
+already sits at the bottom.
 
-- each Propagation starts with `functionality_time` at 0, and `buildPropagationPayload`
-  sends each backed Category's `backup_duration` as the reserve **remaining**, with `backup`
-  off once it is spent;
-- an Element the Propagation gave a countdown (`functionality_time > 0`) is **in shortage**
-  this period; at the period's end `advance_hours` drains the remaining reserve of each of
-  its backed Categories, and a reserve reaching 0 is **spent**: the Element shows
-  Functionality 1 at the end of the period, the Temporal Jump's expiry rule;
-- an Element not in shortage this period gets every reserve back in full (v1: instant
-  refill).
-
-A spent reserve is sent as "no backup", so the next Propagation degrades the Element straight
-from its actual supply, and it recovers like any shortage once supply returns. A reserve
-shorter than one period expires within it. Draining every backed Category of an Element in
-shortage is a v1 approximation: the engine reports the minimum countdown, never which
-Category was binding (§7).
+Backups behave exactly as they do with hand-fired jumps today, including one inherited
+limit: the engine never clears a running countdown (`propagation.py`, backup guard), so a
+countdown keeps draining after its shortage ends. A model where supply returns before the
+reserve runs out clears it with an Event (`set` `functionality_time` 0) in the period the
+shortage ends (§7).
 
 **Repair is an Event.** Nothing counts `expected_repair_time` down; it stays informational.
 A repair completing at period *t* is an Event in Step *t* that operates on the damaged
 Elements (`set` `direct_damage` false, `set` `functionality` to the top level). Automatic
-repair from `advance_hours` is open (§7) and is what requirements §16's deferred recovery
-mechanics would become.
+repair is open (§7) and is what requirements §16's deferred recovery mechanics would
+become.
 
 ### 2.5 One period, in order
 
@@ -249,7 +242,7 @@ The canonical sequence is ADR-0019 §2. Why each piece sits where it does:
 | Imposed layer reset before every Propagation | each Propagation derives shortage from the current supply (§2.4) |
 | Stocks read into supply before every Propagation | an Event in an earlier Phase may change `max_draw` or `min` for a later one (§4.3) |
 | Integration right after the **last propagating** Phase | `D` is that Phase's delivery; later non-propagating Phases (a settlement) then see the period's closing balance |
-| Reserve update and `advance_hours` at the period's end | time passes over the period while the shortage holds; draining at the start would expire a reserve before the period's Propagation could see whether the shortage persists |
+| Temporal Jump Events wherever the modeller puts them | a jump is an ordinary Event; before a period's Propagation it lets that Propagation see expired backups, after it the next period does |
 
 ---
 
@@ -270,11 +263,11 @@ was Graph Diffs. A 44-period Timeline recorded as Scorecard entries would be
 So a run record holds:
 
 - the **start state** as one snapshot (the post-Reset state, §2);
-- per period, **one Graph Diff per Phase** and **one closing diff** (integration, reserves,
-  `advance_hours`). The profile operations belong to the first Phase's diff. A diff holds
+- per period, **one Graph Diff per Phase**. The profile operations belong to the first
+  Phase's diff and the Stock integration to the diff of the Phase it follows. A diff holds
   both sides of every field it changed, so *what a Phase changed* is derivable at read time.
   A period's net change is the composition of its diffs. 44 periods of two Phases is
-  132 sparse diffs, against ADR-0017's measured 66 KB for 20 entries;
+  88 sparse diffs, against ADR-0017's measured 66 KB for 20 entries;
 - per period, a few numbers that are not graph state: what each propagating Phase delivered,
   and what a clamp spilled or left unmet;
 - **no PNG per period.** Render from reconstructed state on demand; capture at most one
@@ -385,8 +378,8 @@ Each is argued in full where cited; this list is for checking the shape.
 6. **A clamp is always reported**: `max` or `min` truncating a period emits `spilled` or
    `unmet` (§4.1).
 7. **A Stock `level` is never written by a Rule** (§4.9).
-8. **Rates and levels are per period; `advance_hours` is elapsed time that only reserves
-   read** (§4.7).
+8. **Rates and levels are per period.** Elapsed time exists only as Temporal Jump Events,
+   which only `functionality_time` reads (§4.7).
 
 ### 4.1 Where a stock belongs: with the capacities
 
@@ -604,23 +597,17 @@ exists that the sign alone cannot reach is the `couples` question (§7).
 no flag. The Inspector labels the field *"level (positive = available to draw)"*, and the
 operation table of §2.3 is written in the stored sign.
 
-### 4.7 Elapsed time and period quantity are two different numbers
+### 4.7 Time is an Event; quantities are per period
 
-| Quantity | Unit | Consumed by |
-|---|---|---|
-| `advance_hours` | **elapsed** hours | reserves (`functionality_time`, §2.4) |
-| the period itself | one period | stock integration — rates are per period, so no conversion |
+A Stock's rates are per period, so integration involves no hours at all. Elapsed time matters
+only to `functionality_time`, and it enters a run only through Temporal Jump Events the
+modeller places. The two are independent: a workforce model with monthly periods and no
+backups never jumps; a model with backups jumps by however many hours a period represents.
 
-The tempting shortcut is a monthly step of `40 h × 4 weeks = 160 h` used for both. It
-breaks, because **160 counts *labour* hours while a reserve counts *elapsed* hours.** A
-calendar month is ~730 elapsed hours, so 160 would under-drain every reserve by ~4.5×, and a
-24-hour reserve would survive a month of simulated time. (The constant is also wrong on its
-own terms: a month is 52/12 = 4.33 weeks, which is why a 38 h/week contract resolves to
-164.7 h/month.)
-
-So rates and stocks are per period, and `advance_hours` is elapsed time read only by
-reserves. For a calendar month use that month's real hours (672–744) when reserves matter,
-or a flat 730 when approximate is fine.
+One trap to know when choosing a jump's hours: **a reserve counts *elapsed* hours.** A
+calendar month is ~730 elapsed hours (672–744). Using a month's labour hours instead
+(`40 h × 4.33 weeks ≈ 173 h`) would under-drain every backup ~4×, and a 24-hour reserve would
+appear to survive a month.
 
 ### 4.8 What the engine must return
 
@@ -708,7 +695,7 @@ abstraction, the abstraction is wrong.
 
 `functionality_time` converges onto this mechanism **last**. It is well-tested core
 behaviour, the project has no e2e driver, and changing it to prove a generality claim is the
-wrong early risk. §2.4's reserve state is the step toward it.
+wrong early risk.
 
 ---
 
@@ -829,13 +816,14 @@ Decisions taken while writing this are recorded in ADR-0019, ADR-0020 and ADR-00
 remains open:
 
 **Capability A**
-- **Automatic repair.** Should `advance_hours` count `expected_repair_time` down and repair an
-  Element at 0? v1 repairs only through an Event (§2.4); requirements §16's deferred recovery
-  mechanics land here.
-- **Per-Category reserve draining.** v1 drains every backed Category of an Element in
-  shortage, because the engine reports only the minimum countdown (§2.4). Exact draining needs
-  the engine to report which Category was binding. Refill is instant in v1; a refill rate is
-  open with it.
+- **Automatic repair.** Should a Temporal Jump count `expected_repair_time` down and repair
+  an Element at 0? v1 repairs only through an Event (§2.4); requirements §16's deferred
+  recovery mechanics land here.
+- **Backups across periods.** A countdown keeps draining after its shortage ends, and an
+  expired backup stays down until an Event restores it (§2.4). Both are today's Temporal Jump
+  behaviour. If a real model needs reserves that stop when supply returns and refill
+  afterwards, the step operator would have to track reserve state per Element; no model needs
+  it yet.
 - **Phase B re-solves from scratch.** The engine is stateless, so staging "contract hours
   first, then supplement" yields two measurements (`delivered_A`, `delivered_B`) and enforces
   no preference. Is a preference order between supplies ever needed?
@@ -863,8 +851,6 @@ remains open:
   field (§4.6). The queue in §6 would, and no concrete backlog model has been written yet.
   Until this is answered a stock cannot express a backlog on a consumer.
 - **Source-side fairness** (§6.4) — schedule it against the second real model.
-- **`advance_hours` per period**: real hours per calendar month, or a flat 730? Matters only
-  for a model using reserves; decide when one exists.
 
 **Cross-cutting**
 - **Cost of a run.** `ENGINE_TIMEOUT_SECONDS` is 30 per Propagation (ADR-0008). A Timeline of

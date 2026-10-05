@@ -34,7 +34,6 @@ const base: Timeline = {
     {
       label: "2023-01",
       unit: "month",
-      advance_hours: 730,
       repeat: 6,
       phases: [
         { events: ["contract"], propagate: true },
@@ -73,9 +72,9 @@ describe("planTimeline", () => {
     const plan = planTimeline({
       name: "t",
       steps: [
-        { label: "Jan", unit: "month", advance_hours: 730, repeat: 1, phases: [{ events: [], propagate: true }] },
-        { label: "x", unit: "none", advance_hours: 0, repeat: 1, phases: [{ events: [], propagate: true }] },
-        { label: "x", unit: "none", advance_hours: 0, repeat: 1, phases: [{ events: [], propagate: true }] },
+        { label: "Jan", unit: "month", repeat: 1, phases: [{ events: [], propagate: true }] },
+        { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
+        { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
       ],
       every: [{ every: 2, phase: 4, events: ["e"] }],
     });

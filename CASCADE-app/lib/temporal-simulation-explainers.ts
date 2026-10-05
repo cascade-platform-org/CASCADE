@@ -132,21 +132,9 @@ export function explainUnit(unit: CalendarUnit): Explanation {
     title: "Calendar unit",
     lines: [
       `Repeats advance the label by one ${unit === "none" ? "number" : unit}. Label format: ${LABEL_FORMATS[unit]}.`,
-      "The unit only names periods. How much time passes is advance_hours; how much flows is the per-period rates.",
+      "The unit only names periods. A period has no duration: time passes only through Temporal Jump Events you place in a Phase or a Periodic rule.",
     ],
     refs: ["ADR-0019 §1"],
-  };
-}
-
-export function explainAdvanceHours(hours: number): Explanation {
-  return {
-    title: "advance_hours",
-    lines: [
-      `Each period of this Step lasts ${hours} elapsed hours. It is the period's Temporal Jump, applied at the period's end.`,
-      "Only backup reserves read it: a reserve in use drains by this amount; one reaching 0 is spent and its Element shows Functionality 1.",
-      "Stocks ignore it — their rates are per period. A calendar month is ~730 h (672–744); 160 would be labour hours and under-drain reserves ~4.5×.",
-    ],
-    refs: ["ADR-0019 §2a", "design doc §4.7"],
   };
 }
 
@@ -182,7 +170,7 @@ export function explainPropagate(on: boolean, isLastPropagating: boolean): Expla
     title: on ? "Phase propagates" : "Phase only applies Events",
     lines: on
       ? [
-          "Before this Phase's Propagation: Functionality and Responsibility Share return to what Events imposed in this run (shortage is recomputed), Functionality Time is set to 0, and every Stock becomes its supply number.",
+          "Before this Phase's Propagation: Functionality and Responsibility Share return to what Events imposed in this run (shortage is recomputed), and every Stock becomes its supply number.",
           isLastPropagating
             ? "This is the period's last propagating Phase: right after it, every Stock is integrated once from what this Phase delivered."
             : "A later Phase propagates too, so Stocks are integrated after that one.",
@@ -195,7 +183,19 @@ export function explainPropagate(on: boolean, isLastPropagating: boolean): Expla
   };
 }
 
-export function explainPhaseEvent(label: string, added: boolean): Explanation {
+export function explainPhaseEvent(label: string, added: boolean, jumpHours?: number): Explanation {
+  if (added && jumpHours !== undefined) {
+    return {
+      title: "Temporal Jump added to a Phase",
+      lines: [
+        `"${label}" advances simulated time by ${jumpHours} h at this point of every period of the Step: it subtracts ${jumpHours} from every positive Functionality Time and expires a countdown reaching 0 to Functionality 1.`,
+        "A period has no duration of its own; this jump is how much time it represents for backups. A model without backups needs no jump.",
+        "An expired backup stays at Functionality 1 until a later Event restores it. A countdown keeps draining after its shortage ends — clear it with an Event (set functionality_time 0) in the period supply returns.",
+        "Placed before the Phase's Propagation, that Propagation already sees the expiries; placed in a Phase after it, the next period does. Reserves count elapsed hours: a month is ~730 h.",
+      ],
+      refs: ["ADR-0019 §1", "ADR-0019 §2a"],
+    };
+  }
   return {
     title: added ? "Event added to a Phase" : "Event removed from a Phase",
     lines: [
@@ -278,7 +278,6 @@ function describePeriod(p: PlannedPeriod, eventLabel: (id: string) => string): s
         : `Phase ${ph.index + 1}: apply ${evs} (no Propagation).`,
     );
   }
-  lines.push(`Close: Elements in shortage drain their reserves by ${p.advanceHours} h; all others refill. Record the closing diff.`);
   return lines;
 }
 

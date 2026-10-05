@@ -9,7 +9,6 @@ import {
   EXPLAIN_REMOVE_PHASE,
   EXPLAIN_REMOVE_STEP,
   explainAddStep,
-  explainAdvanceHours,
   explainLabel,
   explainPeriodic,
   explainPhaseEvent,
@@ -27,6 +26,10 @@ export function TimelineTab() {
   const explain = useTemporalSimulationStore((s) => s.explain);
   const events = useConfigStore((s) => s.config.events);
   const eventLabel = (id: string) => events.find((e) => e.id === id)?.label ?? id;
+  const jumpHours = (id: string) => {
+    const ev = events.find((e) => e.id === id);
+    return ev?.type === "temporal_jump" ? ev.duration_hours ?? 1 : undefined;
+  };
 
   function addStep() {
     const last = timeline.steps[timeline.steps.length - 1];
@@ -61,7 +64,7 @@ export function TimelineTab() {
               </SmallButton>
             </div>
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Field label="Label">
                 <input
                   className={labelValid ? inputCls : `${inputCls} border-red-400`}
@@ -87,20 +90,6 @@ export function TimelineTab() {
                 >
                   {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
-              </Field>
-              <Field label="advance_hours">
-                <input
-                  type="number"
-                  min={0}
-                  className={inputCls}
-                  value={step.advance_hours}
-                  onFocus={() => explain(explainAdvanceHours(step.advance_hours))}
-                  onChange={(e) => {
-                    const h = Math.max(0, Number(e.target.value) || 0);
-                    update((t) => { t.steps[si].advance_hours = h; });
-                    explain(explainAdvanceHours(h));
-                  }}
-                />
               </Field>
               <Field label="repeat">
                 <input
@@ -152,7 +141,7 @@ export function TimelineTab() {
                         const id = e.target.value;
                         if (!id) return;
                         update((t) => { t.steps[si].phases[pi].events.push(id); });
-                        explain(explainPhaseEvent(eventLabel(id), true));
+                        explain(explainPhaseEvent(eventLabel(id), true, jumpHours(id)));
                       }}
                     >
                       <option value="">+ add Event…</option>

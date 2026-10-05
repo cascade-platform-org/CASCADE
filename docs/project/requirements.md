@@ -600,17 +600,17 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 *UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run and explains each interaction. It never touches the model, the history or the engine. The plan (`lib/timeline-plan.ts`) and the Stock formulas (`lib/stock-math.ts`) are the real logic; the types are local until the schema exists.
 
 **Timeline.**
-- A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it), `advance_hours` (elapsed hours, read only by backup reserves) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
+- A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
 - A periodic form, "every *N* periods apply these Events in Phase *k*", removes hand-unrolling.
 - A **profile** gives per-period inputs as Attribute Operations keyed by period label.
-- A Timeline carries no Temporal Jump Events; each Step's `advance_hours` advances time.
+- A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase or a periodic rule, with the hours they choose.
 - **Running a Timeline first performs a Reset**, so every run starts from the authored model with every Element operational. Initial damage is an Event in the first Step.
 - The Timeline is authored as an editable table of Steps and Phases. Editing mid-run means changing an Event or profile entry at a Step; the run replays forward from that period. On the same build, the same Timeline produces the same result.
 - The step operator runs client-side and calls `POST /api/propagate` once per propagating Phase.
 
 **Between periods.**
-- **Shortage is recomputed every Propagation**: Functionality and Responsibility Share return to what Events imposed in this run before each Propagation. `direct_damage`, `expected_repair_time`, Rule-set attributes and Stocks stand.
-- **A backup reserve drains only while its Element is in shortage**, by the period's `advance_hours` at the period's end. A reserve reaching 0 is spent (Functionality 1) and is not re-granted until a period without shortage refills it.
+- **Shortage is recomputed every Propagation**: Functionality and Responsibility Share return to what Events imposed in this run before each Propagation. `direct_damage`, `expected_repair_time`, `functionality_time`, Rule-set attributes and Stocks stand.
+- **Backups keep today's Temporal Jump semantics**: a jump drains every positive Functionality Time and expires a countdown at 0 to Functionality 1, which stands until an Event restores it. A countdown keeps draining after its shortage ends; an Event (`set` `functionality_time` 0) clears it.
 - **Repair is an Event** in the Step where it completes; nothing counts `expected_repair_time` down.
 
 **Stocks.**
@@ -635,7 +635,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 
 **UI.** The supply editor is offered on every Node Type; a non-blocking warning appears on a Service node with any `supply_capacity` entry, and on a Category that holds a Stock while an edge or throughput capacity in it is undeclared. The Stock's level is labelled "positive = available to draw". The existing warning for a node with both supply and demand of one Category is unchanged, so a Stock sits on a supplying node or on a consumer's single incoming edge.
 
-**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; Engine Evaluation accounting for a run (88 Propagations for 44 periods × 2 Phases); backlog Stocks (`couples`); per-source `utilisation` and source-side fairness; automatic repair; per-Category reserve draining.
+**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; Engine Evaluation accounting for a run (88 Propagations for 44 periods × 2 Phases); backlog Stocks (`couples`); per-source `utilisation` and source-side fairness; automatic repair; backups whose countdown stops when supply returns.
 
 ---
 
@@ -959,8 +959,8 @@ without a separate validation script — the same comparison
 | Additional category types beyond `SourceToDemands` and `Requisite` | Extensibility confirmed; types TBD |
 | Exact scorecard layout and visual design | To be defined during UI design |
 | Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
-| Detailed recovery mechanics for `direct_damage` nodes | Deferred. *Proposed* Temporal Simulation (§9.6) repairs only through an Event; automatic repair from `advance_hours` stays open |
-| Temporal Simulation: a saved replayable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Specified, not built** — §9.6; ADR-0019/0020/0021 (proposed); working design `temporal-simulation-design.md`. Exposing `served_ratio` amends ADR-0003; `utilisation` (per source) is deferred. Open: Scorecard entry type, Engine Evaluation accounting, backlog stocks (`couples`), automatic repair, per-Category reserve draining |
+| Detailed recovery mechanics for `direct_damage` nodes | Deferred. *Proposed* Temporal Simulation (§9.6) repairs only through an Event; automatic repair stays open |
+| Temporal Simulation: a saved replayable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Specified, not built** — §9.6; ADR-0019/0020/0021 (proposed); working design `temporal-simulation-design.md`. Exposing `served_ratio` amends ADR-0003; `utilisation` (per source) is deferred. Open: Scorecard entry type, Engine Evaluation accounting, backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 
 ---

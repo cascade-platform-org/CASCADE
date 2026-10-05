@@ -75,7 +75,6 @@ export const newPhase = (propagate = true): TimelinePhase => ({ events: [], prop
 export const newStep = (label: string): TimelineStep => ({
   label,
   unit: "month",
-  advance_hours: 730,
   repeat: 1,
   phases: [newPhase(true)],
 });
@@ -86,7 +85,6 @@ const EXAMPLE_TIMELINE: Timeline = {
     {
       label: "2023-01",
       unit: "month",
-      advance_hours: 730,
       repeat: 12,
       phases: [newPhase(true), newPhase(false)],
     },

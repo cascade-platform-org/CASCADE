@@ -21,7 +21,7 @@ three PNGs; 44 periods × several policy variants recreates the problem ADR-0017
 
 ```
 Timeline   name · steps[] · every[] · profile
-Step       label · unit (day|week|month|quarter|year|none) · advance_hours · repeat (default 1) · phases[]
+Step       label · unit (day|week|month|quarter|year|none) · repeat (default 1) · phases[]
 Phase      events[] (EventDefinition ids) · propagate (default true)
 Periodic   every N periods · phase index · events[]
 profile    { period label: [AttributeOperation, …] }   (ADR-0021)
@@ -38,9 +38,9 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 - The **profile** holds the per-period exogenous inputs as Attribute Operations keyed by
   period label, so it uses ADR-0021's addressing and validation and adds no second write
   mechanism.
-- **`advance_hours` is elapsed time**, read only by reserves (§2a). A Timeline carries no
-  Temporal Jump Events; each period's `advance_hours` is its jump. Rates and stocks are per
-  period and involve no hours.
+- **A period has no duration.** Simulated time passes only through Temporal Jump Events
+  the modeller places in a Phase or a Periodic rule, with the hours they choose; only
+  `functionality_time` reads them. Rates and stocks are per period and involve no hours.
 - **The Timeline stores inputs only.** The **Event is the only edit handle**: a mid-Timeline
   change is an Event (or profile operation) added or changed at a Step, and the run replays
   forward from that period.
@@ -67,49 +67,40 @@ run(timeline):
                                            # each updates the imposed layer (§2a)
       if k.propagate:
         reset functionality and responsibility_share to the imposed layer
-        set functionality_time to 0 on every Element
-        payload = buildPropagationPayload(state, reserves)
-                                           # each Stock → its supply number (ADR-0020 §2);
-                                           # each backed Category → remaining reserve,
-                                           # backup off once spent
+        payload = buildPropagationPayload(state)
+                                           # each Stock → its supply number (ADR-0020 §2)
         apply the Propagation result; keep served_ratio
         if k is p's last propagating Phase:
           integrate every Stock once        # ADR-0020 §2; spilled / unmet recorded
       record the Phase's diff
-    close the period:
-      Elements with functionality_time > 0 are in shortage:
-        drain their reserves by p.advance_hours; a reserve at 0 is spent,
-        and the Element shows Functionality 1
-      every other Element's reserves refill in full (v1)
-      record the closing diff
   push one temporal_simulation_run entry (net diff of the run)
 ```
 
 Integration runs right after the **last propagating** Phase, so a later non-propagating
-Phase (a settlement) reads the period's closing balance. Reserves close the period because
-time passes over it while the shortage holds.
+Phase (a settlement) reads the period's closing balance. A Temporal Jump is one of the
+Phase's Events and applies like any other.
 
 **Stocks become numbers in one seam.** `buildPropagationPayload` (`lib/propagation-payload.ts`)
 is the builder the Propagate button, model-based Analysis (single and batch), the Scorecard
 and the step operator all use, so no engine request ever carries a `Stock`.
 
-### 2a. Recovery, reserves and repair between periods
+### 2a. Recovery, backups and repair between periods
 
 Propagation only worsens Functionality, and ADR-0003 assigns improvement to the timeline.
 
 - **Imposed layer.** For each Element the step operator tracks the Functionality and
-  Responsibility Share last written by an Event in this run, or the post-Reset value. Before
+  Responsibility Share last written by an Event in this run (a Temporal Jump's expiry
+  included), or the post-Reset value. Before
   every Propagation both fields return to it. Shortage-driven degradation is therefore
   recomputed from the current supply each time; Event-imposed state, `direct_damage`,
-  `expected_repair_time`, Rule-set attributes and Stocks stand. The Scenario Baseline cannot
+  `expected_repair_time`, `functionality_time`, Rule-set attributes and Stocks stand. The Scenario Baseline cannot
   serve here: it keeps a field's first write only.
-- **Reserve state**, per (Element, backed Category), is run state outside the graph. The
-  engine never clears a running `functionality_time`, so carrying it across periods would
-  drain a reserve after its shortage ended. Instead each Propagation starts from countdown 0
-  with the remaining reserve sent as `backup_duration`; a countdown the Propagation sets marks
-  the Element in shortage; the period's close drains or refills as in §2. A spent reserve is
-  sent as no backup, so the next Propagation degrades the Element from its actual supply, and
-  the Element recovers like any shortage once supply returns.
+- **Backups keep today's Temporal Jump semantics.** A jump subtracts its hours from every
+  positive `functionality_time` and expires a countdown at 0 to Functionality 1, which then
+  stands until an Event restores it. The engine never clears a running countdown, so one keeps
+  draining after its shortage ends; a model where supply returns first clears it with an
+  Event (`set` `functionality_time` 0). Tracking reserves per Element was considered and left
+  out: it costs run state and a payload override for a behaviour no model needs yet.
 - **Repair is an Event.** Nothing counts `expected_repair_time` down. A repair completing in
   period *t* is an Event in Step *t* (`set` `direct_damage` false and `functionality` to the
   top level). Automatic repair stays deferred (requirements §16).
@@ -117,8 +108,8 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
 ### 3. Recording: a run record of diffs, and one history entry per run
 
 - **The run record** holds the start state (one snapshot), per period **one Graph Diff per
-  Phase and one closing diff** (the ADR-0017 machinery; the profile's writes belong to the
-  first Phase's diff), and per period the deliveries of each propagating Phase and the
+  Phase** (the ADR-0017 machinery; the profile's writes belong to the first Phase's diff, the
+  Stock integration to the diff of the Phase it follows), and per period the deliveries of each propagating Phase and the
   `spilled`/`unmet` amounts. **No PNG per period.** A period's net change is the composition
   of its diffs.
 - **The run record is a cache.** It is persisted beside its Timeline with a content hash of
@@ -192,9 +183,8 @@ repaints in Level Mode later.
   variants; the batch endpoint cannot help because periods depend on each other. A
   server-side run endpoint behind `propagation_service` and the entitlement accounting for a
   run are open.
-- `buildPropagationPayload` gains the reserve override (§2a) beside the Stock conversion.
 - `functionality_time` converges onto the Stock mechanism **last**: it is well-tested core
-  behaviour with no e2e driver. The reserve state of §2a is the first step.
+  behaviour with no e2e driver.
 - **Level Mode** reuses the Analysis Heatmap's legend and repaint machinery
   (`lib/analysis-legend.ts`).
 - **CONTEXT.md** gains Temporal Simulation, Timeline, Step, Phase, Level Scale and Level
@@ -202,4 +192,4 @@ repaints in Level Mode later.
   Simulation.
 - **Open (design doc §7):** whether `PropagationScorecardEntry` migrates to diffs and whether
   a simulation Scorecard entry is a new type in ADR-0006's union; automatic repair;
-  per-Category reserve draining.
+  backups whose countdown stops when supply returns.

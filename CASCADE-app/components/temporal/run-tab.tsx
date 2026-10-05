@@ -117,7 +117,6 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">#</th>
               <th className="py-1 pr-2 font-semibold">Period</th>
               <th className="py-1 pr-2 font-semibold">Phases</th>
-              <th className="py-1 pr-2 font-semibold">Hours</th>
               <th className="py-1 pr-2 font-semibold">Operativity</th>
               {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.name || "metric"}</th>)}
               <th />
@@ -151,7 +150,6 @@ export function RunTab() {
                     ))}
                   </span>
                 </td>
-                <td className="py-1 pr-2 text-zinc-500">{p.advanceHours}</td>
                 <td className="py-1 pr-2 text-zinc-300" title="Computed at read time from the run record">—</td>
                 {metrics.map((m) => <td key={m.id} className="py-1 pr-2 text-zinc-300">—</td>)}
                 <td className="py-1">

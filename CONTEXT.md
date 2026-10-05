@@ -87,7 +87,7 @@ An Event kind advancing simulated time by N hours: subtracts N from every positi
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
 **Temporal Simulation** *(proposed, not built)*:
-A saved, replayable run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind fired by hand; a Timeline carries no Temporal Jump Events, because each Step's `advance_hours` is its jump. A run starts with a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and lands in `update_history` as one Any Graph Update tagged `simulation`. Shortage is recomputed every Propagation; Event-imposed damage stands until a later Event repairs it; a reserve drains only while in use. Mechanics in ADR-0019.
+A saved, replayable run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase or periodic rule holds a Temporal Jump Event. A run starts with a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and lands in `update_history` as one Any Graph Update tagged `simulation`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Timeline** *(proposed)*:
@@ -95,7 +95,7 @@ The saved input of a Temporal Simulation: an ordered list of Steps, periodic "ev
 _Avoid_: "schedule", "script", "run" (a run is one replay of a Timeline)
 
 **Step** *(proposed)*:
-One period of a Timeline, or the same period `repeat`ed: a label and a calendar unit (day, week, month, quarter, year or none), `advance_hours` (elapsed time, read only by backup reserves) and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
+One period of a Timeline, or the same period `repeat`ed: a label, a calendar unit (day, week, month, quarter, year or none) that only names periods, and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
 _Avoid_: "time step" and "tick" (retired with Temporal Jump's old wording); Step is a Timeline element only
 
 **Phase** *(proposed)*:
