@@ -15,7 +15,7 @@ import {
   EXPLAIN_REMOVE_STEP,
   explainAddStep,
   explainLabel,
-  explainPeriodic,
+  explainEventEvery,
   explainPhaseEvent,
   explainPropagate,
   explainRepeat,
@@ -45,6 +45,7 @@ export function TimelineTab() {
   const explain = useTemporalSimulationStore((s) => s.explain);
   const events = useConfigStore((s) => s.config.events);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
+  const setPendingEventTarget = useTemporalSimulationStore((s) => s.setPendingEventTarget);
   const eventLabel = (id: string) => events.find((e) => e.id === id)?.label ?? id;
   const jumpHours = (id: string) => {
     const ev = events.find((e) => e.id === id);
@@ -60,17 +61,9 @@ export function TimelineTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end gap-2">
-        <Field label="Timeline name" className="flex-1">
-          <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
-        </Field>
-        <SmallButton
-          onClick={() => { explain(EXPLAIN_CREATE_EVENT); openConfigModal("events", "new-temporal-simulation-event"); }}
-          title="Create a Temporal-Simulation-only Event in Config → Events"
-        >
-          <CalendarPlus size={11} /> Create Event
-        </SmallButton>
-      </div>
+      <Field label="Timeline name">
+        <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
+      </Field>
 
       <TimelineStrip />
 
@@ -170,13 +163,34 @@ export function TimelineTab() {
                     <Trash2 size={12} />
                   </button>
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 border-l border-zinc-200 pl-2 dark:border-zinc-700">
-                    {phase.events.map((id, ei) => (
-                      <span key={ei} className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow-sm dark:bg-zinc-700 dark:text-zinc-200">
-                        {eventLabel(id)}
+                    {phase.events.map((pe, ei) => (
+                      <span
+                        key={ei}
+                        className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow-sm dark:bg-zinc-700 dark:text-zinc-200"
+                      >
+                        {eventLabel(pe.event)}
+                        {step.repeat > 1 && (
+                          <label className="flex items-center gap-0.5 text-[10px] text-zinc-400" title="Fires on this Step's periods N, 2N, 3N…">
+                            every
+                            <input
+                              type="number"
+                              min={1}
+                              max={step.repeat}
+                              value={pe.every}
+                              onFocus={() => explain(explainEventEvery(eventLabel(pe.event), pe.every, step.repeat))}
+                              onChange={(e) => {
+                                const n = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                                update((t) => { t.steps[si].phases[pi].events[ei].every = n; });
+                                explain(explainEventEvery(eventLabel(pe.event), n, step.repeat));
+                              }}
+                              className="w-8 rounded border border-zinc-200 bg-transparent px-0.5 text-center text-[10px] text-zinc-700 focus:border-blue-400 focus:outline-none dark:border-zinc-600 dark:text-zinc-200"
+                            />
+                          </label>
+                        )}
                         <button
                           type="button"
                           className="text-zinc-400 hover:text-red-600"
-                          onClick={() => { update((t) => { t.steps[si].phases[pi].events.splice(ei, 1); }); explain(explainPhaseEvent(eventLabel(id), false)); }}
+                          onClick={() => { update((t) => { t.steps[si].phases[pi].events.splice(ei, 1); }); explain(explainPhaseEvent(eventLabel(pe.event), false)); }}
                         >
                           <X size={10} />
                         </button>
@@ -188,13 +202,25 @@ export function TimelineTab() {
                       onChange={(e) => {
                         const id = e.target.value;
                         if (!id) return;
-                        update((t) => { t.steps[si].phases[pi].events.push(id); });
+                        update((t) => { t.steps[si].phases[pi].events.push({ event: id, every: 1 }); });
                         explain(explainPhaseEvent(eventLabel(id), true, jumpHours(id)));
                       }}
                     >
-                      <option value="">{events.length === 0 ? "+ Event (use Create Event)" : "+ add Event…"}</option>
+                      <option value="">+ add Event…</option>
                       <EventOptions events={events} />
                     </select>
+                    <button
+                      type="button"
+                      title="Create a Temporal-Simulation-only Event in Config → Events; it joins this Phase when you save"
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      onClick={() => {
+                        setPendingEventTarget({ step: si, phase: pi });
+                        explain(EXPLAIN_CREATE_EVENT);
+                        openConfigModal("events", "new-temporal-simulation-event");
+                      }}
+                    >
+                      <CalendarPlus size={11} /> Create new Event
+                    </button>
                   </div>
                 </div>
               ))}
@@ -210,64 +236,6 @@ export function TimelineTab() {
         <Plus size={11} /> Add Step
       </SmallButton>
 
-      <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-        <p className="mb-2 text-xs font-semibold text-zinc-700 dark:text-zinc-200">Periodic rules</p>
-        {timeline.every.map((rule, ri) => (
-          <div key={ri} className="mb-2 flex flex-wrap items-end gap-2">
-            <Field label="every N periods" className="w-28">
-              <input
-                type="number"
-                min={1}
-                className={inputCls}
-                value={rule.every}
-                onFocus={() => explain(explainPeriodic(rule.every, rule.phase))}
-                onChange={(e) => {
-                  const n = Math.max(1, Math.floor(Number(e.target.value) || 1));
-                  update((t) => { t.every[ri].every = n; });
-                  explain(explainPeriodic(n, rule.phase));
-                }}
-              />
-            </Field>
-            <Field label="in Phase" className="w-20">
-              <input
-                type="number"
-                min={1}
-                className={inputCls}
-                value={rule.phase}
-                onFocus={() => explain(explainPeriodic(rule.every, rule.phase))}
-                onChange={(e) => {
-                  const p = Math.max(1, Math.floor(Number(e.target.value) || 1));
-                  update((t) => { t.every[ri].phase = p; });
-                  explain(explainPeriodic(rule.every, p));
-                }}
-              />
-            </Field>
-            <Field label="Events" className="flex-1">
-              <select
-                className={inputCls}
-                value=""
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) return;
-                  update((t) => { t.every[ri].events.push(id); });
-                  explain(explainPeriodic(rule.every, rule.phase));
-                }}
-              >
-                <option value="">{rule.events.length ? rule.events.map(eventLabel).join(", ") : "+ add Event…"}</option>
-                <EventOptions events={events} />
-              </select>
-            </Field>
-            <button type="button" className="mb-1 text-zinc-400 hover:text-red-600" onClick={() => update((t) => { t.every.splice(ri, 1); })}>
-              <Trash2 size={12} />
-            </button>
-          </div>
-        ))}
-        <SmallButton
-          onClick={() => { update((t) => { t.every.push({ every: 3, phase: 1, events: [] }); }); explain(explainPeriodic(3, 1)); }}
-        >
-          <Plus size={11} /> Add Periodic rule
-        </SmallButton>
-      </div>
     </div>
   );
 }

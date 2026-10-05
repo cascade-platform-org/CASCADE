@@ -14,9 +14,8 @@ import type { CalendarUnit, Timeline } from "@/lib/temporal-simulation-schema";
 
 interface PlannedPhase {
   index: number;
-  /** The Phase's own Events, then any Periodic Events joining it. */
+  /** Ids of the Phase's Events that fire in this period (an `every: N` Event fires on N, 2N…). */
   events: string[];
-  periodicEvents: string[];
   propagate: boolean;
   /** True for the period's last propagating Phase — integration follows it. */
   integratesAfter: boolean;
@@ -104,7 +103,7 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
   }
 }
 
-/** Unroll Steps × repeat, attach Periodic Events, and count engine calls. */
+/** Unroll Steps × repeat, resolve each Event's `every`, and count engine calls. */
 export function planTimeline(timeline: Timeline): TimelinePlan {
   const periods: PlannedPeriod[] = [];
   const warnings: string[] = [];
@@ -128,13 +127,9 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
         stepIndex,
         repetition: r,
         phases: step.phases.map((phase, index) => {
-          const periodicEvents = timeline.every
-            .filter((p) => p.every >= 1 && number % p.every === 0 && p.phase === index + 1)
-            .flatMap((p) => p.events);
           return {
             index,
-            events: [...phase.events, ...periodicEvents],
-            periodicEvents,
+            events: phase.events.filter((e) => (r + 1) % e.every === 0).map((e) => e.event),
             propagate: phase.propagate,
             integratesAfter: index === lastPropagating,
           };
@@ -148,11 +143,15 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
     if (seen.has(p.label)) warnings.push(`Label "${p.label}" appears twice; the profile cannot tell those periods apart.`);
     seen.add(p.label);
   }
-  timeline.every.forEach((p, i) => {
-    if (p.every < 1) warnings.push(`Periodic rule ${i + 1}: "every" must be at least 1.`);
-    const reachable = timeline.steps.some((s) => p.phase >= 1 && p.phase <= s.phases.length);
-    if (!reachable) warnings.push(`Periodic rule ${i + 1}: no Step has a Phase ${p.phase}, so it never fires.`);
-  });
+  timeline.steps.forEach((step, si) =>
+    step.phases.forEach((ph, pi) =>
+      ph.events.forEach((e) => {
+        if (e.every > Math.max(1, step.repeat)) {
+          warnings.push(`Step ${si + 1}, Phase ${pi + 1}: "${e.event}" every ${e.every} periods never fires in a Step of ${step.repeat}.`);
+        }
+      }),
+    ),
+  );
 
   const engineCalls = periods.reduce((n, p) => n + p.phases.filter((ph) => ph.propagate).length, 0);
   return { periods, engineCalls, warnings };

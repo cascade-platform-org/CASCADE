@@ -59,6 +59,11 @@ export interface UiState {
   configModalIntent: "new-temporal-simulation-event" | null;
   /** Event the Events tab scrolls to once, after the intent above created it. */
   configModalFocusEventId: string | null;
+  /**
+   * The Event the intent created during the last Config session. Survives the
+   * close (whoever asked reads it then, and checks it was saved); reset on open.
+   */
+  configModalCreatedEventId: string | null;
 
   // --- File I/O panel ---
   fileIoPanelOpen: boolean;
@@ -223,6 +228,8 @@ export interface UiActions {
   // --- Config modal ---
   openConfigModal: (tab?: ConfigModalTab, intent?: "new-temporal-simulation-event") => void;
   setConfigModalFocusEventId: (id: string | null) => void;
+  /** Record the Event the intent created (also focuses it). */
+  setConfigModalCreatedEventId: (id: string) => void;
   closeConfigModal: () => void;
   setConfigModalTab: (tab: ConfigModalTab) => void;
 
@@ -335,6 +342,7 @@ const initialState: UiState = {
   configModalTab: "functionality-scale",
   configModalIntent: null,
   configModalFocusEventId: null,
+  configModalCreatedEventId: null,
   fileIoPanelOpen: false,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
@@ -423,6 +431,14 @@ export const useUiStore = create<UiStore>()(
         state.configModalOpen = true;
         state.configModalTab = tab;
         state.configModalIntent = intent ?? null;
+        state.configModalCreatedEventId = null;
+      });
+    },
+
+    setConfigModalCreatedEventId(id) {
+      set((state) => {
+        state.configModalCreatedEventId = id;
+        state.configModalFocusEventId = id;
       });
     },
 

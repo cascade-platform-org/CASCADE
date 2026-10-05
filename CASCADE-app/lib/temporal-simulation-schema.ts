@@ -61,9 +61,20 @@ const AttributeOperationSchema = z
   });
 export type AttributeOperation = z.infer<typeof AttributeOperationSchema>;
 
+/**
+ * An Event in a Phase. A bare id fires every period of the Step; `every: N`
+ * fires on the Step's periods N, 2N, 3N… (counted within the Step).
+ */
+const PhaseEventSchema = z
+  .union([
+    z.string().min(1),
+    z.object({ event: z.string().min(1), every: z.number().int().min(1).default(1) }).strict(),
+  ])
+  .transform((v) => (typeof v === "string" ? { event: v, every: 1 } : v));
+
 const TimelinePhaseSchema = z
   .object({
-    events: z.array(z.string()).default([]),
+    events: z.array(PhaseEventSchema).default([]),
     propagate: z.boolean().default(true),
   })
   .strict();
@@ -79,21 +90,10 @@ const TimelineStepSchema = z
   .strict();
 export type TimelineStep = z.infer<typeof TimelineStepSchema>;
 
-const TimelinePeriodicSchema = z
-  .object({
-    /** Every N-th period, counted 1-based from the run's start (N, 2N, …). */
-    every: z.number().int().min(1),
-    /** 1-based number of the Phase the Events join. */
-    phase: z.number().int().min(1),
-    events: z.array(z.string()),
-  })
-  .strict();
-
 const TimelineSchema = z
   .object({
     name: z.string(),
     steps: z.array(TimelineStepSchema),
-    every: z.array(TimelinePeriodicSchema).default([]),
   })
   .strict();
 export type Timeline = z.infer<typeof TimelineSchema>;

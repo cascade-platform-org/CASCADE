@@ -33,7 +33,7 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
   timeline: {
     title: "Timeline",
     lines: [
-      "The Timeline is the saved input: an ordered table of Steps, each with ordered Phases, plus Periodic rules.",
+      "The Timeline is the saved input: an ordered table of Steps, each with ordered Phases holding Events (each firing every period, or every N periods of its Step).",
       "It stores inputs only. Results live in a run record, a cache that can always be recomputed.",
       "Editing a Step in the middle replays the run forward from that period; earlier periods keep their recorded diffs.",
     ],
@@ -171,7 +171,7 @@ export const EXPLAIN_ADD_PHASE: Explanation = {
 
 export const EXPLAIN_REMOVE_PHASE: Explanation = {
   title: "Remove a Phase",
-  lines: ["The Phase and its Events leave every period of this Step. Periodic rules pointing at it stop firing (they are flagged)."],
+  lines: ["The Phase and its Events leave every period of this Step."],
   refs: ["ADR-0019 §1"],
 };
 
@@ -218,12 +218,17 @@ export function explainPhaseEvent(label: string, added: boolean, jumpHours?: num
   };
 }
 
-export function explainPeriodic(every: number, phase: number): Explanation {
+export function explainEventEvery(label: string, every: number, repeat: number): Explanation {
+  const fires = Array.from({ length: Math.floor(repeat / every) }, (_, i) => (i + 1) * every);
   return {
-    title: "Periodic rule",
+    title: `"${label}" every ${every} period${every === 1 ? "" : "s"}`,
     lines: [
-      `Its Events join Phase ${phase} of periods ${every}, ${every * 2}, ${every * 3}, … counted from the run's start.`,
-      "It saves writing the same Event into every N-th Step by hand. A rule pointing at a Phase no Step has never fires and is flagged.",
+      every === 1
+        ? `Fires in every one of this Step's ${repeat} periods.`
+        : fires.length
+          ? `Fires on this Step's periods ${fires.join(", ")} (of ${repeat}). The count restarts in each Step.`
+          : `Never fires: the Step has only ${repeat} periods. It is flagged in the Run tab.`,
+      "In the text form, an Event that fires every period is its bare id; otherwise { \"event\": id, \"every\": N }.",
     ],
     refs: ["ADR-0019 §1"],
   };
@@ -333,7 +338,7 @@ export const EXPLAIN_STRIP: Explanation = {
   lines: [
     "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, clock = a time jump (the only way time passes).",
     "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events. ∫ marks where Stocks integrate: after the period's last propagating Phase.",
-    "Periodic rules appear in the periods they fire in. Click a period for exactly what runs in it.",
+    "An Event set to every N periods shows only in the periods it fires in. Click a period for exactly what runs in it.",
   ],
   refs: ["ADR-0019 §1", "ADR-0019 §2"],
 };
@@ -441,7 +446,7 @@ export const EXPLAIN_CREATE_EVENT: Explanation = {
   title: "Create Event",
   lines: [
     "Opens Config → Events with a new Event marked “Temporal Simulation only”: it never appears in the Action Bar or the Scorecard's uncovered list, only here.",
-    "It can be a Hazard, a Disservice, or a Temporal Jump with its hours — the way a Timeline advances time. Save the Config, then add it to a Phase.",
+    "It can be a Hazard, a Disservice, or a Temporal Jump with its hours — the way a Timeline advances time. When you Save the Config it joins this Phase; Cancel leaves the Phase as it was.",
   ],
   refs: ["ADR-0019 §1", "requirements §6.4"],
 };

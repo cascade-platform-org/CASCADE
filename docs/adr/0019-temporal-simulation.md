@@ -20,18 +20,21 @@ three PNGs; 44 periods × several policy variants recreates the problem ADR-0017
 ### 1. A Timeline is a saved, replayable list of Steps
 
 ```
-Timeline   name · steps[] · every[] · profile
+Timeline   name · steps[] · profile
 Step       label · unit (day|week|month|quarter|year|none) · repeat (default 1) · phases[]
-Phase      events[] (EventDefinition ids) · propagate (default true)
-Periodic   every N periods · phase (1-based) · events[]
+Phase      events[] · propagate (default true)
+events[i]  EventDefinition id  |  { event: id, every: N }   (a bare id = every 1)
 profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 ```
 
 - A **Step** is one period, or the same period pattern `repeat`ed. With a `unit`, repeats
   advance the label (`2023-03`, `2023-W09`, `2023-03-15`, `2023-Q1`, `2023`); with `none`
-  they are numbered `label#2`, `label#3`. `Periodic.every` counts unrolled periods from the
-  run's start.
-- A **Phase** applies its Events (by `EventDefinition` id), then optionally runs one Propagation. Phases exist so an
+  they are numbered `label#2`, `label#3`.
+- A **Phase** applies its Events (by `EventDefinition` id), then optionally runs one Propagation.
+  **An Event in a Phase fires every period of its Step, or every N-th** (`every: N`: the
+  Step's periods N, 2N, 3N…, counted within the Step). A separate Periodic rule, counted
+  from the run's start across Steps, was dropped: it duplicated the Phase for a rare
+  cross-Step case, which is now one entry per Step. Phases exist so an
   Event can fire between two Propagations of one period: to isolate an Event read on its own
   (a settlement), or to measure a period twice. Each Propagation re-solves from scratch, so
   a Phase sets no preference between supplies.
@@ -39,7 +42,7 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   period label, so it uses ADR-0021's addressing and validation and adds no second write
   mechanism.
 - **A period has no duration.** Simulated time passes only through Temporal Jump Events
-  the modeller places in a Phase or a Periodic rule, with the hours they choose; only
+  the modeller places in a Phase, with the hours they choose; only
   `functionality_time` reads them. Rates and stocks are per period and involve no hours.
 - **The Timeline stores inputs only.** The **Event is the only edit handle**: a mid-Timeline
   change is an Event (or profile operation) added or changed at a Step, and the run replays
@@ -52,8 +55,8 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 - **An Event used only in Timelines is marked `temporal_simulation_only`** (an additive
   `EventDefinition` field, any type). It is hidden from the Action Bar and from the
   Scorecard's uncovered-Event list, and only such an Event may be a Temporal Jump in the
-  Config Events tab — the way a Timeline advances time. The Timeline window's **Create
-  Event** opens Config → Events on a new one. A flag rather than a fourth `type`: a
+  Config Events tab — the way a Timeline advances time. Each Phase's **Create new
+  Event** opens Config → Events on a new one, which joins that Phase when Config is saved. A flag rather than a fourth `type`: a
   Temporal-Simulation-only Event can itself be a Hazard, a Disservice or a Temporal Jump.
 
 ### 2. The step operator, one period in order
@@ -68,7 +71,7 @@ run(timeline):
   for each period p:
     apply profile[p.label]                 # set/add/… operations on rates, inflows, …
     for each Phase k of p:
-      apply the Phase's Events, then Periodic Events for (p, k)
+      apply the Phase's Events that fire in p (every N: p's place in its Step is N, 2N…)
                                            # vulnerabilities, mutations, then operations;
                                            # each updates the imposed layer (§2a)
       if k.propagate:
@@ -197,7 +200,7 @@ that explains each control.
 - `EventDefinition.temporal_simulation_only` lands ahead of the rest (Pydantic, JSON Schema,
   Zod; Action Bar, Scorecard and Events tab). The prototype's document schema
   (`lib/temporal-simulation-schema.ts`) becomes the Pydantic model when the feature is built.
-- New Pydantic models (Timeline, Step, Phase, Periodic, Metric, ElementFilter, Level Scale) →
+- New Pydantic models (Timeline, Step, Phase, PhaseEvent, Metric, ElementFilter, Level Scale) →
   `export_json_schema.py` → Zod → `pydantic-mirror.test.ts`, per CLAUDE.md §6.
 - ADR-0016 gains the `simulation` source tag (Reset's second half reverts it), and Clear
   Event's target becomes "the newest Event or run". `AnyUpdateEntry` gains

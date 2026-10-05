@@ -37,13 +37,12 @@ const base: Timeline = {
       unit: "month",
       repeat: 6,
       phases: [
-        { events: ["contract"], propagate: true },
-        { events: ["supplement"], propagate: true },
-        { events: ["settle"], propagate: false },
+        { events: [{ event: "contract", every: 1 }], propagate: true },
+        { events: [{ event: "supplement", every: 1 }], propagate: true },
+        { events: [{ event: "settle", every: 1 }, { event: "quarter-close", every: 3 }], propagate: false },
       ],
     },
   ],
-  every: [{ every: 3, phase: 3, events: ["quarter-close"] }],
 };
 
 describe("planTimeline", () => {
@@ -57,9 +56,9 @@ describe("planTimeline", () => {
     expect(plan.warnings).toEqual([]);
   });
 
-  it("joins Periodic Events to every N-th period, 1-based", () => {
+  it("fires an every-N Event on the Step's periods N, 2N…", () => {
     const plan = planTimeline(base);
-    const fired = plan.periods.filter((p) => p.phases[2].periodicEvents.length > 0).map((p) => p.number);
+    const fired = plan.periods.filter((p) => p.phases[2].events.includes("quarter-close")).map((p) => p.number);
     expect(fired).toEqual([3, 6]);
     expect(plan.periods[2].phases[2].events).toEqual(["settle", "quarter-close"]);
   });
@@ -69,15 +68,14 @@ describe("planTimeline", () => {
     expect(flags).toEqual([false, true, false]);
   });
 
-  it("warns on an invalid label, a duplicate label and an unreachable Periodic rule", () => {
+  it("warns on an invalid label, a duplicate label and an Event that never fires", () => {
     const plan = planTimeline({
       name: "t",
       steps: [
         { label: "Jan", unit: "month", repeat: 1, phases: [{ events: [], propagate: true }] },
-        { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
+        { label: "x", unit: "none", repeat: 1, phases: [{ events: [{ event: "e", every: 2 }], propagate: true }] },
         { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
       ],
-      every: [{ every: 2, phase: 5, events: ["e"] }],
     });
     expect(plan.periods).toHaveLength(2);
     expect(plan.warnings.join("\n")).toMatch(/not a valid month label/);

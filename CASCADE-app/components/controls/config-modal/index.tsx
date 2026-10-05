@@ -36,7 +36,7 @@ export function ConfigModal() {
   const isDirty = useConfigStore((s) => s.isDirty);
   const openDraft = useConfigStore((s) => s.openDraft);
   const addEvent = useConfigStore((s) => s.addEvent);
-  const setFocusEventId = useUiStore((s) => s.setConfigModalFocusEventId);
+  const setCreatedEventId = useUiStore((s) => s.setConfigModalCreatedEventId);
   const commitDraft = useConfigStore((s) => s.commitDraft);
   const discardDraft = useConfigStore((s) => s.discardDraft);
 
@@ -52,9 +52,9 @@ export function ConfigModal() {
         temporal_simulation_only: true,
         attribute_mutations: {},
       });
-      setFocusEventId(id);
+      setCreatedEventId(id);
     }
-  }, [openDraft, addEvent, setFocusEventId]);
+  }, [openDraft, addEvent, setCreatedEventId]);
 
   // Tracks whether a mouse press STARTED on the backdrop itself. A bare
   // `e.target === e.currentTarget` check on the click handler is not enough:

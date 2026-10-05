@@ -91,7 +91,7 @@ A saved, replayable run over many periods: a **Timeline** of **Steps**, each app
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Timeline** *(proposed)*:
-The saved input of a Temporal Simulation: an ordered list of Steps, periodic "every N periods" Events, and a profile of per-period Attribute Operations. Stores inputs only; the run record is a recomputable cache. The Event is its only edit handle. ADR-0019.
+The saved input of a Temporal Simulation: an ordered list of Steps whose Phases hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; the run record is a recomputable cache. The Event is its only edit handle. ADR-0019.
 _Avoid_: "schedule", "script", "run" (a run is one replay of a Timeline)
 
 **Step** *(proposed)*:

@@ -11,7 +11,9 @@
  * (`lib/stock-math.ts`), which the built feature keeps.
  */
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useConfigStore } from "@/store/config-store";
+import { explainPhaseEvent } from "@/lib/temporal-simulation-explainers";
 import { CalendarClock, ListOrdered, Table2, Play, Sigma, Database, Info, Braces } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -42,6 +44,22 @@ export function TemporalSimulationWindow() {
   // The window floats above modals; step aside while Config is open ("Create
   // Event" opens it) and come back when it closes.
   const configModalOpen = useUiStore((s) => s.configModalOpen);
+
+  // "Create new Event" from a Phase: once Config closes, a saved new Event
+  // joins that Phase; a cancelled one leaves the Phase as it was.
+  useEffect(() => {
+    if (configModalOpen) return;
+    const { pendingEventTarget: target, setPendingEventTarget, updateTimeline } = useTemporalSimulationStore.getState();
+    if (!target) return;
+    setPendingEventTarget(null);
+    const id = useUiStore.getState().configModalCreatedEventId;
+    const ev = id ? useConfigStore.getState().config.events.find((e) => e.id === id) : undefined;
+    if (!ev) return;
+    updateTimeline((t) => { t.steps[target.step]?.phases[target.phase]?.events.push({ event: ev.id, every: 1 }); });
+    useTemporalSimulationStore.getState().explain(
+      explainPhaseEvent(ev.label, true, ev.type === "temporal_jump" ? ev.duration_hours ?? 1 : undefined),
+    );
+  }, [configModalOpen]);
   const { closeWindow, setTab, explain } = useTemporalSimulationStore.getState();
 
   return (

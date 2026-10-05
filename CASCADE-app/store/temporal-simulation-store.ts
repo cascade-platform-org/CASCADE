@@ -35,6 +35,8 @@ interface TemporalSimulationState {
   display: "functionality" | "level";
   levelReading: "level" | "change";
   explanation: Explanation;
+  /** The Phase a "Create new Event" came from; the Event joins it when Config is saved. */
+  pendingEventTarget: { step: number; phase: number } | null;
 
   openWindow: () => void;
   closeWindow: () => void;
@@ -45,6 +47,7 @@ interface TemporalSimulationState {
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
+  setPendingEventTarget: (t: { step: number; phase: number } | null) => void;
   updateStock: (patch: Partial<StockPreview>) => void;
   markRun: () => void;
   selectPeriod: (n: number | null) => void;
@@ -71,7 +74,6 @@ const EXAMPLE_TIMELINE: Timeline = {
       phases: [newPhase(true), newPhase(false)],
     },
   ],
-  every: [{ every: 3, phase: 2, events: [] }],
 };
 
 /** What a run depends on in the draft; a change after a run marks it stale. */
@@ -91,6 +93,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     display: "functionality",
     levelReading: "level",
     explanation: EXPLAIN_INTRO,
+    pendingEventTarget: null,
 
     openWindow: () => set((s) => { s.open = true; s.explanation = EXPLAIN_INTRO; }),
     closeWindow: () => set((s) => { s.open = false; }),
@@ -99,6 +102,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     updateTimeline: (fn) => set((s) => { fn(s.timeline); }),
     updateProfile: (fn) => set((s) => { fn(s.profile); }),
     updateMetrics: (fn) => set((s) => { fn(s.metrics); }),
+    setPendingEventTarget: (t) => set((s) => { s.pendingEventTarget = t; }),
     replaceDraft: (d) => set((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; }),
     updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
     markRun: () => set((s) => { s.lastRunKey = runKey(s); s.selectedPeriod = 1; }),

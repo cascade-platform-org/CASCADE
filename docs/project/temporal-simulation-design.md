@@ -15,7 +15,7 @@ which amends ADR-0003.
 **Temporal Simulation** is the name of this module (CONTEXT.md). A **Temporal Jump** stays
 what it is today, one Event kind. A Temporal Simulation is a saved sequence of periods. A
 period has no duration of its own: simulated time passes only where the modeller places a
-Temporal Jump Event, in a Phase or a Periodic rule, with the hours they choose.
+Temporal Jump Event, in a Phase, with the hours they choose.
 
 This document is about the **platform**. Its running example is a workforce banca ore
 model, the first concrete use case; that case's own design notes live with the case, outside
@@ -80,8 +80,8 @@ jumps and Events by hand, and auto-advance chains jumps by the minimum remaining
 **Proposed**: a **Timeline**, an ordered, saved, replayable list of Steps. The schema is
 ADR-0019 §1. In short: a **Step** is one period (or the same period `repeat`ed) with a
 `label`, a calendar `unit` and an ordered list of **Phases**; a Phase
-applies its Events and then optionally runs one Propagation; a **Periodic** entry adds
-Events to every N-th period; and a **profile** holds the per-period exogenous inputs.
+applies its Events, each firing every period of its Step or every N-th one, and then
+optionally runs one Propagation; and a **profile** holds the per-period exogenous inputs.
 
 A **Phase** lets an Event fire *between* two Propagations inside one period. Its uses are
 to isolate an Event whose effect should be read on its own (a settlement, §3.1) and to
@@ -93,7 +93,7 @@ supply over another (§7). A Step with a single Phase is the flat shape.
 (`2023-03` → `2023-04` for months, `2023-W09` → `2023-W10` for weeks, `2023-03-15` for
 days, `2023-Q1` for quarters, `2023` for years); with `none` they are numbered `label#2`,
 `label#3`. The profile is keyed by these labels, so it only has to cover the labels the
-Timeline produces. `Periodic.every` counts unrolled periods from the start of the run.
+Timeline produces.
 
 **The profile is a list of Attribute Operations per label** (§2.3), applied at the start of
 that period. It is input, roughly the size of the model it feeds (banca ore: about
@@ -149,7 +149,7 @@ than a draggable track at tens of periods. A track is not ruled out later.
 
 ### 2.2 A Timeline stores inputs; a run is a cache
 
-**The Timeline stores inputs only**: Steps, Phases, Event ids, Periodic entries and the
+**The Timeline stores inputs only**: Steps, Phases, Event ids (with their `every`) and the
 profile. Schema changes are additive — every new field is optional and absent by default —
 so a model authored today computes the same tomorrow.
 
@@ -213,8 +213,7 @@ write, so it cannot tell "the value before the last Propagation" when an Event a
 Propagation both wrote the same field; the step operator tracks the imposed layer itself as
 it applies each Event.
 
-**Time is an Event.** A period has no duration. A Temporal Jump Event in a Phase (or a
-Periodic rule) advances simulated time by the hours its definition says, with exactly
+**Time is an Event.** A period has no duration. A Temporal Jump Event in a Phase advances simulated time by the hours its definition says, with exactly
 today's semantics: it subtracts its hours from every positive `functionality_time` and
 expires a countdown reaching 0 to Functionality 1. The modeller decides how much time a
 period represents for backups, and a model without backups needs no jump at all. The jump is
@@ -711,7 +710,7 @@ coefficient that v1 includes, and six find a limit.
 | Scenario | Stock | Verdict |
 |---|---|---|
 | Water reservoir | tank level | fits |
-| Municipal budget over a fiscal year | remaining allocation | fits — annual reset is the Periodic policy |
+| Municipal budget over a fiscal year | remaining allocation | fits — annual reset is an Event every 12 periods |
 | Landfill capacity | remaining volume | fits — depleting, `R = 0`, `min = 0` |
 | Carbon / emissions allowance | remaining allowance | fits |
 | Generator fuel during a blackout | litres in tank | fits |

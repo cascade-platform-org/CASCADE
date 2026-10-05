@@ -8,8 +8,7 @@ const doc: TemporalSimulationDoc = {
   format: TEMPORAL_SIMULATION_FORMAT,
   timeline: {
     name: "t",
-    steps: [{ label: "2023-01", unit: "month", repeat: 2, phases: [{ events: ["settle"], propagate: true }] }],
-    every: [],
+    steps: [{ label: "2023-01", unit: "month", repeat: 2, phases: [{ events: [{ event: "settle", every: 1 }, { event: "audit", every: 2 }], propagate: true }] }],
   },
   profile: {
     "2023-01": [
@@ -34,6 +33,22 @@ describe("text round-trip", () => {
     expect(draft.profile.map((e) => e.label)).toEqual(["2023-01", "2023-01", "2023-02"]);
     const parsed = parseDocText(serializeDoc(draftToDoc(draft)));
     expect(parsed.ok && parsed.doc).toEqual(doc);
+  });
+});
+
+describe("Phase Events", () => {
+  it("are written as a bare id when they fire every period, and read back either way", () => {
+    const text = serializeDoc(doc);
+    expect(text).toContain(`"settle"`);
+    expect(text).toContain(`"every": 2`);
+    const r = parseDocText(text);
+    expect(r.ok && r.doc.timeline.steps[0].phases[0].events).toEqual([{ event: "settle", every: 1 }, { event: "audit", every: 2 }]);
+  });
+  it("reject the old top-level Periodic rules", () => {
+    const old = JSON.parse(serializeDoc(doc));
+    old.timeline.every = [];
+    const r = parseDocText(JSON.stringify(old));
+    expect(r.ok ? "" : r.errors.join()).toMatch(/every/);
   });
 });
 
@@ -78,7 +93,7 @@ describe("docWarnings", () => {
       },
     };
     const w = docWarnings(d, [], model).join("\n");
-    expect(w).toMatch(/Unknown Event ids: settle/);
+    expect(w).toMatch(/Unknown Event ids: settle, audit/);
     expect(w).toMatch(/"2024-12" is not a period/);
     expect(w).toMatch(/no Element "ghost"/);
     expect(w).toMatch(/matches no Element/);

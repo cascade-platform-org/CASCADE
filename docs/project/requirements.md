@@ -602,9 +602,9 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 
 **Timeline.**
 - A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
-- A periodic form, "every *N* periods apply these Events in Phase *k*", removes hand-unrolling.
+- An Event in a Phase fires every period of its Step, or every *N*-th one (the Step's periods *N*, 2*N*…), which removes hand-unrolling.
 - A **profile** gives per-period inputs as Attribute Operations keyed by period label.
-- A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase or a periodic rule, with the hours they choose.
+- A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase, with the hours they choose.
 - **Running a Timeline first performs a Reset**, so every run starts from the authored model with every Element operational. Initial damage is an Event in the first Step.
 - The Timeline is authored as an editable table of Steps and Phases. Editing mid-run means changing an Event or profile entry at a Step; the run replays forward from that period. On the same build, the same Timeline produces the same result.
 - The step operator runs client-side and calls `POST /api/propagate` once per propagating Phase.
@@ -625,7 +625,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 - The Propagation result exposes `served_ratio` per consumer and Category.
 - Limits in v1: supply-side only; one source per node Stock.
 
-**Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. An operation targets one Element or every Element an **Element Filter** selects (kind, canvas, Node Type, Category, a label substring; the window then lists every match with a tick box, and unticked ones are excluded), resolved when it runs; a Metric's target is the same filter. A result outside a field's valid range is rejected with a warning. An Event used only in Timelines is marked **Temporal Simulation only**: hidden from the Action Bar and the Scorecard, and the only kind of Event that can be a Temporal Jump; the Timeline's **Create Event** opens Config → Events on a new one (implemented).
+**Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. An operation targets one Element or every Element an **Element Filter** selects (kind, canvas, Node Type, Category, a label substring; the window then lists every match with a tick box, and unticked ones are excluded), resolved when it runs; a Metric's target is the same filter. A result outside a field's valid range is rejected with a warning. An Event used only in Timelines is marked **Temporal Simulation only**: hidden from the Action Bar and the Scorecard, and the only kind of Event that can be a Temporal Jump; each Phase's **Create new Event** opens Config → Events on a new one, which joins that Phase when saved (implemented).
 
 **Recording and metrics.**
 - A run record stores the start state, one Graph Diff per Phase and one closing diff per period, no image per period; the full state of any period is rebuilt on request. It is a cache: stale when the model, Timeline or profile changes, and re-runnable. The Timeline, its profile and the run record are part of the project file.

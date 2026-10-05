@@ -52,7 +52,20 @@ export function docToDraft(doc: TemporalSimulationDoc, newId: () => string): Sim
   };
 }
 
-export const serializeDoc = (doc: TemporalSimulationDoc): string => JSON.stringify(doc, null, 2);
+/** JSON text; a Phase Event that fires every period is written as its bare id. */
+export function serializeDoc(doc: TemporalSimulationDoc): string {
+  const compact = {
+    ...doc,
+    timeline: {
+      ...doc.timeline,
+      steps: doc.timeline.steps.map((s) => ({
+        ...s,
+        phases: s.phases.map((p) => ({ ...p, events: p.events.map((e) => (e.every === 1 ? e.event : e)) })),
+      })),
+    },
+  };
+  return JSON.stringify(compact, null, 2);
+}
 
 /**
  * Pull the JSON out of pasted text. Accepts bare JSON, or a whole LLM reply:
@@ -87,8 +100,7 @@ export function docWarnings(doc: TemporalSimulationDoc, events: EventDefinition[
   const out: string[] = [];
   const eventIds = new Set(events.map((e) => e.id));
   const unknownEvents = new Set<string>();
-  doc.timeline.steps.forEach((s) => s.phases.forEach((p) => p.events.forEach((id) => { if (!eventIds.has(id)) unknownEvents.add(id); })));
-  doc.timeline.every.forEach((r) => r.events.forEach((id) => { if (!eventIds.has(id)) unknownEvents.add(id); }));
+  doc.timeline.steps.forEach((s) => s.phases.forEach((p) => p.events.forEach((e) => { if (!eventIds.has(e.event)) unknownEvents.add(e.event); })));
   if (unknownEvents.size) out.push(`Unknown Event ids: ${[...unknownEvents].join(", ")}. Create them in Config → Events.`);
 
   const plan = planTimeline(doc.timeline);
@@ -125,11 +137,13 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
         "unit": "day"|"week"|"month"|"quarter"|"year"|"none",
         "repeat": int >= 1,            // consecutive periods; the label advances by the unit (none: label#2, label#3…)
         "phases": [                    // run in order inside each period
-          { "events": [EventId…],      // applied in order
+          { "events": [                // applied in order
+              EventId,                 // fires every period of the Step
+              { "event": EventId, "every": N }   // fires on the Step's periods N, 2N, 3N…
+            ],
             "propagate": bool }        // then one Propagation (one Engine Evaluation)
         ] }
-    ],
-    "every": [ { "every": N, "phase": k (1-based), "events": [EventId…] } ]   // add Events to Phase k of periods N, 2N, 3N…
+    ]
   },
   "profile": {                         // period label → operations applied at the start of that period
     "<label>": [
@@ -155,7 +169,7 @@ Filter (every given condition must hold; resolved again each time it is used):
     "exclude": [ElementId…] (matches to leave out) }
 
 Semantics to respect:
-- A period has no duration. Time passes only through a Temporal Jump Event placed in a Phase or an "every" rule.
+- A period has no duration. Time passes only through a Temporal Jump Event placed in a Phase.
 - A run starts with a Reset. Shortage is recomputed before every Propagation; Event-imposed damage stays until an Event changes it.
 - Stocks (supply_capacity.<category> or an edge capacity as an object with rate, inflow, level, min, max, max_draw, retention, efficiency)
   are integrated once per period, right after the last propagating Phase. Levels are typed in their stored sign (positive = available to draw).
@@ -189,7 +203,7 @@ refers to them by id. Events used only in simulations are marked "Temporal Simul
 A saved run over many periods (months, weeks…). A period has no duration of its own: time passes only
 where a temporal jump Event is placed. Each period runs, in order:
 1. its profile operations (the per-period inputs: rates, demands, capacities);
-2. each Phase in order: apply the Phase's Events (and any "every" rule's Events for that period), then,
+2. each Phase in order: apply the Phase's Events that fire this period, then,
    if "propagate" is true, run one Propagation. Before every Propagation, degradation caused by shortage is
    reset, so a shortage lasts only as long as its cause; damage imposed by an Event stays until another
    Event changes it (a repair is an Event).
@@ -198,7 +212,8 @@ evaluation, so periods × propagating Phases is the run's cost: keep Phases that
 at "propagate": false.
 
 Use two Phases when an Event must be read on its own (e.g. a settlement after the period's work),
-otherwise one. Use "every" for policies that recur every N periods instead of repeating Steps.
+otherwise one. An Event written { "event": id, "every": 3 } fires on the 3rd, 6th, 9th… period of its Step
+(a quarterly policy in a monthly Step); a bare id fires every period.
 
 ## What a "path" can reach (profile operations and Metrics)
 
@@ -242,12 +257,11 @@ export const EXAMPLE_DOC: TemporalSimulationDoc = {
         unit: "month",
         repeat: 6,
         phases: [
-          { events: ["advance-one-month"], propagate: true },
-          { events: [], propagate: false },
+          { events: [{ event: "advance-one-month", every: 1 }], propagate: true },
+          { events: [{ event: "pump-maintenance", every: 3 }], propagate: false },
         ],
       },
     ],
-    every: [{ every: 3, phase: 2, events: ["pump-maintenance"] }],
   },
   profile: {
     "2024-01": [
