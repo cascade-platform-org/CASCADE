@@ -232,13 +232,14 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 |---|---|---|
 | `id` | string | Unique identifier |
 | `label` | string | Human-readable name |
-| `type` | enum | `hazard` \| `disservice` |
+| `type` | enum | `hazard` \| `disservice` \| `temporal_jump` (a Temporal Jump only as a Temporal-Simulation-only Event; hand-fired jumps come from the Time control) |
 | `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
 | `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements a *hazard* flags as `direct_damage` — for a hazard that is determined by `vulnerability_levels[event.id] > 0`. (A specific rule may independently set `direct_damage` on any element — ADR-0015.) |
 | `default_repair_time` | integer (hours)? | Fallback `expected_repair_time` for affected Elements with no `direct_damage_effects` entry; hazards only. |
 | `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
 | `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
-| `attribute_operations` | list\<{element, path, op, value}\>? | *Proposed (§9.6, ADR-0021).* Operations on the value a field holds when the Event fires — `op` is `set`, `add`, `mul`, `at_most` or `at_least`; `path` is a list, so it can reach `supply_capacity.<category>.level`. Run after `attribute_mutations`. |
+| `temporal_simulation_only` | boolean (default false) | The Event is used only inside a Temporal Simulation (§9.6): hidden from the Action Bar and the Scorecard's uncovered-Event list. Implemented. |
+| `attribute_operations` | list\<{element \| where, path, op, value}\>? | *Proposed (§9.6, ADR-0021).* Operations on the value a field holds when the Event fires — `op` is `set`, `add`, `mul`, `at_most` or `at_least`; `path` is a list, so it can reach `supply_capacity.<category>.level`. Run after `attribute_mutations`. |
 
 There is no explicit `affected` set on the event definition. The affected set is **implicit**: any Element with `vulnerability_levels[event.id] > 0` is affected. The imposed Functionality level is `N − vulnerability_level` (clamped to 1), applied only if it worsens the current level.
 
@@ -597,7 +598,7 @@ When a Hazard sets `direct_damage = true`, `expected_repair_time` records estima
 
 A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable run over many periods. Mechanics: ADR-0019 (Timeline, period sequence, recording), ADR-0020 (Stocks, `served_ratio`), ADR-0021 (Attribute Operations); reasoning: `temporal-simulation-design.md`. This section states what the product must do.
 
-*UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run and explains each interaction. It never touches the model, the history or the engine. The plan (`lib/timeline-plan.ts`) and the Stock formulas (`lib/stock-math.ts`) are the real logic; the types are local until the schema exists.
+*UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run, edits the whole definition as text, and explains each interaction. It never touches the model, the history or the engine. The real, tested logic: the plan (`lib/timeline-plan.ts`), the Stock formulas (`lib/stock-math.ts`), the Element Filter (`lib/element-filter.ts`) and the text form (`lib/temporal-simulation-text.ts`); the document schema (`lib/temporal-simulation-schema.ts`) is local until the Pydantic model exists.
 
 **Timeline.**
 - A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
@@ -624,12 +625,14 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 - The Propagation result exposes `served_ratio` per consumer and Category.
 - Limits in v1: supply-side only; one source per node Stock.
 
-**Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. A result outside a field's valid range is rejected with a warning.
+**Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. An operation targets one Element or every Element an **Element Filter** selects (kind, canvas, Node Type, Category, edge endpoints, a property, a label substring), resolved when it runs; a Metric's target is the same filter. A result outside a field's valid range is rejected with a warning. An Event used only in Timelines is marked **Temporal Simulation only**: hidden from the Action Bar and the Scorecard, and the only kind of Event that can be a Temporal Jump; the Timeline's **Create Event** opens Config → Events on a new one (implemented).
 
 **Recording and metrics.**
 - A run record stores the start state, one Graph Diff per Phase and one closing diff per period, no image per period; the full state of any period is rebuilt on request. It is a cache: stale when the model, Timeline or profile changes, and re-runnable. The Timeline, its profile and the run record are part of the project file.
 - A whole run is **one** entry in the undo history (`temporal_simulation_run`, its net change). CTRL+Z undoes the whole run; Clear Event (Ctrl+R) treats the run as one Event; Reset restores every Stock. The Situation shows a run as one item.
 - Standard Metrics (Operativity Score, coverage, stock level) and user-defined ones (target filter, attribute, read `state` or `change` = after − before, aggregate, optional filter) are evaluated at read time from recorded state and shown at every period. A metric at period *t* reads only periods up to *t*.
+
+**Plain text.** The whole definition (Timeline, profile, Metrics) has a JSON form validated by the same schema as the window: copy it, edit it or hand it to an LLM (**Copy with context** adds the format reference and this project's Events and Elements), paste it back — bare JSON or a whole LLM reply — and Apply. Schema errors block with their path; references the project cannot satisfy only warn (ADR-0019 §7).
 
 **Level Mode.** A **Level Scale** in Client Configuration (bands over `value / reference`, each with a label and a brand colour) shows a Stock's level, orthogonal to Functionality. While a Temporal Simulation is open, **Level Mode** recolours the canvas by it as Analysis Mode does by a score, switchable with Functionality colours and between a Stock's level and its change over the period. The reference defaults to the Stock's own bound and can be overridden on the Stock (`level_reference`, `change_reference`). Display only: it feeds no Rule, Operativity Score or Recovery Value. A Scorecard entry saved from a simulation stores the per-element values it shows and repaints in Level Mode later.
 

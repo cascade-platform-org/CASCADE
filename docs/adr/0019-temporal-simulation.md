@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** proposed (2026-10-02, revised 2026-10-05). Nothing is built. Reasoning, stress
+**Status:** proposed (2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form). Nothing is built. Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -23,7 +23,7 @@ three PNGs; 44 periods × several policy variants recreates the problem ADR-0017
 Timeline   name · steps[] · every[] · profile
 Step       label · unit (day|week|month|quarter|year|none) · repeat (default 1) · phases[]
 Phase      events[] (EventDefinition ids) · propagate (default true)
-Periodic   every N periods · phase index · events[]
+Periodic   every N periods · phase (1-based) · events[]
 profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 ```
 
@@ -31,7 +31,7 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   advance the label (`2023-03`, `2023-W09`, `2023-03-15`, `2023-Q1`, `2023`); with `none`
   they are numbered `label#2`, `label#3`. `Periodic.every` counts unrolled periods from the
   run's start.
-- A **Phase** applies its Events, then optionally runs one Propagation. Phases exist so an
+- A **Phase** applies its Events (by `EventDefinition` id), then optionally runs one Propagation. Phases exist so an
   Event can fire between two Propagations of one period: to isolate an Event read on its own
   (a settlement), or to measure a period twice. Each Propagation re-solves from scratch, so
   a Phase sets no preference between supplies.
@@ -49,6 +49,12 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   single-downloadable-file principle applies.
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
   is not ruled out later.
+- **An Event used only in Timelines is marked `temporal_simulation_only`** (an additive
+  `EventDefinition` field, any type). It is hidden from the Action Bar and from the
+  Scorecard's uncovered-Event list, and only such an Event may be a Temporal Jump in the
+  Config Events tab — the way a Timeline advances time. The Timeline window's **Create
+  Event** opens Config → Events on a new one. A flag rather than a fourth `type`: a
+  Temporal-Simulation-only Event can itself be a Hazard, a Disservice or a Temporal Jump.
 
 ### 2. The step operator, one period in order
 
@@ -130,10 +136,10 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
 ### 4. Custom Metrics are view definitions in Client Configuration
 
 ```
-Metric   name · target (node filter: type, category, canvas, …) · attribute
-         · read: state | change · phase (optional; for change, absent = the period)
-         · aggregate: sum | mean | min | max | count | share_where | percentile(p)
-         · filter (optional predicate on the attribute)
+Metric   name · target (an ElementFilter, ADR-0021) · path
+         · read: state | change · phase (optional, 1-based; for change, absent = the period)
+         · aggregate: sum | mean | min | max | count | share_where | percentile (+ percentile)
+         · value_filter (optional {cmp, value}; also the predicate of share_where)
 ```
 
 `read: change` is **after − before** over the chosen Phase or period, which is how a
@@ -171,9 +177,25 @@ no Rule, Operativity Score or Recovery Value. A Scorecard entry saved from a sim
 **stores the per-element values it shows** (level or change, and the reference used), so it
 repaints in Level Mode later.
 
+### 7. One definition, two forms: the window and plain text
+
+The whole definition — Timeline, profile and Metrics — is one document,
+`{"format": "cascade.temporal-simulation/v0", timeline, profile, metrics}`, validated by one
+schema whether it is edited in the window or pasted as JSON. Objects are strict, so a
+misspelt key is an error; a reference this project cannot satisfy (an unknown Event id, a
+missing Element, a filter matching nothing) is a warning, and the text still applies.
+Pasting accepts bare JSON or a whole LLM reply (the first fenced `json` block). **Copy with
+context** produces a self-contained prompt: the format reference, this project's Events,
+Canvases, Node Types, Categories and property keys, the Element list up to 300 Elements,
+and the current definition. Text is the bulk and LLM route; the window remains the route
+that explains each control.
+
 ## Consequences
 
-- New Pydantic models (Timeline, Step, Phase, Periodic, Metric, Level Scale) →
+- `EventDefinition.temporal_simulation_only` lands ahead of the rest (Pydantic, JSON Schema,
+  Zod; Action Bar, Scorecard and Events tab). The prototype's document schema
+  (`lib/temporal-simulation-schema.ts`) becomes the Pydantic model when the feature is built.
+- New Pydantic models (Timeline, Step, Phase, Periodic, Metric, ElementFilter, Level Scale) →
   `export_json_schema.py` → Zod → `pydantic-mirror.test.ts`, per CLAUDE.md §6.
 - ADR-0016 gains the `simulation` source tag (Reset's second half reverts it), and Clear
   Event's target becomes "the newest Event or run". `AnyUpdateEntry` gains

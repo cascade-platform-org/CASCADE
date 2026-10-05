@@ -187,8 +187,10 @@ on the last dot, and EPANET ids contain dots (the reason ADR-0016 and ADR-0017 k
 structurally). Operations stay in `attribute_mutations`'s lane — client-side, declared,
 static arithmetic on one value — so they are not Rules and CLAUDE.md §7 is untouched.
 
-What an operation cannot express is a *conditional* ("do A if B else C"). Which Elements an
-operation reaches is explicit, one entry per Element (§7).
+What an operation cannot express is a *conditional* ("do A if B else C"). An operation
+reaches one Element (`element`) or every Element an **Element Filter** selects (`where`:
+kind, canvas, Node Type, Category, edge endpoints, a property, a label substring), resolved
+when it runs. A policy over 19 activities is one entry.
 
 ### 2.4 Recovery, backups and repair between periods
 
@@ -839,8 +841,6 @@ remains open:
 **Capability C**
 - **A per-stock switch for φ-scaling of the inflow?** Needed only when a model has a degraded
   node with sunk inflow (§4.1).
-- **An Element selector for operations.** A policy over 19 activities is 19 entries; a
-  selector ("every node with property X") would shorten it, defined in one place.
 - **Conditionals** ("if A then B else C"), which operations do not express. No model needs
   one yet.
 - **Is `couples` needed?** Candidate shape:

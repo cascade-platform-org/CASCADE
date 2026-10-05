@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { advanceLabel, planTimeline, type Timeline } from "./timeline-plan";
+import { advanceLabel, planTimeline } from "./timeline-plan";
+import type { Timeline } from "./temporal-simulation-schema";
 
 describe("advanceLabel", () => {
   it("advances months across a year boundary", () => {
@@ -42,7 +43,7 @@ const base: Timeline = {
       ],
     },
   ],
-  every: [{ every: 3, phase: 2, events: ["quarter-close"] }],
+  every: [{ every: 3, phase: 3, events: ["quarter-close"] }],
 };
 
 describe("planTimeline", () => {
@@ -76,7 +77,7 @@ describe("planTimeline", () => {
         { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
         { label: "x", unit: "none", repeat: 1, phases: [{ events: [], propagate: true }] },
       ],
-      every: [{ every: 2, phase: 4, events: ["e"] }],
+      every: [{ every: 2, phase: 5, events: ["e"] }],
     });
     expect(plan.periods).toHaveLength(2);
     expect(plan.warnings.join("\n")).toMatch(/not a valid month label/);

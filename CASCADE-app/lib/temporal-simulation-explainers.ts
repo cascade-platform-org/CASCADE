@@ -9,7 +9,8 @@
  * Kept in one module so the wording can be reviewed in one place.
  */
 
-import type { CalendarUnit, PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
+import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
+import type { AttributeOperation, CalendarUnit, ElementFilter, Metric } from "@/lib/temporal-simulation-schema";
 
 export interface Explanation {
   title: string;
@@ -23,7 +24,7 @@ export const EXPLAIN_INTRO: Explanation = {
   lines: [
     "A Temporal Simulation is a saved, replayable run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks.",
     "Nothing in this window changes your model or calls the engine. Each control edits a draft and explains here what the built feature will do.",
-    "Tabs: Timeline (Steps and Phases), Profile (per-period inputs), Run (the plan, Level Mode, undo/clear/reset), Metrics (custom read-outs), Stock (the two formulas on a sample Stock).",
+    "Tabs: Timeline (Steps and Phases), Profile (per-period inputs), Run (the plan, Level Mode, undo/clear/reset), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],
 };
@@ -64,6 +65,15 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
       "There is no formula language: the dropdowns are the whole surface.",
     ],
     refs: ["ADR-0019 §4"],
+  },
+  text: {
+    title: "Text",
+    lines: [
+      "The whole definition — Timeline, profile and Metrics — as one JSON document, validated by the same schema the other tabs edit through.",
+      "Copy it, edit it anywhere (or hand it to an LLM with “Copy with context”), paste it back and Apply. A misspelt key, a wrong type or a bad enum is reported with its path and nothing is applied.",
+      "References this project cannot satisfy (an unknown Event id, an Element that does not exist, a filter matching nothing) are warnings: you can still apply.",
+    ],
+    refs: ["ADR-0019 §7"],
   },
   stock: {
     title: "Stock",
@@ -212,7 +222,7 @@ export function explainPeriodic(every: number, phase: number): Explanation {
   return {
     title: "Periodic rule",
     lines: [
-      `Its Events join Phase ${phase + 1} of periods ${every}, ${every * 2}, ${every * 3}, … counted from the run's start.`,
+      `Its Events join Phase ${phase} of periods ${every}, ${every * 2}, ${every * 3}, … counted from the run's start.`,
       "It saves writing the same Event into every N-th Step by hand. A rule pointing at a Phase no Step has never fires and is flagged.",
     ],
     refs: ["ADR-0019 §1"],
@@ -223,17 +233,44 @@ export function explainPeriodic(every: number, phase: number): Explanation {
 // Profile
 // ---------------------------------------------------------------------------
 
-export function explainProfileRow(op: string, path: string, labelUsed: boolean): Explanation {
+export function explainProfileOp(label: string, op: AttributeOperation, labelUsed: boolean, matches: number | null): Explanation {
+  const target = op.element !== undefined
+    ? `Element ${op.element || "(none chosen)"}`
+    : `each of the ${matches ?? 0} Element${matches === 1 ? "" : "s"} the filter selects (in id order)`;
   return {
     title: "Profile operation",
     lines: [
-      `At the start of its period: ${describeOp(op)} on ${path || "(path)"}.`,
-      "path is a list (supply_capacity, category, field) so it can reach a Stock field and survives dotted ids.",
+      `At the start of period "${label}": ${describeOp(op.op)} (${String(op.value)}) at ${op.path.join(" › ") || "(path)"} on ${target}.`,
+      op.where
+        ? "The filter is resolved when the operation runs, against the model at that moment, so an Element added later is included."
+        : "path is a list (supply_capacity › category › field) so it can reach a Stock field and survives dotted ids.",
       labelUsed
-        ? "A result outside the field's valid range, or a non-set on an absent field, is rejected with a warning."
+        ? "A result outside the field's valid range, or a non-set on an absent field, is rejected with a warning for that Element."
         : "No period of the Timeline has this label, so this entry never applies; it is flagged unused.",
     ],
     refs: ["ADR-0019 §1", "ADR-0021"],
+  };
+}
+
+export function explainFilter(filter: ElementFilter, matches: number, misuse: string[]): Explanation {
+  const kind = filter.kind ?? "node";
+  const conds = [
+    filter.canvas && `on canvas ${filter.canvas}`,
+    filter.node_type && `of type ${filter.node_type}`,
+    filter.category && (kind === "node" ? `in Category ${filter.category}` : `carrying ${filter.category}`),
+    filter.from && `from ${filter.from}`,
+    filter.to && `to ${filter.to}`,
+    filter.property && (filter.property.equals === undefined ? `with property ${filter.property.key}` : `with ${filter.property.key} = ${String(filter.property.equals)}`),
+    filter.label_contains && `whose label contains "${filter.label_contains}"`,
+  ].filter(Boolean);
+  return {
+    title: "Element Filter",
+    lines: [
+      `Selects every ${kind}${conds.length ? " " + conds.join(", ") : ""}: ${matches} match${matches === 1 ? "" : "es"} in the current model.`,
+      "Every given condition must hold; leave a field empty not to constrain it. One filter replaces one row per Element.",
+      ...misuse.map((m) => `Ignored: ${m}.`),
+    ],
+    refs: ["ADR-0021"],
   };
 }
 
@@ -304,7 +341,7 @@ export const EXPLAIN_SHOW_STATE: Explanation = {
 export const EXPLAIN_STALE: Explanation = {
   title: "Run is stale",
   lines: [
-    "The Timeline changed after the last run. The run record carries a hash of the model, Timeline and profile; a mismatch marks it stale.",
+    "The Timeline or profile changed after the last run. The run record carries a hash of the model, Timeline and profile; a mismatch marks it stale.",
     "Re-running replays forward from the first changed period and keeps the earlier periods' diffs.",
   ],
   refs: ["ADR-0019 §3"],
@@ -371,16 +408,17 @@ export const EXPLAIN_SAVE_SCORECARD: Explanation = {
 // Metrics
 // ---------------------------------------------------------------------------
 
-export function explainMetric(m: {
-  name: string; target: string; attribute: string; read: "state" | "change"; phase: string; aggregate: string; filter: string;
-}): Explanation {
+export function explainMetric(m: Metric, matches: number): Explanation {
+  const path = m.path.join(" › ") || "(path)";
   const where = m.read === "state"
-    ? `the value of ${m.attribute || "(attribute)"} at the end of each period`
-    : `the change (after − before) of ${m.attribute || "(attribute)"} over ${m.phase ? `Phase ${m.phase}` : "the whole period"}`;
+    ? `the value at ${path} at the end of each period`
+    : `the change (after − before) at ${path} over ${m.phase ? `Phase ${m.phase}` : "the whole period"}`;
+  const vf = m.value_filter ? ` keeping values ${m.value_filter.cmp} ${m.value_filter.value}` : "";
+  const agg = m.aggregate === "percentile" ? `${m.percentile ?? 50}th percentile` : m.aggregate === "share_where" ? "share passing the value filter" : m.aggregate;
   return {
     title: `Metric "${m.name || "untitled"}"`,
     lines: [
-      `Per period: take ${where}, on ${m.target === "all" ? "every node" : `nodes of type ${m.target}`}${m.filter ? ` where ${m.filter}` : ""}, and report its ${m.aggregate}.`,
+      `Per period: take ${where}, on the ${matches} Element${matches === 1 ? "" : "s"} the target selects${vf}, and report the ${agg}.`,
       m.read === "change"
         ? "A settlement in its own Phase makes that Phase's change exactly the settlement — e.g. sum of a Stock level's change is a cash outlay, positive when the level rises."
         : "Computed at read time from the reconstructed state; nothing is stored per Metric.",
@@ -388,6 +426,47 @@ export function explainMetric(m: {
     ],
     refs: ["ADR-0019 §4"],
   };
+}
+
+export const EXPLAIN_CREATE_EVENT: Explanation = {
+  title: "Create Event",
+  lines: [
+    "Opens Config → Events with a new Event marked “Temporal Simulation only”: it never appears in the Action Bar or the Scorecard's uncovered list, only here.",
+    "It can be a Hazard, a Disservice, or a Temporal Jump with its hours — the way a Timeline advances time. Save the Config, then add it to a Phase.",
+  ],
+  refs: ["ADR-0019 §1", "requirements §6.4"],
+};
+
+export const EXPLAIN_COPY: Explanation = {
+  title: "Copy",
+  lines: ["Copies the JSON definition. Paste it into any editor, change it, and paste it back here to Apply."],
+  refs: ["ADR-0019 §7"],
+};
+
+export const EXPLAIN_COPY_LLM: Explanation = {
+  title: "Copy with context for an LLM",
+  lines: [
+    "Copies a self-contained prompt: what to do, the full format reference, this project's Events, canvases, Node Types, Categories, property keys and (for models up to 300 Elements) the Element list, then the current definition.",
+    "Paste the LLM's whole reply back: the first ```json block is extracted, validated and shown before anything is applied.",
+  ],
+  refs: ["ADR-0019 §7"],
+};
+
+export function explainApply(ok: boolean, errors: number, warnings: number): Explanation {
+  return ok
+    ? {
+        title: "Applied",
+        lines: [
+          "The text replaced the draft Timeline, profile and Metrics. The other tabs now show it.",
+          warnings > 0 ? `${warnings} warning(s) remain — references this project cannot satisfy. Fix them here or in the tabs.` : "No warnings.",
+        ],
+        refs: ["ADR-0019 §7"],
+      }
+    : {
+        title: "Not applied",
+        lines: [`${errors} error(s) — listed under the text with their path. The draft is unchanged.`],
+        refs: ["ADR-0019 §7"],
+      };
 }
 
 // ---------------------------------------------------------------------------

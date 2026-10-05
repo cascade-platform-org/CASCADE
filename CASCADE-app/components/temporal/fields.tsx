@@ -6,7 +6,7 @@
  * shows "what this will do" for the control being used.
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const inputCls =
@@ -82,3 +82,44 @@ export function Segmented<T extends string>({
 
 /** Parse a number input; empty → undefined. */
 export const numOrUndef = (v: string): number | undefined => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
+
+/** A path list shown as "a, b, c"; typed back the same way. */
+export const formatPath = (path: string[]): string => path.join(", ");
+export const parsePath = (text: string): string[] => text.split(",").map((p) => p.trim());
+
+/** Numbers and booleans are typed as text and read back as their type; anything else stays a string. */
+export function parseValue(text: string): number | boolean | string {
+  const t = text.trim();
+  if (t !== "" && !Number.isNaN(Number(t))) return Number(t);
+  if (t === "true" || t === "false") return t === "true";
+  return text;
+}
+
+/**
+ * An input that keeps the text as typed ("1." stays "1." while a decimal is
+ * entered) and reports every change. Remount it (React key) to load a new value.
+ */
+export function TextBackedInput({
+  initial,
+  onCommit,
+  onFocus,
+  placeholder,
+  className,
+}: {
+  initial: string;
+  onCommit: (text: string) => void;
+  onFocus?: () => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [text, setText] = useState(initial);
+  return (
+    <input
+      className={className ?? inputCls}
+      value={text}
+      placeholder={placeholder}
+      onFocus={onFocus}
+      onChange={(e) => { setText(e.target.value); onCommit(e.target.value); }}
+    />
+  );
+}

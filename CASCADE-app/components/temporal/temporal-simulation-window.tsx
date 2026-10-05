@@ -12,17 +12,19 @@
  */
 
 import React from "react";
-import { CalendarClock, ListOrdered, Table2, Play, Sigma, Database, Info } from "lucide-react";
+import { CalendarClock, ListOrdered, Table2, Play, Sigma, Database, Info, Braces } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
 import { useTemporalSimulationStore, type SimTab } from "@/store/temporal-simulation-store";
+import { useUiStore } from "@/store/ui-store";
 import { EXPLAIN_TAB } from "@/lib/temporal-simulation-explainers";
 import { TimelineTab } from "./timeline-tab";
 import { ProfileTab } from "./profile-tab";
 import { RunTab } from "./run-tab";
 import { MetricsTab } from "./metrics-tab";
 import { StockTab } from "./stock-tab";
+import { TextTab } from "./text-tab";
 
 const TABS: { id: SimTab; label: string; icon: React.ReactNode }[] = [
   { id: "timeline", label: "Timeline", icon: <ListOrdered size={15} /> },
@@ -30,17 +32,21 @@ const TABS: { id: SimTab; label: string; icon: React.ReactNode }[] = [
   { id: "run", label: "Run", icon: <Play size={15} /> },
   { id: "metrics", label: "Metrics", icon: <Sigma size={15} /> },
   { id: "stock", label: "Stock", icon: <Database size={15} /> },
+  { id: "text", label: "Text", icon: <Braces size={15} /> },
 ];
 
 export function TemporalSimulationWindow() {
   const open = useTemporalSimulationStore((s) => s.open);
   const tab = useTemporalSimulationStore((s) => s.tab);
   const explanation = useTemporalSimulationStore((s) => s.explanation);
+  // The window floats above modals; step aside while Config is open ("Create
+  // Event" opens it) and come back when it closes.
+  const configModalOpen = useUiStore((s) => s.configModalOpen);
   const { closeWindow, setTab, explain } = useTemporalSimulationStore.getState();
 
   return (
     <FloatingWindow
-      open={open}
+      open={open && !configModalOpen}
       onClose={closeWindow}
       title="Temporal Simulation — prototype"
       icon={<CalendarClock size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
@@ -78,6 +84,7 @@ export function TemporalSimulationWindow() {
           {tab === "run" && <RunTab />}
           {tab === "metrics" && <MetricsTab />}
           {tab === "stock" && <StockTab />}
+          {tab === "text" && <TextTab />}
         </div>
         <section
           aria-live="polite"

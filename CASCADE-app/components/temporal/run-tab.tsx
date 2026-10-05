@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Play, RotateCcw, Undo2, Eraser, Eye, Save, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConfigStore } from "@/store/config-store";
-import { timelineKey, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { runKey, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { planTimeline } from "@/lib/timeline-plan";
 import {
   EXPLAIN_CLEAR_RUN,
@@ -30,6 +30,7 @@ const LEVEL_BANDS = [
 
 export function RunTab() {
   const timeline = useTemporalSimulationStore((s) => s.timeline);
+  const profile = useTemporalSimulationStore((s) => s.profile);
   const lastRunKey = useTemporalSimulationStore((s) => s.lastRunKey);
   const selected = useTemporalSimulationStore((s) => s.selectedPeriod);
   const display = useTemporalSimulationStore((s) => s.display);
@@ -41,7 +42,7 @@ export function RunTab() {
 
   const plan = useMemo(() => planTimeline(timeline), [timeline]);
   const hasRun = lastRunKey !== null;
-  const stale = hasRun && lastRunKey !== timelineKey(timeline);
+  const stale = hasRun && lastRunKey !== runKey({ timeline, profile });
 
   return (
     <div className="space-y-4">
@@ -118,7 +119,7 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">Period</th>
               <th className="py-1 pr-2 font-semibold">Phases</th>
               <th className="py-1 pr-2 font-semibold">Operativity</th>
-              {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.name || "metric"}</th>)}
+              {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.metric.name || "metric"}</th>)}
               <th />
             </tr>
           </thead>

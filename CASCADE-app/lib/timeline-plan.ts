@@ -2,45 +2,15 @@
  * timeline-plan.ts — unroll a Temporal Simulation Timeline into the ordered
  * list of periods a run would execute (ADR-0019 §1–§2).
  *
- * PROTOTYPE. The Timeline types below are local while the Temporal Simulation
- * is a UI prototype: no Pydantic model exists yet. When the feature is built,
- * the types move schema-first (Pydantic → JSON Schema → Zod, CLAUDE.md §6) and
- * these declarations are replaced by `z.infer<>` re-exports.
+ * PROTOTYPE. The Timeline types come from `lib/temporal-simulation-schema.ts`
+ * until the feature is built schema-first (CLAUDE.md §6).
  *
  * Pure: no store access, no engine call. A plan is what a run *would* do, so the
  * UI can show the sequence, the period labels and the Engine Evaluation cost
  * before anything runs.
  */
 
-export type CalendarUnit = "day" | "week" | "month" | "quarter" | "year" | "none";
-
-export interface TimelinePhase {
-  /** EventDefinition ids, applied in order. */
-  events: string[];
-  /** Run one Propagation after the Events. */
-  propagate: boolean;
-}
-
-export interface TimelineStep {
-  label: string;
-  unit: CalendarUnit;
-  repeat: number;
-  phases: TimelinePhase[];
-}
-
-interface TimelinePeriodic {
-  /** Every N-th period, counted 1-based from the run's start (N, 2N, …). */
-  every: number;
-  /** Index of the Phase the Events join. */
-  phase: number;
-  events: string[];
-}
-
-export interface Timeline {
-  name: string;
-  steps: TimelineStep[];
-  every: TimelinePeriodic[];
-}
+import type { CalendarUnit, Timeline } from "@/lib/temporal-simulation-schema";
 
 interface PlannedPhase {
   index: number;
@@ -159,7 +129,7 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
         repetition: r,
         phases: step.phases.map((phase, index) => {
           const periodicEvents = timeline.every
-            .filter((p) => p.every >= 1 && number % p.every === 0 && p.phase === index)
+            .filter((p) => p.every >= 1 && number % p.every === 0 && p.phase === index + 1)
             .flatMap((p) => p.events);
           return {
             index,
@@ -180,8 +150,8 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
   }
   timeline.every.forEach((p, i) => {
     if (p.every < 1) warnings.push(`Periodic rule ${i + 1}: "every" must be at least 1.`);
-    const reachable = timeline.steps.some((s) => p.phase < s.phases.length);
-    if (!reachable) warnings.push(`Periodic rule ${i + 1}: no Step has a Phase ${p.phase + 1}, so it never fires.`);
+    const reachable = timeline.steps.some((s) => p.phase >= 1 && p.phase <= s.phases.length);
+    if (!reachable) warnings.push(`Periodic rule ${i + 1}: no Step has a Phase ${p.phase}, so it never fires.`);
   });
 
   const engineCalls = periods.reduce((n, p) => n + p.phases.filter((ph) => ph.propagate).length, 0);

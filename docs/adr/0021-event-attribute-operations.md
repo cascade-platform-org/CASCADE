@@ -1,6 +1,6 @@
 # ADR-0021 — Events carry Attribute Operations on the current value
 
-**Status:** proposed (2026-10-02, revised 2026-10-05). Nothing is built. Reasoning:
+**Status:** proposed (2026-10-02, revised 2026-10-05: Element Filter decided). Nothing is built. Reasoning:
 `docs/project/temporal-simulation-design.md` §2.3.
 
 ## Context
@@ -22,11 +22,30 @@ Two further constraints: dotted keys split on the last dot, and EPANET ids conta
 
 ```python
 class AttributeOperation(BaseModel):
-    element: str                                         # Element id
+    element: Optional[str] = None                        # one Element id …
+    where: Optional[ElementFilter] = None                # … or every Element a filter selects
     path: list[str]                                      # ["supply_capacity", "hours", "level"]
     op: Literal["set", "add", "mul", "at_most", "at_least"]
     value: float | int | bool | str                      # a number for add/mul/at_most/at_least
+
+class ElementFilter(BaseModel):                          # every given condition must hold
+    kind: Literal["node", "edge"] = "node"
+    canvas: Optional[str] = None                         # Canvas id or label
+    node_type: Optional[str] = None                      # nodes only
+    category: Optional[str] = None                       # nodes: tagged/supplied/demanded; edges: source's supply
+    from_: Optional[str] = None  # "from"                # edges only: source node id
+    to: Optional[str] = None                             # edges only: target node id
+    property: Optional[PropertyMatch] = None             # {key, equals?}
+    label_contains: Optional[str] = None                 # case-insensitive
+    ids: Optional[list[str]] = None
 ```
+
+- **Exactly one of `element` or `where`.** A filter is resolved when the operation runs,
+  against the model at that moment, and the operation applies to each match in Element-id
+  order; a match where the path does not apply is rejected for that Element with a warning.
+  A policy over 19 activities is one entry, and an Element added later is included. The
+  same `ElementFilter` is a Metric's `target` (ADR-0019 §4): one definition, one matcher
+  (`lib/element-filter.ts` in the prototype).
 
 - **`new = op(current, value)`**, applied to the value the field holds when the operation
   runs. `set` writes `value`. `at_most` caps the value at `value`; `at_least` raises it to
@@ -90,5 +109,4 @@ again next period, which is exactly what periodic policy needs.
 - The Events tab of the config modal edits operations; `requirements.md` §6.4 gains the field.
 - What an operation changed is read with a `read: change` Metric over its Phase
   (ADR-0019 §4); no separate result is stored.
-- **Open (design doc §7):** an Element selector so a policy over many Elements is not one
-  entry each; conditionals, which operations do not express.
+- **Open (design doc §7):** conditionals, which operations do not express.

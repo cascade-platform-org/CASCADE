@@ -10,32 +10,12 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Timeline, TimelinePhase, TimelineStep } from "@/lib/timeline-plan";
+import type { Timeline, TimelinePhase, TimelineStep } from "@/lib/temporal-simulation-schema";
+import type { MetricEntry, ProfileEntry, SimulationDraft } from "@/lib/temporal-simulation-text";
 import type { StockDraft } from "@/lib/stock-math";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
-export type SimTab = "timeline" | "profile" | "run" | "metrics" | "stock";
-
-export interface ProfileRowDraft {
-  id: string;
-  label: string;
-  element: string;
-  /** Comma-separated path, e.g. "supply_capacity, hours, rate". */
-  path: string;
-  op: "set" | "add" | "mul" | "at_most" | "at_least";
-  value: string;
-}
-
-export interface MetricDraft {
-  id: string;
-  name: string;
-  target: string;
-  attribute: string;
-  read: "state" | "change";
-  phase: string;
-  aggregate: "sum" | "mean" | "min" | "max" | "count" | "share_where" | "percentile";
-  filter: string;
-}
+export type SimTab = "timeline" | "profile" | "run" | "metrics" | "stock" | "text";
 
 export interface StockPreview extends StockDraft {
   delivered: number;
@@ -46,8 +26,8 @@ interface TemporalSimulationState {
   open: boolean;
   tab: SimTab;
   timeline: Timeline;
-  profile: ProfileRowDraft[];
-  metrics: MetricDraft[];
+  profile: ProfileEntry[];
+  metrics: MetricEntry[];
   stock: StockPreview;
   /** Snapshot of the Timeline the last dry run planned; differs → stale. */
   lastRunKey: string | null;
@@ -61,8 +41,10 @@ interface TemporalSimulationState {
   setTab: (tab: SimTab) => void;
   explain: (e: Explanation) => void;
   updateTimeline: (fn: (t: Timeline) => void) => void;
-  updateProfile: (fn: (rows: ProfileRowDraft[]) => void) => void;
-  updateMetrics: (fn: (rows: MetricDraft[]) => void) => void;
+  updateProfile: (fn: (rows: ProfileEntry[]) => void) => void;
+  updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
+  /** Replace the whole draft — the Text tab's Apply. */
+  replaceDraft: (d: SimulationDraft) => void;
   updateStock: (patch: Partial<StockPreview>) => void;
   markRun: () => void;
   selectPeriod: (n: number | null) => void;
@@ -89,10 +71,12 @@ const EXAMPLE_TIMELINE: Timeline = {
       phases: [newPhase(true), newPhase(false)],
     },
   ],
-  every: [{ every: 3, phase: 1, events: [] }],
+  every: [{ every: 3, phase: 2, events: [] }],
 };
 
-export const timelineKey = (t: Timeline) => JSON.stringify(t);
+/** What a run depends on in the draft; a change after a run marks it stale. */
+export const runKey = (s: { timeline: Timeline; profile: ProfileEntry[] }) =>
+  JSON.stringify([s.timeline, s.profile.map((e) => [e.label, e.op])]);
 
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
   immer((set) => ({
@@ -115,8 +99,9 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     updateTimeline: (fn) => set((s) => { fn(s.timeline); }),
     updateProfile: (fn) => set((s) => { fn(s.profile); }),
     updateMetrics: (fn) => set((s) => { fn(s.metrics); }),
+    replaceDraft: (d) => set((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; }),
     updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
-    markRun: () => set((s) => { s.lastRunKey = timelineKey(s.timeline); s.selectedPeriod = 1; }),
+    markRun: () => set((s) => { s.lastRunKey = runKey(s); s.selectedPeriod = 1; }),
     selectPeriod: (n) => set((s) => { s.selectedPeriod = n; }),
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),

@@ -1,11 +1,15 @@
 "use client";
 
-import { Plus, Trash2, X } from "lucide-react";
+import { CalendarPlus, Plus, Trash2, X } from "lucide-react";
+import { useUiStore } from "@/store/ui-store";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { advanceLabel, type CalendarUnit } from "@/lib/timeline-plan";
+import { advanceLabel } from "@/lib/timeline-plan";
+import type { CalendarUnit } from "@/lib/temporal-simulation-schema";
 import {
   EXPLAIN_ADD_PHASE,
+  EXPLAIN_CREATE_EVENT,
   EXPLAIN_REMOVE_PHASE,
   EXPLAIN_REMOVE_STEP,
   explainAddStep,
@@ -20,11 +24,25 @@ import { Field, SmallButton, inputCls } from "./fields";
 
 const UNITS: CalendarUnit[] = ["day", "week", "month", "quarter", "year", "none"];
 
+/** Event picker: Temporal-Simulation-only Events first, then scenario Events. */
+function EventOptions({ events }: { events: EventDefinition[] }) {
+  const only = events.filter((e) => e.temporal_simulation_only);
+  const scenario = events.filter((e) => !e.temporal_simulation_only);
+  const label = (e: EventDefinition) => (e.type === "temporal_jump" ? `${e.label} (+${e.duration_hours ?? 1} h)` : e.label);
+  return (
+    <>
+      {only.length > 0 && <optgroup label="Temporal Simulation only">{only.map((e) => <option key={e.id} value={e.id}>{label(e)}</option>)}</optgroup>}
+      {scenario.length > 0 && <optgroup label="Scenario Events">{scenario.map((e) => <option key={e.id} value={e.id}>{label(e)}</option>)}</optgroup>}
+    </>
+  );
+}
+
 export function TimelineTab() {
   const timeline = useTemporalSimulationStore((s) => s.timeline);
   const update = useTemporalSimulationStore((s) => s.updateTimeline);
   const explain = useTemporalSimulationStore((s) => s.explain);
   const events = useConfigStore((s) => s.config.events);
+  const openConfigModal = useUiStore((s) => s.openConfigModal);
   const eventLabel = (id: string) => events.find((e) => e.id === id)?.label ?? id;
   const jumpHours = (id: string) => {
     const ev = events.find((e) => e.id === id);
@@ -40,9 +58,17 @@ export function TimelineTab() {
 
   return (
     <div className="space-y-4">
-      <Field label="Timeline name">
-        <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
-      </Field>
+      <div className="flex items-end gap-2">
+        <Field label="Timeline name" className="flex-1">
+          <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
+        </Field>
+        <SmallButton
+          onClick={() => { explain(EXPLAIN_CREATE_EVENT); openConfigModal("events", "new-temporal-simulation-event"); }}
+          title="Create a Temporal-Simulation-only Event in Config → Events"
+        >
+          <CalendarPlus size={11} /> Create Event
+        </SmallButton>
+      </div>
 
       {timeline.steps.map((step, si) => {
         const lastPropagating = step.phases.map((p) => p.propagate).lastIndexOf(true);
@@ -145,7 +171,7 @@ export function TimelineTab() {
                       }}
                     >
                       <option value="">+ add Event…</option>
-                      {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.label}</option>)}
+                      <EventOptions events={events} />
                     </select>
                     <button
                       type="button"
@@ -157,7 +183,7 @@ export function TimelineTab() {
                     </button>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {phase.events.length === 0 && <span className="text-[11px] italic text-zinc-400">No Events{events.length === 0 ? " — define Events in Config → Events first" : ""}</span>}
+                    {phase.events.length === 0 && <span className="text-[11px] italic text-zinc-400">No Events{events.length === 0 ? " — use Create Event first" : ""}</span>}
                     {phase.events.map((id, ei) => (
                       <span key={ei} className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow-sm dark:bg-zinc-700 dark:text-zinc-200">
                         {eventLabel(id)}
@@ -208,10 +234,10 @@ export function TimelineTab() {
                 type="number"
                 min={1}
                 className={inputCls}
-                value={rule.phase + 1}
+                value={rule.phase}
                 onFocus={() => explain(explainPeriodic(rule.every, rule.phase))}
                 onChange={(e) => {
-                  const p = Math.max(1, Math.floor(Number(e.target.value) || 1)) - 1;
+                  const p = Math.max(1, Math.floor(Number(e.target.value) || 1));
                   update((t) => { t.every[ri].phase = p; });
                   explain(explainPeriodic(rule.every, p));
                 }}
@@ -229,7 +255,7 @@ export function TimelineTab() {
                 }}
               >
                 <option value="">{rule.events.length ? rule.events.map(eventLabel).join(", ") : "+ add Event…"}</option>
-                {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.label}</option>)}
+                <EventOptions events={events} />
               </select>
             </Field>
             <button type="button" className="mb-1 text-zinc-400 hover:text-red-600" onClick={() => update((t) => { t.every.splice(ri, 1); })}>
@@ -238,7 +264,7 @@ export function TimelineTab() {
           </div>
         ))}
         <SmallButton
-          onClick={() => { update((t) => { t.every.push({ every: 3, phase: 0, events: [] }); }); explain(explainPeriodic(3, 0)); }}
+          onClick={() => { update((t) => { t.every.push({ every: 3, phase: 1, events: [] }); }); explain(explainPeriodic(3, 1)); }}
         >
           <Plus size={11} /> Add Periodic rule
         </SmallButton>

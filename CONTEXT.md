@@ -35,7 +35,7 @@ A field-level, invertible description of what changed between two Scenarios — 
 _Avoid_: "patch", "delta", "changeset"; and Mutation Reversal (one Event's inverse) or Scenario Baseline (one scenario's) — a Graph Diff is one Update's, and carries both directions
 
 **Event**:
-Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). The typed repair signal and the free-form mutations are complementary, not redundant.
+Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard. The typed repair signal and the free-form mutations are complementary, not redundant.
 _Avoid_: Incident, perturbation (in domain conversation)
 
 **Hazard**:
@@ -115,8 +115,12 @@ The canvas recoloured by the Level Scale while a Temporal Simulation is open, as
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
 **Attribute Operation** *(proposed)*:
-An entry in an Event's `attribute_operations` (or a Timeline profile): `(element, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
+An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
 _Avoid_: "mutation" (that is the literal-overwrite `attribute_mutations`), "formula", "expression"
+
+**Element Filter** *(proposed)*:
+A selection of Elements by what they are — kind (node or edge), Canvas, Node Type, Category, edge endpoints, a `properties` key (and value), a label substring — every given condition holding. Resolved when used, against the model at that moment, in Element-id order. The target of an **Attribute Operation** (`where`) and of a Temporal Simulation Metric. ADR-0021.
+_Avoid_: "selector", "query", "group" (a filter is re-resolved each time; it stores no membership)
 
 **Node Type**:
 Display classification (`Source` / `Infrastructure` / `Service` / `Personnel`) controlling rendering only — the engine branches solely on Category and Category Type. Personnel-specific DSL is out of scope.
