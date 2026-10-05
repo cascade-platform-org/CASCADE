@@ -9,7 +9,7 @@
 
 import { useCallback } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
+import { useConfigStore, selectN, selectScaleLevels, isVulnerabilityEvent } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { Edge } from "@/lib/schemas/network";
@@ -23,7 +23,7 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
   const allNodes = useCanvasStore((s) => s.nodes);
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
-  const events = useConfigStore(useShallow((s) => s.config.events));
+  const events = useConfigStore(useShallow((s) => s.config.events.filter(isVulnerabilityEvent)));
   const historyAction = useHistoryAction();
 
   const patch = useCallback(

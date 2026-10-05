@@ -62,6 +62,15 @@ class EventDefinition(BaseModel):
     direct_damage_effects: Optional[dict[str, DirectDamageEffect]] = Field(
         default=None, description="Per-element repair time overrides. Hazards only. Key = ElementId."
     )
+    temporal_simulation_only: bool = Field(
+        default=False,
+        description=(
+            "True for an Event used only inside a Temporal Simulation (a Phase or a Periodic "
+            "rule): it is hidden from the Action Bar and from the Scorecard's uncovered-Event "
+            "list. Any type may be Temporal-Simulation-only, a Temporal Jump included. "
+            "Client-side only; the engine never reads it."
+        ),
+    )
     attribute_mutations: dict[str, Any] = Field(
         default_factory=dict,
         description=(

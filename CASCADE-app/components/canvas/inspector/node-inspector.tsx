@@ -12,7 +12,7 @@ import { useCallback, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useUiStore } from "@/store/ui-store";
-import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
+import { useConfigStore, selectN, selectScaleLevels, isVulnerabilityEvent } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { Node } from "@/lib/schemas/network";
@@ -230,7 +230,7 @@ export function NodeInspector({ node }: { node: Node }) {
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
   const categories = useConfigStore(useShallow((s) => s.config.categories));
-  const events = useConfigStore(useShallow((s) => s.config.events));
+  const events = useConfigStore(useShallow((s) => s.config.events.filter(isVulnerabilityEvent)));
   const openConfigModal = useUiStore((s) => s.openConfigModal);
   const historyAction = useHistoryAction();
 

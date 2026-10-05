@@ -35,12 +35,26 @@ export function ConfigModal() {
 
   const isDirty = useConfigStore((s) => s.isDirty);
   const openDraft = useConfigStore((s) => s.openDraft);
+  const addEvent = useConfigStore((s) => s.addEvent);
+  const setFocusEventId = useUiStore((s) => s.setConfigModalFocusEventId);
   const commitDraft = useConfigStore((s) => s.commitDraft);
   const discardDraft = useConfigStore((s) => s.discardDraft);
 
   useEffect(() => {
     openDraft();
-  }, [openDraft]);
+    // Acted on here, after the draft exists: a child tab's effect would run
+    // first and write into the draft openDraft is about to replace.
+    if (useUiStore.getState().configModalIntent === "new-temporal-simulation-event") {
+      const id = addEvent({
+        label: "New Temporal Simulation Event",
+        type: "disservice",
+        frequency_per_10y: 0,
+        temporal_simulation_only: true,
+        attribute_mutations: {},
+      });
+      setFocusEventId(id);
+    }
+  }, [openDraft, addEvent, setFocusEventId]);
 
   // Tracks whether a mouse press STARTED on the backdrop itself. A bare
   // `e.target === e.currentTarget` check on the click handler is not enough:

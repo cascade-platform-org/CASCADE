@@ -909,6 +909,12 @@
           "description": "Per-element repair time overrides. Hazards only. Key = ElementId.",
           "title": "Direct Damage Effects"
         },
+        "temporal_simulation_only": {
+          "default": false,
+          "description": "True for an Event used only inside a Temporal Simulation (a Phase or a Periodic rule): it is hidden from the Action Bar and from the Scorecard's uncovered-Event list. Any type may be Temporal-Simulation-only, a Temporal Jump included. Client-side only; the engine never reads it.",
+          "title": "Temporal Simulation Only",
+          "type": "boolean"
+        },
         "attribute_mutations": {
           "additionalProperties": true,
           "description": "Keys are dot-notation strings \"<elementId>.<fieldName>\". Values are any JSON-serialisable type. May overwrite any Element field, including first-class fields like `functionality` and `direct_damage`. `direct_damage_effects` is kept as a typed, engine-recognised complement \u2014 do not express physical damage solely via attribute_mutations.",

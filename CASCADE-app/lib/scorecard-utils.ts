@@ -217,7 +217,8 @@ export interface UncoveredEvent {
 
 /**
  * Type 3: EventDefinitions in config with no matching Scorecard entry.
- * Excludes temporal_jump events (system-generated, not user-authored).
+ * Excludes temporal_jump events (system-generated, not user-authored) and
+ * Temporal-Simulation-only Events, which are not scenarios of their own.
  */
 export function findUncoveredEvents(
   config: ModelConfiguration,
@@ -225,7 +226,7 @@ export function findUncoveredEvents(
 ): UncoveredEvent[] {
   const coveredIds = new Set(scorecard.filter(isPropagationEntry).flatMap((e) => e.event_ids));
   return (config.events ?? [])
-    .filter((ev) => ev.type !== "temporal_jump" && !coveredIds.has(ev.id))
+    .filter((ev) => ev.type !== "temporal_jump" && !ev.temporal_simulation_only && !coveredIds.has(ev.id))
     .map((ev) => ({ eventId: ev.id, eventLabel: ev.label, eventType: ev.type }));
 }
 

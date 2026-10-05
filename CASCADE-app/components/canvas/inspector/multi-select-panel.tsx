@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react";
 import { X } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
-import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
+import { useConfigStore, selectN, selectScaleLevels, isVulnerabilityEvent } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
@@ -85,7 +85,7 @@ export function MultiSelectPanel({
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
-  const events = useConfigStore(useShallow((s) => s.config.events));
+  const events = useConfigStore(useShallow((s) => s.config.events.filter(isVulnerabilityEvent)));
   const categories = useConfigStore(useShallow((s) => s.config.categories));
   const historyAction = useHistoryAction();
 

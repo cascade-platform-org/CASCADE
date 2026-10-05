@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { useConfigStore } from "@/store/config-store";
+import { useConfigStore, isVulnerabilityEvent } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
 import { cn, NumberInput, ColBtn } from "./primitives";
 import type { Node, CategoryDependencyProfiles, CategoryDependencyProfile } from "@/lib/schemas/network";
@@ -13,7 +13,7 @@ const NODE_TYPE_OPTIONS = ["Source", "Infrastructure", "Service", "Personnel"];
 export function TabNodeDefaults() {
   const nodeDefaults = useConfigStore(useShallow((s) => s.draft.node_defaults ?? {}));
   const categories = useConfigStore(useShallow((s) => s.draft.categories));
-  const events = useConfigStore(useShallow((s) => s.draft.events));
+  const events = useConfigStore(useShallow((s) => s.draft.events.filter(isVulnerabilityEvent)));
   const n = useConfigStore((s) => s.draft.functionality_scale.length);
   const addNodeDefault = useConfigStore((s) => s.addNodeDefault);
   const removeNodeDefault = useConfigStore((s) => s.removeNodeDefault);

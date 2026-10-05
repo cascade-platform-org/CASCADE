@@ -49,6 +49,16 @@ export interface UiState {
   // --- Config modal ---
   configModalOpen: boolean;
   configModalTab: ConfigModalTab;
+  /**
+   * One-shot request read by the Config modal right after it opens its draft:
+   * "new-temporal-simulation-event" appends a Temporal-Simulation-only Event
+   * (the Temporal Simulation window's "Create Event"). Cleared when the modal
+   * closes — not when acted on, because the modal's mount effect can run twice
+   * (React StrictMode) and the second run re-opens the draft.
+   */
+  configModalIntent: "new-temporal-simulation-event" | null;
+  /** Event the Events tab scrolls to once, after the intent above created it. */
+  configModalFocusEventId: string | null;
 
   // --- File I/O panel ---
   fileIoPanelOpen: boolean;
@@ -211,7 +221,8 @@ export interface UiActions {
   setActiveTool: (tool: ActiveTool) => void;
 
   // --- Config modal ---
-  openConfigModal: (tab?: ConfigModalTab) => void;
+  openConfigModal: (tab?: ConfigModalTab, intent?: "new-temporal-simulation-event") => void;
+  setConfigModalFocusEventId: (id: string | null) => void;
   closeConfigModal: () => void;
   setConfigModalTab: (tab: ConfigModalTab) => void;
 
@@ -322,6 +333,8 @@ const initialState: UiState = {
   activeTool: "select",
   configModalOpen: false,
   configModalTab: "functionality-scale",
+  configModalIntent: null,
+  configModalFocusEventId: null,
   fileIoPanelOpen: false,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
@@ -405,15 +418,24 @@ export const useUiStore = create<UiStore>()(
     // Config modal
     // -------------------------------------------------------------------------
 
-    openConfigModal(tab = "functionality-scale") {
+    openConfigModal(tab = "functionality-scale", intent) {
       set((state) => {
         state.configModalOpen = true;
         state.configModalTab = tab;
+        state.configModalIntent = intent ?? null;
       });
     },
 
+    setConfigModalFocusEventId(id) {
+      set((state) => { state.configModalFocusEventId = id; });
+    },
+
     closeConfigModal() {
-      set((state) => { state.configModalOpen = false; });
+      set((state) => {
+        state.configModalOpen = false;
+        state.configModalIntent = null;
+        state.configModalFocusEventId = null;
+      });
     },
 
     setConfigModalTab(tab) {

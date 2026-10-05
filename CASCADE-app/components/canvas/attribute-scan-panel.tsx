@@ -6,7 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useUiStore } from "@/store/ui-store";
 import { useCanvasStore, selectActiveCanvas, selectOrderedCanvases } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
-import { useConfigStore } from "@/store/config-store";
+import { useConfigStore, isVulnerabilityEvent } from "@/store/config-store";
 import type { Node, Edge } from "@/lib/schemas/network";
 
 // ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ export function AttributeScanPanel() {
 
   const config = useConfigStore(useShallow((s) => s.config));
   const N = Math.max(...config.functionality_scale.map((l) => l.level));
-  const events = config.events ?? [];
+  const events = (config.events ?? []).filter(isVulnerabilityEvent);
   const categories = config.categories ?? [];
 
   const globalViewActive = useUiStore((s) => s.globalViewActive);

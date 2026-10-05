@@ -79,6 +79,12 @@ export const EventDefinitionSchema = z.object({
    */
   direct_damage_effects: z.record(z.string(), DirectDamageEffectSchema).optional(),
   /**
+   * True for an Event used only inside a Temporal Simulation (ADR-0019): hidden
+   * from the Action Bar and from the Scorecard's uncovered-Event list. Any type
+   * may be Temporal-Simulation-only, a Temporal Jump included.
+   */
+  temporal_simulation_only: z.boolean().optional(),
+  /**
    * Unrestricted field overwrites applied to Elements when this Event is triggered.
    * Keys are dot-notation strings: "<elementId>.<fieldName>".
    * May overwrite any Element field including first-class ones (functionality, direct_damage).

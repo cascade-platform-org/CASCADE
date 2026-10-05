@@ -543,13 +543,20 @@ export const selectScaleLevels = (state: ConfigStore): FunctionalityScaleLevel[]
 export const selectLevelColor = (level: number) => (state: ConfigStore): string =>
   state.config.functionality_scale.find((l) => l.level === level)?.color ?? brandColor("neutral", 400);
 
-/** First 5 events shown in the Action Bar. */
-export const selectActionBarEvents = (state: ConfigStore): EventDefinition[] =>
-  state.config.events.slice(0, 5);
+/** A Temporal Jump degrades nothing by vulnerability, so it gets no vulnerability slider. */
+export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type !== "temporal_jump";
 
-/** Events 6+ that overflow into the "More ▼" menu. */
+/** Events a user fires by hand. Temporal-Simulation-only Events live in Timelines (ADR-0019). */
+const scenarioEvents = (state: ConfigStore): EventDefinition[] =>
+  state.config.events.filter((e) => !e.temporal_simulation_only);
+
+/** First 5 scenario events shown in the Action Bar. */
+export const selectActionBarEvents = (state: ConfigStore): EventDefinition[] =>
+  scenarioEvents(state).slice(0, 5);
+
+/** Scenario events 6+ that overflow into the "More ▼" menu. */
 export const selectOverflowEvents = (state: ConfigStore): EventDefinition[] =>
-  state.config.events.slice(5);
+  scenarioEvents(state).slice(5);
 
 /** All category definitions from the committed config. */
 export const selectCategories = (state: ConfigStore): CategoryDefinition[] =>

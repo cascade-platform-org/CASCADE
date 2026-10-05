@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useConfigStore } from "@/store/config-store";
+import { useUiStore } from "@/store/ui-store";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, NumberInput, ColBtn, CollapsibleSection } from "./primitives";
 import { IconPickerButton } from "./icon-picker";
@@ -16,11 +19,22 @@ export function TabEvents() {
   const addEvent = useConfigStore((s) => s.addEvent);
   const removeEvent = useConfigStore((s) => s.removeEvent);
   const updateEvent = useConfigStore((s) => s.updateEvent);
+  const focusEventId = useUiStore((s) => s.configModalFocusEventId);
+  const setFocusEventId = useUiStore((s) => s.setConfigModalFocusEventId);
+
+  // "Create Event" from the Temporal Simulation window lands here: bring the
+  // new Event into view once, then forget it.
+  useEffect(() => {
+    if (!focusEventId) return;
+    document.querySelector(`[data-event-id="${CSS.escape(focusEventId)}"]`)?.scrollIntoView({ block: "center" });
+    setFocusEventId(null);
+  }, [focusEventId, setFocusEventId]);
 
   return (
     <div>
       <p className="mb-3 text-xs text-zinc-500">
-        First 5 events appear in the Action Bar. Events 6+ appear in &ldquo;More ▼&rdquo;.
+        The first 5 Scenario events appear in the Action Bar, the rest in &ldquo;More ▼&rdquo;.
+        Events marked <em>Temporal Simulation only</em> are hidden there and used in Timelines.
       </p>
 
       {events.length === 0 && (
@@ -29,7 +43,7 @@ export function TabEvents() {
 
       <div className="space-y-3">
         {events.map((ev, idx) => (
-          <div key={ev.id} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
+          <div key={ev.id} data-event-id={ev.id} className="rounded-md border border-zinc-100 p-3 dark:border-zinc-800">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold text-zinc-500">#{idx + 1}</span>
               <div className="flex items-center gap-1">
@@ -57,24 +71,58 @@ export function TabEvents() {
                 <select
                   value={ev.type}
                   onChange={(e) =>
-                    updateEvent(ev.id, { type: e.target.value as "hazard" | "disservice" })
+                    updateEvent(ev.id, { type: e.target.value as EventDefinition["type"] })
                   }
                   className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                 >
                   <option value="hazard">Hazard</option>
                   <option value="disservice">Disservice</option>
+                  {/* A hand-fired jump comes from the Time control; a Timeline's jump is an Event. */}
+                  {ev.temporal_simulation_only && <option value="temporal_jump">Temporal Jump</option>}
                 </select>
               </div>
               <div>
-                <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y</label>
-                <NumberInput
-                  value={ev.frequency_per_10y}
-                  min={0}
-                  step={0.1}
-                  className="w-full"
-                  onChange={(v) => updateEvent(ev.id, { frequency_per_10y: v })}
-                />
+                <label className="mb-0.5 block text-xs text-zinc-400">Used in</label>
+                <select
+                  value={ev.temporal_simulation_only ? "temporal-simulation" : "scenario"}
+                  onChange={(e) => {
+                    const only = e.target.value === "temporal-simulation";
+                    updateEvent(ev.id, {
+                      temporal_simulation_only: only || undefined,
+                      // A Temporal Jump exists only inside a Timeline.
+                      ...(!only && ev.type === "temporal_jump" ? { type: "disservice" as const } : {}),
+                    });
+                  }}
+                  className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <option value="scenario">Scenario (Action Bar)</option>
+                  <option value="temporal-simulation">Temporal Simulation only</option>
+                </select>
               </div>
+              {ev.type === "temporal_jump" && (
+                <div>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Advances time by (h)</label>
+                  <NumberInput
+                    value={ev.duration_hours}
+                    min={1}
+                    className="w-full"
+                    onChange={(v) => updateEvent(ev.id, { duration_hours: v })}
+                  />
+                </div>
+              )}
+              {/* Frequency is not meaningful for a Temporal Jump (schema). */}
+              {ev.type !== "temporal_jump" && (
+                <div>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y</label>
+                  <NumberInput
+                    value={ev.frequency_per_10y}
+                    min={0}
+                    step={0.1}
+                    className="w-full"
+                    onChange={(v) => updateEvent(ev.id, { frequency_per_10y: v })}
+                  />
+                </div>
+              )}
               {ev.type === "disservice" && (
                 <div>
                   <label className="mb-0.5 block text-xs text-zinc-400">Recovery time (h)</label>
@@ -88,12 +136,14 @@ export function TabEvents() {
               )}
             </div>
 
-            <CollapsibleSection
-              label="Vulnerability levels"
-              badgeFromStore={ev.id}
-            >
-              <VulnerabilityLevelsEditor eventId={ev.id} />
-            </CollapsibleSection>
+            {ev.type !== "temporal_jump" && (
+              <CollapsibleSection
+                label="Vulnerability levels"
+                badgeFromStore={ev.id}
+              >
+                <VulnerabilityLevelsEditor eventId={ev.id} />
+              </CollapsibleSection>
+            )}
 
             {ev.type === "hazard" && (
               <CollapsibleSection
