@@ -103,6 +103,12 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
   }
 }
 
+/**
+ * "Every N periods": the N-th, 2N-th, 3N-th… of a run of periods, counted from
+ * 1. `position` is 0-based. One rule for Phase Events and for profile values.
+ */
+export const firesEvery = (position: number, every: number): boolean => (position + 1) % every === 0;
+
 /** Index of the last propagating Phase — Stocks integrate after it (ADR-0019 §2); -1 if none. */
 export const lastPropagatingIndex = (phases: { propagate: boolean }[]): number =>
   phases.map((p) => p.propagate).lastIndexOf(true);
@@ -137,7 +143,7 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
         repetition: r,
         phases: step.phases.map((phase, index) => ({
           index,
-          events: phase.events.filter((e) => (r + 1) % e.every === 0).map((e) => e.event),
+          events: phase.events.filter((e) => firesEvery(r, e.every)).map((e) => e.event),
           propagate: phase.propagate,
           integratesAfter: index === lastPropagating,
         })),

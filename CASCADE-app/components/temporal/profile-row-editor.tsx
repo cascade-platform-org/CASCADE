@@ -14,7 +14,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { filterLabel, matchElements } from "@/lib/element-filter";
 import { explainProfileRow, explainProfileWrite } from "@/lib/temporal-simulation-explainers";
-import { planTimeline } from "@/lib/timeline-plan";
+import { firesEvery, planTimeline } from "@/lib/timeline-plan";
 import { OperationKindSchema } from "@/lib/temporal-simulation-schema";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
@@ -132,8 +132,9 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
 }
 
 /**
- * The value the op uses, written into a span of the row's cells: from, to and
- * every N periods. The cells stay the row's values; this only fills them.
+ * The value the op uses, written into a span of the row's cells: From, To and
+ * every N periods (the N-th, 2N-th… of the span, as for a Phase Event). The
+ * cells stay the row's values; this only fills them.
  */
 function ValueWriter({
   row,
@@ -153,7 +154,8 @@ function ValueWriter({
 
   const start = Math.max(0, labels.indexOf(from));
   const end = labels.indexOf(to) < 0 ? labels.length - 1 : labels.indexOf(to);
-  const span = labels.slice(start, end + 1).filter((_, k) => k % every === 0);
+  // The From…To periods N, 2N, 3N…, as a Phase Event's every N counts its Step's periods.
+  const span = labels.slice(start, end + 1).filter((_, k) => firesEvery(k, every));
   const parsed = value.trim() === "" ? undefined : parseValue(value);
   const problem =
     parsed === undefined ? "Type the value first."
@@ -195,7 +197,7 @@ function ValueWriter({
         </div>
       </div>
       <p className="mt-1 text-[10px] text-zinc-500">
-        {problem ?? `Writes into ${span.length} cell${span.length === 1 ? "" : "s"}${row.op === "set" && span.length > 1 ? " — for set, the first is enough: the value stays until changed" : ""}.`}
+        {problem ?? `Writes into ${span.length} cell${span.length === 1 ? "" : "s"}: ${span.length <= 6 ? span.join(", ") : `${span.slice(0, 3).join(", ")} … ${span[span.length - 1]}`}${row.op === "set" && span.length > 1 ? ". For set, the first is enough: the value stays until changed" : ""}.`}
       </p>
     </div>
   );

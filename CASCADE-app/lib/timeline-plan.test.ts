@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceLabel, planTimeline } from "./timeline-plan";
+import { advanceLabel, firesEvery, planTimeline } from "./timeline-plan";
 import type { Timeline } from "./temporal-simulation-schema";
 
 describe("advanceLabel", () => {
@@ -81,5 +81,13 @@ describe("planTimeline", () => {
     expect(plan.warnings.join("\n")).toMatch(/not a valid month label/);
     expect(plan.warnings.join("\n")).toMatch(/appears twice/);
     expect(plan.warnings.join("\n")).toMatch(/never fires/);
+  });
+});
+
+describe("firesEvery", () => {
+  it("picks the N-th, 2N-th… of a run, counted from 1", () => {
+    const months = Array.from({ length: 12 }, (_, k) => k);
+    expect(months.filter((k) => firesEvery(k, 3))).toEqual([2, 5, 8, 11]);
+    expect(months.filter((k) => firesEvery(k, 1))).toEqual(months);
   });
 });
