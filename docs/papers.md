@@ -7,7 +7,7 @@ of record live with their publishers.
 
 ---
 
-## Composable, Knowledge-Driven Disservice Propagation for Complex Interdependent Services
+## Composable, Knowledge-Driven Disservice Propagation for Complex Interdependent Services with a Flow-Allocation Module Validated Against Hydraulic Simulation
 
 A category-typed propagation architecture in which quantity-aware and purely logical
 interdependencies share one discrete functionality scale and converge through a single

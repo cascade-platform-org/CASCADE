@@ -23,13 +23,6 @@
 \def\UrlFont{\rmfamily}
 \def\orcidID#1{\unskip$^{[#1]}$}
 
-% Drafting aid---must be unused at submission time.
-\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
-% Numeric placeholder---data from the 2026-07-22 rebuild run
-% (experiments/aqueducts/final_benchmark.csv) to be filled in. Every \dtba MUST be
-% resolved before submission. Optional arg = a hint of what number goes there.
-\newcommand{\dtba}[1][?]{\textcolor{red}{\textbf{[#1]}}}
-
 % Notation used throughout (Sec. 3): keep consistent, define once.
 \newcommand{\worstof}{\mathrm{worst\_of}}
 \newcommand{\bestof}{\mathrm{best\_of}}
@@ -67,8 +60,6 @@
 \maketitle
 
 \begin{abstract}
-% Springer SVProc guide (instructions_for_authors.pdf, p.4): abstract 150-250
-% Page count: 12 pp
 Modeling cascading failure across interdependent critical infrastructure requires either
 a composable physical simulator per domain or a topological abstraction that discards
 quantity awareness. Simulators are costly, data-hungry, and require detailed calibration per domain; topological
