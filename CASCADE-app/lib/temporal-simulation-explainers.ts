@@ -268,6 +268,22 @@ export function explainProfileRow(row: Omit<AttributeOperation, "value">, matche
   };
 }
 
+/** The row editor's Value: what Write puts in the chosen cells. */
+export function explainProfileWrite(op: AttributeOperation["op"], value: string, periods: string[]): Explanation {
+  const span = periods.length === 0 ? "no period" : periods.length === 1 ? `"${periods[0]}"` : `${periods.length} periods, "${periods[0]}" to "${periods[periods.length - 1]}"`;
+  return {
+    title: "Profile value",
+    lines: [
+      `The value is what the op uses: ${describeOp(op)}. Write puts ${value === "" ? "it" : `"${value}"`} in the row's cells for ${span}; Clear empties them.`,
+      op === "set"
+        ? "For set, one cell is enough: the value stays in later periods. Fill more only where the value changes, or to re-impose it over an Event's change."
+        : "Each filled cell applies the op once in its period, so a value over several periods compounds (mul 1.02 over 12 months ≈ +27%).",
+      "The cells are the row's values; this only fills them. Each cell can still be edited on its own.",
+    ],
+    refs: ["ADR-0019 §1", "ADR-0021"],
+  };
+}
+
 /** An empty profile cell: no operation in that period. */
 export function explainProfileCarry(label: string, op: AttributeOperation["op"], carried: string | undefined): Explanation {
   return {

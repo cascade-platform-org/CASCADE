@@ -112,7 +112,7 @@ function ProfileCell({
       <input
         aria-label={`${label} value`}
         value={draft ?? shown}
-        placeholder={carried}
+        placeholder={carried ?? "·"}
         title={invalid ? `${row.op} needs a number` : undefined}
         onFocus={() => {
           setDraft(shown);
@@ -130,7 +130,7 @@ function ProfileCell({
           onWrite(parts.map((p) => (p === "" ? undefined : parseValue(p))));
         }}
         className={cn(
-          "h-full w-full bg-transparent px-1 text-right text-[11px] tabular-nums text-zinc-800 placeholder:text-zinc-300 focus:bg-blue-50 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:bg-blue-900/30",
+          "m-px h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-sm border border-zinc-200 bg-white px-1 text-right text-[11px] tabular-nums text-zinc-800 placeholder:text-zinc-300 hover:border-blue-300 focus:border-blue-400 focus:bg-blue-50 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:bg-blue-900/30",
           invalid && "text-red-600 dark:text-red-400",
         )}
       />
@@ -315,7 +315,10 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
                   )}
                 >
                   <span className="truncate text-[11px] text-zinc-700 dark:text-zinc-200">{rowTarget(row, model)}</span>
-                  <span className="truncate text-[9px] text-zinc-400">{row.op} · {row.path.join(" › ") || "(path)"}</span>
+                  <span className="truncate text-[9px] text-zinc-400">
+                    {row.op} · {row.path.join(" › ") || "(path)"}
+                    {Object.keys(row.values).length === 0 && <span className="text-amber-600 dark:text-amber-400"> · no value yet</span>}
+                  </span>
                 </button>
                 {labels.map((l) => (
                   <ProfileCell

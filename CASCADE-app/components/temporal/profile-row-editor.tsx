@@ -6,18 +6,20 @@
  * Timeline grid.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Copy, Trash2, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { filterLabel, matchElements } from "@/lib/element-filter";
-import { explainProfileRow } from "@/lib/temporal-simulation-explainers";
+import { explainProfileRow, explainProfileWrite } from "@/lib/temporal-simulation-explainers";
+import { planTimeline } from "@/lib/timeline-plan";
 import { OperationKindSchema } from "@/lib/temporal-simulation-schema";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
-import { Field, Segmented, TextBackedInput, formatPath, inputCls, parsePath } from "./fields";
+import { NumberInput } from "@/components/ui/number-input";
+import { Field, Segmented, SmallButton, TextBackedInput, formatPath, inputCls, parsePath, parseValue } from "./fields";
 
 export function describeRow(row: ProfileRow): void {
   const matches = row.where ? matchElements(row.where, useCanvasStore.getState()).length : null;
@@ -26,6 +28,9 @@ export function describeRow(row: ProfileRow): void {
 
 export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; onClose: () => void; onSelect: (id: string) => void }) {
   const update = useTemporalSimulationStore((s) => s.updateProfile);
+  const explain = useTemporalSimulationStore((s) => s.explain);
+  const timeline = useTemporalSimulationStore((s) => s.timeline);
+  const labels = useMemo(() => planTimeline(timeline).periods.map((p) => p.label), [timeline]);
   const { nodes, edges } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges })));
 
   // Built once per model change.
@@ -101,6 +106,13 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         </Field>
       </div>
 
+      <ValueWriter row={row} labels={labels} onWrite={(cells) => {
+        update((rows) => {
+          const r = rows.find((x) => x.id === row.id);
+          if (r) for (const [l, v] of cells) { if (v === undefined) delete r.values[l]; else r.values[l] = v; }
+        });
+      }} explain={explain} />
+
       <div className="mt-2">
         {row.where ? (
           // FilterEditor explains its own change, so this skips `describeRow`.
@@ -115,6 +127,76 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
           </select>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The value the op uses, written into a span of the row's cells: from, to and
+ * every N periods. The cells stay the row's values; this only fills them.
+ */
+function ValueWriter({
+  row,
+  labels,
+  onWrite,
+  explain,
+}: {
+  row: ProfileRow;
+  labels: string[];
+  onWrite: (cells: [string, ProfileRow["values"][string] | undefined][]) => void;
+  explain: ReturnType<typeof useTemporalSimulationStore.getState>["explain"];
+}) {
+  const [value, setValue] = useState("");
+  const [from, setFrom] = useState(labels[0] ?? "");
+  const [to, setTo] = useState(labels[labels.length - 1] ?? "");
+  const [every, setEvery] = useState(1);
+
+  const start = Math.max(0, labels.indexOf(from));
+  const end = labels.indexOf(to) < 0 ? labels.length - 1 : labels.indexOf(to);
+  const span = labels.slice(start, end + 1).filter((_, k) => k % every === 0);
+  const parsed = value.trim() === "" ? undefined : parseValue(value);
+  const problem =
+    parsed === undefined ? "Type the value first."
+      : row.op !== "set" && typeof parsed !== "number" ? `${row.op} needs a number.`
+        : span.length === 0 ? "The span holds no period." : null;
+  const describe = () => explain(explainProfileWrite(row.op, value, span));
+
+  return (
+    <div className="mt-2 rounded-md bg-zinc-50 p-2 dark:bg-zinc-800/60" onFocus={(e) => { e.stopPropagation(); describe(); }}>
+      <div className="grid grid-cols-[1.2fr_1fr_1fr_0.6fr_auto] items-end gap-2">
+        <Field label={`Value (${row.op})`}>
+          <input className={inputCls} value={value} placeholder={row.op === "mul" ? "1.02" : "120"} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        <Field label="From">
+          <select className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)}>
+            {labels.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </Field>
+        <Field label="To">
+          <select className={inputCls} value={to} onChange={(e) => setTo(e.target.value)}>
+            {labels.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </Field>
+        <Field label="Every">
+          <NumberInput min={1} className={inputCls} value={every} onChange={(v) => setEvery(Math.max(1, Math.floor(v)))} />
+        </Field>
+        <div className="flex gap-1 pb-px">
+          <SmallButton
+            tone="accent"
+            disabled={problem !== null}
+            title={problem ?? `Write into ${span.length} cell${span.length === 1 ? "" : "s"}`}
+            onClick={() => { onWrite(span.map((l) => [l, parsed])); describe(); }}
+          >
+            Write
+          </SmallButton>
+          <SmallButton disabled={span.length === 0} title="Empty these cells" onClick={() => { onWrite(span.map((l) => [l, undefined])); describe(); }}>
+            Clear
+          </SmallButton>
+        </div>
+      </div>
+      <p className="mt-1 text-[10px] text-zinc-500">
+        {problem ?? `Writes into ${span.length} cell${span.length === 1 ? "" : "s"}${row.op === "set" && span.length > 1 ? " — for set, the first is enough: the value stays until changed" : ""}.`}
+      </p>
     </div>
   );
 }
