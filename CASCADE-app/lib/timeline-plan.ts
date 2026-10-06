@@ -92,6 +92,14 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
       monday.setUTCDate(monday.getUTCDate() + 7 * k);
       return isoWeekLabel(monday);
     }
+    case "hour": {
+      m = label.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})$/);
+      if (!m || Number(m[4]) > 23) return null;
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4])));
+      if (d.getUTCMonth() !== Number(m[2]) - 1) return null;
+      d.setUTCHours(d.getUTCHours() + k);
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}`;
+    }
     case "day": {
       m = label.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!m) return null;

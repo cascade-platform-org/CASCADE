@@ -854,7 +854,9 @@ remains open:
   `none` would record a stock without letting it constrain anything. Banca ore needed no such
   field (§4.6). The queue in §6 would, and no concrete backlog model has been written yet.
   Until this is answered a stock cannot express a backlog on a consumer.
-- **Source-side fairness** (§6.4) — schedule it against the second real model.
+- **Source-side fairness** (§6.4) between ordinary sources — schedule it against the second
+  real model. Storage got its own rule (ADR-0020 §1c: last source, last sink, shared by
+  fraction).
 
 **Cross-cutting**
 - **Cost of a run.** `ENGINE_TIMEOUT_SECONDS` is 30 per Propagation (ADR-0008). A Timeline of

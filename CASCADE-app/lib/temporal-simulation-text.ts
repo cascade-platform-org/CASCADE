@@ -194,7 +194,7 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
   "timeline": {
     "name": string,
     "steps": [                         // run in order
-      { "label": string,               // first period: day YYYY-MM-DD | week YYYY-Www | month YYYY-MM | quarter YYYY-Qn | year YYYY | none: any text
+      { "label": string,               // first period: hour YYYY-MM-DDTHH | day YYYY-MM-DD | week YYYY-Www | month YYYY-MM | quarter YYYY-Qn | year YYYY | none: any text
         "unit": ${alternatives(CalendarUnitSchema.options)},
         "repeat": int >= 1,            // consecutive periods; the label advances by the unit (none: label#2, label#3…)
         "phases": [                    // run in order inside each period

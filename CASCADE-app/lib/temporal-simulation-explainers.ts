@@ -121,6 +121,7 @@ export function explainLabel(label: string, unit: CalendarUnit, valid: boolean):
 }
 
 const LABEL_FORMATS: Record<CalendarUnit, string> = {
+  hour: "YYYY-MM-DDTHH (24-hour clock)",
   day: "YYYY-MM-DD",
   week: "YYYY-Www (ISO week)",
   month: "YYYY-MM",

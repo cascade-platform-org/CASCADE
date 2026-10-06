@@ -21,7 +21,7 @@ three PNGs; 44 periods × several policy variants recreates the problem ADR-0017
 
 ```
 Timeline   name · steps[] · profile
-Step       label · unit (day|week|month|quarter|year|none) · repeat (default 1) · phases[]
+Step       label · unit (hour|day|week|month|quarter|year|none) · repeat (default 1) · phases[]
 Phase      events[] · propagate (default true)
 events[i]  EventDefinition id  |  { event: id, every: N }   (a bare id = every 1)
 profile    { period label: [AttributeOperation, …] }   (ADR-0021)

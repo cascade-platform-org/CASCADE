@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 
-export const CalendarUnitSchema = z.enum(["day", "week", "month", "quarter", "year", "none"]);
+export const CalendarUnitSchema = z.enum(["hour", "day", "week", "month", "quarter", "year", "none"]);
 export type CalendarUnit = z.infer<typeof CalendarUnitSchema>;
 
 /**

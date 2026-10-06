@@ -3,6 +3,11 @@ import { advanceLabel, firesEvery, planTimeline } from "./timeline-plan";
 import type { Timeline } from "./temporal-simulation-schema";
 
 describe("advanceLabel", () => {
+  it("advances hours across midnight and a month end", () => {
+    expect(advanceLabel("2023-07-31T22", "hour", 3)).toBe("2023-08-01T01");
+    expect(advanceLabel("2023-07-14T24", "hour", 0)).toBeNull();
+    expect(advanceLabel("2023-02-30T08", "hour", 0)).toBeNull();
+  });
   it("advances months across a year boundary", () => {
     expect(advanceLabel("2023-11", "month", 3)).toBe("2024-02");
   });

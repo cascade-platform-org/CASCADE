@@ -594,14 +594,16 @@ The user may also trigger a Temporal Jump with a custom duration — useful for 
 
 When a Hazard sets `direct_damage = true`, `expected_repair_time` records estimated repair duration. Detailed recovery mechanics are deferred; the data model reserves these fields.
 
-### 9.6 Temporal Simulation *(proposed — not implemented)*
+### 9.6 Temporal Simulation *(proposed — not implemented; release v1.1, whole)*
 
 A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable run over many periods. Mechanics: ADR-0019 (Timeline, period sequence, recording), ADR-0020 (Stocks, `served_ratio`), ADR-0021 (Attribute Operations); reasoning: `temporal-simulation-design.md`. This section states what the product must do.
+
+**Acceptance (v1.1).** Three models run end to end: (1) the IJDRR sample with a committed Timeline (staged hazards, a repair Event, a seasonal demand row); (2) a committed aqueduct sample over a day, whose tanks are storage Stocks filled by pumps and drawn by the town (flow rates and stored volume both bind), with a demand curve, a demand surge and a pump outage, exercising `served_ratio`, `stored`, integration, Level Mode and a Metric; (3) banca ore, run locally from its import script (client data, never committed).
 
 *UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run, edits the whole definition as text, and explains each interaction. It never touches the model, the history or the engine. The real, tested logic: the plan (`lib/timeline-plan.ts`), the Stock formulas (`lib/stock-math.ts`), the Element Filter (`lib/element-filter.ts`) and the text form (`lib/temporal-simulation-text.ts`); the document schema (`lib/temporal-simulation-schema.ts`) is local until the Pydantic model exists.
 
 **Timeline.**
-- A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (day, week, month, quarter, year or none; repeats advance the label by it) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
+- A Timeline is a named, saved list of **Steps**. A Step is one period, or the same pattern `repeat`ed; it has a `label`, a calendar `unit` (hour, day, week, month, quarter, year or none; repeats advance the label by it) and an ordered list of **Phases**. A Phase applies its Events, then optionally runs one Propagation.
 - An Event in a Phase fires every period of its Step, or every *N*-th one (the Step's periods *N*, 2*N*…), which removes hand-unrolling.
 - A **profile** gives per-period inputs as Attribute Operations keyed by period label.
 - A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase, with the hours they choose.
@@ -623,7 +625,8 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 - `max` or `min` truncating a period reports the amount (`spilled`, `unmet`).
 - Reset restores every Stock to its pre-run level and ends the run; a hand edit of a Stock field survives Reset.
 - The Propagation result exposes `served_ratio` per consumer and Category.
-- Limits in v1: supply-side only; one source per node Stock.
+- A Stock with `max_fill` is **storage** (a tank, a reservoir): it fills from the network's own flow of its Category and feeds it, used as the last source and filled as the last sink, so water passes through it within a period and a pump outage drains it at the demand's pace; storages reaching the same demand draw and fill by the same fraction of what each can give or take (ADR-0020 §1c). The Propagation result reports each storage's `filled` and `drawn`.
+- Limits in v1: supply-side only; one source per node Stock with a `rate` (storage is exempt).
 
 **Events.** An Event may carry **Attribute Operations** (`set`, `add`, `mul`, `at_most`, `at_least` on the value the field holds), the only way an Event writes a Stock. An operation targets one Element or every Element an **Element Filter** selects (kind, canvas, Node Type, Category, a label substring; the window then lists every match with a tick box, and unticked ones are excluded), resolved when it runs; a Metric's target is the same filter. A result outside a field's valid range is rejected with a warning. An Event used only in Timelines is marked **Temporal Simulation only**: hidden from the Action Bar and the Scorecard, and the only kind of Event that can be a Temporal Jump; each Phase's **Create new Event** opens Config → Events on a new one, which joins that Phase when saved (implemented).
 
@@ -636,9 +639,9 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved, replayable
 
 **Level Mode.** A **Level Scale** in Client Configuration (bands over `value / reference`, each with a label and a brand colour) shows a Stock's level, orthogonal to Functionality. While a Temporal Simulation is open, **Level Mode** recolours the canvas by it as Analysis Mode does by a score, switchable with Functionality colours and between a Stock's level and its change over the period. The reference defaults to the Stock's own bound and can be overridden on the Stock (`level_reference`, `change_reference`). Display only: it feeds no Rule, Operativity Score or Recovery Value. A Scorecard entry saved from a simulation stores the per-element values it shows and repaints in Level Mode later.
 
-**UI.** The supply editor is offered on every Node Type; a non-blocking warning appears on a Service node with any `supply_capacity` entry, and on a Category that holds a Stock while an edge or throughput capacity in it is undeclared. The Stock's level is labelled "positive = available to draw". The existing warning for a node with both supply and demand of one Category is unchanged, so a Stock sits on a supplying node or on a consumer's single incoming edge.
+**UI.** The supply editor is offered on every Node Type; a non-blocking warning appears on a Service node with any `supply_capacity` entry, and on a Category that holds a Stock while an edge or throughput capacity in it is undeclared. The Stock's level is labelled "positive = available to draw". The existing warning for a node with both supply and demand of one Category is unchanged except for storage, which does both by design; any other Stock sits on a supplying node or on a consumer's single incoming edge.
 
-**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; Engine Evaluation accounting for a run (88 Propagations for 44 periods × 2 Phases); backlog Stocks (`couples`); per-source `utilisation` and source-side fairness; automatic repair; backups whose countdown stops when supply returns.
+**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; Engine Evaluation accounting for a run (88 Propagations for 44 periods × 2 Phases); backlog Stocks (`couples`); per-source `utilisation` and source-side fairness between ordinary sources (storage has its own rule); automatic repair; backups whose countdown stops when supply returns.
 
 ---
 

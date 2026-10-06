@@ -95,7 +95,7 @@ The saved input of a Temporal Simulation: an ordered list of Steps whose Phases 
 _Avoid_: "schedule", "script", "run" (a run is one replay of a Timeline)
 
 **Step** *(proposed)*:
-One period of a Timeline, or the same period `repeat`ed: a label, a calendar unit (day, week, month, quarter, year or none) that only names periods, and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
+One period of a Timeline, or the same period `repeat`ed: a label, a calendar unit (hour, day, week, month, quarter, year or none) that only names periods, and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
 _Avoid_: "time step" and "tick" (retired with Temporal Jump's old wording); Step is a Timeline element only
 
 **Phase** *(proposed)*:
