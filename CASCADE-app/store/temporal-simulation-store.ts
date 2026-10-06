@@ -11,7 +11,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CalendarUnit, Timeline, TimelinePhase, TimelineStep } from "@/lib/temporal-simulation-schema";
-import { draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
+import type { MetricEntry, ProfileRow, SimulationDraft } from "@/lib/temporal-simulation-text";
 import type { StockDraft } from "@/lib/stock-math";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
@@ -29,8 +29,8 @@ interface TemporalSimulationState {
   profile: ProfileRow[];
   metrics: MetricEntry[];
   stock: StockPreview;
-  /** Snapshot of the Timeline the last dry run planned; differs → stale. */
-  lastRunKey: string | null;
+  /** A run is shown (the Run View): the definition is read-only until End run. */
+  running: boolean;
   selectedPeriod: number | null;
   display: "functionality" | "level";
   levelReading: "level" | "change";
@@ -47,6 +47,7 @@ interface TemporalSimulationState {
   replaceDraft: (d: SimulationDraft) => void;
   updateStock: (patch: Partial<StockPreview>) => void;
   markRun: () => void;
+  endRun: () => void;
   selectPeriod: (n: number | null) => void;
   setDisplay: (d: "functionality" | "level") => void;
   setLevelReading: (r: "level" | "change") => void;
@@ -73,19 +74,15 @@ const EXAMPLE_TIMELINE: Timeline = {
   ],
 };
 
-/** What a run depends on in the draft; a change after a run marks it stale. */
-export const runKey = (s: { timeline: Timeline; profile: ProfileRow[] }) =>
-  JSON.stringify(draftToDoc({ timeline: s.timeline, profile: s.profile, metrics: [] }));
-
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
-  immer((set, get) => ({
+  immer((set) => ({
     open: false,
     tab: "timeline",
     timeline: EXAMPLE_TIMELINE,
     profile: [],
     metrics: [],
     stock: { rate: 160, level: -20, min: -50, delivered: 150, phi: 1 },
-    lastRunKey: null,
+    running: false,
     selectedPeriod: null,
     display: "functionality",
     levelReading: "level",
@@ -100,11 +97,8 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     updateMetrics: (fn) => set((s) => { fn(s.metrics); }),
     replaceDraft: (d) => set((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; }),
     updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
-    markRun: () => {
-      // Keyed from the plain state: stringifying the immer draft would draft every nested object.
-      const key = runKey(get());
-      set((s) => { s.lastRunKey = key; s.selectedPeriod = 1; });
-    },
+    markRun: () => set((s) => { s.running = true; s.selectedPeriod = 1; }),
+    endRun: () => set((s) => { s.running = false; s.selectedPeriod = null; s.display = "functionality"; }),
     selectPeriod: (n) => set((s) => { s.selectedPeriod = n; }),
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),

@@ -164,8 +164,9 @@ correct and is documented.
 The ADR-0017 differ recurses one level into `properties` and stores other compound fields
 whole. A Stock is written one field at a time, so the differ and the Scenario Baseline
 address a Stock field by `[field, category, stock_field]` (an edge Stock by
-`["capacity", stock_field]`), the path form of ADR-0021. Reset reverting a run's `level` then
-leaves a hand correction to `max` standing, as ADR-0016 intends for authoring work.
+`["capacity", stock_field]`), the path form of ADR-0021. Reset reverting an Event's write to
+`level` then leaves a hand correction to `max` standing, as ADR-0016 intends for authoring
+work. (A Temporal Simulation run never writes the model, ADR-0019 §3.)
 
 ### 5. v1 limits, stated
 
@@ -198,8 +199,17 @@ leaves a hand correction to `max` standing, as ADR-0016 intends for authoring wo
   `lib/schemas/network.ts` (`z.union`) and `pydantic-mirror.test.ts`; `engine/flow.py`
   (`_in_category`, `_max_source_supply`, `_effective_supply`, `_edge_capacity`, through one
   helper that fails loudly on a stray `Stock`); the Node and Edge Inspector,
-  `tab-node-defaults.tsx` and `build-model-tour.ts`; the importers (expected unchanged, to
-  confirm). `logical.py` and `rules_eval.py` read only the keys.
+  `tab-node-defaults.tsx` and `build-model-tour.ts`; the importers. The existing EPANET importer is
+  unchanged (tanks stay Sources with a backup countdown, so the published importer
+  benchmarks reproduce); a **second EPANET importer, for Temporal Simulation**, maps each
+  tank to storage (§1c): `level`, `min` and `max` from the tank's geometry and initial,
+  minimum and maximum levels, `max_draw` from its outlet pipes, `max_fill` from its inlet
+  pipes, no backup and no reserve Event. It also writes the project's Temporal Simulation
+  from the INP's time data: one Step of `hour × [TIMES] duration`; one profile row per
+  demand pattern (base demand × multiplier per hour); each time-based control (`AT TIME`,
+  `AT CLOCKTIME`) as a Temporal-Simulation-only Event in its period. Level-based controls are
+  conditionals, which v1.1 lacks; they are listed as skipped in the import report (a full
+  tank already stops taking water). No Metrics or hazards are added. `logical.py` and `rules_eval.py` read only the keys.
 - The Graph Diff differ (ADR-0017) and the Scenario Baseline key (ADR-0016) gain the path
   form of §4.
 - **UI:** the supply editor is offered on every Node Type. A non-blocking warning on a

@@ -282,17 +282,14 @@ So a run record holds:
 Putting an Event whose effect matters on its own (a settlement) in **its own Phase** makes
 that Phase's diff exactly that effect, which is how a cash outlay is read (§3.2).
 
-**A whole run is one Any Graph Update in `update_history`.** The undo history is capped at
-`HISTORY_LIMIT = 20` (`store/history-store.ts`) and the Scenario Baseline is derived by
-folding it (ADR-0016). 132 entries there would evict the Reset that started the run. So
-history gets **one** entry per run, of a new `update_type` `temporal_simulation_run`,
-holding the net diff from the run's start to its end. The Baseline fold tags all of it
-`simulation`; the per-period diffs live in the run record. CTRL+Z undoes the whole run.
-
-**Clear Event treats a run as one Event.** Ctrl+R picks the newest `event_applied` *or*
-`temporal_simulation_run` entry; on a run it reverts the run's net diff and lands on the
-post-Reset state the run started from. The **Situation** lists a run as one item named by
-its Timeline.
+**A run is a view, not an edit.** It computes on its own copy of the model and is shown in
+the **Run View**, read-only, the way Analysis Mode shows a score. Every change over time is
+authored before the run (profile values, Phase Events), so nothing needs editing while one
+is shown. The live model and `update_history` (capped at `HISTORY_LIMIT = 20`, folded into
+the Scenario Baseline, ADR-0016) are never written: no history entry type, no Baseline tag,
+no Clear Event rule, and a cancelled run has nothing to undo. An earlier draft landed a run
+as one `temporal_simulation_run` entry tagged `simulation`; it existed only to keep a run
+undoable while the model stayed editable.
 
 ADR-0018 set the same precedent independently: it kept a per-evaluation *delta*
 (`EvaluationOutcome`) because *"retaining whole snapshots for every evaluation of a Shapley
@@ -666,21 +663,15 @@ Propagations, and all land in the run's diffs. `attribute_mutations` addresses a
 so a mutation on `supply_capacity` that replaces a Stock is rejected with a warning: a Stock
 is written field by field.
 
-### 4.10 Reset, and how a run is tagged
+### 4.10 Reset and Stocks
 
 - `Stock.level` is **model**, so Reset's first half (force operational) does not touch it.
   Reset's second half reverts machine writes from the Scenario Baseline, **by provenance**
-  (ADR-0016).
-- A run is one history entry, and the Baseline fold tags it **`simulation`**, the fourth
-  source tag beside `event:<id>`, `propagation` and `manual`. Everything inside a run —
-  Events, operations, Propagations, integration — is one writer from history's point of view;
-  the per-writer detail lives in the run record.
-- Reset reverts `simulation` entries with the others, so **every stock returns to its level
-  from before the run**, and the run's Level Mode ends.
+  (ADR-0016): an Event fired by hand that changed a `level` is reverted.
+- A run never writes the model (§3), so leaving the Run View shows every Stock at its
+  authored level with nothing to revert.
 - A hand edit of a Stock (a new opening balance) is authoring work and survives Reset; the
-  path-level diff of §4.1 is what keeps it separate from the run's `level` writes.
-
-Since every run starts with a Reset (§2), a run and a later Reset bracket the same state.
+  path-level diff of §4.1 is what keeps it separate from an Event's `level` writes.
 
 ---
 
@@ -859,12 +850,10 @@ remains open:
   fraction).
 
 **Cross-cutting**
-- **Cost of a run.** `ENGINE_TIMEOUT_SECONDS` is 30 per Propagation (ADR-0008). A Timeline of
-  44 periods with two propagating Phases is 88 sequential client-side calls, each metered
-  against the role's Engine Evaluation budget, and a policy frontier multiplies that by every
-  variant. The batch endpoint cannot help, because periods depend on each other. A server-side
-  run endpoint behind `propagation_service`, and the entitlement accounting for a run, are
-  open.
+- **A server-side run endpoint.** v1.1 runs client-side, one metered Propagation per
+  propagating Phase, budgets raised if use needs it (ADR-0019, Consequences). An endpoint
+  that uploads the model once matters for large models and policy frontiers; it would port
+  the step operator to Python.
 - **Worker-level data is personal data.** The banca ore case keeps per-worker ledgers in its
   import script, pseudonymised, and sends only per-activity aggregates to the platform; the
   canvas works on those aggregates, and the ledger is the authority for per-worker claims.

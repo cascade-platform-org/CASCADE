@@ -57,6 +57,7 @@ function ExplanationPanel() {
 export function TemporalSimulationWindow() {
   const open = useTemporalSimulationStore((s) => s.open);
   const tab = useTemporalSimulationStore((s) => s.tab);
+  const running = useTemporalSimulationStore((s) => s.running);
   // The window floats above modals; step aside while Config is open ("Create
   // new Event" opens it) and come back when it closes.
   const configModalOpen = useUiStore((s) => s.configModalOpen);
@@ -96,12 +97,20 @@ export function TemporalSimulationWindow() {
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
           Prototype: this edits a draft and explains each interaction below. Your model, the history and the engine are never touched.
         </div>
+        {running && (tab === "timeline" || tab === "metrics" || tab === "text") && (
+          <div className="border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
+            A run is shown, so the definition is read-only. End run (Run tab) to edit it; every change over time goes in before the run.
+          </div>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {/* While a run is shown the definition is read-only (ADR-0019 §1): a disabled fieldset disables every control inside. */}
+          <fieldset disabled={running && (tab === "timeline" || tab === "metrics")} className="contents">
           {tab === "timeline" && <TimelineTab />}
           {tab === "run" && <RunTab />}
           {tab === "metrics" && <MetricsTab />}
           {tab === "stock" && <StockTab />}
           {tab === "text" && <TextTab />}
+          </fieldset>
         </div>
         <ExplanationPanel />
       </div>

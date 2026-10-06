@@ -36,15 +36,15 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
       "The Timeline is the saved input: an ordered table of Steps, each with ordered Phases holding Events (each firing every period, or every N periods of its Step).",
       "Under the overview sits the profile: the known inputs per period (rates, inflows, demands), one row per operation and one cell per period, applied at the start of the period before any Phase.",
       "It stores inputs only. Results live in a run record, a cache that can always be recomputed.",
-      "Editing a Step in the middle replays the run forward from that period; earlier periods keep their recorded diffs.",
+      "Every change over time is authored here, before a run: a profile value or a Phase Event. While a run is shown this definition is read-only; End run to edit, and the next run starts from the beginning.",
     ],
     refs: ["ADR-0019 §1", "ADR-0019 §3"],
   },
   run: {
     title: "Run",
     lines: [
-      "Running first performs a Reset, then executes every period in order, calling the engine once per propagating Phase.",
-      "The run lands in the undo history as ONE entry; the per-period detail lives in the run record.",
+      "A run computes on its own copy of the model, Reset (both halves), executing every period in order and calling the engine once per propagating Phase.",
+      "It is shown in the Run View, read-only; the live model and the undo history are never written. End run (or Reset) shows the model as it was.",
       "In this prototype, Run computes the plan only (labels, Phases, engine calls); no Propagation is sent.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3"],
@@ -87,7 +87,7 @@ export function explainAddStep(label: string): Explanation {
     title: "Add a Step",
     lines: [
       `A new Step starting at "${label}" is appended. A Step is one period, or the same period pattern repeated.`,
-      "Saved Timelines are part of the project file. Adding a Step after a run marks the run stale; re-running replays only from the first changed period.",
+      "The Temporal Simulation (one per project) is part of the project file. Steps are added before a run; each run starts from the beginning.",
     ],
     refs: ["ADR-0019 §1"],
   };
@@ -342,10 +342,10 @@ export function explainRun(plan: TimelinePlan, eventLabel: (id: string) => strin
   return {
     title: "Run (dry)",
     lines: [
-      "1. Reset — one undoable entry; the run starts from the authored model with every Element operational.",
+      "1. Copy the model and Reset the copy: the run starts from the authored model with every Element operational. Your model is never written.",
       ...(first ? describePeriod(first, eventLabel).map((l) => `2. ${l}`) : ["2. (no periods)"]),
       `3. Repeat for all ${plan.periods.length} periods: ${plan.engineCalls} Propagations, each one Engine Evaluation against your role's budget (30 s timeout each).`,
-      "4. Push ONE temporal_simulation_run entry (the run's net diff) to the undo history; store the per-Phase diffs in the run record.",
+      "4. Keep the per-Phase diffs in the run record and open the Run View: the canvas shows the selected period, read-only, until End run. Progress shows period k of n; Cancel or a failure discards the run.",
       plan.warnings.length > 0 ? `Blocked: ${plan.warnings.length} warning(s) must be fixed first.` : "Prototype: the plan is shown in the table below; nothing was sent to the engine.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3", "ADR-0008"],
@@ -397,41 +397,13 @@ export const EXPLAIN_SHOW_STATE: Explanation = {
   refs: ["ADR-0019 §3"],
 };
 
-export const EXPLAIN_STALE: Explanation = {
-  title: "Run is stale",
+export const EXPLAIN_END_RUN: Explanation = {
+  title: "End run",
   lines: [
-    "The Timeline or profile changed after the last run. The run record carries a hash of the model, Timeline and profile; a mismatch marks it stale.",
-    "Re-running replays forward from the first changed period and keeps the earlier periods' diffs.",
+    "Leaves the Run View: the canvas shows your model exactly as it was, because the run lived on its own copy. Reset does the same.",
+    "The Timeline, profile and Metrics become editable again. Every change over time is authored before a run, as profile values or Phase Events; the next run starts from the beginning.",
   ],
-  refs: ["ADR-0019 §3"],
-};
-
-export const EXPLAIN_UNDO_RUN: Explanation = {
-  title: "Undo (Ctrl+Z) after a run",
-  lines: [
-    "The whole run is one entry in the undo history, so Ctrl+Z undoes all of it at once and lands on the post-Reset state.",
-    "A second Ctrl+Z undoes the Reset the run started with.",
-  ],
-  refs: ["ADR-0019 §3"],
-};
-
-export const EXPLAIN_CLEAR_RUN: Explanation = {
-  title: "Clear Event (Ctrl+R) after a run",
-  lines: [
-    "Clear Event treats a run as one Event: if the run is the newest Event-like entry, Ctrl+R reverts its whole net diff.",
-    "It pushes an event_cleared entry, so Ctrl+Z brings the run back. The Situation lists the run as one item named by its Timeline.",
-  ],
-  refs: ["ADR-0019 §3", "ADR-0016 §5"],
-};
-
-export const EXPLAIN_RESET_RUN: Explanation = {
-  title: "Reset after a run",
-  lines: [
-    "Forces every Element operational, and reverts every write tagged simulation — so every Stock returns to its level from before the run.",
-    "A hand edit of a Stock field (a new opening balance, a corrected max) is authoring work and survives Reset.",
-    "Reset also ends the run's Level Mode.",
-  ],
-  refs: ["ADR-0019 §5", "ADR-0020 §4"],
+  refs: ["ADR-0019 §3", "ADR-0019 §5"],
 };
 
 export function explainDisplay(mode: "functionality" | "level", reading: "level" | "change"): Explanation {

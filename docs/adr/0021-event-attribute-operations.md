@@ -69,8 +69,9 @@ concepts, and keeping the unticked set (instead of the ticked one) keeps the fil
   whole `supply_capacity` or `capacity` holding a Stock is rejected with a warning, so an
   Attribute Operation is the only way an Event writes a Stock.
 - The written change is a **Graph Diff** entry addressed by its full path (ADR-0020 §4).
-  Fired by hand, it is tagged `event:<id>` for the Scenario Baseline; inside a run, the run's
-  single history entry is tagged `simulation` (ADR-0019 §5). No Mutation Reversal is written.
+  Fired by hand, it is tagged `event:<id>` for the Scenario Baseline; inside a run it lands
+  in the run record only, never in the model or its history (ADR-0019 §3). No Mutation
+  Reversal is written.
 - A Timeline's **profile** is a list of Attribute Operations per period label
   (ADR-0019 §1), the same mechanism without an Event around it.
 - Recovering Functionality between Phases and periods is the step operator's job

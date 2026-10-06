@@ -51,7 +51,7 @@ The inverse of one Event application: every field it overwrote, keyed `"<element
 _Avoid_: "undo record", "diff", "patch" (a Mutation Reversal is one Event's inverse — a **Graph Diff** is one Update's, a **Scenario Baseline** the whole scenario's; all three share the representation)
 
 **Clear Event**:
-Removes the most recently applied Event from the scenario (Ctrl+R — there is no per-Event picker). Reverts that Event's own writes **and** every write the Propagation made, leaving the remaining Events standing but un-propagated: a cascade computed from an input that no longer exists is stale. Nothing re-runs automatically; hand edits survive, whatever field they touched. Pushes an `event_cleared` **Any Graph Update**, so CTRL+Z brings the Event and its cascade back. *Proposed (ADR-0019):* a **Temporal Simulation** run counts as one Event, and clearing it reverts the whole run. Mechanics in ADR-0016.
+Removes the most recently applied Event from the scenario (Ctrl+R — there is no per-Event picker). Reverts that Event's own writes **and** every write the Propagation made, leaving the remaining Events standing but un-propagated: a cascade computed from an input that no longer exists is stale. Nothing re-runs automatically; hand edits survive, whatever field they touched. Pushes an `event_cleared` **Any Graph Update**, so CTRL+Z brings the Event and its cascade back. Mechanics in ADR-0016.
 _Avoid_: "undo the event" (CTRL+Z walks the update history one Update at a time, whatever that Update was; Clear Event removes one Event from the scenario however much has happened since)
 
 **Scenario Field**:
@@ -63,7 +63,7 @@ The span of `update_history` belonging to the **current** scenario: newest-first
 _Avoid_: "session", "undo stack" (the undo stack is positional over ALL history; a Scenario History stops at the Reset)
 
 **Scenario Baseline**:
-Each field's value from before the current scenario touched it, keyed structurally by Element id, field and `properties` sub-key, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event, and every entry carries a **source tag** naming who wrote the field (`event:<id>`, `propagation`, `manual`; *proposed*, ADR-0019: `simulation` for a whole run). Machine writes are captured **by provenance, never by field name**, so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Derived by folding `update_history`, so it cannot disagree with the history. Mechanics in ADR-0016.
+Each field's value from before the current scenario touched it, keyed structurally by Element id, field and `properties` sub-key, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event, and every entry carries a **source tag** naming who wrote the field (`event:<id>`, `propagation`, `manual`). Machine writes are captured **by provenance, never by field name**, so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Derived by folding `update_history`, so it cannot disagree with the history. Mechanics in ADR-0016.
 _Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
 
 **Reset**:
@@ -87,7 +87,7 @@ An Event kind advancing simulated time by N hours: subtracts N from every positi
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
 **Temporal Simulation** *(proposed, not built)*:
-A saved, replayable run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase or periodic rule holds a Temporal Jump Event. A run starts with a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and lands in `update_history` as one Any Graph Update tagged `simulation`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
+A saved, replayable run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Timeline** *(proposed)*:
@@ -109,6 +109,10 @@ _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a
 **Level Scale** *(proposed)*:
 A display scale, orthogonal to the Functionality scale, for a **Stock**: ordered bands over the signed ratio `value / reference`, each with a label and a brand colour token, in Client Configuration (never sent to the backend). Exists because an accumulation can be a problem at both extremes while Functionality only worsens. The reference belongs to the Stock and defaults to its own bound. ADR-0019.
 _Avoid_: "level scale" for Functionality levels (those are the Functionality scale); a Rule input (display only)
+
+**Run View** *(proposed)*:
+The canvas showing a **Temporal Simulation** run at a selected period, read-only, the way **Analysis Mode** shows a score. The run lives on its own copy of the model, so leaving the view (Reset or End run) shows the model exactly as it was. Every change over time is authored before the run, as profile values or Phase Events. ADR-0019 §3.
+_Avoid_: "simulation mode" ("Simulation" bare is avoided), "replay"
 
 **Level Mode** *(proposed)*:
 The canvas recoloured by the Level Scale while a Temporal Simulation is open, as **Analysis Mode** recolours it by a score: colours mean a stock's level or its change over the period, not Functionality. Cleared by Reset.

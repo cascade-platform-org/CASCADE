@@ -44,12 +44,17 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 - **A period has no duration.** Simulated time passes only through Temporal Jump Events
   the modeller places in a Phase, with the hours they choose; only
   `functionality_time` reads them. Rates and stocks are per period and involve no hours.
-- **The Timeline stores inputs only.** The **Event is the only edit handle**: a mid-Timeline
-  change is an Event (or profile operation) added or changed at a Step, and the run replays
-  forward from that period.
-- The Timeline and its profile live **in the project file** under their own key: the
-  profile is input, roughly model-sized (~40 KB for banca ore), and ADR-0017's
-  single-downloadable-file principle applies.
+- **The Timeline stores inputs only, and every change over time is authored before the
+  run**, as a profile value or a Phase Event: "at period 5" is an Event in period 5. **While
+  a run is on the canvas, the model and the Temporal Simulation are read-only** (browsing
+  periods, the Functionality ↔ Level switch and saving a period to the Scorecard stay
+  available); Reset ends the run, and every run starts from the beginning. There is no
+  partial replay.
+- A project holds **one** Temporal Simulation, in the project file under its own key
+  (`Project.temporal_simulation`): the whole document of §7 (Timeline, profile, Metrics) and
+  its run-record cache. The profile is input, roughly model-sized (~40 KB for banca ore), and
+  ADR-0017's single-downloadable-file principle applies. A variant to compare is another
+  project version or a copy of the project.
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
   is not ruled out later. The profile is a **grid on the same period columns**: one row
   per operation (target, path, op), one cell per period. A written value stays in later
@@ -69,8 +74,9 @@ propagating Phase. The engine changes only to return `served_ratio` (ADR-0020).
 
 ```
 run(timeline):
-  Reset                                    # one undoable scenario_reset: every run starts
-                                           # from the authored model, every Element operational
+  state = Reset(copy of the model)         # the run's own copy, both halves of Reset: the
+                                           # authored model, every Element operational;
+                                           # the live model and its history are never written
   for each period p:
     apply profile[p.label]                 # set/add/… operations on rates, inflows, …
     for each Phase k of p:
@@ -85,7 +91,7 @@ run(timeline):
         if k is p's last propagating Phase:
           integrate every Stock once        # ADR-0020 §2; spilled / unmet recorded
       record the Phase's diff
-  push one temporal_simulation_run entry (net diff of the run)
+  keep the run record; show the Run View (§3)
 ```
 
 Integration runs right after the **last propagating** Phase, so a later non-propagating
@@ -117,7 +123,7 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
   period *t* is an Event in Step *t* (`set` `direct_damage` false and `functionality` to the
   top level). Automatic repair stays deferred (requirements §16).
 
-### 3. Recording: a run record of diffs, and one history entry per run
+### 3. Recording: a run record of diffs, shown in the Run View; the model is never edited
 
 - **The run record** holds the start state (one snapshot), per period **one Graph Diff per
   Phase** (the ADR-0017 machinery; the profile's writes belong to the first Phase's diff, the
@@ -125,21 +131,23 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
   `spilled`/`unmet` amounts. **No PNG per period.** A period's net change is the composition
   of its diffs.
 - **The run record is a cache.** It is persisted beside its Timeline with a content hash of
-  the model, Timeline and profile; a mismatch marks it stale. It is kept because recomputing
-  costs an Engine Evaluation per propagating Phase.
-- **One `update_history` entry per run.** History is capped at `HISTORY_LIMIT = 20` and the
-  Scenario Baseline folds it, so per-period entries would evict the Reset that started the
-  run. The run is one Any Graph Update of `update_type` `temporal_simulation_run` holding the
-  net diff from start to end. CTRL+Z undoes the whole run.
-- **Clear Event treats a run as one Event.** Ctrl+R picks the newest `event_applied` or
-  `temporal_simulation_run` entry; on a run it reverts the net diff, landing on the post-Reset
-  state. The Situation lists a run as one item named by its Timeline.
+  the model and the Temporal Simulation, so a saved project reopens on its run; when the
+  hash no longer matches (the project was edited elsewhere), the cached run is dropped. It
+  is kept because recomputing costs an Engine Evaluation per propagating Phase.
+- **A run is a view, not an edit** (decided 2026-10-06). It computes on its own copy and
+  never writes the live model or `update_history`. The **Run View** shows it as Analysis Mode
+  shows a score: the canvas paints the selected period's reconstructed state, read-only.
+  Leaving it (Reset, or End run) shows the model exactly as it was. A run therefore needs no
+  history entry type, no Scenario Baseline tag and no Clear Event rule; a cancelled or failed
+  run has nothing to undo; and ADR-0016 is unchanged. Turning a period's state into the
+  working model ("Keep this period as the scenario", one ordinary history entry) is left out
+  of v1.1.
 - A period's full state is **reconstructed on request** by walking the diffs forward from
-  the start state, the same primitive a mid-Timeline replay uses. No keyframes.
+  the start state. No keyframes.
 - **A metric at period *t* reads period *t* and earlier only.** Centred averages and
   normalisation against the run's final maximum are post-hoc summaries.
 
-### 4. Custom Metrics are view definitions in Client Configuration
+### 4. Custom Metrics are view definitions inside the Temporal Simulation
 
 ```
 Metric   name · target (an ElementFilter, ADR-0021) · path
@@ -154,14 +162,13 @@ wanted it extends `shared/rule-grammar.json` in that one file. A Metric is prese
 arithmetic over recorded state and is no Rule, so evaluating it client-side leaves
 CLAUDE.md §7 intact.
 
-### 5. Reset ends a simulation, through the Scenario Baseline
+### 5. Reset ends the Run View
 
-The Baseline fold tags a `temporal_simulation_run` entry **`simulation`**, a fourth source
-tag beside `event:<id>`, `propagation` and `manual` (ADR-0016). Everything inside a run is one
-writer from history's point of view. Reset's second half reverts `simulation` entries with
-the machine-written ones, so every Stock returns to its pre-run level; Reset also ends the run
-and its Level Mode. A hand edit of a Stock is authoring work and survives, because the differ
-addresses a Stock field by its full path (ADR-0020).
+Reset, or End run, leaves the Run View and its Level Mode. The model never changed, so
+nothing is reverted: every Stock shows its authored level again. An earlier draft ran on the
+live model, landed as one `temporal_simulation_run` history entry and reverted through a
+fourth Scenario Baseline tag, `simulation`; once the model became read-only during a run,
+that machinery protected nothing.
 
 ### 6. A Level Scale shows a stock, orthogonal to Functionality; Level Mode recolours like Analysis
 
@@ -203,16 +210,19 @@ that explains each control.
 - `EventDefinition.temporal_simulation_only` lands ahead of the rest (Pydantic, JSON Schema,
   Zod; Action Bar, Scorecard and Events tab). The prototype's document schema
   (`lib/temporal-simulation-schema.ts`) becomes the Pydantic model when the feature is built.
+- `Project` gains `temporal_simulation` (optional, one per project); the Level Scale stays in
+  Client Configuration as a display preference.
 - New Pydantic models (Timeline, Step, Phase, PhaseEvent, Metric, ElementFilter, Level Scale) →
   `export_json_schema.py` → Zod → `pydantic-mirror.test.ts`, per CLAUDE.md §6.
-- ADR-0016 gains the `simulation` source tag (Reset's second half reverts it), and Clear
-  Event's target becomes "the newest Event or run". `AnyUpdateEntry` gains
-  `temporal_simulation_run`. `deriveSituation` lists a run as one item.
-- **The step operator is client-side in v1.** A 44-period run with two propagating Phases
-  is 88 sequential Propagations, each an Engine Evaluation (ADR-0008), multiplied by policy
-  variants; the batch endpoint cannot help because periods depend on each other. A
-  server-side run endpoint behind `propagation_service` and the entitlement accounting for a
-  run are open.
+- ADR-0016, `AnyUpdateEntry`, Clear Event and `deriveSituation` are unchanged: a run never
+  enters `update_history` (§3).
+- **The step operator is client-side** (decided 2026-10-06 for v1.1). Each Propagation is an
+  ordinary engine call, metered as one Engine Evaluation (ADR-0008): a 72-hour run with two
+  propagating Phases is 144, well inside a role's per-minute budget, which is raised if real
+  use needs it. A run shows its progress and can be cancelled; a cancel, a budget refusal or
+  an engine error discards it and names the failing period. The model is never touched. A
+  server-side run endpoint (one upload instead of one per Propagation) is deferred: it would
+  port the whole step operator to Python.
 - `functionality_time` converges onto the Stock mechanism **last**: it is well-tested core
   behaviour with no e2e driver.
 - **Level Mode** reuses the Analysis Heatmap's legend and repaint machinery

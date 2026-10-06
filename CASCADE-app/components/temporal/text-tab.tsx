@@ -28,6 +28,7 @@ import { SmallButton } from "./fields";
 export function TextTab() {
   const { timeline, profile, metrics } = useTemporalSimulationStore(useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics })));
   const { explain, replaceDraft } = useTemporalSimulationStore.getState();
+  const running = useTemporalSimulationStore((s) => s.running);
   // Config and the model are read when a button is used; this tab does not re-render on their changes.
   const doc = useMemo(() => draftToDoc({ timeline, profile, metrics }), [timeline, profile, metrics]);
   const currentText = useMemo(() => serializeDoc(doc), [doc]);
@@ -66,7 +67,7 @@ export function TextTab() {
         <span className="flex-1" />
         <SmallButton disabled={!dirty} onClick={() => { setText(currentText); setResult(null); }}><RotateCcw size={11} /> Revert text</SmallButton>
         <SmallButton onClick={() => check(false)}><Check size={11} /> Check</SmallButton>
-        <SmallButton tone="accent" disabled={!dirty} onClick={() => check(true)}><Upload size={11} /> Apply</SmallButton>
+        <SmallButton tone="accent" disabled={!dirty || running} onClick={() => check(true)}><Upload size={11} /> Apply</SmallButton>
       </div>
 
       <textarea
