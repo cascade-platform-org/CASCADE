@@ -41,6 +41,7 @@ the repository.
 5. What this buys, beyond the first use case
 6. Stress-testing the abstraction against other domains
 7. Open questions
+8. Build plan (release v1.1)
 
 ---
 
@@ -835,13 +836,10 @@ remains open:
   first, then supplement" yields two measurements (`delivered_A`, `delivered_B`) and enforces
   no preference. Is a preference order between supplies ever needed?
 
-**Capability B**
-- Does the existing `PropagationScorecardEntry` migrate to diffs, and is a simulation
-  Scorecard entry (which stores its Level Mode values) a new type in ADR-0006's union?
-- Which standard metrics ship? Operativity Score exists; coverage and stock level are the
-  obvious additions once `served_ratio` and Stocks exist.
-- Do post-hoc summaries over a finished run (§3.1) live beside the period series, or only in
-  an export?
+**Capability B** — settled 2026-10-06 (ADR-0019 §4): three standard Metrics (Operativity
+Score, coverage, stock level); series export as CSV with summaries left to the spreadsheet;
+a saved period is a new `temporal_simulation` Scorecard entry holding its snapshot and
+values, and `PropagationScorecardEntry` does not migrate to diffs.
 
 **Capability C**
 - **A per-stock switch for φ-scaling of the inflow?** Needed only when a model has a degraded
@@ -868,3 +866,69 @@ remains open:
   import script, pseudonymised, and sends only per-activity aggregates to the platform; the
   canvas works on those aggregates, and the ledger is the authority for per-worker claims.
   ADR-0007's persistence boundary applies unchanged.
+
+---
+
+## 8. Build plan (release v1.1)
+
+Decided in the plan review of 2026-10-06; the decisions themselves live in ADR-0019/0020/0021
+and requirements §9.6. Each slice ships on its own, schema-first (CLAUDE.md §6), with its
+tests, its docs and the audit table (CLAUDE.md §8a) green.
+
+**What the prototype hands over.** The tested pure modules carry over as they are:
+`lib/timeline-plan.ts`, `lib/stock-math.ts`, `lib/element-filter.ts` and
+`lib/temporal-simulation-text.ts`. `lib/temporal-simulation-schema.ts` becomes the Zod
+mirror of the Pydantic models. The window becomes the feature's UI; its banner and "What
+this will do" panel go, and their text becomes the user-manual chapter.
+
+| # | Slice | Needs | Done when |
+|---|---|---|---|
+| 1 | **Attribute Operations on Events** (ADR-0021) | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
+| 2 | **The Temporal Simulation in the project** | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
+| 3 | **Step operator and Run View** | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
+| 4 | **Stocks and storage** (ADR-0020) | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
+| 5 | **Level Scale and Level Mode** | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
+| 6 | **Metrics and Scorecard** | 3 (coverage and stock level: 4) | the Run table shows Operativity, coverage, stock level and custom Metrics; CSV export; a period saves as a `temporal_simulation` Scorecard entry |
+| 7 | **EPANET Temporal Simulation importer and samples** | 2, 4 | Net1 imports with tanks as storage and a starting simulation; the IJDRR and Net1 samples run end to end; banca ore runs locally |
+| 8 | **Manual and reference docs** | all | user-manual chapter (`npm run docs:manual`), `api-reference.md` (`served_ratio`, `stored`), `local-first-guide.md` (Stock, `temporal_simulation`) |
+
+**Slice 1.** Pydantic `ElementFilter` and `AttributeOperation` in `schemas/config.py`,
+`EventDefinition.attribute_operations`; export and Zod. `lib/event-application.ts` applies
+operations after `attribute_mutations`, in id order, rejecting an out-of-range result with a
+warning. The differ and the Baseline key gain the path form. Config → Events gets an
+operations editor reusing the FilterEditor and the profile row editor.
+
+**Slice 2.** Pydantic `Timeline`, `Step`, `Phase`, `PhaseEvent`, `Metric` and the document;
+`Project.temporal_simulation` (optional). `file-io` and sync carry it like the Scorecard.
+The window binds to the project; the Text tab and the LLM copy work on the saved document.
+
+**Slice 3.** `lib/step-operator.ts` runs ADR-0019 §2: Reset of a copy (both halves), per
+period the profile, then per Phase its Events (vulnerabilities, mutations, operations), the
+imposed layer, `buildPropagationPayload`, one `POST /api/propagate`, one diff per Phase.
+Plan errors and schema errors block; a cancel, a budget refusal or an engine error discards
+the run and names the period. The Run View paints the reconstructed period through Analysis
+Mode's display path; the store refuses definition edits until End run or Reset. Tests: the
+same IJDRR Timeline gives the same diffs twice; a reconstructed period equals the running
+state; cancel leaves the model untouched.
+
+**Slice 4.** Backend first: the `Stock` union in `supply_capacity` and `Edge.capacity`, one
+engine helper that fails on a stray Stock, `served_ratio` per consumer and Category, and the
+storage stages (other sources, then storage sources, then fill sinks, sharing by fraction)
+returning `stored`. Tests pin determinism with two tanks on one zone. Then the client:
+`buildPropagationPayload` turns each Stock into numbers, the step operator integrates with
+`lib/stock-math.ts`, the Inspector edits Stocks, and the two warnings land.
+
+**Slice 5.** The Level Scale in Client Configuration (five default bands); Level Mode in the
+Run View, Functionality ↔ Level and Level ↔ Change, via `lib/analysis-legend.ts`.
+
+**Slice 6.** Metric evaluation per period over the run record, the three standard Metrics,
+the CSV export, and the `temporal_simulation` Scorecard entry (Pydantic, Zod, the ADR-0006
+union, its Scorecard card).
+
+**Slice 7.** A second endpoint beside `POST /api/import/inp` maps tanks to storage and
+writes the starting simulation from `[TIMES]`, `[PATTERNS]` and time-based `[CONTROLS]`,
+reporting level-based controls as skipped; the Import dialog offers both importers. The
+IJDRR sample gains its Timeline; Net1 joins `public/samples/manifest.json`.
+
+**Order.** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. The engine half of slice 4 needs nothing on the
+client and can start beside slice 1.

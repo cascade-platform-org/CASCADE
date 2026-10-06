@@ -54,7 +54,7 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
     title: "Metrics",
     lines: [
       "A custom Metric is a view definition saved with the Temporal Simulation: what to read, from which Elements, and how to aggregate it.",
-      "Metrics are computed at read time from the run record and shown at every period. A Metric at period t reads periods up to t only.",
+      "Metrics are computed at read time from the run record and shown at every period, after the three standard ones (Operativity, coverage, stock level). A Metric at period t reads periods up to t only.",
       "There is no formula language: the dropdowns are the whole surface.",
     ],
     refs: ["ADR-0019 §4"],
@@ -425,10 +425,19 @@ export function explainDisplay(mode: "functionality" | "level", reading: "level"
 export const EXPLAIN_SAVE_SCORECARD: Explanation = {
   title: "Save to Scorecard",
   lines: [
-    "Saves the selected period to the Scorecard with the per-element values Level Mode shows (level or change, and the reference used), so it repaints later.",
-    "Whether this is a new entry type in the Scorecard union is still open.",
+    "Saves the selected period as a Temporal Simulation entry: the Timeline's name, the period's label and end-state snapshot, its Metric values and the Level Mode values with their references, plus a picture.",
+    "The values are computed now and kept, because the run itself is not saved; Operativity is derived from the snapshot like any entry's.",
   ],
-  refs: ["ADR-0019 §6", "ADR-0006"],
+  refs: ["ADR-0019 §4", "ADR-0006"],
+};
+
+export const EXPLAIN_EXPORT_CSV: Explanation = {
+  title: "Export CSV",
+  lines: [
+    "Downloads this table: one row per period, one column per Metric (Operativity, coverage per Category, stock level per Category, then yours).",
+    "The run is not saved, so this is how a series leaves the session. Averages and normalisations are left to the spreadsheet.",
+  ],
+  refs: ["ADR-0019 §4"],
 };
 
 // ---------------------------------------------------------------------------

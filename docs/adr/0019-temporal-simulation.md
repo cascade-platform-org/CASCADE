@@ -167,6 +167,26 @@ wanted it extends `shared/rule-grammar.json` in that one file. A Metric is prese
 arithmetic over recorded state and is no Rule, so evaluating it client-side leaves
 CLAUDE.md §7 intact.
 
+**Three standard Metrics ship** (decided 2026-10-06), each a Run-table column beside the
+custom ones:
+- **Operativity Score**, as the Scorecard computes it, at each period's end state;
+- **coverage** per Category: delivered ÷ demand over the Category's consumers, from
+  `served_ratio` (ADR-0020 §3), at the period's last propagating Phase;
+- **stock level** per Category: the signed sum of its Stocks' levels at the period's end
+  (water stored, hours owed).
+
+**Series leave as CSV.** The Run table (periods × Metrics) exports as CSV; post-hoc
+summaries (averages, normalisation against the run's maximum) are left to the spreadsheet.
+
+**A period saved to the Scorecard is a new `temporal_simulation` entry** in ADR-0006's union.
+A `propagation` entry would carry a meaningless "before" (the run's reset start), and the
+run record is not saved, so the entry holds what it shows: the Timeline's name and the
+period's label, the period's end-state snapshot (from which the Scorecard derives
+Operativity as for any entry), the custom and coverage Metric values at that period
+(computed at save, since the run that produced them is not kept), the Level Mode values per
+Stock with the reference used, and a PNG. `PropagationScorecardEntry` does not migrate to
+diffs.
+
 ### 5. Reset ends the Run View
 
 Reset, or End run, leaves the Run View and its Level Mode. The model never changed, so
@@ -235,6 +255,6 @@ that explains each control.
 - **CONTEXT.md** gains Temporal Simulation, Timeline, Step, Phase, Run View, Stock, Level
   Scale, Level Mode, Attribute Operation and Element Filter; "Simulation" as a bare word is retired in favour of Propagation and Temporal
   Simulation.
-- **Open (design doc §7):** whether `PropagationScorecardEntry` migrates to diffs and whether
-  a simulation Scorecard entry is a new type in ADR-0006's union; automatic repair;
-  backups whose countdown stops when supply returns.
+- ADR-0006's Scorecard union gains a `temporal_simulation` entry (§4).
+- **Open (design doc §7):** automatic repair; backups whose countdown stops when supply
+  returns.

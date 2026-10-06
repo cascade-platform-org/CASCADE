@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Play, RotateCcw, Eye, Save, AlertTriangle, XCircle } from "lucide-react";
+import { Play, RotateCcw, Eye, Save, AlertTriangle, XCircle, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { docErrors, draftToDoc } from "@/lib/temporal-simulation-text";
 import {
   EXPLAIN_END_RUN,
+  EXPLAIN_EXPORT_CSV,
   EXPLAIN_SAVE_SCORECARD,
   EXPLAIN_SHOW_STATE,
   explainDisplay,
@@ -23,6 +24,9 @@ const LEVEL_BANDS = [
   { label: "surplus", cls: "bg-blue-300" },
   { label: "large surplus", cls: "bg-blue-600" },
 ];
+
+/** The standard Metrics, a column each before the custom ones (ADR-0019 §4). */
+const STANDARD_METRICS = ["Operativity", "Coverage", "Stock level"];
 
 export function RunTab() {
   const timeline = useTemporalSimulationStore((s) => s.timeline);
@@ -99,6 +103,7 @@ export function RunTab() {
             </>
           )}
           <span className="flex-1" />
+          <SmallButton onClick={() => explain(EXPLAIN_EXPORT_CSV)}><Download size={11} /> Export CSV</SmallButton>
           <SmallButton onClick={() => explain(EXPLAIN_SAVE_SCORECARD)}><Save size={11} /> Save period to Scorecard</SmallButton>
         </div>
       )}
@@ -110,7 +115,7 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">#</th>
               <th className="py-1 pr-2 font-semibold">Period</th>
               <th className="py-1 pr-2 font-semibold">Phases</th>
-              <th className="py-1 pr-2 font-semibold">Operativity</th>
+              {STANDARD_METRICS.map((m) => <th key={m} className="py-1 pr-2 font-semibold">{m}</th>)}
               {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.metric.name || "metric"}</th>)}
               <th />
             </tr>
@@ -143,7 +148,7 @@ export function RunTab() {
                     ))}
                   </span>
                 </td>
-                <td className="py-1 pr-2 text-zinc-300" title="Computed at read time from the run record">—</td>
+                {STANDARD_METRICS.map((m) => <td key={m} className="py-1 pr-2 text-zinc-300" title="Computed at read time from the run record">—</td>)}
                 {metrics.map((m) => <td key={m.id} className="py-1 pr-2 text-zinc-300">—</td>)}
                 <td className="py-1">
                   {hasRun && (
