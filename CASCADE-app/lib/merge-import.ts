@@ -1,4 +1,4 @@
-import type { ModelConfiguration } from "@/lib/schemas/config";
+import type { AttributeOperation, ModelConfiguration } from "@/lib/schemas/config";
 import type { Project } from "@/lib/schemas/network";
 
 /**
@@ -35,9 +35,31 @@ export function remapConfigEventIds(
 ): ModelConfiguration {
   if (Object.keys(nodeIdMap).length === 0 && Object.keys(edgeIdMap).length === 0) return config;
 
+  // Disambiguate by which namespace the id belonged to IN THE SOURCE project —
+  // never fall through from one map to the other, since node/edge ids can
+  // collide with each other and a wrong fallback would silently remap through
+  // the wrong table.
+  const remapId = (elementId: string): string =>
+    elementId in sourceProject.nodes
+      ? (nodeIdMap[elementId] ?? elementId)
+      : elementId in sourceProject.edges
+        ? (edgeIdMap[elementId] ?? elementId)
+        : elementId;
+
+  // An Attribute Operation names Elements in `element` and in its filter's
+  // `exclude` (ADR-0021); a filter's ids are of its own `kind`.
+  const remapOperation = (op: AttributeOperation): AttributeOperation => {
+    if (op.element !== undefined) return { ...op, element: remapId(op.element) };
+    if (!op.where?.exclude) return op;
+    const map = op.where.kind === "edge" ? edgeIdMap : nodeIdMap;
+    return { ...op, where: { ...op.where, exclude: op.where.exclude.map((id) => map[id] ?? id) } };
+  };
+
   return {
     ...config,
     events: config.events.map((event) => {
+      const operations = event.attribute_operations;
+      if (operations && operations.length > 0) event = { ...event, attribute_operations: operations.map(remapOperation) };
       const mutations = event.attribute_mutations;
       if (!mutations || Object.keys(mutations).length === 0) return event;
 
@@ -53,18 +75,7 @@ export function remapConfigEventIds(
           remapped[key] = value;
           continue;
         }
-        const elementId = key.slice(0, dotIdx);
-        const field = key.slice(dotIdx + 1);
-        // Disambiguate by which namespace the id belonged to IN THE SOURCE
-        // project — never fall through from one map to the other, since
-        // node/edge ids can collide with each other and a wrong fallback
-        // would silently remap through the wrong table.
-        const newId = elementId in sourceProject.nodes
-          ? (nodeIdMap[elementId] ?? elementId)
-          : elementId in sourceProject.edges
-            ? (edgeIdMap[elementId] ?? elementId)
-            : elementId;
-        remapped[`${newId}.${field}`] = value;
+        remapped[`${remapId(key.slice(0, dotIdx))}.${key.slice(dotIdx + 1)}`] = value;
       }
       return { ...event, attribute_mutations: remapped };
     }),

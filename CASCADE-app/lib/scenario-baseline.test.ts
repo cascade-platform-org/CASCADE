@@ -161,7 +161,7 @@ describe("resetPlan — the ADR-0016 decision table", () => {
       node("n1", { functionality: 1, capacity: 40, properties: { inp_id: "J1", damaged_by: "quake" } } as Partial<Node>),
     ]);
     const plan = resetPlan(deriveBaseline([entry("propagation", s0, s1)]));
-    const fields = plan.map((e) => e.key ?? e.field).sort();
+    const fields = plan.map((e) => e.path?.at(-1) ?? e.field).sort();
     // `functionality` is in there too — the plan carries every machine write —
     // but the model attributes are the ones ONLY the Baseline could undo.
     expect(fields).toEqual(["capacity", "damaged_by", "functionality"]);
@@ -282,5 +282,37 @@ describe("forceOperational", () => {
   it("returns the input untouched when everything is already operational", () => {
     const healthy = snap([node("n1", { functionality: 3, functionality_time: 0 })]);
     expect(forceOperational(healthy, 3)).toBe(healthy);
+  });
+});
+
+describe("nested values (ADR-0021 operations, ADR-0020 §4 Stocks)", () => {
+  const supply = (water: number, power: number) => ({ supply_capacity: { water, power } });
+
+  it("Reset reverts an Event's nested write and keeps a hand edit of its sibling", () => {
+    const s0 = snap([node("n1", supply(10, 5))]);
+    const s1 = snap([node("n1", supply(20, 5))]); // Event: water ×2
+    const s2 = snap([node("n1", supply(20, 7))]); // hand edit: power
+    const history = [entry("graph_update", s1, s2), entry("event_applied", s0, s1, { event_id: "policy" })];
+    const after = applyBaselineEntries(s2, resetPlan(deriveBaseline(history)));
+    expect(after.nodes.n1.supply_capacity).toEqual({ water: 10, power: 7 });
+  });
+
+  it("an object recorded first covers the values later written inside it", () => {
+    const s0 = snap([node("n1")]);
+    const s1 = snap([node("n1", { supply_capacity: { water: 5 } })]); // object appears
+    const s2 = snap([node("n1", { supply_capacity: { water: 9 } })]); // value inside it changes
+    const history = [entry("propagation", s1, s2), entry("propagation", s0, s1)];
+    const after = applyBaselineEntries(s2, resetPlan(deriveBaseline(history)));
+    expect(after.nodes.n1.supply_capacity).toBeUndefined(); // not resurrected as { water: 5 }
+  });
+
+  it("a value recorded before its object is replaced is put back over that object", () => {
+    const s0 = snap([node("n1", supply(10, 5))]);
+    const s1 = snap([node("n1", supply(20, 5))]); // nested write
+    const s2 = snap([node("n1", { supply_capacity: undefined })]); // whole object removed
+    delete (s2.nodes.n1 as Partial<Node>).supply_capacity;
+    const history = [entry("propagation", s1, s2), entry("propagation", s0, s1)];
+    const after = applyBaselineEntries(s2, resetPlan(deriveBaseline(history)));
+    expect(after.nodes.n1.supply_capacity).toEqual({ water: 10, power: 5 });
   });
 });

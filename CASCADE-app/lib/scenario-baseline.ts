@@ -21,7 +21,7 @@
  */
 
 import { reverseMutations } from "@/lib/event-application";
-import { writeFieldValue } from "@/lib/graph-diff";
+import { changePath, writeFieldValue } from "@/lib/graph-diff";
 import { updatesInScenario } from "@/lib/scenario-history";
 import type { AnyUpdateEntry, GraphDiff, GraphSnapshot } from "@/lib/schemas/network";
 
@@ -70,7 +70,9 @@ export interface BaselineEntry {
   /** Element or Canvas id. */
   id: string;
   field: string;
-  /** Set only for `field: "properties"`, matching a Graph Diff's FieldChange. */
+  /** Where inside `field` the value sits, as in a Graph Diff's FieldChange; absent = the whole field. */
+  path?: string[];
+  /** Legacy one-step `path` (a `properties` key), on entries retired by older builds. */
   key?: string;
   /** The value from before the scenario touched this field, or DIFF_ABSENT. */
   value: unknown;
@@ -82,12 +84,24 @@ export type ScenarioBaseline = Map<string, BaselineEntry>;
 
 /**
  * Structured, not dot-joined. `"<elementId>.<field>"` would have to split on the
- * last dot, which EPANET ids break (`J.12.A`), and a `properties` sub-key needs
- * a third component anyway. JSON is used purely as a collision-free encoder —
- * nothing parses this back, because the parts are carried on the entry.
+ * last dot, which EPANET ids break (`J.12.A`), and a nested value needs its path
+ * anyway. JSON is used purely as a collision-free encoder — nothing parses this
+ * back, because the parts are carried on the entry.
  */
-export function baselineKey(id: string, field: string, key?: string): string {
-  return JSON.stringify([id, field, key ?? null]);
+export function baselineKey(id: string, field: string, path: readonly string[] = []): string {
+  return JSON.stringify([id, field, ...path]);
+}
+
+/** The key of an entry, legacy `key` included. */
+export const entryKey = (e: Pick<BaselineEntry, "id" | "field" | "path" | "key">): string =>
+  baselineKey(e.id, e.field, changePath(e));
+
+/** True when the Baseline already holds `path` or an object containing it: that value is older. */
+function heldAbove(baseline: ScenarioBaseline, id: string, field: string, path: readonly string[]): boolean {
+  for (let depth = 0; depth <= path.length; depth++) {
+    if (baseline.has(baselineKey(id, field, path.slice(0, depth)))) return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,12 +148,14 @@ export function foldDiff(baseline: ScenarioBaseline, diff: GraphDiff, source: Ba
     for (const record of group) {
       if (record.op === "update") {
         for (const change of record.fields) {
-          const k = baselineKey(record.id, change.field, change.key);
-          if (baseline.has(k)) continue;
-          baseline.set(k, {
+          const path = changePath(change);
+          // First write wins, and a value inside an object the Baseline already holds is
+          // covered by it: that object's recorded value is from before this write.
+          if (heldAbove(baseline, record.id, change.field, path)) continue;
+          baseline.set(baselineKey(record.id, change.field, path), {
             id: record.id,
             field: change.field,
-            ...(change.key !== undefined ? { key: change.key } : {}),
+            ...(path.length > 0 ? { path } : {}),
             value: change.before,
             source,
           });
@@ -180,9 +196,7 @@ export function deriveBaseline(
   const resetInBuffer = history.some((e) => e.update_type === "scenario_reset");
   if (!resetInBuffer) {
     for (const entry of retired) {
-      if (!baseline.has(baselineKey(entry.id, entry.field, entry.key))) {
-        baseline.set(baselineKey(entry.id, entry.field, entry.key), entry);
-      }
+      if (!baseline.has(entryKey(entry))) baseline.set(entryKey(entry), entry);
     }
   }
 
@@ -366,12 +380,16 @@ export function applyBaselineEntries(
     return copy;
   };
 
-  for (const entry of entries) {
+  // Objects before the values inside them: an object recorded AFTER a nested value
+  // of it holds that value mid-scenario, and the nested entry, written second,
+  // puts the older value back.
+  const ordered = [...entries].sort((a, b) => changePath(a).length - changePath(b).length);
+  for (const entry of ordered) {
     const record = openForWrite(entry.id);
     if (!record) continue;
-    // Same primitive diff application uses, so the DIFF_ABSENT and `properties`
+    // Same primitive diff application uses, so the DIFF_ABSENT and nested-path
     // rules have exactly one implementation between the two modules.
-    writeFieldValue(record, entry.field, entry.key, entry.value);
+    writeFieldValue(record, entry.field, changePath(entry), entry.value);
   }
 
   if (written.size === 0) return snapshot;

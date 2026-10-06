@@ -592,7 +592,7 @@ function applyEventFromActionBar(
   const N = useConfigStore.getState().getFunctionalityN();
   const snapshotBefore = storeState.toGraphSnapshot();
 
-  storeState.applyEvent(event, N);
+  const refused = storeState.applyEvent(event, N);
 
   const snapshotAfter = useCanvasStore.getState().toGraphSnapshot();
   const affected = countChangedElements(snapshotBefore, snapshotAfter);
@@ -604,6 +604,13 @@ function applyEventFromActionBar(
     variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
     durationMs: 3500,
   });
+  // Attribute Operations are refused per Element rather than clamped (ADR-0021); say which.
+  if (refused.length > 0) {
+    pushToast({
+      message: `${refused.length} operation${refused.length > 1 ? "s" : ""} not applied: ${refused.slice(0, 2).join("; ")}${refused.length > 2 ? "; …" : ""}`,
+      variant: "warning",
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -8,10 +8,12 @@
  * The tab components own all domain-specific state; this file is a thin router.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "./primitives";
+import { useShallow } from "zustand/react/shallow";
 import { useConfigStore } from "@/store/config-store";
+import { operationProblems } from "./attribute-operations-editor";
 import { useUiStore } from "@/store/ui-store";
 import type { ConfigModalTab } from "@/store/ui-store";
 import { TabFunctionalityScale } from "./tab-functionality-scale";
@@ -61,6 +63,9 @@ export function ConfigModal() {
   // backdrop — silently closing the modal. Requiring the press to have begun
   // on the backdrop as well means only a genuine backdrop click closes it.
   const pressStartedOnBackdrop = useRef(false);
+  // Shown once a Save was refused, and recomputed as the rows are fixed.
+  const [saveTried, setSaveTried] = useState(false);
+  const problems = useConfigStore(useShallow((s) => operationProblems(s.draft.events)));
 
   function handleClose() {
     if (isDirty) {
@@ -71,6 +76,12 @@ export function ConfigModal() {
   }
 
   function handleSave() {
+    // The configuration travels with every Propagation request and the backend
+    // validates it, so a half-written Attribute Operation would fail them all.
+    if (problems.length > 0) {
+      setSaveTried(true);
+      return;
+    }
     commitDraft();
     // The new Event may have been deleted before Save; report only a saved one.
     const id = newEventId.current;
@@ -139,7 +150,12 @@ export function ConfigModal() {
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 justify-end gap-2 border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
+          {saveTried && problems.length > 0 && (
+            <p className="mr-auto text-xs text-red-600 dark:text-red-400">
+              Fix before saving — {problems.slice(0, 2).join("; ")}{problems.length > 2 ? "; …" : ""}
+            </p>
+          )}
           <button
             onClick={handleClose}
             className="rounded px-4 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"

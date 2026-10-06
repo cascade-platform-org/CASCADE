@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 EventKind = Literal["hazard", "disservice", "temporal_jump"]
@@ -33,6 +33,56 @@ class CategoryDefinition(BaseModel):
 class DirectDamageEffect(BaseModel):
     expected_repair_time: int = Field(..., ge=0, description="Hours")
     # future: resources_needed
+
+
+class ElementFilter(BaseModel):
+    """Selects Elements by conditions that must all hold (ADR-0021).
+
+    Resolved when it is used, against the model at that moment, so an Element
+    added later is included. `exclude` holds matches unticked by hand.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["node", "edge"] = "node"
+    canvas: Optional[str] = Field(default=None, description="Canvas id or label.")
+    node_type: Optional[str] = Field(default=None, description="Nodes only.")
+    category: Optional[str] = Field(
+        default=None,
+        description="Nodes: tagged, supplied or demanded. Edges: their source's supply.",
+    )
+    label_contains: Optional[str] = Field(
+        default=None,
+        description='Case-insensitive; an edge reads as "source label → target label".',
+    )
+    exclude: Optional[list[str]] = Field(default=None, description="Matches left out, by Element id.")
+
+
+AttributeOperationKind = Literal["set", "add", "mul", "at_most", "at_least"]
+
+
+class AttributeOperation(BaseModel):
+    """`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).
+
+    `at_most` caps the value at `value`; `at_least` raises it to `value`. Applied
+    client-side when the Event fires; the engine never reads it.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    element: Optional[str] = Field(default=None, min_length=1)
+    where: Optional[ElementFilter] = None
+    path: list[str] = Field(..., min_length=1, description='Field path, e.g. ["supply_capacity", "water"].')
+    op: AttributeOperationKind
+    value: float | int | bool | str
+
+    @model_validator(mode="after")
+    def _one_target_and_numeric_arithmetic(self) -> "AttributeOperation":
+        if (self.element is None) == (self.where is None):
+            raise ValueError("give exactly one of `element` (an id) or `where` (a filter)")
+        if self.op != "set" and (isinstance(self.value, bool) or not isinstance(self.value, (int, float))):
+            raise ValueError("add, mul, at_most and at_least need a number `value`")
+        if any(not segment for segment in self.path):
+            raise ValueError("a path segment cannot be empty")
+        return self
 
 
 class EventDefinition(BaseModel):
@@ -79,6 +129,14 @@ class EventDefinition(BaseModel):
             "including first-class fields like `functionality` and `direct_damage`. "
             "`direct_damage_effects` is kept as a typed, engine-recognised complement — "
             "do not express physical damage solely via attribute_mutations."
+        ),
+    )
+    attribute_operations: Optional[list[AttributeOperation]] = Field(
+        default=None,
+        description=(
+            "Ordered operations on the value a field holds when the Event fires, applied "
+            "after attribute_mutations (ADR-0021). Operations on one Element and path "
+            "compose in order. Client-side only; the engine never reads them."
         ),
     )
 

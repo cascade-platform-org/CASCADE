@@ -2128,7 +2128,15 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " on the exposed elements."
+                "text": " on the exposed elements. "
+              },
+              {
+                "kind": "strong",
+                "text": "Attribute operations"
+              },
+              {
+                "kind": "text",
+                "text": " let an Event change a value relative to what it is — halve a supply, add 5 to a demand, cap a capacity — on one element or on every element a filter selects (kind, canvas, node type, category, part of the label, then tick the matches). An operation that cannot apply to an element (arithmetic on a value the element does not have, or a result out of range) is skipped for that element and reported when the Event fires; Save refuses an operation that is not filled in."
               }
             ],
             [

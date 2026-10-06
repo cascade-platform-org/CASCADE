@@ -283,12 +283,17 @@ export const DIFF_ABSENT = "__CASCADE_ABSENT__";
  *
  * `field` is data, not part of a string key: MutationReversal's
  * `"<elementId>.<field>"` convention has to split on the last dot, and EPANET
- * element ids contain dots (`J.12.A`). `key` is set only for `properties`,
- * which is diffed one level deep because `ElementUpdate.properties` is MERGED
- * onto an Element rather than replaced.
+ * element ids contain dots (`J.12.A`).
+ *
+ * `path` addresses a value nested inside `field` (`["water", "demand"]` inside
+ * `category_dependency_profiles`): the differ recurses into objects present on
+ * both sides, so one nested write is recorded and reverted alone (ADR-0021,
+ * ADR-0020 §4). Absent = the whole field. `key` is the legacy one-step form for
+ * `properties`, read as `[key]` (`changePath` in `lib/graph-diff.ts`).
  */
 export const FieldChangeSchema = z.object({
   field: z.string(),
+  path: z.array(z.string()).optional(),
   key: z.string().optional(),
   before: z.unknown(),
   after: z.unknown(),

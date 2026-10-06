@@ -1,6 +1,6 @@
 # ADR-0016 — Reset, Clear Event and Undo: three reverters over one Scenario Baseline
 
-**Status:** accepted (2026-09-10). Proposed amendment: ADR-0020 §4 keys a Stock field by its full path.
+**Status:** accepted (2026-09-10). Amended 2026-10-06: entries are keyed by element id, field and the path inside it (ADR-0017's `FieldChange.path`); an entry for an object covers the values recorded inside it later, and reverting writes objects before the values inside them.
 
 ## Context
 
@@ -77,8 +77,8 @@ names fields, and why it names only these.
 Reset, and Clear Event, operate over the **Scenario Baseline**: a field-level map
 holding each touched field's value from before the scenario touched it.
 
-Entries are keyed **structurally** — element id, field name, and a `properties`
-sub-key — not by the `"<elementId>.<field>"` string a Mutation Reversal uses.
+Entries are keyed **structurally** — element id, field name, and the path inside
+the field (a `properties` key, or since 2026-10-06 any nested value) — not by the `"<elementId>.<field>"` string a Mutation Reversal uses.
 That convention has to split on the last dot, which EPANET ids break (`J.12.A`),
 and a `properties` key needs a third component anyway. The parts are carried on
 the entry, so nothing parses the key back; it exists only to hold one field once

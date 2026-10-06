@@ -4,17 +4,16 @@
  * FilterEditor — narrows Elements by Kind, Canvas, Category, Node Type and
  * label, then lists every match with a tick box. Unticking adds the Element to
  * `exclude`, so the filter stays live: an Element that starts matching later
- * is included. Shared by profile operations and Metric targets.
+ * is included. Shared by Event Attribute Operations, profile rows and Metric targets.
  */
 
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
-import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { filterLabel, filterMisuse, matchElements } from "@/lib/element-filter";
-import { explainFilter } from "@/lib/temporal-simulation-explainers";
-import type { ElementFilter } from "@/lib/temporal-simulation-schema";
+import { explainFilter, type Explanation } from "@/lib/temporal-simulation-explainers";
+import type { ElementFilter } from "@/lib/schemas/config";
 import { NODE_TYPES } from "@/lib/schemas/primitives";
 import { Field, inputCls } from "./fields";
 
@@ -29,8 +28,20 @@ function clean(f: ElementFilter): ElementFilter {
   return out;
 }
 
-export function FilterEditor({ value, onChange }: { value: ElementFilter; onChange: (f: ElementFilter) => void }) {
-  const explain = useTemporalSimulationStore((s) => s.explain);
+/**
+ * `onExplain` receives what the filter selects, for a host that explains its
+ * controls (the Temporal Simulation window); Config → Events passes none.
+ */
+export function FilterEditor({
+  value,
+  onChange,
+  onExplain,
+}: {
+  value: ElementFilter;
+  onChange: (f: ElementFilter) => void;
+  onExplain?: (e: Explanation) => void;
+}) {
+  const explain = onExplain ?? (() => {});
   const { nodes, edges, canvases } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges, canvases: s.canvases })));
   const categories = useConfigStore(useShallow((s) => s.config.categories.map((c) => c.name)));
   const { kind } = value;

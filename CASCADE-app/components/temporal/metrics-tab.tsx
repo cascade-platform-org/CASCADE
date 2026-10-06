@@ -39,7 +39,7 @@ export function MetricsTab() {
             <SmallButton tone="danger" onClick={() => update((ms) => { ms.splice(i, 1); })}><Trash2 size={11} /></SmallButton>
           </div>
           {/* FilterEditor explains its own change, so this skips `describe`. */}
-          <FilterEditor value={m.target} onChange={(target) => update((ms) => { ms[i].metric.target = target; })} />
+          <FilterEditor onExplain={explain} value={m.target} onChange={(target) => update((ms) => { ms[i].metric.target = target; })} />
           <div className="grid grid-cols-4 gap-2">
             <Field label="Read">
               <select className={inputCls} value={m.read} onChange={(e) => edit(i, { read: e.target.value as Metric["read"], phase: undefined })}>

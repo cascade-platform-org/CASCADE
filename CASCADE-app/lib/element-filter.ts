@@ -8,7 +8,7 @@
 
 import type { Canvas, Edge, Node } from "@/lib/schemas/network";
 import { elementLabel } from "@/lib/coalition";
-import type { ElementFilter } from "@/lib/temporal-simulation-schema";
+import type { ElementFilter } from "@/lib/schemas/config";
 
 export interface FilterableModel {
   nodes: Record<string, Node>;

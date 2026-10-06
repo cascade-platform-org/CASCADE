@@ -31,6 +31,7 @@
 
 import { nanoid } from "nanoid";
 
+import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
 import { DIFF_ABSENT } from "@/lib/schemas/network";
 import type { Node, Edge, GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -64,6 +65,8 @@ export interface EventApplication {
   snapshot: GraphSnapshot;
   /** How to undo it — feed to `reverseMutations`. */
   reversal: MutationReversal;
+  /** Attribute Operations refused for an Element, with the reason (ADR-0021: never clamped). */
+  warnings: string[];
 }
 
 /** Split a `"<elementId>.<field>"` key. Returns null when there is no dot. */
@@ -91,6 +94,16 @@ class ElementWriter {
   /** The Element as it was before any write in this application. */
   original(id: string): Node | Edge | undefined {
     return this.source.nodes[id] ?? this.source.edges[id];
+  }
+
+  /** The Element as written so far: what a relative operation reads. */
+  current(id: string): Node | Edge | undefined {
+    return this.nodes[id] ?? this.edges[id];
+  }
+
+  /** The registries as written so far: what a filter resolves against. */
+  registries(): { nodes: Record<string, Node>; edges: Record<string, Edge> } {
+    return { nodes: this.nodes, edges: this.edges };
   }
 
   has(id: string): boolean {
@@ -181,6 +194,10 @@ export const temporalJumpHours = (e: EventDefinition): number | undefined =>
  *   1. `vulnerability_levels` — impose `N − level`, only where it worsens
  *   2. `direct_damage` — Hazards only, on every Element the Event affects
  *   3. `attribute_mutations` — unrestricted field overwrites
+ *   4. `attribute_operations` — `op(current, value)` at a path (ADR-0021). The one
+ *      deliberate exception to "read the original": an operation is relative, so
+ *      it reads what the passes before it wrote, and operations on one Element
+ *      and path compose in list order. A filter resolves against that state too.
  *
  * The Event becomes the Responsibility Share of every Element whose Functionality
  * it changed (`{ [event.id]: 1.0 }`), so the UI reports the Event as the cause
@@ -294,7 +311,38 @@ export function applyEventToSnapshot(
     }
   }
 
-  return { snapshot: writer.result(), reversal };
+  // ── 4. attribute_operations (ADR-0021) ────────────────────────────────────
+  // Last, so they win; a refused operation leaves that Element as it was and is
+  // reported, never clamped. Writing Functionality re-attributes the cause to the
+  // Event, as phases 1 and 3 do.
+  const warnings: string[] = [];
+  const operations = event.attribute_operations ?? [];
+  if (operations.length > 0) {
+    const canvases = Object.fromEntries(snapshot.canvases.map((c) => [c.id, c]));
+    for (const op of operations) {
+      for (const id of operationTargets(op, { ...writer.registries(), canvases })) {
+        const el = writer.current(id);
+        if (!el) continue;
+        const kind = id in snapshot.nodes ? "node" : "edge";
+        const out = applyOperationTo(el as unknown as Record<string, unknown>, kind, op, n);
+        if ("error" in out) {
+          warnings.push(`${event.label} → ${("label" in el && el.label) || id}: ${out.error}`);
+          continue;
+        }
+        const field = op.path[0];
+        const before = (writer.original(id) as Record<string, unknown> | undefined)?.[field];
+        capture(id, field, before === undefined ? ABSENT : before);
+        if (field === "functionality") {
+          capture(id, "responsibility_share", writer.original(id)?.responsibility_share ?? ABSENT);
+          writer.write(id, { [field]: out.element[field], responsibility_share: eventCause });
+        } else {
+          writer.write(id, { [field]: out.element[field] });
+        }
+      }
+    }
+  }
+
+  return { snapshot: writer.result(), reversal, warnings };
 }
 
 /**

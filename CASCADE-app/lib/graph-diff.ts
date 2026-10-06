@@ -11,12 +11,14 @@
  * throws, undo just leaves a value behind. Whole snapshots had this property for
  * free and it is the one virtue of theirs worth preserving.
  *
- * `properties` is the single exception, and it is a shape rule rather than a
- * field rule: it is diffed one level deep because `ElementUpdate.properties` is
- * MERGED onto an Element (`lib/element-update.ts`), so a Rule adding one key to
- * a 20-key object would otherwise store that whole object on both sides. Every
- * other compound field is replaced wholesale by whoever writes it, so storing it
- * whole is both exact and cheaper.
+ * Nested values are diffed by SHAPE, never by name: wherever a field holds a
+ * plain object on both sides, the differ recurses and records each changed
+ * value under its `path` (`category_dependency_profiles › water › demand`).
+ * An Attribute Operation writes one nested value (ADR-0021) and a Stock is
+ * written field by field (ADR-0020 §4), so a whole-object record would make
+ * Reset revert a sibling the user edited by hand. `properties` used to be the
+ * one field diffed (one level) this way, under a `key`; that legacy form is
+ * still read (`changePath`).
  *
  * Diffs carry BOTH directions, so undo applies one backwards and redo applies
  * the same one forwards, against the live graph. There is no chain to replay
@@ -89,24 +91,27 @@ function diffFields(before: Record_, after: Record_): FieldChange[] {
   const changes: FieldChange[] = [];
   const fields = new Set([...Object.keys(before), ...Object.keys(after)]);
 
-  for (const field of fields) {
-    const b = before[field];
-    const a = after[field];
-
-    if (field === "properties" && isPlainObject(b) && isPlainObject(a)) {
+  /** Record a change at `path` inside `field`, recursing while both sides are objects. */
+  const visit = (field: string, path: string[], b: unknown, a: unknown): void => {
+    if (isPlainObject(b) && isPlainObject(a)) {
       for (const key of new Set([...Object.keys(b), ...Object.keys(a)])) {
-        const bk = key in b ? b[key] : DIFF_ABSENT;
-        const ak = key in a ? a[key] : DIFF_ABSENT;
-        if (!deepEqual(bk, ak)) changes.push({ field, key, before: bk, after: ak });
+        visit(field, [...path, key], key in b ? b[key] : DIFF_ABSENT, key in a ? a[key] : DIFF_ABSENT);
       }
-      continue;
+      return;
     }
+    if (deepEqual(b, a)) return;
+    changes.push(path.length > 0 ? { field, path, before: b, after: a } : { field, before: b, after: a });
+  };
 
-    const bv = field in before ? b : DIFF_ABSENT;
-    const av = field in after ? a : DIFF_ABSENT;
-    if (!deepEqual(bv, av)) changes.push({ field, before: bv, after: av });
+  for (const field of fields) {
+    visit(field, [], field in before ? before[field] : DIFF_ABSENT, field in after ? after[field] : DIFF_ABSENT);
   }
   return changes;
+}
+
+/** Where inside its field a change sits: `path`, or the legacy one-step `key`, or the whole field. */
+export function changePath(change: Pick<FieldChange, "path" | "key">): string[] {
+  return change.path ?? (change.key !== undefined ? [change.key] : []);
 }
 
 function isPlainObject(v: unknown): v is Record_ {
@@ -205,39 +210,48 @@ export type DiffDirection = "forward" | "backward";
 /**
  * Write one field's value onto a record, IN PLACE.
  *
- * The single home for the DIFF_ABSENT rule and the `properties` sub-key rule,
- * shared by diff application here and by Scenario Baseline reversal
+ * The single home for the DIFF_ABSENT rule and the nested-path rule, shared by
+ * diff application here and by Scenario Baseline reversal
  * (`lib/scenario-baseline.ts`). Both undo the same kinds of write, so a change
  * to "delete versus set" semantics has to land in one place or the two drift.
  *
- * `key` addresses a sub-key of `field` (only `properties` is diffed that deep).
- * DIFF_ABSENT deletes rather than writing `null`, which an
- * optional-but-not-nullable Zod/Pydantic field would reject.
+ * `path` addresses a value nested inside `field`; every object on the way is
+ * copied, never mutated, and created when missing. DIFF_ABSENT deletes rather
+ * than writing `null`, which an optional-but-not-nullable Zod/Pydantic field
+ * would reject. An object whose last key was removed stays `{}` rather than
+ * disappearing: `{}` and absent are indistinguishable to every consumer, and
+ * dropping it would need a second sentinel to undo.
  */
 export function writeFieldValue(
   record: Record_,
   field: string,
-  key: string | undefined,
+  path: readonly string[],
   value: unknown,
 ): void {
-  if (key !== undefined) {
-    const props = isPlainObject(record[field]) ? { ...(record[field] as Record_) } : {};
-    if (value === DIFF_ABSENT) delete props[key];
-    else props[key] = value;
-    // A record whose last property was removed keeps `properties: {}` rather
-    // than losing the key: `{}` and absent are indistinguishable to every
-    // consumer, and dropping it would need a second sentinel to undo.
-    record[field] = props;
+  if (path.length === 0) {
+    if (value === DIFF_ABSENT) delete record[field];
+    else record[field] = value;
     return;
   }
-  if (value === DIFF_ABSENT) delete record[field];
-  else record[field] = value;
+  const root: Record_ = isPlainObject(record[field]) ? { ...record[field] } : {};
+  let parent = root;
+  for (const key of path.slice(0, -1)) {
+    const child: Record_ = isPlainObject(parent[key]) ? { ...parent[key] } : {};
+    parent[key] = child;
+    parent = child;
+  }
+  const last = path[path.length - 1];
+  if (value === DIFF_ABSENT) delete parent[last];
+  else parent[last] = value;
+  record[field] = root;
 }
 
 function applyFields(record: Record_, fields: readonly FieldChange[], dir: DiffDirection): Record_ {
   const out: Record_ = { ...record };
+  // One diff never holds both a field and a value nested in it (the differ recurses
+  // only where both sides are objects), so the changes are independent of order.
   for (const change of fields) {
-    writeFieldValue(out, change.field, change.key, dir === "forward" ? change.after : change.before);
+    writeFieldValue(out, change.field, changePath(change), dir === "forward" ? change.after : change.before);
   }
   return out;
 }

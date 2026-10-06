@@ -80,7 +80,7 @@ describe("diffGraph / applyGraphDiff", () => {
     ]);
   });
 
-  it("diffs properties one level deep, not as a whole object", () => {
+  it("diffs nested objects by path, not as a whole object", () => {
     const before = snap([node("n1", { properties: { inp_id: "J1", kind: "junction" } })]);
     const after = snap([
       node("n1", { properties: { inp_id: "J1", kind: "junction", damaged_by: "quake" } }),
@@ -89,8 +89,31 @@ describe("diffGraph / applyGraphDiff", () => {
     // One entry for the one key that moved — NOT the whole 3-key object twice.
     // This is the ADR-0015 case: a Rule merging one custom key onto an Element.
     expect(diff.nodes[0].fields).toEqual([
-      { field: "properties", key: "damaged_by", before: DIFF_ABSENT, after: "quake" },
+      { field: "properties", path: ["damaged_by"], before: DIFF_ABSENT, after: "quake" },
     ]);
+  });
+
+  it("records a value two objects deep alone, and round-trips it", () => {
+    const profiles = (demand: number) => ({ water: { dependency_level: 2, demand }, power: { dependency_level: 1, demand: 5 } });
+    const before = snap([node("n1", { category_dependency_profiles: profiles(10) } as Partial<Node>)]);
+    const after = snap([node("n1", { category_dependency_profiles: profiles(12) } as Partial<Node>)]);
+    const diff = roundTrips(before, after);
+    expect(diff.nodes[0].fields).toEqual([
+      { field: "category_dependency_profiles", path: ["water", "demand"], before: 10, after: 12 },
+    ]);
+  });
+
+  it("records a whole object where one side is not an object", () => {
+    const before = snap([node("n1")]);
+    const after = snap([node("n1", { supply_capacity: { water: 5 } })]);
+    const diff = roundTrips(before, after);
+    expect(diff.nodes[0].fields).toEqual([{ field: "supply_capacity", before: DIFF_ABSENT, after: { water: 5 } }]);
+  });
+
+  it("still applies a legacy `key` change from an older history entry", () => {
+    const before = snap([node("n1", { properties: { a: 1 } })]);
+    const legacy = { nodes: [{ id: "n1", op: "update" as const, fields: [{ field: "properties", key: "b", before: DIFF_ABSENT, after: 2 }] }], edges: [], canvases: [] };
+    expect(applyGraphDiff(before, legacy, "forward").nodes.n1.properties).toEqual({ a: 1, b: 2 });
   });
 
   it("round-trips removing the last property key", () => {

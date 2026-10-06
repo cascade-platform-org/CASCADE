@@ -392,16 +392,21 @@ Zod mirror, and desyncs the Scorecard dedup hash from the true prior state.
 class FieldChange(BaseModel):
     """One field's value on each side of a Graph Diff.
 
-    `key` is set only for `field="properties"`, which is diffed one level deep
-    because `ElementUpdate.properties` is MERGED onto an Element rather than
-    replaced (`lib/element-update.ts`) — a Rule adding one key to a 20-key
-    object would otherwise store the whole object on both sides.
+    `path` addresses a value nested inside `field` (`["water", "demand"]` inside
+    `category_dependency_profiles`): the differ recurses into objects present on
+    both sides, so an Attribute Operation writing one nested value (ADR-0021), or
+    a Stock field (ADR-0020 §4), is recorded and reverted alone, and a hand edit
+    of a sibling value survives. Absent = the whole field.
+
+    `key` is the legacy form of a one-step `path`, written for `properties` by
+    builds before 2026-10-06; readers treat it as `[key]`.
 
     `field` is carried as data rather than encoded into a string key: the
     `"<elementId>.<field>"` convention used by MutationReversal has to split on
     the last dot, and EPANET element ids contain dots (`J.12.A`).
     """
     field: str
+    path: Optional[list[str]] = None
     key: Optional[str] = None
     before: Any = None
     after: Any = None

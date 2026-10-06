@@ -63,7 +63,7 @@ The span of `update_history` belonging to the **current** scenario: newest-first
 _Avoid_: "session", "undo stack" (the undo stack is positional over ALL history; a Scenario History stops at the Reset)
 
 **Scenario Baseline**:
-Each field's value from before the current scenario touched it, keyed structurally by Element id, field and `properties` sub-key, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event, and every entry carries a **source tag** naming who wrote the field (`event:<id>`, `propagation`, `manual`). Machine writes are captured **by provenance, never by field name**, so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Derived by folding `update_history`, so it cannot disagree with the history. Mechanics in ADR-0016.
+Each field's value from before the current scenario touched it, keyed structurally by Element id, field and the path inside it, and consumed by **Clear Event** and by the model-attribute half of **Reset**. Same shape as a **Mutation Reversal**, including the `ABSENT` sentinel, but spanning the whole scenario rather than one Event, and every entry carries a **source tag** naming who wrote the field (`event:<id>`, `propagation`, `manual`). Machine writes are captured **by provenance, never by field name**, so an attribute a Rule gains under ADR-0015 is covered without anyone listing it; a hand edit, which provenance cannot see, is captured for **Scenario Fields** only. Derived by folding `update_history`, so it cannot disagree with the history. Mechanics in ADR-0016.
 _Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
 
 **Reset**:
@@ -118,11 +118,11 @@ _Avoid_: "simulation mode" ("Simulation" bare is avoided), "replay"
 The canvas recoloured by the Level Scale while a run is shown (the **Run View**), as **Analysis Mode** recolours it by a score: colours mean a stock's level or its change over the period, not Functionality. Cleared by End run or Reset.
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
-**Attribute Operation** *(proposed)*:
-An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
+**Attribute Operation**:
+An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. Runs after `attribute_mutations`; a result outside the field's range, or arithmetic on an absent value, is refused for that Element and reported, never clamped. ADR-0021. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
 _Avoid_: "mutation" (that is the literal-overwrite `attribute_mutations`), "formula", "expression"
 
-**Element Filter** *(proposed)*:
+**Element Filter**:
 A selection of Elements by what they are — kind (node or edge), Canvas, Node Type, Category, a label substring — every given condition holding, minus the matches unticked by hand (`exclude`). Resolved when used, against the model at that moment, in Element-id order. The target of an **Attribute Operation** (`where`) and of a Temporal Simulation Metric. ADR-0021.
 _Avoid_: "selector", "query", "group" (a filter is re-resolved each time; it stores no membership)
 

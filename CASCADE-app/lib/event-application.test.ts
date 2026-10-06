@@ -254,3 +254,92 @@ describe("Temporal Jump", () => {
     expect("responsibility_share" in reverted.nodes.n1).toBe(false);
   });
 });
+
+describe("attribute_operations (ADR-0021)", () => {
+  const policy = (ops: EventDefinition["attribute_operations"], over: Partial<EventDefinition> = {}): EventDefinition => ({
+    id: "policy",
+    label: "Policy",
+    type: "disservice",
+    frequency_per_10y: 0,
+    attribute_operations: ops,
+    ...over,
+  });
+  const pool = (water: number, over: Partial<Node> = {}) => node("pool", { supply_capacity: { water, power: 5 }, ...over });
+
+  it("applies op(current, value) at a nested path and leaves its siblings alone", () => {
+    const { snapshot, warnings } = applyEventToSnapshot(
+      snap([pool(10)]),
+      policy([{ element: "pool", path: ["supply_capacity", "water"], op: "mul", value: 0.5 }]),
+      N,
+    );
+    expect(warnings).toEqual([]);
+    expect(snapshot.nodes.pool.supply_capacity).toEqual({ water: 5, power: 5 });
+  });
+
+  it("applies to every match of a filter, and leaves the rest untouched by identity", () => {
+    const s = snap([
+      node("s1", { node_type: "Service", category_dependency_profiles: { water: { dependency_level: 1, demand: 10 } } }),
+      node("s2", { node_type: "Service", category_dependency_profiles: { water: { dependency_level: 1, demand: 20 } } }),
+      pool(10, { node_type: "Source" }),
+    ]);
+    const { snapshot } = applyEventToSnapshot(
+      s,
+      policy([{ where: { kind: "node", node_type: "Service" }, path: ["category_dependency_profiles", "water", "demand"], op: "add", value: 5 }]),
+      N,
+    );
+    expect(snapshot.nodes.s1.category_dependency_profiles?.water?.demand).toBe(15);
+    expect(snapshot.nodes.s2.category_dependency_profiles?.water?.demand).toBe(25);
+    expect(snapshot.nodes.pool).toBe(s.nodes.pool);
+  });
+
+  it("composes operations on one path in order, after attribute_mutations", () => {
+    const { snapshot } = applyEventToSnapshot(
+      snap([pool(10)]),
+      policy(
+        [
+          { element: "pool", path: ["supply_capacity", "water"], op: "add", value: 2 },
+          { element: "pool", path: ["supply_capacity", "water"], op: "at_most", value: 50 },
+          { element: "pool", path: ["supply_capacity", "water"], op: "mul", value: 2 },
+        ],
+        { attribute_mutations: { "pool.supply_capacity": { water: 100, power: 5 } } },
+      ),
+      N,
+    );
+    expect(snapshot.nodes.pool.supply_capacity?.water).toBe(100); // (100 + 2) capped at 50, ×2
+  });
+
+  it("refuses, never clamps: absent value, a path into a number, a schema violation, above N", () => {
+    const s = snap([pool(10)]);
+    const { snapshot, warnings } = applyEventToSnapshot(
+      s,
+      policy([
+        { element: "pool", path: ["supply_capacity", "gas"], op: "add", value: 1 },
+        { element: "pool", path: ["supply_capacity", "water", "level"], op: "set", value: 1 },
+        { element: "pool", path: ["functionality"], op: "mul", value: 0 },
+        { element: "pool", path: ["functionality"], op: "add", value: 1 },
+      ]),
+      N,
+    );
+    expect(warnings).toHaveLength(4);
+    expect(warnings.join("\n")).toMatch(/absent value/);
+    expect(warnings.join("\n")).toMatch(/holds a value, not an object/);
+    expect(warnings.join("\n")).toMatch(/not a valid value/);
+    expect(warnings.join("\n")).toMatch(/above the top Functionality level/);
+    expect(snapshot).toBe(s);
+  });
+
+  it("set creates a missing value, and writing Functionality names the Event as the cause", () => {
+    const { snapshot, reversal } = applyEventToSnapshot(
+      snap([node("n1")]),
+      policy([
+        { element: "n1", path: ["supply_capacity", "water"], op: "set", value: 40 },
+        { element: "n1", path: ["functionality"], op: "set", value: 1 },
+      ]),
+      N,
+    );
+    expect(snapshot.nodes.n1.supply_capacity).toEqual({ water: 40 });
+    expect(snapshot.nodes.n1.functionality).toBe(1);
+    expect(snapshot.nodes.n1.responsibility_share).toEqual({ policy: 1 });
+    expect(reverseMutations(snapshot, reversal).nodes.n1).toEqual(node("n1"));
+  });
+});

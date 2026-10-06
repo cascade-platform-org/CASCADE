@@ -797,11 +797,26 @@
       "type": "object"
     },
     "FieldChange": {
-      "description": "One field's value on each side of a Graph Diff.\n\n`key` is set only for `field=\"properties\"`, which is diffed one level deep\nbecause `ElementUpdate.properties` is MERGED onto an Element rather than\nreplaced (`lib/element-update.ts`) \u2014 a Rule adding one key to a 20-key\nobject would otherwise store the whole object on both sides.\n\n`field` is carried as data rather than encoded into a string key: the\n`\"<elementId>.<field>\"` convention used by MutationReversal has to split on\nthe last dot, and EPANET element ids contain dots (`J.12.A`).",
+      "description": "One field's value on each side of a Graph Diff.\n\n`path` addresses a value nested inside `field` (`[\"water\", \"demand\"]` inside\n`category_dependency_profiles`): the differ recurses into objects present on\nboth sides, so an Attribute Operation writing one nested value (ADR-0021), or\na Stock field (ADR-0020 \u00a74), is recorded and reverted alone, and a hand edit\nof a sibling value survives. Absent = the whole field.\n\n`key` is the legacy form of a one-step `path`, written for `properties` by\nbuilds before 2026-10-06; readers treat it as `[key]`.\n\n`field` is carried as data rather than encoded into a string key: the\n`\"<elementId>.<field>\"` convention used by MutationReversal has to split on\nthe last dot, and EPANET element ids contain dots (`J.12.A`).",
       "properties": {
         "field": {
           "title": "Field",
           "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
         },
         "key": {
           "anyOf": [

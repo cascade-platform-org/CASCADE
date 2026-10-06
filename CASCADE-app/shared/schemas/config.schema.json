@@ -86,6 +86,165 @@
       "title": "DirectDamageEffect",
       "type": "object"
     },
+    "AttributeOperation": {
+      "additionalProperties": false,
+      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. Applied\nclient-side when the Event fires; the engine never reads it.",
+      "properties": {
+        "element": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Element"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementFilter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "path": {
+          "description": "Field path, e.g. [\"supply_capacity\", \"water\"].",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Path",
+          "type": "array"
+        },
+        "op": {
+          "enum": [
+            "set",
+            "add",
+            "mul",
+            "at_most",
+            "at_least"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "path",
+        "op",
+        "value"
+      ],
+      "title": "AttributeOperation",
+      "type": "object"
+    },
+    "ElementFilter": {
+      "additionalProperties": false,
+      "description": "Selects Elements by conditions that must all hold (ADR-0021).\n\nResolved when it is used, against the model at that moment, so an Element\nadded later is included. `exclude` holds matches unticked by hand.",
+      "properties": {
+        "kind": {
+          "default": "node",
+          "enum": [
+            "node",
+            "edge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "canvas": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canvas id or label.",
+          "title": "Canvas"
+        },
+        "node_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nodes only.",
+          "title": "Node Type"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nodes: tagged, supplied or demanded. Edges: their source's supply.",
+          "title": "Category"
+        },
+        "label_contains": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Case-insensitive; an edge reads as \"source label \u2192 target label\".",
+          "title": "Label Contains"
+        },
+        "exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Matches left out, by Element id.",
+          "title": "Exclude"
+        }
+      },
+      "title": "ElementFilter",
+      "type": "object"
+    },
     "EventDefinition": {
       "properties": {
         "id": {
@@ -192,6 +351,22 @@
           "description": "Keys are dot-notation strings \"<elementId>.<fieldName>\". Values are any JSON-serialisable type. May overwrite any Element field, including first-class fields like `functionality` and `direct_damage`. `direct_damage_effects` is kept as a typed, engine-recognised complement \u2014 do not express physical damage solely via attribute_mutations.",
           "title": "Attribute Mutations",
           "type": "object"
+        },
+        "attribute_operations": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/AttributeOperation"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ordered operations on the value a field holds when the Event fires, applied after attribute_mutations (ADR-0021). Operations on one Element and path compose in order. Client-side only; the engine never reads them.",
+          "title": "Attribute Operations"
         }
       },
       "required": [

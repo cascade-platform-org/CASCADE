@@ -1,6 +1,6 @@
 # ADR-0017 — Update history stores Graph Diffs; auto-save writes a Working Copy
 
-**Status:** accepted (2026-09-10). Proposed amendment: ADR-0020 §4 addresses a Stock field by its full path.
+**Status:** accepted (2026-09-10). Amended 2026-10-06: the differ recurses into every object present on both sides and records a nested value under `FieldChange.path` (`properties` was the one field diffed this way, one level deep, under `key`, which is still read). An Attribute Operation (ADR-0021) and a Stock field (ADR-0020 §4) are then recorded and reverted alone.
 
 ## Context
 

@@ -14,7 +14,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { AnyUpdateEntry } from "@/lib/schemas";
 import { diffByteSize } from "@/lib/graph-diff";
-import { baselineKey, deriveBaseline, foldDiff, sourceOf, type BaselineEntry, type ScenarioBaseline } from "@/lib/scenario-baseline";
+import { deriveBaseline, entryKey, foldDiff, sourceOf, type BaselineEntry, type ScenarioBaseline } from "@/lib/scenario-baseline";
 
 export const HISTORY_LIMIT = 20;
 
@@ -121,7 +121,7 @@ function evict(state: HistoryState): void {
   // bulk edit can push several entries out at the same time, and rebuilding the
   // whole map for each of them is O(retired × evicted) for no benefit.
   const retired = new Map<string, BaselineEntry>();
-  for (const e of state.retiredBaseline) retired.set(baselineKey(e.id, e.field, e.key), e);
+  for (const e of state.retiredBaseline) retired.set(entryKey(e), e);
   let retiredChanged = false;
 
   const retire = (entry: AnyUpdateEntry) => {

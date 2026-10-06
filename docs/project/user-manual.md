@@ -293,7 +293,14 @@ firing and normal propagation takes over.
 
 1. **Define the Event** in Config → Events, as a **Hazard** (physical damage,
    needs repair) or a **Disservice** (no damage, clears with its cause). Set
-   `Vulnerability levels` on the exposed elements.
+   `Vulnerability levels` on the exposed elements. **Attribute operations** let
+   an Event change a value relative to what it is — halve a supply, add 5 to a
+   demand, cap a capacity — on one element or on every element a filter
+   selects (kind, canvas, node type, category, part of the label, then tick
+   the matches). An operation that cannot apply to an element (arithmetic on a
+   value the element does not have, or a result out of range) is skipped for
+   that element and reported when the Event fires; Save refuses an operation
+   that is not filled in.
 2. **Pick the scope** — *Local* or *Global* (§2.6).
 3. **Apply** the Event. Several can be stacked before propagating.
 4. **Propagate.**

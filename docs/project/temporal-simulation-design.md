@@ -883,7 +883,7 @@ this will do" panel go, and their text becomes the user-manual chapter.
 
 | # | Slice | Needs | Done when |
 |---|---|---|---|
-| 1 | **Attribute Operations on Events** (ADR-0021) | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
+| 1 | **Attribute Operations on Events** (ADR-0021) — *built 2026-10-06* | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
 | 2 | **The Temporal Simulation in the project** | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
 | 3 | **Step operator and Run View** | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
 | 4 | **Stocks and storage** (ADR-0020) | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |

@@ -140,7 +140,8 @@ export interface CanvasActions {
    *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_mutations.
    *   3. Pushes an event_applied history entry carrying a Graph Diff of what it changed.
    */
-  applyEvent: (event: EventDefinition, n: number) => void;
+  /** Applies the Event; returns the Attribute Operations it refused, with reasons. */
+  applyEvent: (event: EventDefinition, n: number) => string[];
   /**
    * Revert the most recent event_applied entry AND everything the Propagation
    * wrote, via the Scenario Baseline (ADR-0016). Falls back, for entries written
@@ -472,7 +473,7 @@ export const useCanvasStore = create<CanvasStore>()(
       // inverse; the entry's Graph Diff records the same thing in the same shape
       // for EVERY update type, and the Scenario Baseline reads it (ADR-0016).
       // It is still READ off entries older builds wrote — see clearEvent.
-      const { snapshot } = applyEventToSnapshot(get().toGraphSnapshot(), event, n);
+      const { snapshot, warnings } = applyEventToSnapshot(get().toGraphSnapshot(), event, n);
       withHistory(
         get,
         () => set((draft) => {
@@ -491,6 +492,7 @@ export const useCanvasStore = create<CanvasStore>()(
             : {}),
         },
       );
+      return warnings;
     },
 
     clearEvent() {

@@ -15,7 +15,7 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { filterLabel } from "@/lib/element-filter";
 import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
 import { firesEvery } from "@/lib/timeline-plan";
-import { OperationKindSchema, valueFitsOp } from "@/lib/temporal-simulation-schema";
+import { OperationKindSchema, valueFitsOp } from "@/lib/schemas/config";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
 import { NumberInput } from "@/components/ui/number-input";
@@ -102,6 +102,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         {row.where ? (
           // FilterEditor explains its own change, so this skips `describeRow`.
           <FilterEditor
+            onExplain={useTemporalSimulationStore.getState().explain}
             value={row.where}
             onChange={(where) => updateRow(row.id, (r) => { r.where = where; })}
           />

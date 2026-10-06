@@ -9,6 +9,7 @@ import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, NumberInput, ColBtn, CollapsibleSection } from "./primitives";
 import { IconPickerButton } from "./icon-picker";
+import { AttributeOperationsEditor } from "./attribute-operations-editor";
 import {
   DirectDamageEditor,
   VulnerabilityLevelsEditor,
@@ -167,6 +168,16 @@ export function TabEvents() {
               <AttributeMutationsEditor
                 mutations={ev.attribute_mutations ?? {}}
                 onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
+              />
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              label="Attribute operations"
+              badge={ev.attribute_operations?.length || undefined}
+            >
+              <AttributeOperationsEditor
+                operations={ev.attribute_operations ?? []}
+                onChange={(next) => updateEvent(ev.id, { attribute_operations: next.length > 0 ? next : undefined })}
               />
             </CollapsibleSection>
           </div>

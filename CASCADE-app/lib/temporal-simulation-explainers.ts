@@ -11,7 +11,8 @@
 
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
 import { filterConditions, type FilterableModel } from "@/lib/element-filter";
-import type { AttributeOperation, CalendarUnit, ElementFilter, Metric } from "@/lib/temporal-simulation-schema";
+import type { CalendarUnit, Metric } from "@/lib/temporal-simulation-schema";
+import type { AttributeOperation, ElementFilter } from "@/lib/schemas/config";
 
 export interface Explanation {
   title: string;

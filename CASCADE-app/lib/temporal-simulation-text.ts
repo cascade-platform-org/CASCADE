@@ -8,18 +8,8 @@
  */
 
 import type { ZodError } from "zod";
-import {
-  AggregateSchema,
-  CalendarUnitSchema,
-  ComparisonSchema,
-  OperationKindSchema,
-  TEMPORAL_SIMULATION_FORMAT,
-  TemporalSimulationDocSchema,
-  type AttributeOperation,
-  type Metric,
-  type TemporalSimulationDoc,
-  type Timeline,
-} from "@/lib/temporal-simulation-schema";
+import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationDocSchema, type Metric, type TemporalSimulationDoc, type Timeline } from "@/lib/temporal-simulation-schema";
+import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/config";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
