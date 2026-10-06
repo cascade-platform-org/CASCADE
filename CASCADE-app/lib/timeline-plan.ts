@@ -35,6 +35,9 @@ export interface TimelinePlan {
   periods: PlannedPeriod[];
   /** One Engine Evaluation per propagating Phase (ADR-0008). */
   engineCalls: number;
+  /** Block a run: a period without a valid label, or two periods the profile cannot tell apart. */
+  errors: string[];
+  /** Reported only: a Step with no Phase, an Event whose `every` exceeds its Step. */
   warnings: string[];
 }
 
@@ -89,6 +92,7 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
       m = label.match(/^(\d{4})-W(\d{2})$/);
       if (!m || Number(m[2]) < 1 || Number(m[2]) > 53) return null;
       const monday = isoWeekMonday(Number(m[1]), Number(m[2]));
+      if (isoWeekLabel(monday) !== label) return null; // week 53 of a 52-week year
       monday.setUTCDate(monday.getUTCDate() + 7 * k);
       return isoWeekLabel(monday);
     }
@@ -111,6 +115,17 @@ export function advanceLabel(label: string, unit: CalendarUnit, k: number): stri
   }
 }
 
+/** A valid first label for each unit, for a new Step when the previous label does not parse. */
+export const EXAMPLE_LABEL: Record<CalendarUnit, string> = {
+  hour: "2023-01-01T00",
+  day: "2023-01-01",
+  week: "2023-W01",
+  month: "2023-01",
+  quarter: "2023-Q1",
+  year: "2023",
+  none: "P1",
+};
+
 /**
  * "Every N periods": the N-th, 2N-th, 3N-th… of a run of periods, counted from
  * 1. `position` is 0-based. One rule for Phase Events and for profile values.
@@ -124,6 +139,7 @@ export const lastPropagatingIndex = (phases: { propagate: boolean }[]): number =
 /** Unroll Steps × repeat, resolve each Event's `every`, and count engine calls. */
 export function planTimeline(timeline: Timeline): TimelinePlan {
   const periods: PlannedPeriod[] = [];
+  const errors: string[] = [];
   const warnings: string[] = [];
 
   timeline.steps.forEach((step, stepIndex) => {
@@ -141,7 +157,7 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
     for (let r = 0; r < step.repeat; r++) {
       const label = advanceLabel(step.label, step.unit, r);
       if (label === null) {
-        warnings.push(`Step ${stepIndex + 1}: "${step.label}" is not a valid ${step.unit} label.`);
+        errors.push(`Step ${stepIndex + 1}: "${step.label}" is not a valid ${step.unit} label.`);
         return;
       }
       periods.push({
@@ -161,9 +177,9 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
 
   const seen = new Set<string>();
   for (const p of periods) {
-    if (seen.has(p.label)) warnings.push(`Label "${p.label}" appears twice; the profile cannot tell those periods apart.`);
+    if (seen.has(p.label)) errors.push(`Label "${p.label}" appears twice; the profile cannot tell those periods apart.`);
     seen.add(p.label);
   }
   const engineCalls = periods.reduce((n, p) => n + p.phases.filter((ph) => ph.propagate).length, 0);
-  return { periods, engineCalls, warnings };
+  return { periods, engineCalls, errors, warnings };
 }

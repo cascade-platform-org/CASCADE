@@ -46,8 +46,10 @@ export function TextTab() {
     }
     const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState());
     if (apply) {
-      replaceDraft(docToDraft(parsed.doc, nanoid));
-      setText(serializeDoc(parsed.doc));
+      const draft = docToDraft(parsed.doc, nanoid);
+      replaceDraft(draft);
+      // Show the text the draft now serialises to, so the tab reads "Matches the draft".
+      setText(serializeDoc(draftToDoc(draft)));
       explain(explainApply(0, warnings.length));
     }
     setResult({ errors: [], warnings, applied: apply });
@@ -65,13 +67,14 @@ export function TextTab() {
           <Bot size={11} /> Copy with context for an LLM
         </SmallButton>
         <span className="flex-1" />
-        <SmallButton disabled={!dirty} onClick={() => { setText(currentText); setResult(null); }}><RotateCcw size={11} /> Revert text</SmallButton>
+        <SmallButton disabled={!dirty || running} onClick={() => { setText(currentText); setResult(null); }}><RotateCcw size={11} /> Revert text</SmallButton>
         <SmallButton onClick={() => check(false)}><Check size={11} /> Check</SmallButton>
         <SmallButton tone="accent" disabled={!dirty || running} onClick={() => check(true)}><Upload size={11} /> Apply</SmallButton>
       </div>
 
       <textarea
         spellCheck={false}
+        readOnly={running}
         value={text}
         onChange={(e) => { setText(e.target.value); setResult(null); }}
         onPaste={() => setResult(null)}

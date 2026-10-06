@@ -35,7 +35,7 @@ A field-level, invertible description of what changed between two Scenarios — 
 _Avoid_: "patch", "delta", "changeset"; and Mutation Reversal (one Event's inverse) or Scenario Baseline (one scenario's) — a Graph Diff is one Update's, and carries both directions
 
 **Event**:
-Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard. The typed repair signal and the free-form mutations are complementary, not redundant.
+Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard's uncovered-Event list. The typed repair signal and the free-form mutations are complementary, not redundant.
 _Avoid_: Incident, perturbation (in domain conversation)
 
 **Hazard**:
@@ -67,7 +67,7 @@ Each field's value from before the current scenario touched it, keyed structural
 _Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
 
 **Reset**:
-Ends the current scenario, in two halves that do not depend on each other. **Every Element is forced operational** — full Functionality, Functionality Time 0, no `direct_damage`, `expected_repair_time` or Responsibility Share — consulting nothing; and every write an Event or a Propagation made to a *model* attribute is reverted from the **Scenario Baseline**. Half one needs no record, so Reset repairs a damaged network even where the Baseline is incomplete, at the cost of promoting an Element authored below the scale maximum. A hand edit to a model field survives — that is authoring work. Always whole-scenario, ignoring the local/global scope toggle. Ends the current Situation, ends any **Temporal Jump** run, clears the Analysis Heatmap, and is itself one undoable **Any Graph Update**. Mechanics in ADR-0016.
+Ends the current scenario, in two halves that do not depend on each other. **Every Element is forced operational** — full Functionality, Functionality Time 0, no `direct_damage`, `expected_repair_time` or Responsibility Share — consulting nothing; and every write an Event or a Propagation made to a *model* attribute is reverted from the **Scenario Baseline**. Half one needs no record, so Reset repairs a damaged network even where the Baseline is incomplete, at the cost of promoting an Element authored below the scale maximum. A hand edit to a model field survives — that is authoring work. Always whole-scenario, ignoring the local/global scope toggle. Ends the current Situation, ends any **Temporal Jump** run, clears the Analysis Heatmap (*proposed*, ADR-0019: and leaves the **Run View**), and is itself one undoable **Any Graph Update**. Mechanics in ADR-0016.
 _Avoid_: "reset to N" (Reset also reverts Rule-written attributes and ends the scenario; it is not only a Functionality sweep)
 
 **Scenario**:
@@ -75,7 +75,7 @@ A Functionality state of a multi-canvas fed to a Propagation — created by appl
 _Avoid_: Simulation state, hazard scenario (a Scenario need not come from a Hazard)
 
 **Propagation**:
-One engine computation: Scenario + Model Configuration → post-cascade Scenario. Monotone: Functionality only worsens within a run. Scope is **local** (client trims the request to the active Canvas) or **global** (full Project sent); scope affects only the engine payload, never the global registry. Endpoint: `POST /api/propagate`.
+One engine computation: Scenario + Model Configuration → post-cascade Scenario. Monotone: Functionality only worsens within one Propagation. Scope is **local** (client trims the request to the active Canvas) or **global** (full Project sent); scope affects only the engine payload, never the global registry. Endpoint: `POST /api/propagate`.
 _Avoid_: Simulation
 
 **Functionality Time**:
@@ -87,12 +87,12 @@ An Event kind advancing simulated time by N hours: subtracts N from every positi
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
 **Temporal Simulation** *(proposed, not built)*:
-A saved, replayable run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
+A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Timeline** *(proposed)*:
-The saved input of a Temporal Simulation: an ordered list of Steps whose Phases hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; the run record is a recomputable cache. The Event is its only edit handle. ADR-0019.
-_Avoid_: "schedule", "script", "run" (a run is one replay of a Timeline)
+The saved input of a Temporal Simulation: an ordered list of Steps whose Phases hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
+_Avoid_: "schedule", "script", "run" (a run is one execution of a Timeline)
 
 **Step** *(proposed)*:
 One period of a Timeline, or the same period `repeat`ed: a label, a calendar unit (hour, day, week, month, quarter, year or none) that only names periods, and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
@@ -103,7 +103,7 @@ An ordered group inside a Step: its Events apply, then optionally one Propagatio
 _Avoid_: "stage", "sub-step"
 
 **Stock** *(proposed)*:
-A value that persists across periods, held inside `Node.supply_capacity[category]` as the richer form of a supply rate (`rate`, `inflow`, `level`, `min`, `max`, `max_draw`, `retention`, `efficiency`, and the Level Scale references). `level` is on hand and signed as typed; what the stock offers and accrues is scaled by Functionality, the stored level never. Also allowed on `Edge.capacity`, where it adds edge capacity and no supply. Read and integrated only by the step operator; the engine never sees one and a Rule never writes one. The only stock before this was Functionality Time. ADR-0020.
+A value that persists across periods, held inside `Node.supply_capacity[category]` as the richer form of a supply rate (`rate`, `inflow`, `level`, `min`, `max`, `max_draw`, `max_fill`, `retention`, `efficiency`, and the Level Scale references). With `max_fill` it is **storage** (a tank, a reservoir): it fills from the network's own flow of its Category and feeds it, used as the last source and filled as the last sink, sharing by fraction with other storages. `level` is on hand and signed as typed; what the stock offers and accrues is scaled by Functionality, the stored level never. Also allowed on `Edge.capacity`, where it adds edge capacity and no supply. Read and integrated only by the step operator; the engine never sees one and a Rule never writes one. The only stock before this was Functionality Time. ADR-0020.
 _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a Scenario Field
 
 **Level Scale** *(proposed)*:
@@ -115,7 +115,7 @@ The canvas showing a **Temporal Simulation** run at a selected period, read-only
 _Avoid_: "simulation mode" ("Simulation" bare is avoided), "replay"
 
 **Level Mode** *(proposed)*:
-The canvas recoloured by the Level Scale while a Temporal Simulation is open, as **Analysis Mode** recolours it by a score: colours mean a stock's level or its change over the period, not Functionality. Cleared by Reset.
+The canvas recoloured by the Level Scale while a run is shown (the **Run View**), as **Analysis Mode** recolours it by a score: colours mean a stock's level or its change over the period, not Functionality. Cleared by End run or Reset.
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
 **Attribute Operation** *(proposed)*:
@@ -135,7 +135,7 @@ The complete user-editable project settings, split into Client Configuration and
 _Avoid_: Config, ModelConfig, ProjectConfig, settings
 
 **Client Configuration**:
-The frontend-only subset — display colours, Event definitions (applied client-side), Scorecard weights, Canvas metadata. Never sent to the backend.
+The frontend-only subset — display colours, Event definitions (applied client-side), Scorecard weights, Canvas metadata (*proposed*: the Level Scale). Never sent to the backend.
 _Avoid_: Display configuration, UI config
 
 **Engine Configuration**:
@@ -263,7 +263,7 @@ The metered unit of engine work: one Propagation = 1; a model-based analysis = `
 _Avoid_: "engine run", "propagation call" (ambiguous)
 
 **Network Importer**:
-A pure transformation of an external network format into a CASCADE ProjectBundle — parse, reduce, map; never persist, never propagate. One subpackage per format under `CASCADE-backend/core/importers/`; the first is the EPANET `.inp` water importer (`POST /api/import/inp`). All mapping rules — sources (reservoirs, tanks, injection wells), Service/Infrastructure junctions, inline pump/valve nodes, uniform Design Velocity pipe capacities (with the Sweep providing orientation and the retained Capacity Margin drill), Full-Duplex Splits, skeletonization, generated scenario Events, Replace/Add-as-extra-canvas modes — live in ADR-0012.
+A pure transformation of an external network format into a CASCADE ProjectBundle — parse, reduce, map; never persist, never propagate. One subpackage per format under `CASCADE-backend/core/importers/`; the first is the EPANET `.inp` water importer (`POST /api/import/inp`). All mapping rules — sources (reservoirs, tanks, injection wells), Service/Infrastructure junctions, inline pump/valve nodes, uniform Design Velocity pipe capacities (with the Sweep providing orientation and the retained Capacity Margin drill), Full-Duplex Splits, skeletonization, generated scenario Events, Replace/Add-as-extra-canvas modes — live in ADR-0012. *Proposed* (ADR-0020): a second EPANET importer, for **Temporal Simulation**, maps each tank to storage and writes a starting simulation from the file's time data.
 _Avoid_: "converter", "uploader"; treating import as sync (nothing is stored server-side)
 
 **Design Velocity**:

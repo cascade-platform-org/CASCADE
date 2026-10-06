@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Play, RotateCcw, Eye, Save, AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { planTimeline } from "@/lib/timeline-plan";
 import { docErrors, draftToDoc } from "@/lib/temporal-simulation-text";
 import {
   EXPLAIN_END_RUN,
@@ -14,7 +13,7 @@ import {
   explainRun,
   explainSelectPeriod,
 } from "@/lib/temporal-simulation-explainers";
-import { Segmented, SmallButton, useEventLookup } from "./fields";
+import { Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 
 /** Default Level Scale bands. Tailwind ramps are brand-driven (CLAUDE.md §5). */
 const LEVEL_BANDS = [
@@ -36,9 +35,12 @@ export function RunTab() {
   const { explain, markRun, endRun, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
 
-  const plan = useMemo(() => planTimeline(timeline), [timeline]);
-  // The same schema check the Text tab's Apply runs; a draft that fails it cannot run.
-  const errors = useMemo(() => docErrors(draftToDoc({ timeline, profile, metrics })), [timeline, profile, metrics]);
+  const plan = usePlan();
+  // The plan's errors, then the schema check the Text tab's Apply runs: either blocks a run.
+  const errors = useMemo(
+    () => [...plan.errors, ...docErrors(draftToDoc({ timeline, profile, metrics }))],
+    [plan, timeline, profile, metrics],
+  );
 
   return (
     <div className="space-y-4">
@@ -48,7 +50,7 @@ export function RunTab() {
           disabled={hasRun || plan.periods.length === 0 || errors.length > 0}
           onClick={() => {
             explain(explainRun(plan, eventLabel));
-            if (plan.warnings.length === 0) markRun();
+            markRun();
           }}
         >
           <Play size={11} /> Run (dry)
@@ -97,7 +99,7 @@ export function RunTab() {
             </>
           )}
           <span className="flex-1" />
-          <SmallButton disabled={selected === null} onClick={() => explain(EXPLAIN_SAVE_SCORECARD)}><Save size={11} /> Save period to Scorecard</SmallButton>
+          <SmallButton onClick={() => explain(EXPLAIN_SAVE_SCORECARD)}><Save size={11} /> Save period to Scorecard</SmallButton>
         </div>
       )}
 
@@ -117,7 +119,7 @@ export function RunTab() {
             {plan.periods.map((p) => (
               <tr
                 key={p.number}
-                onClick={() => { if (hasRun) { selectPeriod(p.number); } explain(explainSelectPeriod(p, eventLabel)); }}
+                onClick={() => { if (hasRun) selectPeriod(p.number); explain(explainSelectPeriod(p, eventLabel)); }}
                 className={cn(
                   "cursor-pointer border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/60",
                   selected === p.number && hasRun && "bg-blue-50 dark:bg-blue-900/20",

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { advanceLabel, lastPropagatingIndex } from "@/lib/timeline-plan";
+import { EXAMPLE_LABEL, advanceLabel, lastPropagatingIndex } from "@/lib/timeline-plan";
 import { isScenarioEvent, temporalJumpHours } from "@/lib/event-application";
 import { CalendarUnitSchema } from "@/lib/temporal-simulation-schema";
 import {
@@ -60,10 +60,10 @@ export function TimelineTab() {
   const events = useConfigStore((s) => s.config.events);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
   const { byId, eventLabel } = useEventLookup();
-  const profile = useTemporalSimulationStore((s) => s.profile);
   /** The profile row whose target, path and op are being edited. */
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
-  const row = profile.find((r) => r.id === selectedRow);
+  // Only the selected row: editing another row does not re-render the Steps below.
+  const row = useTemporalSimulationStore((s) => s.profile.find((r) => r.id === selectedRow));
   const jumpHours = (id: string) => {
     const ev = byId.get(id);
     return ev && temporalJumpHours(ev);
@@ -71,8 +71,9 @@ export function TimelineTab() {
 
   function addStep() {
     const last = timeline.steps[timeline.steps.length - 1];
-    const label = last ? advanceLabel(last.label, last.unit, last.repeat) ?? "2024-01" : "2023-01";
-    update((t) => { t.steps.push(newStep(label, last?.unit ?? "month")); });
+    const unit = last?.unit ?? "month";
+    const label = (last && advanceLabel(last.label, last.unit, last.repeat)) ?? EXAMPLE_LABEL[unit];
+    update((t) => { t.steps.push(newStep(label, unit)); });
     explain(explainAddStep(label));
   }
 
@@ -95,7 +96,7 @@ export function TimelineTab() {
         <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
       </Field>
 
-      <TimelineGrid selectedRow={row ? selectedRow : null} onSelectRow={setSelectedRow} />
+      <TimelineGrid selectedRow={row?.id ?? null} onSelectRow={setSelectedRow} />
       {row && <ProfileRowEditor row={row} onClose={() => setSelectedRow(null)} onSelect={setSelectedRow} />}
 
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Steps</h3>
@@ -201,7 +202,8 @@ export function TimelineTab() {
                         className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-700 shadow-sm dark:bg-zinc-700 dark:text-zinc-200"
                       >
                         {eventLabel(pe.event)}
-                        {step.repeat > 1 && (
+                        {/* Shown whenever it can matter, so an every left above a shrunk repeat can be fixed here. */}
+                        {(step.repeat > 1 || pe.every > 1) && (
                           <label className="flex items-center gap-0.5 text-[10px] text-zinc-400" title="Fires on this Step's periods N, 2N, 3N…">
                             every
                             <NumberInput

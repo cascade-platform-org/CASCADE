@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** proposed (2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form). Nothing is built. Reasoning, stress
+**Status:** proposed (2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Nothing is built. Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -17,7 +17,7 @@ three PNGs; 44 periods × several policy variants recreates the problem ADR-0017
 
 ## Decision
 
-### 1. A Timeline is a saved, replayable list of Steps
+### 1. A Timeline is a saved, re-runnable list of Steps
 
 ```
 Timeline   name · steps[] · profile
@@ -28,9 +28,13 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 ```
 
 - A **Step** is one period, or the same period pattern `repeat`ed. With a `unit`, repeats
-  advance the label (`2023-03`, `2023-W09`, `2023-03-15`, `2023-Q1`, `2023`); with `none`
+  advance the label (`2023-03-15T08`, `2023-03-15`, `2023-W09`, `2023-03`, `2023-Q1`,
+  `2023`); with `none`
   they are numbered `label#2`, `label#3`.
 - A **Phase** applies its Events (by `EventDefinition` id), then optionally runs one Propagation.
+- A run is refused while a period has no valid label or two periods share one (the profile
+  could not tell them apart); a Step with no Phase, or an `every` larger than its Step, is
+  only a warning.
   **An Event in a Phase fires every period of its Step, or every N-th** (`every: N`: the
   Step's periods N, 2N, 3N…, counted within the Step). A separate Periodic rule, counted
   from the run's start across Steps, was dropped: it duplicated the Phase for a rare
@@ -51,8 +55,8 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   available); Reset ends the run, and every run starts from the beginning. There is no
   partial replay.
 - A project holds **one** Temporal Simulation, in the project file under its own key
-  (`Project.temporal_simulation`): the whole document of §7 (Timeline, profile, Metrics) and
-  its run-record cache. The profile is input, roughly model-sized (~40 KB for banca ore), and
+  (`Project.temporal_simulation`): the whole document of §7 (Timeline, profile, Metrics); the
+  run record is not saved (§3). The profile is input, roughly model-sized (~40 KB for banca ore), and
   ADR-0017's single-downloadable-file principle applies. A variant to compare is another
   project version or a copy of the project.
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
@@ -70,7 +74,8 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 ### 2. The step operator, one period in order
 
 The step operator is client-side and calls the existing `POST /api/propagate` once per
-propagating Phase. The engine changes only to return `served_ratio` (ADR-0020).
+propagating Phase. The engine changes only to return `served_ratio` and each storage's
+`stored`, and to allocate storage last (ADR-0020 §1c, §3).
 
 ```
 run(timeline):
@@ -130,10 +135,10 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
   Stock integration to the diff of the Phase it follows), and per period the deliveries of each propagating Phase and the
   `spilled`/`unmet` amounts. **No PNG per period.** A period's net change is the composition
   of its diffs.
-- **The run record is a cache.** It is persisted beside its Timeline with a content hash of
-  the model and the Temporal Simulation, so a saved project reopens on its run; when the
-  hash no longer matches (the project was edited elsewhere), the cached run is dropped. It
-  is kept because recomputing costs an Engine Evaluation per propagating Phase.
+- **The run record lives in memory for the session and is not saved** (decided
+  2026-10-06). Reopening a project means running again; a saved run would add megabytes to
+  every save, sync and download plus a content hash to tell when it is stale. A result worth
+  keeping is a period saved to the Scorecard.
 - **A run is a view, not an edit** (decided 2026-10-06). It computes on its own copy and
   never writes the live model or `update_history`. The **Run View** shows it as Analysis Mode
   shows a score: the canvas paints the selected period's reconstructed state, read-only.
@@ -227,8 +232,8 @@ that explains each control.
   behaviour with no e2e driver.
 - **Level Mode** reuses the Analysis Heatmap's legend and repaint machinery
   (`lib/analysis-legend.ts`).
-- **CONTEXT.md** gains Temporal Simulation, Timeline, Step, Phase, Level Scale and Level
-  Mode; "Simulation" as a bare word is retired in favour of Propagation and Temporal
+- **CONTEXT.md** gains Temporal Simulation, Timeline, Step, Phase, Run View, Stock, Level
+  Scale, Level Mode, Attribute Operation and Element Filter; "Simulation" as a bare word is retired in favour of Propagation and Temporal
   Simulation.
 - **Open (design doc §7):** whether `PropagationScorecardEntry` migrates to diffs and whether
   a simulation Scorecard entry is a new type in ADR-0006's union; automatic repair;

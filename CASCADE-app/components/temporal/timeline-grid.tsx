@@ -12,7 +12,7 @@
  * grid and a run cannot disagree.
  */
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Clock, Plus } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useShallow } from "zustand/react/shallow";
@@ -20,14 +20,13 @@ import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { planTimeline, type PlannedPeriod } from "@/lib/timeline-plan";
-import { filterLabel, matchElements, type FilterableModel } from "@/lib/element-filter";
-import { rowOperation, type ProfileRow } from "@/lib/temporal-simulation-text";
-import type { AttributeOperation } from "@/lib/temporal-simulation-schema";
-import { EXPLAIN_STRIP, explainProfileCarry, explainProfileOp, explainSelectPeriod } from "@/lib/temporal-simulation-explainers";
+import type { PlannedPeriod } from "@/lib/timeline-plan";
+import { filterConditions, filterLabel, type FilterableModel } from "@/lib/element-filter";
+import type { ProfileRow } from "@/lib/temporal-simulation-text";
+import { valueFitsOp, type AttributeOperation } from "@/lib/temporal-simulation-schema";
+import { EXPLAIN_STRIP, explainSelectPeriod } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
-import { parseValue, useEventLookup } from "./fields";
-import { describeRow } from "./profile-row-editor";
+import { describeCell, describeRow, parseValue, useEventLookup, usePlan } from "./fields";
 
 const MAX_MARKERS = 3;
 const LABEL_COL = 150;
@@ -48,17 +47,12 @@ function EventMarker({ type }: { type: EventDefinition["type"] | undefined }) {
   );
 }
 
-/** What a row acts on, in a few words. */
+/** What a row acts on, in a few words; a filter in the words its explanation uses. */
 function rowTarget(row: ProfileRow, model: FilterableModel): string {
   if (row.element !== undefined) return row.element ? filterLabel(row.element, model) : "(choose an Element)";
   const f = row.where ?? { kind: "node" as const };
-  const parts = [
-    f.node_type ? `${f.node_type} nodes` : `${f.kind}s`,
-    f.category,
-    f.canvas && `on ${model.canvases[f.canvas]?.label ?? f.canvas}`,
-    f.label_contains && `“${f.label_contains}”`,
-  ].filter(Boolean);
-  return `All ${parts.join(" · ")}${f.exclude?.length ? ` − ${f.exclude.length}` : ""}`;
+  const conds = filterConditions(f, model.canvases);
+  return `All ${f.kind}s${conds.length ? " " + conds.join(", ") : ""}${f.exclude?.length ? ` − ${f.exclude.length}` : ""}`;
 }
 
 /** For a `set` row: the value each empty cell carries from an earlier one. */
@@ -73,13 +67,29 @@ function carriedValues(row: ProfileRow, labels: string[]): Record<string, string
   return out;
 }
 
-/** A pasted series: tab, newline or ; separated; else comma or space separated. */
+/**
+ * A pasted series. Tab, newline or ; separate cells and an empty one is kept
+ * (a blank spreadsheet cell empties its period); else spaces separate. A comma
+ * is a decimal point ("1,5" from a decimal-comma spreadsheet), never a separator.
+ */
 function splitSeries(text: string): string[] {
-  const parts = text.trim().split(/[\t\r\n;]+/);
-  return (parts.length > 1 ? parts : text.trim().split(/[,\s]+/)).map((p) => p.trim());
+  const t = text.replace(/\r?\n$/, "");
+  const parts = /[\t\n;]/.test(t) ? t.split(/\r?\n|\t|;/) : t.trim().split(/\s+/);
+  return parts.map((p) => p.trim());
 }
 
-function ProfileCell({
+/** A cell's text as a value; "1,5" (a decimal comma, typed or pasted) reads as 1.5. */
+const cellValue = (text: string): Value | undefined =>
+  text.trim() === "" ? undefined : parseValue(text.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2"));
+
+const periodTitle = (p: PlannedPeriod, eventLabel: (id: string) => string) =>
+  `${p.label}: ${p.phases.map((ph) => `P${ph.index + 1} ${ph.events.map(eventLabel).join(", ") || "no Events"}${ph.propagate ? " → Propagate" : ""}`).join(" · ")}`;
+
+/**
+ * One cell. Memoised with stable handlers, so editing a cell re-renders only
+ * its row (immer keeps the other rows' identity).
+ */
+const ProfileCell = memo(function ProfileCell({
   row,
   label,
   carried,
@@ -91,19 +101,19 @@ function ProfileCell({
   label: string;
   carried: string | undefined;
   stepStart: boolean;
-  /** Write values from this cell onward; undefined clears a cell. */
-  onWrite: (values: (Value | undefined)[]) => void;
-  onFill: () => void;
+  /** Write values into `row` from `label` onward; undefined empties a cell. */
+  onWrite: (rowId: string, label: string, values: (Value | undefined)[]) => void;
+  /** Write `value` here and repeat it into the empty cells after, up to the next filled one. */
+  onFill: (row: ProfileRow, label: string, value: Value) => void;
 }) {
-  const explain = useTemporalSimulationStore((s) => s.explain);
   const has = label in row.values;
   const shown = has ? String(row.values[label]) : "";
   /** What is being typed; null = show the stored value. */
   const [draft, setDraft] = useState<string | null>(null);
-  const invalid = has && row.op !== "set" && typeof row.values[label] !== "number";
+  const invalid = has && !valueFitsOp(row.op, row.values[label]);
 
   function commit() {
-    if (draft !== null && draft !== shown) onWrite([draft.trim() === "" ? undefined : parseValue(draft)]);
+    if (draft !== null && draft !== shown) onWrite(row.id, label, [cellValue(draft)]);
     setDraft(null);
   }
 
@@ -114,11 +124,7 @@ function ProfileCell({
         value={draft ?? shown}
         placeholder={carried ?? "·"}
         title={invalid ? `${row.op} needs a number` : undefined}
-        onFocus={() => {
-          setDraft(shown);
-          const matches = row.where ? matchElements(row.where, useCanvasStore.getState()).length : null;
-          explain(has ? explainProfileOp(label, rowOperation(row, row.values[label]), true, matches) : explainProfileCarry(label, row.op, carried));
-        }}
+        onFocus={() => { setDraft(shown); describeCell(row, label, carried); }}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
@@ -127,19 +133,24 @@ function ProfileCell({
           if (parts.length < 2) return;
           e.preventDefault();
           setDraft(null);
-          onWrite(parts.map((p) => (p === "" ? undefined : parseValue(p))));
+          onWrite(row.id, label, parts.map(cellValue));
         }}
         className={cn(
           "m-px h-[calc(100%-2px)] w-[calc(100%-2px)] rounded-sm border border-zinc-200 bg-white px-1 text-right text-[11px] tabular-nums text-zinc-800 placeholder:text-zinc-300 hover:border-blue-300 focus:border-blue-400 focus:bg-blue-50 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:bg-blue-900/30",
           invalid && "text-red-600 dark:text-red-400",
         )}
       />
-      {has && (
+      {(has || (draft !== null && draft.trim() !== "")) && (
         <button
           type="button"
           title="Repeat this value into the following empty cells"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={onFill}
+          onClick={() => {
+            // The value being typed wins over the stored one, and is committed with the fill.
+            const value = draft !== null ? cellValue(draft) : row.values[label];
+            setDraft(null);
+            if (value !== undefined) onFill(row, label, value);
+          }}
           className="absolute -top-1 right-0 hidden rounded bg-white px-0.5 text-[9px] leading-3 text-blue-600 shadow-sm group-hover:block dark:bg-zinc-800"
         >
           →
@@ -147,19 +158,18 @@ function ProfileCell({
       )}
     </div>
   );
-}
+});
 
 export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string | null; onSelectRow: (id: string | null) => void }) {
-  const timeline = useTemporalSimulationStore((s) => s.timeline);
   const rows = useTemporalSimulationStore((s) => s.profile);
-  const updateProfile = useTemporalSimulationStore((s) => s.updateProfile);
-  const explain = useTemporalSimulationStore((s) => s.explain);
-  const model = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges, canvases: s.canvases })));
+  const { updateProfile, writeCells, explain } = useTemporalSimulationStore.getState();
+  // Only the row labels read the model, so only a change to them re-renders the grid.
+  const targets = useCanvasStore(useShallow((s) => rows.map((r) => rowTarget(r, s))));
   const { byId, eventLabel } = useEventLookup();
-  const plan = useMemo(() => planTimeline(timeline), [timeline]);
+  const plan = usePlan();
   const labels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
 
-  const jumps = plan.periods.reduce((n, p) => n + p.phases.reduce((m, ph) => m + ph.events.filter((id) => byId.get(id)?.type === "temporal_jump").length, 0), 0);
+  const jumps = plan.periods.flatMap((p) => p.phases.flatMap((ph) => ph.events)).filter((id) => byId.get(id)?.type === "temporal_jump").length;
   const columns = { gridTemplateColumns: `${LABEL_COL}px repeat(${plan.periods.length}, ${PERIOD_COL}px)` };
   const stepStarts = new Set(plan.periods.filter((p) => p.repetition === 0).map((p) => p.label));
   const known = new Set(labels);
@@ -173,28 +183,18 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
     else groups.push({ stepIndex: p.stepIndex, periods: [p] });
   }
 
-  /** Write `values` into `row` from `label` onward, in Timeline order. */
-  function write(rowId: string, label: string, values: (Value | undefined)[]) {
+  // Stable while the Steps stay the same, so the memoised cells skip re-rendering.
+  const write = useCallback((rowId: string, label: string, values: (Value | undefined)[]) => {
     const start = labels.indexOf(label);
-    updateProfile((rs) => {
-      const r = rs.find((x) => x.id === rowId);
-      if (!r) return;
-      values.forEach((v, k) => {
-        const l = labels[start + k];
-        if (l === undefined) return;
-        if (v === undefined) delete r.values[l];
-        else r.values[l] = v;
-      });
-    });
-  }
+    writeCells(rowId, values.flatMap((v, k): [string, Value | undefined][] => (labels[start + k] === undefined ? [] : [[labels[start + k], v]])));
+  }, [labels, writeCells]);
 
-  /** Repeat `label`'s value into the empty cells after it, up to the next filled one. */
-  function fill(row: ProfileRow, label: string) {
+  const fill = useCallback((row: ProfileRow, label: string, value: Value) => {
     const after = labels.slice(labels.indexOf(label) + 1);
     const end = after.findIndex((l) => l in row.values);
-    const targets = end < 0 ? after : after.slice(0, end);
-    if (targets.length > 0) write(row.id, targets[0], targets.map(() => row.values[label]));
-  }
+    const targetsAfter = end < 0 ? after : after.slice(0, end);
+    writeCells(row.id, [label, ...targetsAfter].map((l): [string, Value] => [l, value]));
+  }, [labels, writeCells]);
 
   function addRow() {
     const category = useConfigStore.getState().config.categories[0]?.name;
@@ -252,7 +252,7 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
                 key={p.number}
                 type="button"
                 onClick={() => explain(explainSelectPeriod(p, eventLabel))}
-                title={`${p.label}: ${p.phases.map((ph) => `P${ph.index + 1} ${ph.events.map(eventLabel).join(", ") || "no Events"}${ph.propagate ? " → Propagate" : ""}`).join(" · ")}`}
+                title={periodTitle(p, eventLabel)}
                 className={cn(
                   "flex flex-col items-stretch px-1 hover:bg-zinc-100 dark:hover:bg-zinc-800",
                   stepStarts.has(p.label) ? "border-l-2 border-zinc-300 dark:border-zinc-600" : "border-l border-zinc-100 dark:border-zinc-800",
@@ -300,21 +300,21 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
               </span>
             )}
           </div>
-          {rows.map((row) => {
+          {rows.map((row, ri) => {
             const carried = carriedValues(row, labels);
             return (
               <div key={row.id} className="grid border-t border-zinc-100 dark:border-zinc-800" style={columns}>
                 <button
                   type="button"
                   onClick={() => { onSelectRow(selectedRow === row.id ? null : row.id); describeRow(row); }}
-                  title={`${rowTarget(row, model)} — ${row.op} ${row.path.join(" › ")}`}
+                  title={`${targets[ri]} — ${row.op} ${row.path.join(" › ")}`}
                   className={cn(
                     labelCell,
                     "flex h-7 min-w-0 flex-col justify-center text-left leading-tight hover:bg-zinc-50 dark:hover:bg-zinc-800",
                     selectedRow === row.id && "bg-blue-50 dark:bg-blue-900/30",
                   )}
                 >
-                  <span className="truncate text-[11px] text-zinc-700 dark:text-zinc-200">{rowTarget(row, model)}</span>
+                  <span className="truncate text-[11px] text-zinc-700 dark:text-zinc-200">{targets[ri]}</span>
                   <span className="truncate text-[9px] text-zinc-400">
                     {row.op} · {row.path.join(" › ") || "(path)"}
                     {Object.keys(row.values).length === 0 && <span className="text-amber-600 dark:text-amber-400"> · no value yet</span>}
@@ -327,8 +327,8 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
                     label={l}
                     carried={carried[l]}
                     stepStart={stepStarts.has(l)}
-                    onWrite={(values) => write(row.id, l, values)}
-                    onFill={() => fill(row, l)}
+                    onWrite={write}
+                    onFill={fill}
                   />
                 ))}
               </div>

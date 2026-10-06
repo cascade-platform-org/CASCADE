@@ -123,7 +123,8 @@ is never scaled. `inflow` is separate from `rate` so a capacity can rise without
 more inflow (cross-training raises an edge's `rate`; contract hours stay put).
 
 **`D` for a node Stock** is the sum of the consumers' deliveries of its Category, which is the
-source's outflow only when that node is the Category's **only source**. v1 requires that;
+source's outflow only when that node is the Category's **only source**. v1 requires that
+(storage excepted, §1c);
 otherwise the Stock's integration is skipped with a warning.
 
 - **The engine never writes a Stock.** `POST /api/propagate/batch` runs up to 50 coalitions
@@ -170,8 +171,9 @@ work. (A Temporal Simulation run never writes the model, ADR-0019 §3.)
 
 ### 5. v1 limits, stated
 
-- **Supply-side only.** A node Stock adds supply. A backlog that should add to *demand* is
-  the open `couples` question.
+- **Supply-side only**, storage excepted. A node Stock adds supply; storage (§1c) is also the
+  last sink of its own Category. A backlog that should add to *demand* is the open `couples`
+  question.
 - **One source per node Stock** with a `rate`; shared-consumer topologies wait for
   source-side fairness between ordinary sources. Storage (§1c) is exempt: its order and its
   fraction sharing make its outflow determinate.
@@ -218,4 +220,4 @@ work. (A Temporal Simulation run never writes the model, ADR-0019 §3.)
   where an edge or throughput capacity is undeclared.
 - Display of a Stock is the Level Scale of ADR-0019 §6.
 - New term in CONTEXT.md: Stock. Docs: `local-first-guide.md` (node fields table),
-  `api-reference.md` (`served_ratio`), `requirements.md` §5.3.
+  `api-reference.md` (`served_ratio`, `stored`), `requirements.md` §5.3.

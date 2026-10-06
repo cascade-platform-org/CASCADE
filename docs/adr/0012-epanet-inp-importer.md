@@ -2,7 +2,9 @@
 
 **Status:** accepted (2026-07-07; consolidated to current state 2026-07-16 — the
 full experiment/regression history behind each rule lives in
-`experiments/aqueducts/ATTEMPTS.md`)
+`experiments/aqueducts/ATTEMPTS.md`). Proposed addition: ADR-0020 adds a second EPANET
+importer, for Temporal Simulation (tanks as storage, a starting simulation from the file's
+time data); this importer is unchanged.
 
 ## Context
 

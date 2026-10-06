@@ -54,9 +54,9 @@ export function FilterEditor({ value, onChange }: { value: ElementFilter; onChan
     // One scan: the candidates, then the ticked ones among them.
     const all = matchElements({ ...next, exclude: undefined }, useCanvasStore.getState());
     const out = new Set(next.exclude ?? []);
-    explain(explainFilter(next, all.filter((id) => !out.has(id)).length, all.length, filterMisuse(next)));
+    explain(explainFilter(next, all.filter((id) => !out.has(id)).length, all.length, filterMisuse(next), useCanvasStore.getState().canvases));
   };
-  const showExplain = () => explain(explainFilter(value, selected.length, candidates.length, filterMisuse(value)));
+  const showExplain = () => explain(explainFilter(value, selected.length, candidates.length, filterMisuse(value), canvases));
   const toggle = (id: string) =>
     commit({ exclude: excluded.has(id) ? [...excluded].filter((x) => x !== id) : [...excluded, id] });
 

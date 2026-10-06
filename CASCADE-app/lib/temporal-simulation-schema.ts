@@ -42,6 +42,10 @@ export type ElementFilter = z.infer<typeof ElementFilterSchema>;
 
 export const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_least"]);
 
+/** add, mul, at_most and at_least read a number; only set may write text or a boolean. */
+export const valueFitsOp = (op: z.infer<typeof OperationKindSchema>, value: unknown): boolean =>
+  op === "set" || typeof value === "number";
+
 /** ADR-0021: one operation, on one Element (`element`) or on every match of `where`. */
 const AttributeOperationSchema = z
   .object({
@@ -55,7 +59,7 @@ const AttributeOperationSchema = z
   .refine((o) => (o.element === undefined) !== (o.where === undefined), {
     message: "give exactly one of `element` (an id) or `where` (a filter)",
   })
-  .refine((o) => o.op === "set" || typeof o.value === "number", {
+  .refine((o) => valueFitsOp(o.op, o.value), {
     message: "add, mul, at_most and at_least need a number `value`",
     path: ["value"],
   });

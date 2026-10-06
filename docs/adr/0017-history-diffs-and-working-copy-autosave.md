@@ -1,6 +1,6 @@
 # ADR-0017 — Update history stores Graph Diffs; auto-save writes a Working Copy
 
-**Status:** accepted (2026-09-10)
+**Status:** accepted (2026-09-10). Proposed amendment: ADR-0020 §4 addresses a Stock field by its full path.
 
 ## Context
 

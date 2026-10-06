@@ -9,6 +9,12 @@
 import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useConfigStore } from "@/store/config-store";
+import { useCanvasStore } from "@/store/canvas-store";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { planTimeline, type TimelinePlan } from "@/lib/timeline-plan";
+import { countTargets } from "@/lib/element-filter";
+import { rowOperation, type ProfileRow } from "@/lib/temporal-simulation-text";
+import { explainProfileCarry, explainProfileOp, explainProfileRow } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
 
 export const inputCls =
@@ -133,4 +139,26 @@ export function useEventLookup(): { byId: Map<string, EventDefinition>; eventLab
     const byId = new Map(events.map((e) => [e.id, e]));
     return { byId, eventLabel: (id: string) => byId.get(id)?.label ?? id };
   }, [events]);
+}
+
+/** The Timeline's plan, recomputed only when its Steps change (a renamed Timeline keeps it). */
+export function usePlan(): TimelinePlan {
+  const steps = useTemporalSimulationStore((s) => s.timeline.steps);
+  return useMemo(() => planTimeline({ name: "", steps }), [steps]);
+}
+
+/** Explain a profile row: what it acts on and how many periods hold a value. */
+export function describeRow(row: ProfileRow): void {
+  useTemporalSimulationStore.getState().explain(
+    explainProfileRow(row, countTargets(row, useCanvasStore.getState()), Object.keys(row.values).length),
+  );
+}
+
+/** Explain one cell of a profile row: its operation, or the value carried into it. */
+export function describeCell(row: ProfileRow, label: string, carried: string | undefined): void {
+  useTemporalSimulationStore.getState().explain(
+    label in row.values
+      ? explainProfileOp(label, rowOperation(row, row.values[label]), countTargets(row, useCanvasStore.getState()))
+      : explainProfileCarry(label, row.op, carried),
+  );
 }

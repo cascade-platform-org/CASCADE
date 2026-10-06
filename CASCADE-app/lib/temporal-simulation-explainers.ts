@@ -10,6 +10,7 @@
  */
 
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
+import { filterConditions, type FilterableModel } from "@/lib/element-filter";
 import type { AttributeOperation, CalendarUnit, ElementFilter, Metric } from "@/lib/temporal-simulation-schema";
 
 export interface Explanation {
@@ -22,9 +23,9 @@ export interface Explanation {
 export const EXPLAIN_INTRO: Explanation = {
   title: "Temporal Simulation (prototype)",
   lines: [
-    "A Temporal Simulation is a saved, replayable run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks.",
+    "A Temporal Simulation is a saved definition, run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks, plus its profile and Metrics. One per project.",
     "Nothing in this window changes your model or calls the engine. Each control edits a draft and explains here what the built feature will do.",
-    "Tabs: Timeline (Steps and Phases), Profile (per-period inputs), Run (the plan, Level Mode, undo/clear/reset), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
+    "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],
 };
@@ -35,7 +36,7 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
     lines: [
       "The Timeline is the saved input: an ordered table of Steps, each with ordered Phases holding Events (each firing every period, or every N periods of its Step).",
       "Under the overview sits the profile: the known inputs per period (rates, inflows, demands), one row per operation and one cell per period, applied at the start of the period before any Phase.",
-      "It stores inputs only. Results live in a run record, a cache that can always be recomputed.",
+      "It stores inputs only. A run's results live in memory for the session; reopening the project means running again.",
       "Every change over time is authored here, before a run: a profile value or a Phase Event. While a run is shown this definition is read-only; End run to edit, and the next run starts from the beginning.",
     ],
     refs: ["ADR-0019 §1", "ADR-0019 §3"],
@@ -52,7 +53,7 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
   metrics: {
     title: "Metrics",
     lines: [
-      "A custom Metric is a view definition in Client Configuration: what to read, from which Elements, and how to aggregate it.",
+      "A custom Metric is a view definition saved with the Temporal Simulation: what to read, from which Elements, and how to aggregate it.",
       "Metrics are computed at read time from the run record and shown at every period. A Metric at period t reads periods up to t only.",
       "There is no formula language: the dropdowns are the whole surface.",
     ],
@@ -205,7 +206,7 @@ export function explainPhaseEvent(label: string, added: boolean, jumpHours?: num
       added
         ? `"${label}" fires in this Phase every period of the Step: vulnerabilities, then attribute_mutations, then Attribute Operations.`
         : `"${label}" no longer fires here.`,
-      "An Event is the only edit handle on a Timeline. Functionality it imposes stands in later periods until another Event changes it (repair is an Event too).",
+      "Every change over time is a Phase Event or a profile value. Functionality an Event imposes stands in later periods until another Event changes it (repair is an Event too).",
     ],
     refs: ["ADR-0019 §1", "ADR-0019 §2a", "ADR-0021"],
   };
@@ -231,7 +232,7 @@ export function explainEventEvery(label: string, every: number, repeat: number):
 // Profile
 // ---------------------------------------------------------------------------
 
-export function explainProfileOp(label: string, op: AttributeOperation, labelUsed: boolean, matches: number | null): Explanation {
+export function explainProfileOp(label: string, op: AttributeOperation, matches: number | null): Explanation {
   const target = describeTarget(op, matches);
   return {
     title: "Profile operation",
@@ -240,9 +241,7 @@ export function explainProfileOp(label: string, op: AttributeOperation, labelUse
       op.where
         ? "The filter is resolved when the operation runs, against the model at that moment, so an Element added later is included."
         : "path is a list (supply_capacity › category › field) so it can reach a Stock field and survives dotted ids.",
-      labelUsed
-        ? "A result outside the field's valid range, or a non-set on an absent field, is rejected with a warning for that Element."
-        : "No period of the Timeline has this label, so this entry never applies; it is flagged unused.",
+      "A result outside the field's valid range, or a non-set on an absent field, is rejected with a warning for that Element.",
     ],
     refs: ["ADR-0019 §1", "ADR-0021"],
   };
@@ -301,14 +300,9 @@ export function explainProfileCarry(label: string, op: AttributeOperation["op"],
   };
 }
 
-export function explainFilter(filter: ElementFilter, selected: number, candidates: number, misuse: string[]): Explanation {
+export function explainFilter(filter: ElementFilter, selected: number, candidates: number, misuse: string[], canvases: FilterableModel["canvases"]): Explanation {
   const { kind } = filter;
-  const conds = [
-    filter.canvas && `on canvas ${filter.canvas}`,
-    filter.node_type && `of type ${filter.node_type}`,
-    filter.category && (kind === "node" ? `in Category ${filter.category}` : `carrying ${filter.category}`),
-    filter.label_contains && `whose label contains "${filter.label_contains}"`,
-  ].filter(Boolean);
+  const conds = filterConditions(filter, canvases);
   const unticked = filter.exclude?.length ?? 0;
   return {
     title: "Element Filter",
@@ -346,7 +340,9 @@ export function explainRun(plan: TimelinePlan, eventLabel: (id: string) => strin
       ...(first ? describePeriod(first, eventLabel).map((l) => `2. ${l}`) : ["2. (no periods)"]),
       `3. Repeat for all ${plan.periods.length} periods: ${plan.engineCalls} Propagations, each one Engine Evaluation against your role's budget (30 s timeout each).`,
       "4. Keep the per-Phase diffs in the run record and open the Run View: the canvas shows the selected period, read-only, until End run. Progress shows period k of n; Cancel or a failure discards the run.",
-      plan.warnings.length > 0 ? `Blocked: ${plan.warnings.length} warning(s) must be fixed first.` : "Prototype: the plan is shown in the table below; nothing was sent to the engine.",
+      plan.errors.length > 0
+        ? `Blocked: ${plan.errors.length} error(s) — a period without a valid label, or two periods with one label. Warnings do not block.`
+        : "Prototype: the plan is shown in the table below; nothing was sent to the engine.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3", "ADR-0008"],
   };
@@ -420,7 +416,7 @@ export function explainDisplay(mode: "functionality" | "level", reading: "level"
             ? "Each Stock is coloured by its level ÷ reference on the Level Scale: a node Stock colours its node, an edge Stock its edge."
             : "Each Stock is coloured by its change over the selected period (after − before) ÷ its change_reference.",
           "The reference defaults to the Stock's own bound max(|min|, |max|); a Stock with no bound and no override stays neutral, and the legend says so.",
-          "Display only: Level Mode feeds no Rule, Operativity Score or Recovery Value. Reset clears it.",
+          "Display only: Level Mode feeds no Rule, Operativity Score or Recovery Value. End run or Reset clears it.",
         ],
         refs: ["ADR-0019 §6"],
       };

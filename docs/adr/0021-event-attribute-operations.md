@@ -1,6 +1,6 @@
 # ADR-0021 — Events carry Attribute Operations on the current value
 
-**Status:** proposed (2026-10-02, revised 2026-10-05: Element Filter decided). Nothing is built. Reasoning:
+**Status:** proposed (2026-10-02, revised 2026-10-05: Element Filter decided; 2026-10-06: inside a run, writes land in the run record only). Nothing is built. Reasoning:
 `docs/project/temporal-simulation-design.md` §2.3.
 
 ## Context
@@ -10,7 +10,7 @@ An Event's `attribute_mutations` is `{"<elementId>.<field>": literal}`: it can o
 settle half a balance, settle the excess above a threshold, raise a ceiling by 10%. Neither
 the stock integration rule (one fixed shape, ADR-0020) nor a literal overwrite can say "write
 half of the current level", so without a primitive that policy would live in client script
-code outside the Event, which is the only edit handle.
+code outside the Event and the profile, which are the only edit handles.
 
 Two further constraints: dotted keys split on the last dot, and EPANET ids contain dots
 (ADR-0016 and ADR-0017 keyed structurally for that reason); and a Stock field sits at
@@ -91,7 +91,7 @@ An operation is static, declared arithmetic on one value, applied client-side wh
 or a Timeline fires the Event. It has no condition and no engine evaluation, so CLAUDE.md §7
 (rule *evaluation* belongs to the engine) is untouched. ADR-0015's set-once latch governs
 engine-driven fixed points and does not apply: a user-fired Event may write the same path
-again next period, which is exactly what periodic policy needs.
+again next period, which is exactly what a recurring policy needs.
 
 ### Considered
 

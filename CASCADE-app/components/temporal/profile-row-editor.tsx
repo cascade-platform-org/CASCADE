@@ -12,25 +12,19 @@ import { nanoid } from "nanoid";
 import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { filterLabel, matchElements } from "@/lib/element-filter";
-import { explainProfileRow, explainProfileWrite } from "@/lib/temporal-simulation-explainers";
-import { firesEvery, planTimeline } from "@/lib/timeline-plan";
-import { OperationKindSchema } from "@/lib/temporal-simulation-schema";
+import { filterLabel } from "@/lib/element-filter";
+import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
+import { firesEvery } from "@/lib/timeline-plan";
+import { OperationKindSchema, valueFitsOp } from "@/lib/temporal-simulation-schema";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
 import { NumberInput } from "@/components/ui/number-input";
-import { Field, Segmented, SmallButton, TextBackedInput, formatPath, inputCls, parsePath, parseValue } from "./fields";
-
-export function describeRow(row: ProfileRow): void {
-  const matches = row.where ? matchElements(row.where, useCanvasStore.getState()).length : null;
-  useTemporalSimulationStore.getState().explain(explainProfileRow(row, matches, Object.keys(row.values).length));
-}
+import { Field, Segmented, SmallButton, TextBackedInput, describeRow, formatPath, inputCls, parsePath, parseValue, usePlan } from "./fields";
 
 export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; onClose: () => void; onSelect: (id: string) => void }) {
-  const update = useTemporalSimulationStore((s) => s.updateProfile);
-  const explain = useTemporalSimulationStore((s) => s.explain);
-  const timeline = useTemporalSimulationStore((s) => s.timeline);
-  const labels = useMemo(() => planTimeline(timeline).periods.map((p) => p.label), [timeline]);
+  const { updateProfile, updateRow } = useTemporalSimulationStore.getState();
+  const plan = usePlan();
+  const labels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
   const { nodes, edges } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges })));
 
   // Built once per model change.
@@ -44,12 +38,8 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
   );
 
   function edit(patch: Partial<Omit<ProfileRow, "id" | "values">>) {
-    const next = { ...row, ...patch };
-    update((rows) => {
-      const i = rows.findIndex((r) => r.id === row.id);
-      if (i >= 0) rows[i] = next;
-    });
-    describeRow(next);
+    updateRow(row.id, (r) => { Object.assign(r, patch); });
+    describeRow({ ...row, ...patch });
   }
 
   return (
@@ -64,7 +54,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
           className="text-zinc-400 hover:text-blue-600"
           onClick={() => {
             const copy = { ...row, id: nanoid() };
-            update((rows) => { rows.splice(rows.findIndex((r) => r.id === row.id) + 1, 0, copy); });
+            updateProfile((rows) => { rows.splice(rows.findIndex((r) => r.id === row.id) + 1, 0, copy); });
             onSelect(copy.id);
           }}
         >
@@ -74,7 +64,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
           type="button"
           title="Remove row"
           className="text-zinc-400 hover:text-red-600"
-          onClick={() => { update((rows) => { rows.splice(rows.findIndex((r) => r.id === row.id), 1); }); onClose(); }}
+          onClick={() => updateProfile((rows) => { rows.splice(rows.findIndex((r) => r.id === row.id), 1); })}
         >
           <Trash2 size={12} />
         </button>
@@ -106,19 +96,14 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         </Field>
       </div>
 
-      <ValueWriter row={row} labels={labels} onWrite={(cells) => {
-        update((rows) => {
-          const r = rows.find((x) => x.id === row.id);
-          if (r) for (const [l, v] of cells) { if (v === undefined) delete r.values[l]; else r.values[l] = v; }
-        });
-      }} explain={explain} />
+      <ValueWriter row={row} labels={labels} />
 
       <div className="mt-2">
         {row.where ? (
           // FilterEditor explains its own change, so this skips `describeRow`.
           <FilterEditor
             value={row.where}
-            onChange={(where) => update((rows) => { const r = rows.find((x) => x.id === row.id); if (r) r.where = where; })}
+            onChange={(where) => updateRow(row.id, (r) => { r.where = where; })}
           />
         ) : (
           <select className={inputCls} value={row.element ?? ""} onChange={(e) => edit({ element: e.target.value })}>
@@ -136,30 +121,25 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
  * every N periods (the N-th, 2N-th… of the span, as for a Phase Event). The
  * cells stay the row's values; this only fills them.
  */
-function ValueWriter({
-  row,
-  labels,
-  onWrite,
-  explain,
-}: {
-  row: ProfileRow;
-  labels: string[];
-  onWrite: (cells: [string, ProfileRow["values"][string] | undefined][]) => void;
-  explain: ReturnType<typeof useTemporalSimulationStore.getState>["explain"];
-}) {
+function ValueWriter({ row, labels }: { row: ProfileRow; labels: string[] }) {
+  const { explain, writeCells } = useTemporalSimulationStore.getState();
   const [value, setValue] = useState("");
-  const [from, setFrom] = useState(labels[0] ?? "");
-  const [to, setTo] = useState(labels[labels.length - 1] ?? "");
+  const [chosenFrom, setFrom] = useState(labels[0] ?? "");
+  const [chosenTo, setTo] = useState(labels[labels.length - 1] ?? "");
   const [every, setEvery] = useState(1);
 
+  // A choice the Timeline no longer has (a renamed or removed Step) falls back to its end,
+  // and the selects show what Write will use.
+  const from = labels.includes(chosenFrom) ? chosenFrom : labels[0] ?? "";
+  const to = labels.includes(chosenTo) ? chosenTo : labels[labels.length - 1] ?? "";
   const start = Math.max(0, labels.indexOf(from));
-  const end = labels.indexOf(to) < 0 ? labels.length - 1 : labels.indexOf(to);
+  const end = labels.indexOf(to);
   // The From…To periods N, 2N, 3N…, as a Phase Event's every N counts its Step's periods.
   const span = labels.slice(start, end + 1).filter((_, k) => firesEvery(k, every));
   const parsed = value.trim() === "" ? undefined : parseValue(value);
   const problem =
     parsed === undefined ? "Type the value first."
-      : row.op !== "set" && typeof parsed !== "number" ? `${row.op} needs a number.`
+      : !valueFitsOp(row.op, parsed) ? `${row.op} needs a number.`
         : span.length === 0 ? "The span holds no period." : null;
   const describe = () => explain(explainProfileWrite(row.op, value, span));
 
@@ -187,11 +167,11 @@ function ValueWriter({
             tone="accent"
             disabled={problem !== null}
             title={problem ?? `Write into ${span.length} cell${span.length === 1 ? "" : "s"}`}
-            onClick={() => { onWrite(span.map((l) => [l, parsed])); describe(); }}
+            onClick={() => { writeCells(row.id, span.map((l) => [l, parsed])); describe(); }}
           >
             Write
           </SmallButton>
-          <SmallButton disabled={span.length === 0} title="Empty these cells" onClick={() => { onWrite(span.map((l) => [l, undefined])); describe(); }}>
+          <SmallButton disabled={span.length === 0} title="Empty these cells" onClick={() => { writeCells(row.id, span.map((l) => [l, undefined])); describe(); }}>
             Clear
           </SmallButton>
         </div>

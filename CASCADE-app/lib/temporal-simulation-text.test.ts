@@ -74,6 +74,7 @@ describe("parseDocText", () => {
     const reply = `Here is the updated definition:\n\n\`\`\`json\n${serializeDoc(doc)}\n\`\`\`\nLet me know.`;
     expect(parseDocText(reply).ok).toBe(true);
     expect(extractJson(`text {"a": 1} more`)).toBe(`{"a": 1}`);
+    expect(extractJson("```js\nx()\n```\nand\n```json\n{\"a\": 1}\n```").trim()).toBe(`{"a": 1}`);
   });
   it("reports a misspelt key, a bad enum and an operation with both targets, by path", () => {
     const bad = JSON.parse(serializeDoc(doc));

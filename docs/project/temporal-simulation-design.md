@@ -9,8 +9,9 @@ reasoning, the stress tests and the open questions.** Formulas, schemas and the 
 sequence have one home, the ADRs; this document cites them.
 
 The stock mechanism runs in the client: the step operator and `buildPropagationPayload`
-(`lib/propagation-payload.ts`). The engine changes in one place, to return `served_ratio`,
-which amends ADR-0003.
+(`lib/propagation-payload.ts`). The engine changes in two places, amending ADR-0003: it
+returns `served_ratio`, and it allocates storage last and returns each storage's `stored`
+(ADR-0020 §1c, §3).
 
 **Temporal Simulation** is the name of this module (CONTEXT.md). A **Temporal Jump** stays
 what it is today, one Event kind. A Temporal Simulation is a saved sequence of periods. A
@@ -27,7 +28,7 @@ the repository.
 
 1. What exists today
 2. Capability A — a composable time simulation
-   (2.1 the Event is the only edit handle · 2.2 inputs and the run cache ·
+   (2.1 changes over time are authored before the run · 2.2 inputs only ·
    2.3 Events carry operations · 2.4 recovery, backups and repair between periods ·
    2.5 one period, in order)
 3. Capability B — recording a run
@@ -77,7 +78,7 @@ A → B → C is the build order.
 jumps and Events by hand, and auto-advance chains jumps by the minimum remaining
 `functionality_time`. The trail cannot be named, re-run, or compared with a variant.
 
-**Proposed**: a **Timeline**, an ordered, saved, replayable list of Steps. The schema is
+**Proposed**: a **Timeline**, an ordered, saved, re-runnable list of Steps. The schema is
 ADR-0019 §1. In short: a **Step** is one period (or the same period `repeat`ed) with a
 `label`, a calendar `unit` and an ordered list of **Phases**; a Phase
 applies its Events, each firing every period of its Step or every N-th one, and then
@@ -91,7 +92,7 @@ supply over another (§7). A Step with a single Phase is the flat shape.
 
 **The Step carries its own calendar.** With a `unit`, repeats advance the label
 (`2023-03` → `2023-04` for months, `2023-W09` → `2023-W10` for weeks, `2023-03-15` for
-days, `2023-Q1` for quarters, `2023` for years); with `none` they are numbered `label#2`,
+days, `2023-03-15T08` for hours, `2023-Q1` for quarters, `2023` for years); with `none` they are numbered `label#2`,
 `label#3`. The profile is keyed by these labels, so it only has to cover the labels the
 Timeline produces.
 
@@ -102,9 +103,9 @@ beside its Timeline; ADR-0017 rejected splitting the project in two because that
 single downloadable file local-first depends on. Writing the profile as operations means it
 reuses ADR-0021's addressing, validation and diff path, and adds no second write mechanism.
 
-**A run starts from a working network.** Running a Timeline first performs a **Reset**
-(one undoable `scenario_reset` entry), so every run starts from the authored model with
-every Element operational. An initial condition — an earthquake before a twelve-month
+**A run starts from a working network.** A run Resets its own copy of the model (both
+halves), so every run starts from the authored model with every Element operational; the
+live model and `update_history` are never written (§3.1). An initial condition — an earthquake before a twelve-month
 recovery — is an Event in the first Step. This is what makes a re-run reproducible: the
 start state depends on the model alone.
 
@@ -116,33 +117,23 @@ entitlement arithmetic is *propagating Phases × periods*.
 propagating Phase. A server-side run endpoint, behind `services/propagation_service.py`, is
 the later answer to the cost (§7).
 
-Two properties matter, and neither is free today:
+One property matters, and it is not free today:
 
 - **Determinism.** A saved Timeline must produce the same result on re-run **on the same
   build**. Event application is deterministic; the flow solver needed a `sorted()` in
   `flow_category_candidates` (`flow.py`) to stop degenerate optima flipping between runs, which is a
   warning that determinism here is earned. See §2.2.
-- **Replay.** A mid-Timeline edit replays forward from the edited period using the recorded
-  diffs (§2.1), the ADR-0017 machinery. A Timeline does not invent a second mechanism for
-  winding scenario state forward.
 
-### 2.1 The Event is the only edit handle
+There is no partial replay: every change over time is authored before the run (§2.1), and
+every run starts from the beginning.
 
-**A Timeline is editable in the middle, and the edit is always an Event (or a profile
-operation, which is the same mechanism) added or changed at a Step.** Arbitrary state and
-results are never handles.
+### 2.1 Changes over time are authored before the run
 
-That rule buys three things:
-
-- **Periods before the edit are untouched.** Their recorded diffs stay valid, so the run
-  replays forward from the edited period.
-- **Clear Event's "newest only" limit stops mattering.** There is no need to unwind an
-  arbitrary middle period: change the Event, replay forward.
-- **Every edit is a first-class, recorded operation.**
-
-Replaying from period *n* needs the state at the end of period *n−1*, which is a forward
-walk of the diffs from the run's start — the **same primitive** §3.1 uses to show a period
-on request.
+**Every change over time is an Event in a Phase or a profile value, written before the
+run.** "At period 5" is an Event in period 5; arbitrary state and results are never
+handles. While a run is shown (the Run View) the model and the Temporal Simulation are
+read-only; End run, edit, and run again from the beginning. There is no partial replay: a
+run takes seconds, and one code path leaves nothing to reconcile.
 
 The Timeline is authored as an **editable table** of Steps and Phases, which is clearer
 than a draggable track at tens of periods. A track is not ruled out later. The profile sits
@@ -152,16 +143,17 @@ it, a period range would only repeat a `set`, or need a revert rule that would a
 an Event's change to that field; filled cells, with the carried value shown in empty ones,
 say the same thing with no new rule.
 
-### 2.2 A Timeline stores inputs; a run is a cache
+### 2.2 A Timeline stores inputs only
 
 **The Timeline stores inputs only**: Steps, Phases, Event ids (with their `every`) and the
 profile. Schema changes are additive — every new field is optional and absent by default —
 so a model authored today computes the same tomorrow.
 
-**The run record is a cache of results**, kept because recomputing it costs an Engine
-Evaluation per propagating Phase (ADR-0008). It is persisted beside its Timeline with a
-content hash of the model, the Timeline and the profile; a mismatch marks it stale, and the
-UI offers to re-run. Deleting it loses nothing that cannot be recomputed.
+**The run record is not saved** (decided 2026-10-06). It lives in memory for the session;
+reopening a project means running again, seconds to tens of seconds of metered
+Propagations. A saved run would add megabytes to every save, sync and download, and a
+content hash to tell when it no longer matches; a result worth keeping is saved as a period
+on the Scorecard.
 
 Engine changes can still move results without any change to a saved Timeline: a project's
 configured `flow_ratio_thresholds` table (ADR-0003), a networkx upgrade altering how a
@@ -316,7 +308,8 @@ client-side from the snapshots; never stored."* So **any metric is available aft
 fact**, provided the recorded state contains its inputs — the principle ADR-0018 set for
 the Operativity weighting: *how a result is read is not a property of how it was computed.*
 
-A **custom Metric is a view definition** in Client Configuration. Its schema is
+A **custom Metric is a view definition** saved with the Temporal Simulation
+(`Project.temporal_simulation`). Its schema is
 ADR-0019 §4: target filter, attribute, `read` (`state` or `change`), an optional Phase,
 an aggregate and an optional filter. `read: change` is **after − before** over the chosen
 Phase (or the whole period), so a quantity that rises reads positive. That is what makes a
@@ -373,10 +366,12 @@ Each is argued in full where cited; this list is for checking the shape.
 2. **The stored `level` is never scaled by Functionality; what a Stock offers and accrues
    is** (§4.1).
 3. **A Stock lives inside `supply_capacity` or an edge `capacity`** (`float | Stock`), so it
-   is supply-side only in v1 (§4.1).
-4. **A node Stock needs its node to be the only source of its Category; an edge Stock needs
-   its target to have exactly one incoming flow edge.** Otherwise that Stock's integration is
-   skipped with a warning (§4.1, §4.8).
+   is supply-side only in v1 (§4.1), except **storage** (`max_fill`), which also takes from
+   the network (ADR-0020 §1c).
+4. **A node Stock with a `rate` needs its node to be the only source of its Category; an
+   edge Stock needs its target to have exactly one incoming flow edge.** Otherwise that
+   Stock's integration is skipped with a warning (§4.1, §4.8). Storage has no such limit:
+   it is used last, filled last, and shares by fraction with other storages.
 5. **`level` is on-hand only**, and `min`/`max` bound on-hand (§4.1, pinned by §6.1).
 6. **A clamp is always reported**: `max` or `min` truncating a period emits `spilled` or
    `unmet` (§4.1).
@@ -415,9 +410,10 @@ with sunk inflow keeps the node at the top Functionality level, where φ = 1, an
 rate through `rate`. Banca ore does exactly this. A second model needing a degraded node
 with unscaled inflow would be the argument for a per-stock flag (§7).
 
-**Supply-side only in v1.** `supply_capacity` makes a node a source in the Category's flow
-graph, so a node Stock always adds supply. A backlog, which should add to *demand*, is the
-`couples` question (§7).
+**Supply-side only in v1, storage excepted.** `supply_capacity` makes a node a source in the
+Category's flow graph, so a node Stock adds supply. Storage (`max_fill`, a tank) is also the
+last sink of its own Category (ADR-0020 §1c). A backlog, which should add to *demand*, is
+the `couples` question (§7).
 
 **A Stock may also sit on an Edge.** `Edge.capacity` is `float | Stock` in the same way.
 **An edge Stock adds edge capacity and no supply**: drawing its level lets more flow pass
@@ -494,7 +490,7 @@ Per period (full sequence: ADR-0019 §2):
 | # | Who | Does what | Touches the stock? |
 |---|---|---|---|
 | 1 | Step operator | Apply the period's profile operations and Phase Events | may write `rate`, `inflow`, `max_draw`… |
-| 2 | **Step operator** | **Turn each Stock into a supply number** (in the payload) | **reads** |
+| 2 | **Step operator** | **Turn each Stock into a supply number** (storage: a last source and a last sink) | **reads** |
 | 3 | Engine | Propagate. Sees capacities and demands, exactly as today | **no** |
 | 4 | **Step operator** | **Integrate the returned flows into each level**, once, after the last propagating Phase | **writes `level`** |
 | 5 | Step operator | Record the diffs | no |
@@ -516,6 +512,15 @@ new level                     =  clamp( a·L + n·φ·R − D + arrivals(t),  m,
 
 In the ordinary case (`a = n = 1`, `R = rate`, no `max_draw`, φ = 1) these are
 `supply = rate + (L − m)` and `L' = clamp(L + rate − D, m, M)`.
+
+**Storage** (`max_fill`, `rate` 0) is handed over as two numbers and integrated from what
+the engine reports it filled and drew (ADR-0020 §1c):
+
+```
+source (used last)   =  min( max_draw,  a·L + n·R − m )
+sink   (filled last) =  min( max_fill,  M − L )
+new level            =  clamp( a·L + n·φ·R + filled − drawn,  m,  M )
+```
 
 **Why the draw reads `a·L + n·R − rate`.** The draw is the level the period can give up and
 still end at or above `m` when everything offered is delivered. Drawing against the raw `L`
@@ -621,6 +626,8 @@ edge is capped at demand, so the ratio cannot exceed 1).
 - **`served_ratio`** — per consumer **and per Category** (`{category: ratio}`), because a
   consumer of water and electricity has two ratios and a stock is per (node, Category).
   `delivered = served_ratio[cat] × demand[cat]`. Lands with v1.
+- **`stored`** — per storage node and Category, `filled` and `drawn` (ADR-0020 §1c). Lands
+  with v1.1; storage's order (last source, last sink, fraction sharing) makes it determinate.
 - **`utilisation`** — per source: delivered ÷ supply. Deferred.
 
 A **node Stock needs the source's outflow**: a reservoir's level falls by what *it*
@@ -638,8 +645,9 @@ deliberately avoids trusting.
 | several sources sharing consumers | **no** — arbitrary under ties |
 
 Hence `served_ratio` lands now, and `utilisation` waits for a source-side fairness rule (the
-same work as a source-side allocation strategy). Until then a node Stock keeps **one source
-per Category**; an edge Stock with a single-incoming-edge target needs only `served_ratio`.
+same work as a source-side allocation strategy). Until then a node Stock with a `rate` keeps
+**one source per Category**; an edge Stock with a single-incoming-edge target needs only
+`served_ratio`; storage needs `stored`.
 
 Implementation notes (ADR-0020 §3): consumers the flow pass drops as fully served must still
 be reported; keep the **converged** iteration's values; emit ratios for unchanged Elements
@@ -683,12 +691,12 @@ is written field by field.
 | Diff-based recording + custom metrics (B) | long runs that fit in a project file, and domain metrics without a schema change per domain |
 | Stocks (C) | reservoir and tank levels, fuel reserves, spare-parts inventory, budgets |
 | `served_ratio` (C) | coverage as a number beside the quantised level — useful to **every** flow model, including the existing water work. `utilisation` follows once source-side fairness exists (§6.4) |
+| storage + `stored` (C) | tanks over a day: flow rates and stored volume both bind, and pump outages, demand surges and hazards reach the town through the tanks |
 
-A second declaration should be written on paper before any schema is frozen. The readiest is
-a **water reservoir** on the EPANET side (ADR-0012 / ADR-0013): stock = tank level, bounds =
-capacity and dead storage, inflow = a seasonal catchment profile, outflow = demand computed
-by propagation, periodic policy = a release schedule. If only one domain fits the
-abstraction, the abstraction is wrong.
+The second declaration is the **aqueduct over a day** (decided 2026-10-06): EPANET Net1
+through the Temporal Simulation importer, each tank a storage Stock (level, bounds, outlet
+and inlet capacities from its geometry and pipes), demand patterns as profile rows, a pump
+outage as Events. If only one domain fits the abstraction, the abstraction is wrong.
 
 `functionality_time` converges onto this mechanism **last**. It is well-tested core
 behaviour, the project has no e2e driver, and changing it to prove a generality claim is the
@@ -699,7 +707,8 @@ wrong early risk.
 ## 6. Stress-testing the abstraction against other domains
 
 The mechanism is `L' = clamp(a·L + n·φ·R − D + arrivals(t), m, M)` with rates per period,
-one stock per (node, Category) or per edge, and one source per node stock. Sixteen candidate
+one stock per (node, Category) or per edge, and one source per node stock with a `rate`
+(storage is exempt). Sixteen candidate
 models, chosen to be as unlike a workforce as possible: five fit v1 as is, five need a
 coefficient that v1 includes, and six find a limit.
 
@@ -771,8 +780,8 @@ Inspector and every reader branch for a variant most models never use.
 pending: Optional[dict[str, float]] = None   # period label → amount arriving then
 ```
 
-It is sparse, nothing shifts each period, it survives §2.1's mid-Timeline edits (inserting a
-Step would corrupt relative offsets), and it reads directly — *"3 units arrive in 2026-05"*.
+It is sparse, nothing shifts each period, it survives inserting a Step before it (relative
+offsets would be corrupted), and it reads directly — *"3 units arrive in 2026-05"*.
 
 ### 6.2 A retention factor covers a whole class
 
@@ -792,8 +801,9 @@ in now.
 
 §4.8 restricts node Stocks to one source per Category, because source outflow is determinate
 only when sources do not share consumers. A **multi-warehouse supply chain feeding shared
-retailers** violates that immediately, and so does any two-reservoir zone. Edge Stocks avoid
-it only where each consumer has a single incoming edge. **Source-side fairness is what the
+retailers** violates that immediately. A zone fed by several tanks does not, since storage shares by
+fraction (ADR-0020 §1c). Edge Stocks avoid it only where each consumer has a single incoming
+edge. **Source-side fairness is what the
 second or third real model will need**, so it is scheduled against that model.
 
 ### 6.5 Compartment models are out of scope

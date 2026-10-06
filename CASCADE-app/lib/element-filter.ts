@@ -72,3 +72,18 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
 export function filterMisuse(filter: ElementFilter): string[] {
   return filter.kind === "edge" && filter.node_type !== undefined ? ["node_type applies to nodes only"] : [];
 }
+
+/** A filter's conditions in words, shared by the profile grid's row label and the filter explanation. */
+export function filterConditions(filter: ElementFilter, canvases: FilterableModel["canvases"]): string[] {
+  return [
+    filter.node_type && `of type ${filter.node_type}`,
+    filter.category && (filter.kind === "node" ? `in Category ${filter.category}` : `carrying ${filter.category}`),
+    filter.canvas && `on canvas ${canvases[filter.canvas]?.label ?? filter.canvas}`,
+    filter.label_contains && `whose label contains “${filter.label_contains}”`,
+  ].filter((c): c is string => Boolean(c));
+}
+
+/** How many Elements an operation acts on: its filter's matches, or null for one Element. */
+export function countTargets(op: { where?: ElementFilter }, model: FilterableModel): number | null {
+  return op.where ? matchElements(op.where, model).length : null;
+}

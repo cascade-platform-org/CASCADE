@@ -29,9 +29,10 @@ interface TemporalSimulationState {
   profile: ProfileRow[];
   metrics: MetricEntry[];
   stock: StockPreview;
-  /** A run is shown (the Run View): the definition is read-only until End run. */
+  /** A run is shown (the Run View): every definition writer below is refused until End run. */
   running: boolean;
-  selectedPeriod: number | null;
+  /** The period the Run View shows; meaningful only while `running`. */
+  selectedPeriod: number;
   display: "functionality" | "level";
   levelReading: "level" | "change";
   explanation: Explanation;
@@ -42,13 +43,17 @@ interface TemporalSimulationState {
   explain: (e: Explanation) => void;
   updateTimeline: (fn: (t: Timeline) => void) => void;
   updateProfile: (fn: (rows: ProfileRow[]) => void) => void;
+  /** Change one profile row in place; an unknown id does nothing. */
+  updateRow: (id: string, fn: (row: ProfileRow) => void) => void;
+  /** Write cells of one row; undefined empties a cell. */
+  writeCells: (id: string, cells: [label: string, value: ProfileRow["values"][string] | undefined][]) => void;
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
   updateStock: (patch: Partial<StockPreview>) => void;
   markRun: () => void;
   endRun: () => void;
-  selectPeriod: (n: number | null) => void;
+  selectPeriod: (n: number) => void;
   setDisplay: (d: "functionality" | "level") => void;
   setLevelReading: (r: "level" | "change") => void;
 }
@@ -83,7 +88,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     metrics: [],
     stock: { rate: 160, level: -20, min: -50, delivered: 150, phi: 1 },
     running: false,
-    selectedPeriod: null,
+    selectedPeriod: 1,
     display: "functionality",
     levelReading: "level",
     explanation: EXPLAIN_INTRO,
@@ -92,13 +97,22 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     closeWindow: () => set((s) => { s.open = false; }),
     setTab: (tab) => set((s) => { s.tab = tab; }),
     explain: (e) => set((s) => { s.explanation = e; }),
-    updateTimeline: (fn) => set((s) => { fn(s.timeline); }),
-    updateProfile: (fn) => set((s) => { fn(s.profile); }),
-    updateMetrics: (fn) => set((s) => { fn(s.metrics); }),
-    replaceDraft: (d) => set((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; }),
+    // Definition writers: refused while a run is shown (ADR-0019 §1), whatever the caller.
+    updateTimeline: (fn) => set((s) => { if (!s.running) fn(s.timeline); }),
+    updateProfile: (fn) => set((s) => { if (!s.running) fn(s.profile); }),
+    updateRow: (id, fn) => set((s) => {
+      const row = s.running ? undefined : s.profile.find((r) => r.id === id);
+      if (row) fn(row);
+    }),
+    writeCells: (id, cells) => set((s) => {
+      const row = s.running ? undefined : s.profile.find((r) => r.id === id);
+      if (row) for (const [label, value] of cells) { if (value === undefined) delete row.values[label]; else row.values[label] = value; }
+    }),
+    updateMetrics: (fn) => set((s) => { if (!s.running) fn(s.metrics); }),
+    replaceDraft: (d) => set((s) => { if (!s.running) { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; } }),
     updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
     markRun: () => set((s) => { s.running = true; s.selectedPeriod = 1; }),
-    endRun: () => set((s) => { s.running = false; s.selectedPeriod = null; s.display = "functionality"; }),
+    endRun: () => set((s) => { s.running = false; s.display = "functionality"; }),
     selectPeriod: (n) => set((s) => { s.selectedPeriod = n; }),
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),

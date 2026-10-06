@@ -3,6 +3,10 @@ import { advanceLabel, firesEvery, planTimeline } from "./timeline-plan";
 import type { Timeline } from "./temporal-simulation-schema";
 
 describe("advanceLabel", () => {
+  it("rejects week 53 of a year that has 52 ISO weeks", () => {
+    expect(advanceLabel("2021-W53", "week", 0)).toBeNull();
+    expect(advanceLabel("2020-W53", "week", 0)).toBe("2020-W53");
+  });
   it("advances hours across midnight and a month end", () => {
     expect(advanceLabel("2023-07-31T22", "hour", 3)).toBe("2023-08-01T01");
     expect(advanceLabel("2023-07-14T24", "hour", 0)).toBeNull();
@@ -83,8 +87,8 @@ describe("planTimeline", () => {
       ],
     });
     expect(plan.periods).toHaveLength(2);
-    expect(plan.warnings.join("\n")).toMatch(/not a valid month label/);
-    expect(plan.warnings.join("\n")).toMatch(/appears twice/);
+    expect(plan.errors.join("\n")).toMatch(/not a valid month label/);
+    expect(plan.errors.join("\n")).toMatch(/appears twice/);
     expect(plan.warnings.join("\n")).toMatch(/never fires/);
   });
 });

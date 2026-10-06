@@ -124,8 +124,10 @@ export function serializeDoc(doc: TemporalSimulationDoc): string {
  * the first ```json fenced block wins, else the outermost braces.
  */
 export function extractJson(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*\n([\s\S]*?)```/);
-  if (fenced) return fenced[1];
+  // Fences pair up in order, so another language's block before the JSON cannot shift them.
+  const fences = [...text.matchAll(/```([\w-]*)[^\n]*\n([\s\S]*?)```/g)];
+  const fenced = fences.find((f) => f[1] === "json") ?? fences.find((f) => f[2].trim().startsWith("{"));
+  if (fenced) return fenced[2];
   const first = text.indexOf("{");
   const last = text.lastIndexOf("}");
   return first >= 0 && last > first ? text.slice(first, last + 1) : text;
@@ -162,7 +164,7 @@ export function docWarnings(doc: TemporalSimulationDoc, events: EventDefinition[
   if (unknownEvents.size) out.push(`Unknown Event ids: ${[...unknownEvents].join(", ")}. Create them in Config → Events.`);
 
   const plan = planTimeline(doc.timeline);
-  out.push(...plan.warnings);
+  out.push(...plan.errors, ...plan.warnings);
   const labels = new Set(plan.periods.map((p) => p.label));
   for (const [label, ops] of Object.entries(doc.profile)) {
     if (!labels.has(label)) out.push(`Profile label "${label}" is not a period of the Timeline; its ${ops.length} operation(s) never apply.`);
@@ -232,8 +234,10 @@ Filter (every given condition must hold; resolved again each time it is used):
 Semantics to respect:
 - A period has no duration. Time passes only through a Temporal Jump Event placed in a Phase.
 - A run starts with a Reset. Shortage is recomputed before every Propagation; Event-imposed damage stays until an Event changes it.
-- Stocks (supply_capacity.<category> or an edge capacity as an object with rate, inflow, level, min, max, max_draw, retention, efficiency)
-  are integrated once per period, right after the last propagating Phase. Levels are typed in their stored sign (positive = available to draw).
+- Stocks (supply_capacity.<category> or an edge capacity as an object with rate, inflow, level, min, max, max_draw, max_fill,
+  retention, efficiency, level_reference, change_reference) are integrated once per period, right after the last propagating
+  Phase. Levels are typed in their stored sign (positive = available to draw). A Stock with max_fill is storage (a tank): it is
+  the last source used and the last sink filled, so water passes through it within a period.
 - Events used only here should be "Temporal Simulation only" in Config → Events.`;
 
 /**
@@ -261,7 +265,7 @@ refers to them by id. Events used only in simulations are marked "Temporal Simul
 
 ## What a Temporal Simulation is
 
-A saved run over many periods (months, weeks…). A period has no duration of its own: time passes only
+A saved definition, run over many periods (hours, days, months…). A period has no duration of its own: time passes only
 where a temporal jump Event is placed. Each period runs, in order:
 1. its profile operations (the per-period inputs: rates, demands, capacities);
 2. each Phase in order: apply the Phase's Events that fire this period, then,
