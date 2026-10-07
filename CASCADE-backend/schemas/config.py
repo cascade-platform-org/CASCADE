@@ -197,6 +197,31 @@ class GraphTypeConfig(BaseModel):
     )
 
 
+BrandRole = Literal["neutral", "danger", "warning", "success", "accent"]
+
+
+class LevelBand(BaseModel):
+    """One band of the Level Scale (ADR-0019 §6): a Stock whose `value / reference`
+    is below `below` (and at or above the previous band's bound) shows in this
+    band. Colours are brand tokens (a role and a ramp step), never hex literals."""
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    below: Optional[float] = Field(default=None, description="Upper bound of the ratio; absent on the last band.")
+    role: BrandRole
+    step: int = Field(..., ge=50, le=950)
+
+
+def _default_level_scale() -> list[LevelBand]:
+    return [
+        LevelBand(label="large deficit", below=-0.5, role="danger", step=600),
+        LevelBand(label="deficit", below=-0.1, role="danger", step=300),
+        LevelBand(label="balanced", below=0.1, role="neutral", step=500),
+        LevelBand(label="surplus", below=0.5, role="accent", step=300),
+        LevelBand(label="large surplus", role="accent", step=600),
+    ]
+
+
 class ConfigMeta(BaseModel):
     name: str
     description: Optional[str] = None
@@ -231,6 +256,15 @@ class ModelConfiguration(BaseModel):
             "Absent entries use the engine's built-in defaults for that graph type."
         ),
     )
+    level_scale: list[LevelBand] = Field(
+        default_factory=_default_level_scale,
+        min_length=1,
+        description=(
+            "Client Configuration (ADR-0019 §6): how Level Mode colours a Stock by "
+            "value / reference in a Temporal Simulation run. Ascending bounds; only "
+            "the last band has none. The engine never reads it."
+        ),
+    )
     node_defaults: Dict[str, Any] = Field(
         default_factory=dict,
         description=(
@@ -238,3 +272,13 @@ class ModelConfiguration(BaseModel):
             "Value = partial Node — any Node field except id and position can be preset."
         ),
     )
+
+    @model_validator(mode="after")
+    def _level_scale_ascends(self) -> "ModelConfiguration":
+        bounds = [band.below for band in self.level_scale]
+        if bounds[-1] is not None or any(b is None for b in bounds[:-1]):
+            raise ValueError("level_scale: every band but the last needs `below`, and the last has none")
+        finite = [b for b in bounds if b is not None]
+        if any(b <= a for a, b in zip(finite, finite[1:])):
+            raise ValueError("level_scale: band bounds must ascend")
+        return self

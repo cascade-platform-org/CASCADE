@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2) and runs with the Run View (`lib/step-operator.ts`, slice 3); Stocks, Level Mode and Metrics are not built yet. Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2) runs with the Run View (`lib/step-operator.ts`, slice 3), Stocks (ADR-0020, slice 4) and Level Mode (`lib/level-mode.ts`, slice 5); Metrics are not built yet. Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -215,6 +215,11 @@ balanced, surplus, large surplus). The reference belongs to the Stock: by defaul
 bound `max(|min|, |max|)`, overridable by `Stock.level_reference` (level) and
 `Stock.change_reference` (a period's change). A Stock with neither is left neutral and the
 legend says so.
+
+As built, the Level Scale is `ModelConfiguration.level_scale` (bands of label, upper bound
+and brand token, edited under Config → Functionality Scale). Level Mode paints through the
+same per-Element colour map as the Analysis Heatmap; a node with several Stocks shows the
+most extreme ratio, and an Element without a Stock recedes to a light grey.
 
 **Level Mode**, available only inside a Temporal Simulation, recolours the canvas by the
 Level Scale as Analysis Mode does by a score; the legend swaps; Reset clears it. A switch

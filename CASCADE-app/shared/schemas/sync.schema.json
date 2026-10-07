@@ -1445,6 +1445,53 @@
       "title": "HeuristicConfig",
       "type": "object"
     },
+    "LevelBand": {
+      "additionalProperties": false,
+      "description": "One band of the Level Scale (ADR-0019 \u00a76): a Stock whose `value / reference`\nis below `below` (and at or above the previous band's bound) shows in this\nband. Colours are brand tokens (a role and a ramp step), never hex literals.",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "below": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Upper bound of the ratio; absent on the last band.",
+          "title": "Below"
+        },
+        "role": {
+          "enum": [
+            "neutral",
+            "danger",
+            "warning",
+            "success",
+            "accent"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "step": {
+          "maximum": 950,
+          "minimum": 50,
+          "title": "Step",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "label",
+        "role",
+        "step"
+      ],
+      "title": "LevelBand",
+      "type": "object"
+    },
     "Metric": {
       "additionalProperties": false,
       "description": "A view definition evaluated per period over the run record (ADR-0019 \u00a74).",
@@ -1590,6 +1637,15 @@
             "$ref": "#/$defs/GraphTypeConfig"
           },
           "title": "Graph Types",
+          "type": "array"
+        },
+        "level_scale": {
+          "description": "Client Configuration (ADR-0019 \u00a76): how Level Mode colours a Stock by value / reference in a Temporal Simulation run. Ascending bounds; only the last band has none. The engine never reads it.",
+          "items": {
+            "$ref": "#/$defs/LevelBand"
+          },
+          "minItems": 1,
+          "title": "Level Scale",
           "type": "array"
         },
         "node_defaults": {

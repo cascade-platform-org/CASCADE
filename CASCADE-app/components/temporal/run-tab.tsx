@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
+import { useConfigStore } from "@/store/config-store";
+import { brandColor } from "@/lib/brand";
 import { cancelTemporalSimulationRun, endTemporalSimulationRun, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import {
   EXPLAIN_END_RUN,
@@ -16,15 +18,6 @@ import {
   explainSelectPeriod,
 } from "@/lib/temporal-simulation-explainers";
 import { Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
-
-/** Default Level Scale bands. Tailwind ramps are brand-driven (CLAUDE.md §5). */
-const LEVEL_BANDS = [
-  { label: "large deficit", cls: "bg-red-600" },
-  { label: "deficit", cls: "bg-red-300" },
-  { label: "balanced", cls: "bg-zinc-300" },
-  { label: "surplus", cls: "bg-blue-300" },
-  { label: "large surplus", cls: "bg-blue-600" },
-];
 
 /** The standard Metrics, a column each before the custom ones (ADR-0019 §4). */
 const STANDARD_METRICS = ["Operativity", "Coverage", "Stock level"];
@@ -43,6 +36,7 @@ export function RunTab() {
   const display = useTemporalSimulationStore((s) => s.display);
   const reading = useTemporalSimulationStore((s) => s.levelReading);
   const metrics = useTemporalSimulationStore((s) => s.metrics);
+  const levelScale = useConfigStore((s) => s.config.level_scale);
   const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
 
@@ -122,9 +116,9 @@ export function RunTab() {
                 onChange={(r) => { setLevelReading(r); explain(explainDisplay("level", r)); }}
               />
               <div className="flex items-center gap-1" onClick={() => explain(explainDisplay("level", reading))}>
-                {LEVEL_BANDS.map((b) => (
+                {levelScale.map((b) => (
                   <span key={b.label} className="flex items-center gap-1 text-[10px] text-zinc-500">
-                    <span className={cn("h-2.5 w-2.5 rounded-sm", b.cls)} />{b.label}
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: brandColor(b.role, b.step) }} />{b.label}
                   </span>
                 ))}
               </div>

@@ -33,6 +33,8 @@ import "@xyflow/react/dist/style.css";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
+import { useLevelPaint } from "@/hooks/useLevelPaint";
+import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
@@ -131,6 +133,7 @@ const NODE_BOX = 72;           // conservative bounding-box size per node (px)
 function GlobalViewCanvas() {
   // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
   const { nodes: allNodes, edges: allEdges } = useShownElements();
+  const levelPaint = useLevelPaint();
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
 
@@ -293,6 +296,8 @@ function GlobalViewCanvas() {
 
   return (
     <div className="h-full w-full">
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
+      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -310,6 +315,7 @@ function GlobalViewCanvas() {
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         <ZoomSlider />
       </ReactFlow>
+      </SnapshotColorsProvider>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
           Every canvas view needs it: an Analysis Heatmap applies to the Element

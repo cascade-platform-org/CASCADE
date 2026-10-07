@@ -887,7 +887,7 @@ this will do" panel go, and their text becomes the user-manual chapter.
 | 2 | **The Temporal Simulation in the project** — *built 2026-10-07* | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
 | 3 | **Step operator and Run View** — *built 2026-10-07* | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
 | 4 | **Stocks and storage** (ADR-0020) — *built 2026-10-07* | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
-| 5 | **Level Scale and Level Mode** | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
+| 5 | **Level Scale and Level Mode** — *built 2026-10-07* | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
 | 6 | **Metrics and Scorecard** | 3 (coverage and stock level: 4) | the Run table shows Operativity, coverage, stock level and custom Metrics; CSV export; a period saves as a `temporal_simulation` Scorecard entry |
 | 7 | **EPANET Temporal Simulation importer and samples** | 2, 4 | Net1 imports with tanks as storage and a starting simulation; the IJDRR and Net1 samples run end to end; banca ore runs locally |
 | 8 | **Manual and reference docs** | all | user-manual chapter (`npm run docs:manual`), `api-reference.md` (`served_ratio`, `stored`), `local-first-guide.md` (Stock, `temporal_simulation`) |

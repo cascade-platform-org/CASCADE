@@ -26,6 +26,7 @@ import type { Node } from "@/lib/schemas/network";
 import type { EngineAlgorithms } from "@/lib/schemas/api";
 import { brandColor } from "@/lib/brand";
 import { isScenarioEvent } from "@/lib/event-application";
+import { DEFAULT_LEVEL_SCALE, type LevelBand } from "@/lib/schemas/config";
 
 // ---------------------------------------------------------------------------
 // Default configuration — N=3, no categories, no events
@@ -42,6 +43,7 @@ export const DEFAULT_CONFIG: ModelConfiguration = {
   categories: [],
   events: [],
   graph_types: [],
+  level_scale: DEFAULT_LEVEL_SCALE,
   node_defaults: {},
 };
 
@@ -119,6 +121,8 @@ interface ConfigActions {
    * those levels mean; the engine validates the length against the scale.
    */
   setFlowRatioThresholds: (thresholds: number[] | null) => void;
+  /** Client Configuration: Level Mode's bands (ADR-0019 §6). */
+  setLevelScale: (scale: LevelBand[]) => void;
 
   // --- Categories (operate on draft) ---
   addCategory: (category: CategoryDefinition) => void;
@@ -331,6 +335,13 @@ export const useConfigStore = create<ConfigStore>()(
       set((state) => {
         if (thresholds === null) delete state.draft.flow_ratio_thresholds;
         else state.draft.flow_ratio_thresholds = thresholds;
+        recomputeDirty(state);
+      });
+    },
+
+    setLevelScale(scale) {
+      set((state) => {
+        state.draft.level_scale = scale;
         recomputeDirty(state);
       });
     },

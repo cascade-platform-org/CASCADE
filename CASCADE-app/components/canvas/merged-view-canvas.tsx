@@ -33,6 +33,8 @@ import { useShallow } from "zustand/react/shallow";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
+import { useLevelPaint } from "@/hooks/useLevelPaint";
+import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkStore } from "@/store/network-store";
@@ -76,6 +78,7 @@ function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean): RFEdge {
 function MergedViewCanvas() {
   // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
   const { nodes: allNodes, edges: allEdges } = useShownElements();
+  const levelPaint = useLevelPaint();
   const runShown = useTemporalSimulationStore((s) => s.running);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const updateNode = useCanvasStore((s) => s.updateNode);
@@ -380,6 +383,8 @@ function MergedViewCanvas() {
         <GeoMapBackground key={geoCanvasId} canvasId={geoCanvasId} />
       )}
 
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
+      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -423,6 +428,7 @@ function MergedViewCanvas() {
           }}
         />
       </ReactFlow>
+      </SnapshotColorsProvider>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
           Every canvas view needs it: an Analysis Heatmap applies to the Element

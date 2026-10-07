@@ -86,7 +86,7 @@ _Avoid_: Time warning, countdown, timer
 An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
-**Temporal Simulation** *(being built for v1.1: the definition, runs and Stocks are built; Level Mode and Metrics are not)*:
+**Temporal Simulation** *(being built for v1.1: the definition, runs, Stocks and Level Mode are built; Metrics are not)*:
 A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
@@ -106,7 +106,7 @@ _Avoid_: "stage", "sub-step"
 A value that persists across periods, held inside `Node.supply_capacity[category]` as the richer form of a supply rate (`rate`, `inflow`, `level`, `min`, `max`, `max_draw`, `max_fill`, `retention`, `efficiency`, and the Level Scale references). With `max_fill` it is **storage** (a tank, a reservoir): it fills from the network's own flow of its Category and feeds it, used as the last source and filled as the last sink, sharing by fraction with other storages. `level` is on hand and signed as typed; what the stock offers and accrues is scaled by Functionality, the stored level never. Also allowed on `Edge.capacity`, where it adds edge capacity and no supply. Read and integrated only by the step operator; the engine never sees one and a Rule never writes one. The only stock before this was Functionality Time. ADR-0020.
 _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a Scenario Field
 
-**Level Scale** *(proposed)*:
+**Level Scale**:
 A display scale, orthogonal to the Functionality scale, for a **Stock**: ordered bands over the signed ratio `value / reference`, each with a label and a brand colour token, in Client Configuration (never sent to the backend). Exists because an accumulation can be a problem at both extremes while Functionality only worsens. The reference belongs to the Stock and defaults to its own bound. ADR-0019.
 _Avoid_: "level scale" for Functionality levels (those are the Functionality scale); a Rule input (display only)
 
@@ -114,7 +114,7 @@ _Avoid_: "level scale" for Functionality levels (those are the Functionality sca
 The canvas showing a **Temporal Simulation** run at a selected period, read-only, the way **Analysis Mode** shows a score; the Inspector shows that period too, and every model edit is refused until the view ends. The run lives on its own copy of the model, so leaving the view (Reset or End run) shows the model exactly as it was. Every change over time is authored before the run, as profile values or Phase Events. ADR-0019 §3.
 _Avoid_: "simulation mode" ("Simulation" bare is avoided), "replay"
 
-**Level Mode** *(proposed)*:
+**Level Mode**:
 The canvas recoloured by the Level Scale while a run is shown (the **Run View**), as **Analysis Mode** recolours it by a score: colours mean a stock's level or its change over the period, not Functionality. Cleared by End run or Reset.
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
@@ -135,7 +135,7 @@ The complete user-editable project settings, split into Client Configuration and
 _Avoid_: Config, ModelConfig, ProjectConfig, settings
 
 **Client Configuration**:
-The frontend-only subset — display colours, Event definitions (applied client-side), Scorecard weights, Canvas metadata (*proposed*: the Level Scale). Never sent to the backend.
+The frontend-only subset — display colours, Event definitions (applied client-side), Scorecard weights, Canvas metadata, the Level Scale. Never sent to the backend.
 _Avoid_: Display configuration, UI config
 
 **Engine Configuration**:

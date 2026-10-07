@@ -140,6 +140,45 @@ export const GraphTypeConfigSchema = z.object({
 // Project config root
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Level Scale (ADR-0019 §6) — Client Configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * One band of the Level Scale: a Stock whose `value / reference` is below
+ * `below` (and at or above the previous bound) shows in it. Colours are brand
+ * tokens, a role and a ramp step (CLAUDE.md §5), never hex literals.
+ */
+export const LevelBandSchema = z
+  .object({
+    label: z.string(),
+    /** Upper bound of the ratio; absent on the last band. */
+    below: z.number().optional(),
+    role: z.enum(["neutral", "danger", "warning", "success", "accent"]),
+    step: z.number().int().min(50).max(950),
+  })
+  .strict();
+export type LevelBand = z.infer<typeof LevelBandSchema>;
+
+export const DEFAULT_LEVEL_SCALE: LevelBand[] = [
+  { label: "large deficit", below: -0.5, role: "danger", step: 600 },
+  { label: "deficit", below: -0.1, role: "danger", step: 300 },
+  { label: "balanced", below: 0.1, role: "neutral", step: 500 },
+  { label: "surplus", below: 0.5, role: "accent", step: 300 },
+  { label: "large surplus", role: "accent", step: 600 },
+];
+
+/** Every band but the last has a bound, and the bounds ascend. */
+export function levelScaleProblem(scale: readonly LevelBand[]): string | null {
+  const bounds = scale.map((b) => b.below);
+  if (bounds.length === 0) return "the Level Scale needs a band";
+  if (bounds[bounds.length - 1] !== undefined || bounds.slice(0, -1).some((b) => b === undefined)) {
+    return "every band but the last needs a bound, and the last has none";
+  }
+  const finite = bounds.filter((b): b is number => b !== undefined);
+  return finite.some((b, i) => i > 0 && b <= finite[i - 1]) ? "band bounds must ascend" : null;
+}
+
 export const ModelConfigurationSchema = z.object({
   version: z.string(),
   meta: z.object({
@@ -169,6 +208,12 @@ export const ModelConfigurationSchema = z.object({
    * Named node templates. Key = user-chosen name.
    * Applied at node creation time; any Node field except id and position can be preset.
    */
+  /** Client Configuration: how Level Mode colours a Stock in a Temporal Simulation run (ADR-0019 §6). */
+  level_scale: z
+    .array(LevelBandSchema)
+    .min(1)
+    .default(DEFAULT_LEVEL_SCALE)
+    .refine((scale) => levelScaleProblem(scale) === null, { message: "level_scale: bounds must ascend, and only the last band has none" }),
   node_defaults: z.record(z.string(), NodeSchema.partial()).default({}),
 });
 

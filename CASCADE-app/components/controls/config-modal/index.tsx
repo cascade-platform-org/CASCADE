@@ -14,6 +14,7 @@ import { cn } from "./primitives";
 import { useShallow } from "zustand/react/shallow";
 import { useConfigStore } from "@/store/config-store";
 import { operationProblems } from "./attribute-operations-editor";
+import { levelScaleProblem } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import type { ConfigModalTab } from "@/store/ui-store";
 import { TabFunctionalityScale } from "./tab-functionality-scale";
@@ -65,7 +66,12 @@ export function ConfigModal() {
   const pressStartedOnBackdrop = useRef(false);
   // Shown once a Save was refused, and recomputed as the rows are fixed.
   const [saveTried, setSaveTried] = useState(false);
-  const problems = useConfigStore(useShallow((s) => operationProblems(s.draft.events)));
+  const problems = useConfigStore(
+    useShallow((s) => {
+      const scale = levelScaleProblem(s.draft.level_scale);
+      return [...operationProblems(s.draft.events), ...(scale ? [`Level Scale: ${scale}`] : [])];
+    }),
+  );
 
   function handleClose() {
     if (isDirty) {

@@ -33,6 +33,8 @@ import { nanoid } from "nanoid";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
+import { useLevelPaint } from "@/hooks/useLevelPaint";
+import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { NodeSearch } from "./node-search";
@@ -64,6 +66,7 @@ function FlowCanvas() {
   const activeCanvas = useCanvasStore(selectActiveCanvas);
   // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
   const { nodes: allNodes, edges: allEdges } = useShownElements();
+  const levelPaint = useLevelPaint();
   const runShown = useTemporalSimulationStore((s) => s.running);
   const allCanvases = useCanvasStore((s) => s.canvases) as Record<string, import("@/lib/schemas/network").Canvas>;
   const updateNode = useCanvasStore((s) => s.updateNode);
@@ -640,6 +643,8 @@ function FlowCanvas() {
         />
       )}
 
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
+      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -686,6 +691,7 @@ function FlowCanvas() {
           }}
         />
       </ReactFlow>
+      </SnapshotColorsProvider>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms */}
       <CanvasLegend />

@@ -394,6 +394,18 @@ would silently bind the category to no heuristic.
 | `SourceToDemands` | Capacitated flow allocation | Physical resource flows (water, electricity). Delivery ratio → functionality via `dependency_level`. How scarcity is shared is a per-graph-type choice — see "Flow allocation strategies" below. |
 | `Requisite` | Pessimistic aggregation | Non-flow logical necessities. Node degrades if any required upstream falls below threshold. |
 
+#### Level Scale (`level_scale`, ADR-0019 §6)
+
+Client Configuration: how Level Mode colours a Stock in a Temporal Simulation run by
+`value / reference` (its level, or its change over the period). An ordered list of bands
+`{ "label", "below", "role", "step" }`, lowest ratio first; every band but the last has a
+`below` bound and the bounds ascend. `role` and `step` are a brand colour token
+(`neutral`, `danger`, `warning`, `success`, `accent`; step 50–950). The default has five
+bands: large deficit (< −0.5), deficit, balanced (−0.1 to 0.1), surplus, large surplus (≥ 0.5).
+A Stock's reference is its `level_reference` or `change_reference`, else its bound
+max(|min|, |max|); a Stock with neither is shown as "no reference". The engine never
+reads the Level Scale.
+
 #### Flow allocation strategies (ADR-0014)
 
 How a `SourceToDemands` category shares **scarce** supply is selected per

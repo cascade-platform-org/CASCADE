@@ -18,6 +18,8 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConfigStore } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
+import { useLevelPaint } from "@/hooks/useLevelPaint";
+import type { HeatmapLegend } from "@/lib/analysis-legend";
 import { LegendView } from "@/components/analysis/legend-view";
 import { FALLBACK_LEVEL_COLOR } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
@@ -58,13 +60,22 @@ function LegendShape({ type, size = 14, fill }: { type: string; size?: number; f
  * and so without fighting react-hooks/set-state-in-effect.
  */
 export function CanvasLegend() {
-  const heatmapActive = useAnalysisStore((s) => s.heatmapActive);
-  return <LegendPanel key={heatmapActive ? "analysis" : "functionality"} heatmapActive={heatmapActive} />;
+  const analysisActive = useAnalysisStore((s) => s.heatmapActive);
+  const analysisLegend = useAnalysisStore((s) => s.heatmapLegend);
+  // Level Mode (ADR-0019 §6) paints over everything, the Analysis Heatmap included.
+  const levelPaint = useLevelPaint();
+  const overlay = levelPaint
+    ? { heading: "Level Mode", legend: levelPaint.legend }
+    : analysisActive && analysisLegend
+      ? { heading: "Analysis", legend: analysisLegend }
+      : null;
+  return <LegendPanel key={overlay?.heading ?? "functionality"} overlay={overlay} />;
 }
 
-function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
+function LegendPanel({ overlay }: { overlay: { heading: string; legend: HeatmapLegend } | null }) {
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
-  const heatmapLegend = useAnalysisStore((s) => s.heatmapLegend);
+  const heatmapActive = overlay !== null;
+  const heatmapLegend = overlay?.legend ?? null;
   const [open, setOpen] = useState(true);
 
   // Both blocks are shown for an Analysis Heatmap that scored nodes AND edges;
@@ -94,7 +105,7 @@ function LegendPanel({ heatmapActive }: { heatmapActive: boolean }) {
           onClick={() => setOpen((v) => !v)}
           className="flex w-full items-center justify-between px-3 py-1.5 font-semibold text-zinc-500 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
-          <span className="truncate">{heatmapActive ? "Analysis" : "Legend"}</span>
+          <span className="truncate">{overlay?.heading ?? "Legend"}</span>
           <ChevronDown size={11} className={cn("transition-transform", !open && "-rotate-90")} />
         </button>
 

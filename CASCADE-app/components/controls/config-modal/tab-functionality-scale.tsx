@@ -4,7 +4,8 @@ import { useRef } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { useConfigStore } from "@/store/config-store";
 import { useShallow } from "zustand/react/shallow";
-import { TextInput, NumberInput, ColBtn } from "./primitives";
+import { TextInput, NumberInput, ColBtn, CollapsibleSection } from "./primitives";
+import { LevelScaleEditor } from "./level-scale-editor";
 
 export function TabFunctionalityScale() {
   const levels = useConfigStore(useShallow((s) => s.draft.functionality_scale));
@@ -148,6 +149,11 @@ export function TabFunctionalityScale() {
             Reset bounds to linear
           </button>
         )}
+      </div>
+      <div className="mt-5">
+        <CollapsibleSection label="Level Scale — Stocks in a Temporal Simulation run">
+          <LevelScaleEditor />
+        </CollapsibleSection>
       </div>
     </div>
   );
