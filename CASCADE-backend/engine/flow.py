@@ -30,6 +30,19 @@ Allocation over that graph (see ALLOCATIONS):
 `served_ratio = delivered / demand` maps to a level. Capacities/weights are
 integers (networkx flow solvers require it), so all quantities are scaled by
 `SCALE` and rounded; the served ratio is scale-invariant.
+
+Storage (ADR-0020 §1c). A node the request marks as storage for a category
+offers its supply number as a draw, entering at its `out` vertex, and may take
+up to its fill amount from the network. Consumers' deliveries are computed
+with the draw counted like any supply: what each consumer receives does not
+depend on which source sent it. `storage_exchange` then fixes the two orders
+the ADR states, after the fixed point: stored water is used LAST (the least
+draw that still delivers the same amounts, shared by a common fraction of each
+draw), and storage fills LAST (from what the other sources have left after
+every consumer, water-filled by a common fraction of each fill).
+
+A `Stock` never reaches this module: the client sends its supply number, and
+`_number` fails loudly if one slips through.
 """
 from __future__ import annotations
 
@@ -38,13 +51,17 @@ import math
 import networkx as nx
 
 from core.topology import incoming_closure
-from schemas.network import Edge, Node
+from schemas.network import Edge, Node, Stock
 
 SCALE = 1000          # float quantities → integers for the solver
 INF_CAP = 10**12      # stand-in for "unbounded" capacity
 
 _SRC = "__source__"
 _SINK = "__sink__"
+_FRACTION = 10**6     # resolution of the common storage fraction
+
+# node id -> category -> the most that node may fill this Propagation (ADR-0020 §1c)
+StorageFill = dict[str, dict[str, float]]
 
 # Allocation strategies for scarce supply (selected per graph type via the
 # "source-to-demands-flow" heuristic's `allocation` param; see
@@ -72,6 +89,7 @@ def flow_category_candidates(
     n: int,
     allocation: str = DEFAULT_ALLOCATION,
     ratio_thresholds: list[float] | None = None,
+    storage: StorageFill | None = None,
 ) -> dict[str, tuple[int, dict[str, float]]]:
     """Flow proposal for one `SourceToDemands` category.
 
@@ -83,13 +101,85 @@ def flow_category_candidates(
     `ratio_thresholds` is the validated level table (`parse_ratio_thresholds`);
     None means the linear split.
     """
+    return solve_category(
+        category, nodes, edges, node_func, edge_func, n, allocation, ratio_thresholds, storage
+    ).candidates
+
+
+class CategorySolve:
+    """One category's flow solve: the proposal, and what each consumer received."""
+
+    def __init__(
+        self,
+        candidates: dict[str, tuple[int, dict[str, float]]],
+        delivered: dict[str, int],
+        served_ratio: dict[str, float],
+    ) -> None:
+        self.candidates = candidates
+        self.delivered = delivered          # scaled amounts, per consumer
+        self.served_ratio = served_ratio    # every consumer, fully served included
+
+
+def solve_category(
+    category: str,
+    nodes: dict[str, Node],
+    edges: list[Edge],
+    node_func: dict[str, int],
+    edge_func: dict[str, int],
+    n: int,
+    allocation: str = DEFAULT_ALLOCATION,
+    ratio_thresholds: list[float] | None = None,
+    storage: StorageFill | None = None,
+) -> CategorySolve:
+    """`flow_category_candidates`, also returning every consumer's delivery and
+    served ratio (ADR-0020 §3) for the result and the storage stages."""
+    built = _build_graph(category, nodes, edges, node_func, edge_func, n, storage)
+    if built is None:
+        return CategorySolve({}, {}, {})
+    graph, consumers, _draws = built
+
+    if allocation == "priority_greedy":
+        delivered = _allocate_priority_greedy(graph, consumers, nodes, edges, category)
+    else:
+        delivered = _allocate_tiered_fair_share(graph, consumers, nodes, category)
+
+    candidates: dict[str, tuple[int, dict[str, float]]] = {}
+    served: dict[str, float] = {}
+    for nid in consumers:
+        # Ratio against the TRUE float demand, not the scaled integer: a
+        # demand small enough to round to a zero-capacity sink edge must read
+        # as ratio 0 (permanently starved — the documented symptom the
+        # importer's FLOW_UNIT_SCALE guards against), not divide-by-zero
+        # "fully served". `demand` is truthy for every consumers[] entry.
+        demand = _demand(nodes[nid], category)
+        served_ratio = min(1.0, delivered.get(nid, 0) / SCALE / demand) if demand else 1.0
+        served[nid] = served_ratio
+        level = _ratio_to_level(served_ratio, n, ratio_thresholds)
+        if level >= n:
+            continue  # fully (or near-fully) served — no degradation proposed
+        candidates[nid] = (level, _blame(nid, category, nodes, edges, node_func, edge_func, n))
+    return CategorySolve(candidates, delivered, served)
+
+
+def _build_graph(
+    category: str,
+    nodes: dict[str, Node],
+    edges: list[Edge],
+    node_func: dict[str, int],
+    edge_func: dict[str, int],
+    n: int,
+    storage: StorageFill | None,
+) -> tuple[nx.DiGraph, dict[str, int], dict[str, int]] | None:
+    """The category's capacitated flow network (module docstring), or None when
+    there is nothing to allocate. Returns `(graph, consumer demands, storage
+    draws)`, scaled; a storage draw enters at the node's `out` vertex."""
     # sorted: node iteration order decides edge-insertion order into the
     # solver graph, and an unsorted set's order depends on the per-process
     # hash seed — under a degenerate optimum (scarcity ties) that can flip
     # which consumer a solver happens to favour between runs.
     members = sorted(nid for nid, node in nodes.items() if _in_category(node, category))
     if not members:
-        return {}
+        return None
 
     # Default capacity for unspecified infrastructure throughput and edges: the
     # maximum supply of any source in this category. This makes those capacities
@@ -99,6 +189,7 @@ def flow_category_candidates(
 
     graph = nx.DiGraph()
     consumers: dict[str, int] = {}  # nid -> scaled demand (sink-edge capacity)
+    draws: dict[str, int] = {}      # storage nid -> scaled draw (source-edge capacity)
 
     for nid in members:
         node = nodes[nid]
@@ -107,7 +198,11 @@ def flow_category_candidates(
 
         supply = _effective_supply(node, category, node_func[nid], n)
         if supply is not None:
-            graph.add_edge(_SRC, (nid, "in"), capacity=supply, weight=0)
+            if _is_storage(storage, nid, category):
+                draws[nid] = supply
+                graph.add_edge(_SRC, (nid, "out"), capacity=supply, weight=0)
+            else:
+                graph.add_edge(_SRC, (nid, "in"), capacity=supply, weight=0)
 
         demand = _demand(node, category)
         if demand:
@@ -118,28 +213,135 @@ def flow_category_candidates(
             cap = _edge_capacity(edge, edge_func[edge.id], n, default_cap)
             graph.add_edge((edge.source, "out"), (edge.target, "in"), capacity=cap, weight=1)
 
-    if not consumers or _SRC not in graph:
-        return {}  # no demand or no supply — nothing to allocate
+    if _SRC not in graph:
+        return None  # no supply — nothing to allocate
+    if not consumers and not any(_is_storage(storage, nid, category) for nid in members):
+        return None  # no demand and nothing to fill
+    return graph, consumers, draws
 
-    if allocation == "priority_greedy":
-        delivered = _allocate_priority_greedy(graph, consumers, nodes, edges, category)
-    else:
-        delivered = _allocate_tiered_fair_share(graph, consumers, nodes, category)
 
-    candidates: dict[str, tuple[int, dict[str, float]]] = {}
+def storage_exchange(
+    category: str,
+    nodes: dict[str, Node],
+    edges: list[Edge],
+    node_func: dict[str, int],
+    edge_func: dict[str, int],
+    n: int,
+    storage: StorageFill,
+    delivered: dict[str, int],
+) -> dict[str, tuple[float, float]]:
+    """What each storage of `category` filled and drew, as `{nid: (filled,
+    drawn)}` in model units (ADR-0020 §1c). Run once, on the converged state,
+    with the consumers' deliveries of the final solve held fixed.
+
+    Drawn: the least total draw that still delivers `delivered`, each storage
+    capped at the same fraction of its draw, the smallest fraction that works.
+    Filled: water-filling over the fill amounts by a common fraction, from what
+    is left after every consumer; draws are fixed, so one tank never fills from
+    the network by drawing more from another.
+    """
+    stores = sorted(nid for nid in nodes if _is_storage(storage, nid, category) and _in_category(nodes[nid], category))
+    if not stores:
+        return {}
+    built = _build_graph(category, nodes, edges, node_func, edge_func, n, storage)
+    if built is None:
+        return {nid: (0.0, 0.0) for nid in stores}
+    graph, consumers, draws = built
     for nid in consumers:
-        # Ratio against the TRUE float demand, not the scaled integer: a
-        # demand small enough to round to a zero-capacity sink edge must read
-        # as ratio 0 (permanently starved — the documented symptom the
-        # importer's FLOW_UNIT_SCALE guards against), not divide-by-zero
-        # "fully served". `demand` is truthy for every consumers[] entry.
-        demand = _demand(nodes[nid], category)
-        served_ratio = delivered.get(nid, 0) / SCALE / demand if demand else 1.0
-        level = _ratio_to_level(served_ratio, n, ratio_thresholds)
-        if level >= n:
-            continue  # fully (or near-fully) served — no degradation proposed
-        candidates[nid] = (level, _blame(nid, category, nodes, edges, node_func, edge_func, n))
-    return candidates
+        graph.add_edge((nid, "in"), _SINK, capacity=delivered.get(nid, 0), weight=0)
+    target = sum(delivered.get(nid, 0) for nid in consumers)
+
+    drawn = _least_draw(graph, draws, target, big=graph.number_of_edges() + 10)
+    for nid, amount in drawn.items():
+        graph[_SRC][(nid, "out")]["capacity"] = amount
+
+    fill_caps: dict[str, int] = {}
+    for nid in stores:
+        fill = storage[nid][category]
+        cap = _scaled(fill * _func_ratio(node_func[nid], n))
+        if cap > 0:
+            fill_caps[nid] = cap
+            graph.add_edge((nid, "in"), (nid, "fill"), capacity=cap, weight=0)
+    filled = _fill_by_fraction(graph, fill_caps, target)
+    return {nid: (filled.get(nid, 0) / SCALE, drawn.get(nid, 0) / SCALE) for nid in stores}
+
+
+def _least_draw(graph: nx.DiGraph, draws: dict[str, int], target: int, big: int) -> dict[str, int]:
+    """Each storage's draw when stored water is used last: the smallest common
+    fraction f of every draw that still delivers `target`, then a min-cost flow
+    where storage costs more than any path, so other sources go first."""
+    if not draws:
+        return {}
+
+    def set_fraction(f: int) -> None:
+        for nid, cap in draws.items():
+            graph[_SRC][(nid, "out")]["capacity"] = cap * f // _FRACTION
+
+    lo, hi = 0, _FRACTION
+    while lo < hi:  # smallest feasible fraction
+        mid = (lo + hi) // 2
+        set_fraction(mid)
+        value, _ = nx.maximum_flow(graph, _SRC, _SINK)
+        if value >= target:
+            hi = mid
+        else:
+            lo = mid + 1
+    set_fraction(lo)
+    for nid in draws:
+        graph[_SRC][(nid, "out")]["weight"] = big
+    flow = nx.max_flow_min_cost(graph, _SRC, _SINK)
+    for nid in draws:
+        graph[_SRC][(nid, "out")]["weight"] = 0
+    return {nid: flow.get(_SRC, {}).get((nid, "out"), 0) for nid in draws}
+
+
+def _fill_by_fraction(graph: nx.DiGraph, caps: dict[str, int], frozen_total: int) -> dict[str, int]:
+    """Max-min water-filling over storages by a common FRACTION of each fill
+    capacity: the consumer-side loop of `_allocate_tiered_fair_share`, mirrored
+    onto fills and weighted by capacity. The consumers' sink edges are already
+    in the graph at their deliveries (`frozen_total`), so filling never takes
+    water a consumer received."""
+    filled: dict[str, int] = {}
+    active = sorted(caps)
+
+    def set_caps(f: int) -> int:
+        total = 0
+        for nid in active:
+            cap = caps[nid] * f // _FRACTION
+            graph.add_edge((nid, "fill"), _SINK, capacity=cap, weight=0)
+            total += cap
+        return total
+
+    lam = 0
+    while active:
+        lo, hi = lam, _FRACTION
+        while lo < hi:  # largest feasible common fraction
+            mid = (lo + hi + 1) // 2
+            target = frozen_total + set_caps(mid)
+            value, _ = nx.maximum_flow(graph, _SRC, _SINK)
+            if value >= target:
+                lo = mid
+            else:
+                hi = mid - 1
+        lam = lo
+        set_caps(lam)
+        _, flow = nx.maximum_flow(graph, _SRC, _SINK)
+        reachable = _residual_reachable(graph, flow)
+        still_active: list[str] = []
+        for nid in active:
+            amount = caps[nid] * lam // _FRACTION
+            if lam >= _FRACTION or (nid, "fill") not in reachable:
+                filled[nid] = amount  # full, or bottlenecked: frozen at the fraction
+                frozen_total += amount
+            else:
+                still_active.append(nid)
+                graph.remove_edge((nid, "fill"), _SINK)
+        if len(still_active) == len(active):
+            for nid in still_active:  # a solver anomaly; never loop forever
+                filled[nid] = caps[nid] * lam // _FRACTION
+            break
+        active = still_active
+    return filled
 
 
 def _allocate_priority_greedy(
@@ -303,6 +505,19 @@ def _in_category(node: Node, category: str) -> bool:
     return bool(node.node_categories and category in node.node_categories)
 
 
+def _is_storage(storage: StorageFill | None, nid: str, category: str) -> bool:
+    return storage is not None and category in storage.get(nid, {})
+
+
+def _number(value: float | Stock | None, where: str) -> float | None:
+    """A capacity as the engine reads it. A Stock here is a client bug: the
+    payload builder sends its supply number (ADR-0020 §2), and guessing one
+    would put a level the engine must never read into the allocation."""
+    if isinstance(value, Stock):
+        raise TypeError(f"{where} is a Stock; the engine reads only numbers (ADR-0020 §2)")
+    return value
+
+
 def _scaled(value: float) -> int:
     return max(0, round(value * SCALE))
 
@@ -328,15 +543,16 @@ def _max_source_supply(category: str, nodes: dict[str, Node]) -> float | None:
     category has no source. Used as the default capacity for unspecified
     infrastructure throughput and edges."""
     supplies = [
-        node.supply_capacity[category]
+        _number(node.supply_capacity[category], f"node {node.id} supply_capacity[{category}]")
         for node in nodes.values()
         if node.supply_capacity and category in node.supply_capacity
     ]
-    return max(supplies) if supplies else None
+    numbers = [value for value in supplies if value is not None]
+    return max(numbers) if numbers else None
 
 
 def _effective_supply(node: Node, category: str, func: int, n: int) -> int | None:
-    cap = (node.supply_capacity or {}).get(category)
+    cap = _number((node.supply_capacity or {}).get(category), f"node {node.id} supply_capacity[{category}]")
     if cap is None:
         return None
     return _scaled(cap * _func_ratio(func, n))
@@ -368,7 +584,8 @@ def _priority(node: Node, category: str) -> int:
 
 
 def _edge_capacity(edge: Edge, func: int, n: int, default_cap: float | None) -> int:
-    cap = edge.capacity if edge.capacity is not None else default_cap
+    own = _number(edge.capacity, f"edge {edge.id} capacity")
+    cap = own if own is not None else default_cap
     if cap is None:
         return INF_CAP
     return _scaled(cap * _func_ratio(func, n))

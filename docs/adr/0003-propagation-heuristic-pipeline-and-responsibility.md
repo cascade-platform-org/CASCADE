@@ -1,6 +1,6 @@
 # ADR-0003 — Propagation heuristic pipeline, multi-category composition, and responsibility share
 
-**Status:** accepted (flow-allocation default superseded by ADR-0014 — see the closing note). Proposed amendment: ADR-0020 adds `served_ratio` and storage's `stored` to the Propagation result, and allocates storage last (§1c, §3).
+**Status:** accepted (flow-allocation default superseded by ADR-0014 — see the closing note). Amended by ADR-0020 (built 2026-10-07): the Propagation result gains `served_ratio` and storage's `stored`, and storage is drawn and filled last (§1c, §3).
 
 ## Heuristic pipeline: propose → guard → commit
 

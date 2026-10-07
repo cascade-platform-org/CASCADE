@@ -133,6 +133,138 @@
       "title": "Position",
       "type": "object"
     },
+    "Stock": {
+      "additionalProperties": false,
+      "description": "A supply rate with a level that persists across Temporal Simulation periods (ADR-0020).\n\nSits where a bare number would: `Node.supply_capacity[category]` or\n`Edge.capacity`. The engine never reads one: `buildPropagationPayload` sends\nits supply number, and only the client's step operator integrates `level`.\nWith `max_fill` it is **storage** (\u00a71c): it fills from the network's own flow\nof its Category and feeds that flow, used last and filled last.",
+      "properties": {
+        "rate": {
+          "description": "Per-period capacity basis: what a bare number would carry.",
+          "minimum": 0,
+          "title": "Rate",
+          "type": "number"
+        },
+        "inflow": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Credited each period; absent = rate.",
+          "title": "Inflow"
+        },
+        "level": {
+          "description": "Signed amount on hand; positive = available to draw.",
+          "title": "Level",
+          "type": "number"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Floor of the level; absent = 0.",
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ceiling of the level; absent = none.",
+          "title": "Max"
+        },
+        "max_draw": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Most the level may add to supply per period.",
+          "title": "Max Draw"
+        },
+        "max_fill": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set = storage: most it may take from the network per period.",
+          "title": "Max Fill"
+        },
+        "retention": {
+          "default": 1.0,
+          "description": "Multiplier on the level each period (decay, interest).",
+          "minimum": 0,
+          "title": "Retention",
+          "type": "number"
+        },
+        "efficiency": {
+          "default": 1.0,
+          "description": "Multiplier on the credited inflow (transfer loss).",
+          "minimum": 0,
+          "title": "Efficiency",
+          "type": "number"
+        },
+        "level_reference": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Level Scale reference for the level.",
+          "title": "Level Reference"
+        },
+        "change_reference": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Level Scale reference for a period's change.",
+          "title": "Change Reference"
+        }
+      },
+      "required": [
+        "rate",
+        "level"
+      ],
+      "title": "Stock",
+      "type": "object"
+    },
     "Node": {
       "properties": {
         "id": {
@@ -273,7 +405,14 @@
           "anyOf": [
             {
               "additionalProperties": {
-                "type": "number"
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "$ref": "#/$defs/Stock"
+                  }
+                ]
               },
               "type": "object"
             },
@@ -450,6 +589,9 @@
           "anyOf": [
             {
               "type": "number"
+            },
+            {
+              "$ref": "#/$defs/Stock"
             },
             {
               "type": "null"
@@ -1274,6 +1416,28 @@
           },
           "title": "Warnings",
           "type": "array"
+        },
+        "served_ratio": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "description": "Delivered \u00f7 demand per flow consumer and Category, at the converged state (ADR-0020 \u00a73), fully served consumers included. The cause of a flow Functionality level; a Rule override or a backup deferral may make the two disagree.",
+          "title": "Served Ratio",
+          "type": "object"
+        },
+        "stored": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "$ref": "#/$defs/StoredAmount"
+            },
+            "type": "object"
+          },
+          "description": "Per storage node and Category: what it filled and drew (ADR-0020 \u00a71c).",
+          "title": "Stored",
+          "type": "object"
         }
       },
       "required": [
@@ -1283,6 +1447,27 @@
         "iterations"
       ],
       "title": "PropagationResult",
+      "type": "object"
+    },
+    "StoredAmount": {
+      "description": "What one storage exchanged with the network in one Propagation (ADR-0020 \u00a71c).",
+      "properties": {
+        "filled": {
+          "minimum": 0,
+          "title": "Filled",
+          "type": "number"
+        },
+        "drawn": {
+          "minimum": 0,
+          "title": "Drawn",
+          "type": "number"
+        }
+      },
+      "required": [
+        "filled",
+        "drawn"
+      ],
+      "title": "StoredAmount",
       "type": "object"
     },
     "PropagationScorecardEntry": {

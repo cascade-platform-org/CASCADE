@@ -3,15 +3,27 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from .network import Project, ResponsibilityShare, PropagationScorecardEntry
+from .network import Project, ResponsibilityShare, PropagationScorecardEntry, Stock
 from .config import ModelConfiguration
 
 
 # ---------------------------------------------------------------------------
 # Propagation request / result
 # ---------------------------------------------------------------------------
+
+def _reject_stocks(project: Project) -> None:
+    """A Stock never reaches the engine (ADR-0020 §2): the payload builder sends
+    its supply number. Refused here as a 422 rather than failing inside a run."""
+    for node in project.nodes.values():
+        for category, value in (node.supply_capacity or {}).items():
+            if isinstance(value, Stock):
+                raise ValueError(f"node {node.id}: supply_capacity[{category}] is a Stock; send its supply number")
+    for edge in project.edges.values():
+        if isinstance(edge.capacity, Stock):
+            raise ValueError(f"edge {edge.id}: capacity is a Stock; send its capacity number")
+
 
 class PropagationRequest(BaseModel):
     """
@@ -25,6 +37,20 @@ class PropagationRequest(BaseModel):
     active_canvas_id: Optional[str] = Field(
         default=None, description="Canvas to restrict propagation when scope = local."
     )
+    storage: Optional[dict[str, dict[str, float]]] = Field(
+        default=None,
+        description=(
+            "Storage (ADR-0020 §1c), written by the client's payload builder: node → "
+            "Category → the most it may fill this Propagation. That node's "
+            "supply_capacity[Category] is then its draw, used only for demand the "
+            "other sources cannot cover; filling comes after every consumer."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _numbers_only(self):
+        _reject_stocks(self.project)
+        return self
 
 
 MAX_COALITIONS_PER_BATCH = 50
@@ -51,6 +77,15 @@ class BatchPropagationRequest(BaseModel):
     active_canvas_id: Optional[str] = Field(
         default=None, description="Canvas to restrict propagation when scope = local."
     )
+    storage: Optional[dict[str, dict[str, float]]] = Field(
+        default=None,
+        description=(
+            "Storage (ADR-0020 §1c), written by the client's payload builder: node → "
+            "Category → the most it may fill this Propagation. That node's "
+            "supply_capacity[Category] is then its draw, used only for demand the "
+            "other sources cannot cover; filling comes after every consumer."
+        ),
+    )
     coalitions: list[list[str]] = Field(
         ...,
         min_length=1,
@@ -61,6 +96,11 @@ class BatchPropagationRequest(BaseModel):
             "Project are ignored, exactly as they are on the single-run path."
         ),
     )
+
+    @model_validator(mode="after")
+    def _numbers_only(self):
+        _reject_stocks(self.project)
+        return self
 
 
 class ElementUpdate(BaseModel):
@@ -90,6 +130,12 @@ class ElementUpdate(BaseModel):
     properties: Optional[dict[str, Any]] = None
 
 
+class StoredAmount(BaseModel):
+    """What one storage exchanged with the network in one Propagation (ADR-0020 §1c)."""
+    filled: float = Field(..., ge=0)
+    drawn: float = Field(..., ge=0)
+
+
 class PropagationResult(BaseModel):
     scope: Literal["local", "global"]
     updates: list[ElementUpdate]
@@ -98,6 +144,19 @@ class PropagationResult(BaseModel):
     warnings: list[str] = Field(
         default_factory=list,
         description="Non-fatal engine warnings, e.g. convergence not reached.",
+    )
+    served_ratio: dict[str, dict[str, float]] = Field(
+        default_factory=dict,
+        description=(
+            "Delivered ÷ demand per flow consumer and Category, at the converged state "
+            "(ADR-0020 §3), fully served consumers included. The cause of a flow "
+            "Functionality level; a Rule override or a backup deferral may make the two "
+            "disagree."
+        ),
+    )
+    stored: dict[str, dict[str, StoredAmount]] = Field(
+        default_factory=dict,
+        description="Per storage node and Category: what it filled and drew (ADR-0020 §1c).",
     )
 
 

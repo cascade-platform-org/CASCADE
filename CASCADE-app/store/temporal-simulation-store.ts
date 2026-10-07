@@ -22,14 +22,14 @@ import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
 import type { CalendarUnit, Timeline, Phase, Step, TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
-import type { StockDraft } from "@/lib/stock-math";
+import type { StockFields } from "@/lib/stock-math";
 import { periodState, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
 export type SimTab = "timeline" | "run" | "metrics" | "stock" | "text";
 
-export interface StockPreview extends StockDraft {
+export interface StockPreview extends StockFields {
   delivered: number;
   phi: number;
 }

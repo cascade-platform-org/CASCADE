@@ -67,7 +67,7 @@ function propagate(updates: ElementUpdate[]): void {
   runWithHistory(
     () =>
       useCanvasStore.getState().applyPropagationResult({
-        updates, warnings: [], scope: "global", iterations: 1, computed_at: new Date().toISOString(),
+        updates, warnings: [], scope: "global", iterations: 1, computed_at: new Date().toISOString(), served_ratio: {}, stored: {},
       }),
     "Propagation (global)",
     { updateType: "propagation", scope: "global", canvasId: null },

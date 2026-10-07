@@ -9,14 +9,17 @@
  */
 
 import { useCallback, useState } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Database } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
-import type { Node } from "@/lib/schemas/network";
+import type { CapacityValue, Edge, Node } from "@/lib/schemas/network";
+import { undeclaredCapacities } from "@/lib/stock-checks";
+import { capacityNumber, isStorage } from "@/lib/stock-math";
+import { StockEditor, stockFromRate } from "./stock-editor";
 import type { CategoryDependencyProfile } from "@/lib/schemas/network";
 import {
   Section, Field, TextInput, NumberInput, Toggle,
@@ -42,9 +45,11 @@ import { brandColor } from "@/lib/brand";
  * results.
  */
 function SupplyDemandConflictWarning({ node }: { node: Node }) {
-  const conflicting = Object.keys(node.supply_capacity ?? {}).filter(
-    (cat) => (node.category_dependency_profiles?.[cat]?.demand ?? 0) > 0,
-  );
+  // Storage supplies and takes one Category by design (ADR-0020 §1c).
+  const conflicting = Object.entries(node.supply_capacity ?? {})
+    .filter(([, value]) => typeof value === "number" || !isStorage(value))
+    .map(([cat]) => cat)
+    .filter((cat) => (node.category_dependency_profiles?.[cat]?.demand ?? 0) > 0);
   if (conflicting.length === 0) return null;
 
   return (
@@ -57,16 +62,47 @@ function SupplyDemandConflictWarning({ node }: { node: Node }) {
   );
 }
 
+/**
+ * ADR-0020's two Stock-era warnings. A Service node usually consumes; supplying
+ * from one is allowed (the editor is offered on every Node Type) but is more
+ * often a node that should be a Source. And a Category holding a Stock widens
+ * every undeclared capacity in it, since those default to the largest supply,
+ * which now includes the draw from the level.
+ */
+function SupplyWarnings({ node, nodes, edges }: { node: Node; nodes: Record<string, Node>; edges: Record<string, Edge> }) {
+  const supplied = Object.keys(node.supply_capacity ?? {});
+  const stockCats = Object.entries(node.supply_capacity ?? {}).filter(([, v]) => typeof v !== "number").map(([cat]) => cat);
+  const undeclared = stockCats
+    .map((cat) => ({ cat, ...undeclaredCapacities(cat, nodes, edges) }))
+    .filter((u) => u.edges + u.nodes > 0);
+  const box = "mt-2 rounded-md border-l-2 border-amber-400 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200";
+  return (
+    <>
+      {node.node_type === "Service" && supplied.length > 0 && (
+        <p className={box}>A Service node supplying {supplied.join(", ")}: a node that produces is usually a Source.</p>
+      )}
+      {undeclared.map((u) => (
+        <p key={u.cat} className={box}>
+          {u.cat} holds a Stock, and {u.edges > 0 && `${u.edges} edge${u.edges > 1 ? "s" : ""}`}
+          {u.edges > 0 && u.nodes > 0 && " and "}
+          {u.nodes > 0 && `${u.nodes} node${u.nodes > 1 ? "s" : ""}`} in it declare no capacity. Those default to the
+          largest supply, which now includes the Stock&apos;s draw; declare them.
+        </p>
+      ))}
+    </>
+  );
+}
+
 function SupplyCapacityEditor({
   supply,
   configCats,
   onChange,
 }: {
-  supply: Record<string, number>;
+  supply: Record<string, CapacityValue>;
   configCats: string[];
-  onChange: (s: Record<string, number>) => void;
+  onChange: (s: Record<string, CapacityValue>) => void;
 }) {
-  const [rows, setRows] = useState<[string, number][]>(() =>
+  const [rows, setRows] = useState<[string, CapacityValue][]>(() =>
     Object.entries(supply).map(([k, v]) => [k, v]),
   );
 
@@ -79,9 +115,9 @@ function SupplyCapacityEditor({
     setRows(Object.entries(supply).map(([k, v]) => [k, v]));
   }
 
-  function commit(next: [string, number][]) {
+  function commit(next: [string, CapacityValue][]) {
     setRows(next);
-    const obj: Record<string, number> = {};
+    const obj: Record<string, CapacityValue> = {};
     for (const [k, v] of next) if (k !== "") obj[k] = v;
     onChange(obj);
   }
@@ -89,13 +125,14 @@ function SupplyCapacityEditor({
   return (
     <div className="space-y-1">
       {rows.map(([cat, cap], i) => (
-        <div key={i} className="flex items-center gap-1">
+        <div key={i}>
+        <div className="flex items-center gap-1">
           {configCats.length > 0 ? (
             <select
               value={cat}
               onChange={(e) =>
                 commit(
-                  rows.map((r, j): [string, number] =>
+                  rows.map((r, j): [string, CapacityValue] =>
                     j === i ? [e.target.value, r[1]] : r,
                   ),
                 )
@@ -115,7 +152,7 @@ function SupplyCapacityEditor({
               value={cat}
               onChange={(e) =>
                 commit(
-                  rows.map((r, j): [string, number] =>
+                  rows.map((r, j): [string, CapacityValue] =>
                     j === i ? [e.target.value, r[1]] : r,
                   ),
                 )
@@ -124,25 +161,48 @@ function SupplyCapacityEditor({
               className={`w-24 ${INLINE_INPUT_CLASS}`}
             />
           )}
-          <input
-            type="number"
-            min={0}
-            value={cap}
-            onChange={(e) =>
-              commit(
-                rows.map((r, j): [string, number] =>
-                  j === i ? [r[0], Number(e.target.value)] : r,
-                ),
-              )
+          {typeof cap === "number" ? (
+            <input
+              type="number"
+              min={0}
+              value={cap}
+              onChange={(e) =>
+                commit(
+                  rows.map((r, j): [string, CapacityValue] =>
+                    j === i ? [r[0], Number(e.target.value)] : r,
+                  ),
+                )
+              }
+              className={`flex-1 ${INLINE_INPUT_CLASS}`}
+            />
+          ) : (
+            <span className="flex-1 text-[11px] text-blue-700 dark:text-blue-300">
+              {isStorage(cap) ? "Storage" : "Stock"} · level {cap.level}
+            </span>
+          )}
+          <button
+            title={typeof cap === "number" ? "Make it a Stock: a level that persists across Temporal Simulation periods" : "Back to a plain number (keeps the rate)"}
+            onClick={() =>
+              commit(rows.map((r, j): [string, CapacityValue] => (j === i ? [r[0], typeof cap === "number" ? stockFromRate(cap) : cap.rate] : r)))
             }
-            className={`flex-1 ${INLINE_INPUT_CLASS}`}
-          />
+            className={typeof cap === "number" ? "text-zinc-300 hover:text-blue-600" : "text-blue-600 hover:text-zinc-500"}
+          >
+            <Database size={12} />
+          </button>
           <button
             onClick={() => commit(rows.filter((_, j) => j !== i))}
             className="text-zinc-300 hover:text-red-500"
           >
             <X size={12} />
           </button>
+        </div>
+        {typeof cap !== "number" && (
+          <StockEditor
+            stock={cap}
+            storageAllowed
+            onChange={(next) => commit(rows.map((r, j): [string, CapacityValue] => (j === i ? [r[0], next] : r)))}
+          />
+        )}
         </div>
       ))}
       <button
@@ -262,7 +322,8 @@ export function NodeInspector({ node }: { node: Node }) {
   function defaultThroughput(cat: string): number | null {
     const supplies = Object.values(allNodes)
       .map((other) => other.supply_capacity?.[cat])
-      .filter((v): v is number => typeof v === "number");
+      .filter((v): v is CapacityValue => v !== undefined)
+      .map(capacityNumber);
     return supplies.length > 0 ? Math.max(...supplies) : null;
   }
 
@@ -384,55 +445,53 @@ export function NodeInspector({ node }: { node: Node }) {
           `_effective_supply` / `_throughput`). Throughput used to exist in the
           schema and in the engine with no field anywhere in the UI, so it could
           only be set by importing or hand-editing JSON. */}
-      {/* `?.length` is a NUMBER: on a node with no Categories it is 0, and
-          `0 && …` renders a literal "0" into the panel rather than nothing. */}
-      {(node.node_type === "Source" || (node.node_categories?.length ?? 0) > 0) && (
-        <Section title="Capacities">
-          <Field label="Supply Capacity" hint="How much of a Category this node can supply.">
-            <SupplyCapacityEditor
-              supply={node.supply_capacity ?? {}}
-              configCats={categories.map((c) => c.name)}
-              onChange={(s) => patch({ supply_capacity: s })}
-            />
-          </Field>
-          <SupplyDemandConflictWarning node={node} />
+      {/* Offered on every Node Type (ADR-0020); a Service node that supplies is warned about. */}
+      <Section title="Capacities">
+        <Field label="Supply Capacity" hint="How much of a Category this node can supply.">
+          <SupplyCapacityEditor
+            supply={node.supply_capacity ?? {}}
+            configCats={categories.map((c) => c.name)}
+            onChange={(s) => patch({ supply_capacity: s })}
+          />
+        </Field>
+        <SupplyDemandConflictWarning node={node} />
+        <SupplyWarnings node={node} nodes={allNodes} edges={allEdges} />
 
-          {/* Only SourceToDemands categories: the Requisite pass carries no
-              quantities, so a throughput limit would read as a live control
-              that does nothing. */}
-          {throughputCategories.map((cat) => {
-            const fallback = defaultThroughput(cat);
-            return (
-              <Field
-                key={cat}
-                label={`Throughput Capacity — ${cat}`}
-                hint={
-                  fallback === null
-                    ? "How much can pass through this node. Unset: unlimited."
-                    : `How much can pass through this node. Unset: ${fallback}, the largest supply declared for ${cat}.`
-                }
-              >
-                <NumberInput
-                  value={node.throughput_capacity?.[cat]}
-                  min={0}
-                  placeholder={fallback === null ? "unlimited" : String(fallback)}
-                  onChange={(v) => {
-                    // 0 is how the field comes back when it is cleared, and
-                    // "passes nothing" is not what clearing means — drop the
-                    // key instead so the default applies again.
-                    const next = { ...(node.throughput_capacity ?? {}) };
-                    if (v > 0) next[cat] = v;
-                    else delete next[cat];
-                    patch({
-                      throughput_capacity: Object.keys(next).length > 0 ? next : undefined,
-                    });
-                  }}
-                />
-              </Field>
-            );
-          })}
-        </Section>
-      )}
+        {/* Only SourceToDemands categories: the Requisite pass carries no
+            quantities, so a throughput limit would read as a live control
+            that does nothing. */}
+        {throughputCategories.map((cat) => {
+          const fallback = defaultThroughput(cat);
+          return (
+            <Field
+              key={cat}
+              label={`Throughput Capacity — ${cat}`}
+              hint={
+                fallback === null
+                  ? "How much can pass through this node. Unset: unlimited."
+                  : `How much can pass through this node. Unset: ${fallback}, the largest supply declared for ${cat}.`
+              }
+            >
+              <NumberInput
+                value={node.throughput_capacity?.[cat]}
+                min={0}
+                placeholder={fallback === null ? "unlimited" : String(fallback)}
+                onChange={(v) => {
+                  // 0 is how the field comes back when it is cleared, and
+                  // "passes nothing" is not what clearing means — drop the
+                  // key instead so the default applies again.
+                  const next = { ...(node.throughput_capacity ?? {}) };
+                  if (v > 0) next[cat] = v;
+                  else delete next[cat];
+                  patch({
+                    throughput_capacity: Object.keys(next).length > 0 ? next : undefined,
+                  });
+                }}
+              />
+            </Field>
+          );
+        })}
+      </Section>
 
       {/* 4. Socioeconomic Values */}
       <Section title="Socioeconomic Values">

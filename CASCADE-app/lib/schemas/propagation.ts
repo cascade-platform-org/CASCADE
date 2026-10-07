@@ -49,9 +49,16 @@ export const PropagationMetaSchema = z.object({
 });
 
 /** Full engine response: the run metadata plus the per-element deltas. */
+/** What one storage exchanged with the network in one Propagation (ADR-0020 §1c). */
+export const StoredAmountSchema = z.object({ filled: z.number().min(0), drawn: z.number().min(0) });
+
 export const PropagationResultSchema = PropagationMetaSchema.extend({
   /** Deltas from the engine — apply these on top of the project state. */
   updates: z.array(ElementUpdateSchema),
+  /** Delivered ÷ demand per flow consumer and Category, fully served included (ADR-0020 §3). */
+  served_ratio: z.record(z.string(), z.record(z.string(), z.number())).default({}),
+  /** Per storage node and Category: what it filled and drew (ADR-0020 §1c). */
+  stored: z.record(z.string(), z.record(z.string(), StoredAmountSchema)).default({}),
 });
 
 export type ElementUpdate = z.infer<typeof ElementUpdateSchema>;

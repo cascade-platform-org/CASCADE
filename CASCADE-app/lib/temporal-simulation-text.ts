@@ -13,6 +13,7 @@ import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attr
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
+import type { CapacityValue } from "@/lib/schemas/network";
 
 /**
  * One row of the profile grid: one operation (target, path, op) and its value in
@@ -349,7 +350,9 @@ export function llmContext(
   const edges = Object.values(model.edges);
   const nodeTypes = [...new Set(nodes.map((n) => n.node_type).filter(Boolean))];
   const listElements = nodes.length + edges.length <= 300;
-  const fmt = (r: Record<string, number> | undefined) => Object.entries(r ?? {}).map(([k, v]) => `${k} ${v}`).join(", ");
+  // A Stock is listed whole, as JSON, so an operation can address its fields by path.
+  const capacity = (v: CapacityValue) => (typeof v === "number" ? String(v) : `Stock ${JSON.stringify(v)}`);
+  const fmt = (r: Record<string, CapacityValue> | undefined) => Object.entries(r ?? {}).map(([k, v]) => `${k} ${capacity(v)}`).join(", ");
   const lines = [
     "# CASCADE Temporal Simulation — write the definition",
     "",
@@ -389,7 +392,7 @@ export function llmContext(
       lines.push(`- ${n.id} — ${n.label ?? ""} — ${n.node_type ?? ""} — supplies: ${fmt(n.supply_capacity) || "—"} / needs: ${needs || "—"}`);
     });
     lines.push("Edges (id — source → target — capacity):");
-    edges.forEach((e) => lines.push(`- ${e.id} — ${e.source} → ${e.target}${e.capacity !== undefined ? ` — ${e.capacity}` : ""}`));
+    edges.forEach((e) => lines.push(`- ${e.id} — ${e.source} → ${e.target}${e.capacity !== undefined ? ` — ${capacity(e.capacity)}` : ""}`));
   } else {
     lines.push("Too many Elements to list: select them with \"where\" filters (kind, canvas, category, node_type, label_contains).");
   }

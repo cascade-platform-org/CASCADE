@@ -1,7 +1,13 @@
 # ADR-0020 — Stocks live in the capacities; the engine neither reads nor writes one
 
-**Status:** proposed (2026-10-02, revised 2026-10-05; 2026-10-06: storage, §1c). Nothing is
-built. Amends ADR-0003 (adds `served_ratio` and `stored` to the Propagation result, and the
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05; 2026-10-06: storage, §1c).
+Built 2026-10-07 (build plan slice 4): the schema, the engine's storage stages and result
+maps (`engine/flow.py` `storage_exchange`), the payload seam, the step operator's integration
+(`lib/stock-integration.ts`) and the Inspector's Stock editor. As built, `served_ratio` and
+`stored` are top-level maps of the Propagation result, never fields of an `ElementUpdate`,
+so they can never be written onto an Element; the storage marker is the request's `storage`
+map; and storage's draw is the smallest common fraction of every draw that still delivers
+the same amounts, an approximation where tanks reach different zones. Amends ADR-0003 (adds `served_ratio` and `stored` to the Propagation result, and the
 storage allocation order of §1c). Reasoning and the sixteen-domain stress
 test: `docs/project/temporal-simulation-design.md` §4 and §6.
 

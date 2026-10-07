@@ -247,7 +247,7 @@ window does not, the window says why and the file keeps the last valid one.
 | `expected_repair_time` | `integer` (hours) | Estimated repair duration when `direct_damage = true`. |
 | `importance` | `number` | Weight for Scorecard aggregation. |
 | `cost_of_disservice_per_day` | `number` | Economic impact when below full functionality. |
-| `supply_capacity` | `{ [category]: number }` | Source nodes only. Effective supply = `supply_capacity[cat] × (functionality / N)`. |
+| `supply_capacity` | `{ [category]: number \| Stock }` | What the node supplies per category. Effective supply = `supply_capacity[cat] × (functionality / N)`. A value may be a **Stock** (below). |
 | `throughput_capacity` | `{ [category]: number }` | How much this node can **pass on** — **Throughput Capacity** in the Inspector, offered for `SourceToDemands` categories. Effective throughput = `throughput_capacity[cat] × (functionality / N)`; unset means the category's largest declared supply, or unbounded when it has no source. Lived on the dependency profile as `capacity` until it moved beside `supply_capacity`; files written before the move are migrated on load. |
 | `category_dependency_profiles` | `{ [category]: profile }` | Per-category dependency attributes (see below). Absent on Source nodes for categories they supply. |
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Sensitivity to each defined Event. Higher = more vulnerable; 0 = immune (same as absent). |
@@ -286,13 +286,31 @@ Applied only if it worsens the current `functionality`.
 | `functionality_time` | `integer` (hours) | Same semantics as on nodes. |
 | `direct_damage` | `boolean` | Physical breakage set by a Hazard. |
 | `expected_repair_time` | `integer` (hours) | Estimated repair duration when `direct_damage = true`. |
-| `capacity` | `number` | Maximum throughput; degrades proportionally with Functionality. Edges carry no category — the engine infers it from the endpoints. |
+| `capacity` | `number \| Stock` | Maximum throughput; degrades proportionally with Functionality. Edges carry no category — the engine infers it from the endpoints. A Stock here adds capacity and no supply. |
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Same semantics as on nodes. |
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes. |
 
 ---
+
+#### Stock (ADR-0020)
+
+A capacity that persists across Temporal Simulation periods, written where a number
+would be: `"supply_capacity": { "water": { "rate": 0, "level": 300, "min": 50, "max": 500, "max_fill": 120 } }`.
+The engine never reads one: every Propagation request carries its supply number, and only
+a Temporal Simulation run changes its `level`, once per period.
+
+| Field | Description |
+| --- | --- |
+| `rate` | Per-period capacity basis: what a plain number would carry. |
+| `level` | Signed amount on hand; positive = available to draw. |
+| `min` / `max` | Bounds of the level; absent `min` = 0, absent `max` = none. A clamp is reported as spilled or unmet. |
+| `max_draw` | Most the level may add to supply per period. |
+| `inflow` | Credited each period; absent = `rate`. |
+| `retention` / `efficiency` | Multipliers on the level and on the inflow (default 1). |
+| `max_fill` | Set = **storage** (a tank): it fills from its Category's own flow after every consumer and is drawn only for demand other sources cannot cover. Nodes only. |
+| `level_reference` / `change_reference` | Level Scale references (ADR-0019 §6). |
 
 ### Config File
 

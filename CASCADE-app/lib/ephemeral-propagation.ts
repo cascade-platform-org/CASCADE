@@ -14,12 +14,22 @@ import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { postPropagate, postPropagateBatch } from "@/lib/api-client";
 import { mergeUpdatesIntoSnapshot } from "@/lib/element-update";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { Propagated } from "@/lib/step-operator";
 
 /**
  * Send `snapshot` to the engine and return the post-propagation snapshot.
  * Writes nothing to any store — all side effects are contained to local state.
  */
 export async function runEphemeralPropagation(snapshot: GraphSnapshot): Promise<GraphSnapshot> {
+  return (await propagateSnapshot(snapshot)).snapshot;
+}
+
+/**
+ * `runEphemeralPropagation`, also returning what the Propagation delivered
+ * (`served_ratio`, `stored`): what a Temporal Simulation integrates its Stocks
+ * from (ADR-0020). Writes nothing to any store.
+ */
+export async function propagateSnapshot(snapshot: GraphSnapshot): Promise<Propagated> {
   const canvasState = useCanvasStore.getState();
   const config = useConfigStore.getState().config;
   const scope = useUiStore.getState().propagationScope;
@@ -42,7 +52,10 @@ export async function runEphemeralPropagation(snapshot: GraphSnapshot): Promise<
   });
 
   const result = await postPropagate(payload);
-  return mergeUpdatesIntoSnapshot(snapshot, result.updates);
+  return {
+    snapshot: mergeUpdatesIntoSnapshot(snapshot, result.updates),
+    flow: { served_ratio: result.served_ratio, stored: result.stored },
+  };
 }
 
 /**

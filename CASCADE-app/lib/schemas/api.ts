@@ -102,6 +102,11 @@ export const PropagationRequestSchema = z.object({
   scope: z.enum(["local", "global"]),
   /** Canvas id to restrict propagation when scope = "local". */
   active_canvas_id: z.string().optional(),
+  /**
+   * Storage (ADR-0020 §1c): node → Category → the most it may fill this
+   * Propagation. Written by `buildPropagationPayload` from storage Stocks.
+   */
+  storage: z.record(z.string(), z.record(z.string(), z.number())).optional(),
 });
 
 /**
@@ -125,6 +130,7 @@ export const BatchPropagationRequestSchema = z.object({
   config: ModelConfigurationSchema,
   scope: z.enum(["local", "global"]),
   active_canvas_id: z.string().optional(),
+  storage: z.record(z.string(), z.record(z.string(), z.number())).optional(),
   coalitions: z.array(z.array(z.string())).min(1).max(MAX_COALITIONS_PER_BATCH),
 });
 

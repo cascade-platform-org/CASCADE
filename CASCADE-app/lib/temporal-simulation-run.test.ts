@@ -10,7 +10,9 @@ import type { GraphSnapshot } from "@/lib/schemas/network";
 
 /** Engine stand-in: the snapshot comes back unchanged, so a period shows exactly what its Events imposed. */
 const engine = vi.fn(async (s: GraphSnapshot): Promise<GraphSnapshot> => s);
-vi.mock("@/lib/ephemeral-propagation", () => ({ runEphemeralPropagation: (s: GraphSnapshot) => engine(s) }));
+vi.mock("@/lib/ephemeral-propagation", () => ({
+  propagateSnapshot: async (s: GraphSnapshot) => ({ snapshot: await engine(s), flow: { served_ratio: {}, stored: {} } }),
+}));
 
 const { useCanvasStore } = await import("@/store/canvas-store");
 const { useConfigStore, selectN } = await import("@/store/config-store");

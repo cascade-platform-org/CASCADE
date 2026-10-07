@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RunStopped, periodState, runTimeline, type RunInput } from "./step-operator";
+import { RunStopped, periodState, runTimeline, type Propagated, type RunInput } from "./step-operator";
 import { planTimeline } from "./timeline-plan";
 import { isEmptyDiff } from "./graph-diff";
 import type { EventDefinition } from "./schemas/config";
@@ -18,11 +18,13 @@ const start: GraphSnapshot = {
 };
 
 /** A fake engine: `b` falls to `a`'s Functionality when `a` is worse, caused by `a`. */
-async function engine(s: GraphSnapshot): Promise<GraphSnapshot> {
+function cascade(s: GraphSnapshot): GraphSnapshot {
   const a = s.nodes.a, b = s.nodes.b;
   if (a.functionality >= b.functionality) return s;
   return { ...s, nodes: { ...s.nodes, b: { ...b, functionality: a.functionality, responsibility_share: { a: 1 } } } };
 }
+const lift = (snapshot: GraphSnapshot): Propagated => ({ snapshot, flow: { served_ratio: {}, stored: {} } });
+const engine = async (s: GraphSnapshot): Promise<Propagated> => lift(cascade(s));
 
 const event = (id: string, over: Partial<EventDefinition> = {}): EventDefinition => ({ id, label: id, type: "disservice", frequency_per_10y: 0, ...over });
 const events: EventDefinition[] = [
@@ -59,7 +61,7 @@ describe("runTimeline", () => {
   it("gives the same diffs twice, and every period reconstructs to the state it ran in", async () => {
     const seen: GraphSnapshot[] = [];
     const days = [["cut"], ["quake"], ["repair"]];
-    const record = await runTimeline(input(days, { propagate: async (s) => { const out = await engine(s); seen.push(out); return out; } }));
+    const record = await runTimeline(input(days, { propagate: async (s) => { const out = cascade(s); seen.push(out); return lift(out); } }));
     expect((await runTimeline(input(days))).periods).toEqual(record.periods);
     seen.forEach((state, i) => expect(periodState(record, i + 1)).toEqual(state));
   });
@@ -93,7 +95,7 @@ describe("runTimeline", () => {
     const cancelled = runTimeline(input([["cut"], [], []], { signal: controller.signal, onProgress: () => controller.abort() }));
     await expect(cancelled).rejects.toMatchObject({ period: "2023-01-02", message: "Cancelled" });
 
-    const failing = runTimeline(input([[], ["cut"]], { propagate: async (s) => { if (f(s, "a") < N) throw new Error("429 budget"); return s; } }));
+    const failing = runTimeline(input([[], ["cut"]], { propagate: async (s) => { if (f(s, "a") < N) throw new Error("429 budget"); return lift(s); } }));
     await expect(failing).rejects.toBeInstanceOf(RunStopped);
     await expect(failing).rejects.toMatchObject({ period: "2023-01-02", message: "429 budget" });
     expect(start).toEqual(before);

@@ -886,7 +886,7 @@ this will do" panel go, and their text becomes the user-manual chapter.
 | 1 | **Attribute Operations on Events** (ADR-0021) — *built 2026-10-06* | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
 | 2 | **The Temporal Simulation in the project** — *built 2026-10-07* | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
 | 3 | **Step operator and Run View** — *built 2026-10-07* | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
-| 4 | **Stocks and storage** (ADR-0020) | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
+| 4 | **Stocks and storage** (ADR-0020) — *built 2026-10-07* | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
 | 5 | **Level Scale and Level Mode** | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
 | 6 | **Metrics and Scorecard** | 3 (coverage and stock level: 4) | the Run table shows Operativity, coverage, stock level and custom Metrics; CSV export; a period saves as a `temporal_simulation` Scorecard entry |
 | 7 | **EPANET Temporal Simulation importer and samples** | 2, 4 | Net1 imports with tanks as storage and a starting simulation; the IJDRR and Net1 samples run end to end; banca ore runs locally |
@@ -926,7 +926,11 @@ engine helper that fails on a stray Stock, `served_ratio` per consumer and Categ
 storage stages (other sources, then storage sources, then fill sinks, sharing by fraction)
 returning `stored`. Tests pin determinism with two tanks on one zone. Then the client:
 `buildPropagationPayload` turns each Stock into numbers, the step operator integrates with
-`lib/stock-math.ts`, the Inspector edits Stocks, and the two warnings land.
+`lib/stock-math.ts`, the Inspector edits Stocks, and the two warnings land. Built as: the
+engine counts a storage draw as one more supply while the fixed point runs (who receives
+what does not depend on which source sent it), then `storage_exchange` orders draw and fill
+once on the converged state; the client integrates in `lib/stock-integration.ts`, where a
+node Stock's D is every delivery of its Category less what storage drew.
 
 **Slice 5.** The Level Scale in Client Configuration (five default bands); Level Mode in the
 Run View, Functionality ↔ Level and Level ↔ Change, via `lib/analysis-legend.ts`.

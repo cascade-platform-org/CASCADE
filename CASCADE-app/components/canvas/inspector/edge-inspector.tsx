@@ -8,6 +8,7 @@
  */
 
 import { useCallback } from "react";
+import { Database } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { isVulnerabilityEvent } from "@/lib/event-application";
@@ -16,6 +17,7 @@ import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { Edge } from "@/lib/schemas/network";
 import { Section, Field, NumberInput, Toggle, vulnHint } from "./primitives";
 import { CauseBanner } from "./cause-banner";
+import { StockEditor, stockFromRate } from "./stock-editor";
 import { RulesEditor, PropertiesEditor } from "./editors";
 import { brandColor } from "@/lib/brand";
 
@@ -115,7 +117,21 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
           label="Throughput Capacity"
           hint="How much can pass along this edge. Scales with the edge's Functionality."
         >
-          <NumberInput value={edge.capacity} min={0} onChange={(v) => patch({ capacity: v })} />
+          {typeof edge.capacity === "object" ? (
+            <StockEditor stock={edge.capacity} storageAllowed={false} onChange={(capacity) => patch({ capacity })} />
+          ) : (
+            <NumberInput value={edge.capacity} min={0} onChange={(v) => patch({ capacity: v })} />
+          )}
+          <button
+            type="button"
+            className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:underline dark:text-blue-400"
+            onClick={() =>
+              patch({ capacity: typeof edge.capacity === "object" ? edge.capacity.rate : stockFromRate(edge.capacity ?? 0) })
+            }
+          >
+            <Database size={11} />
+            {typeof edge.capacity === "object" ? "Back to a plain number (keeps the rate)" : "Make it a Stock: a balance that persists across periods"}
+          </button>
         </Field>
       </Section>
 

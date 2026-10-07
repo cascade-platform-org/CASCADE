@@ -53,6 +53,50 @@ export const CategoryDependencyProfileSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Stock (ADR-0020)
+// ---------------------------------------------------------------------------
+
+/**
+ * A supply rate with a level that persists across Temporal Simulation periods.
+ * Sits where a bare number would: `supply_capacity[category]` or an edge's
+ * `capacity`. The engine never reads one: `buildPropagationPayload` sends its
+ * supply number. With `max_fill` it is storage (§1c): filled and drawn last.
+ */
+export const StockSchema = z
+  .object({
+    /** Per-period capacity basis: what a bare number would carry. */
+    rate: z.number().min(0),
+    /** Credited each period; absent = rate. */
+    inflow: z.number().optional(),
+    /** Signed amount on hand; positive = available to draw. */
+    level: z.number(),
+    /** Floor of the level; absent = 0. */
+    min: z.number().optional(),
+    /** Ceiling of the level; absent = none. */
+    max: z.number().optional(),
+    /** Most the level may add to supply per period. */
+    max_draw: z.number().min(0).optional(),
+    /** Set = storage: most it may take from the network per period. */
+    max_fill: z.number().min(0).optional(),
+    /** Multiplier on the level each period (decay, interest). */
+    retention: z.number().min(0).default(1),
+    /** Multiplier on the credited inflow (transfer loss). */
+    efficiency: z.number().min(0).default(1),
+    level_reference: z.number().gt(0).optional(),
+    change_reference: z.number().gt(0).optional(),
+  })
+  .strict()
+  .refine((s) => s.max === undefined || s.max >= (s.min ?? 0), {
+    message: "a Stock's max must be at least its min (absent min = 0)",
+    path: ["max"],
+  });
+export type Stock = z.infer<typeof StockSchema>;
+
+/** A capacity as stored: a plain per-period number, or a Stock. */
+export const CapacityValueSchema = z.union([z.number(), StockSchema]);
+export type CapacityValue = z.infer<typeof CapacityValueSchema>;
+
+// ---------------------------------------------------------------------------
 // Node
 // ---------------------------------------------------------------------------
 
@@ -84,7 +128,7 @@ export const NodeSchema = z.object({
    * as a source AND a consumer. The Inspector flags it (node-inspector.tsx,
    * SupplyDemandConflictWarning); it is a modelling slip, not a schema error.
    */
-  supply_capacity: z.record(z.string(), z.number()).optional(),
+  supply_capacity: z.record(z.string(), CapacityValueSchema).optional(),
   /**
    * Keyed by category. How much this node can PASS ON, as opposed to produce.
    * Effective throughput = throughput_capacity[cat] × (functionality / N);
@@ -134,7 +178,8 @@ export const EdgeSchema = z.object({
   functionality_time: z.number().int().min(0).optional(),
   direct_damage: z.boolean().optional(),
   expected_repair_time: z.number().int().min(0).optional(),
-  capacity: z.number().optional(),
+  /** A Stock here adds edge capacity and no supply (ADR-0020 §1b). */
+  capacity: CapacityValueSchema.optional(),
   /** Same semantics as on nodes: 0..N−1, 0 = immune (same as absent). */
   vulnerability_levels: z.record(z.string(), z.number().int().min(0).max(100)).optional(),
   /**

@@ -26,7 +26,7 @@ export const EXPLAIN_INTRO: Explanation = {
   title: "Temporal Simulation",
   lines: [
     "A Temporal Simulation is a saved definition, run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks, plus its profile and Metrics. One per project.",
-    "The definition is saved in the project, with its file, autosave and sync. A run computes on its own copy and is shown read-only in the Run View; your model is never written. Stocks, Level Mode and Metric values are not built yet. Each control explains here what it does.",
+    "The definition is saved in the project, with its file, autosave and sync. A run computes on its own copy and is shown read-only in the Run View; your model is never written. Stocks integrate once per period; Level Mode and Metric values are not built yet. Each control explains here what it does.",
     "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],

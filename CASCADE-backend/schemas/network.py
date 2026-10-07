@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, BeforeValidator, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from schemas.temporal_simulation import TemporalSimulation
 
@@ -103,6 +103,39 @@ class CategoryDependencyProfile(BaseModel):
 # Node
 # ---------------------------------------------------------------------------
 
+class Stock(BaseModel):
+    """A supply rate with a level that persists across Temporal Simulation periods (ADR-0020).
+
+    Sits where a bare number would: `Node.supply_capacity[category]` or
+    `Edge.capacity`. The engine never reads one: `buildPropagationPayload` sends
+    its supply number, and only the client's step operator integrates `level`.
+    With `max_fill` it is **storage** (§1c): it fills from the network's own flow
+    of its Category and feeds that flow, used last and filled last.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    rate: float = Field(..., ge=0, description="Per-period capacity basis: what a bare number would carry.")
+    inflow: Optional[float] = Field(default=None, description="Credited each period; absent = rate.")
+    level: float = Field(..., description="Signed amount on hand; positive = available to draw.")
+    min: Optional[float] = Field(default=None, description="Floor of the level; absent = 0.")
+    max: Optional[float] = Field(default=None, description="Ceiling of the level; absent = none.")
+    max_draw: Optional[float] = Field(default=None, ge=0, description="Most the level may add to supply per period.")
+    max_fill: Optional[float] = Field(
+        default=None, ge=0, description="Set = storage: most it may take from the network per period."
+    )
+    retention: float = Field(default=1.0, ge=0, description="Multiplier on the level each period (decay, interest).")
+    efficiency: float = Field(default=1.0, ge=0, description="Multiplier on the credited inflow (transfer loss).")
+    level_reference: Optional[float] = Field(default=None, gt=0, description="Level Scale reference for the level.")
+    change_reference: Optional[float] = Field(default=None, gt=0, description="Level Scale reference for a period's change.")
+
+    @model_validator(mode="after")
+    def _bounds_ordered(self) -> "Stock":
+        low = 0.0 if self.min is None else self.min
+        if self.max is not None and self.max < low:
+            raise ValueError("a Stock's max must be at least its min (absent min = 0)")
+        return self
+
+
 class Node(BaseModel):
     id: str
     functionality: int = Field(..., ge=1)
@@ -117,12 +150,14 @@ class Node(BaseModel):
     position: Optional[Position] = None
     geo: Optional[GeoCoords] = None
     # Keyed by category name. Present only on Source nodes.
-    # Effective supply = supply_capacity[cat] × (functionality / N).
+    # Effective supply = supply_capacity[cat] × (functionality / N). A value may
+    # be a Stock (ADR-0020), which buildPropagationPayload turns into its supply
+    # number before any engine request; the engine only ever sees numbers.
     # Carrying both supply_capacity[c] and category_dependency_profiles[c].demand
     # for the same category is not rejected here or by the engine: flow.py reads
     # the two independently, so the node enters that category's flow graph as a
     # source AND a consumer. The frontend Inspector flags it for the modeller.
-    supply_capacity: Optional[dict[str, float]] = None
+    supply_capacity: Optional[dict[str, float | Stock]] = None
     # Keyed by category. How much this node can PASS ON, as opposed to produce.
     # Effective throughput = throughput_capacity[cat] × (functionality / N);
     # absent means the category's largest declared supply (engine/flow.py,
@@ -198,7 +233,8 @@ class Edge(BaseModel):
     functionality_time: Optional[int] = Field(default=None, ge=0, description="Hours")
     direct_damage: Optional[bool] = None
     expected_repair_time: Optional[int] = Field(default=None, ge=0, description="Hours")
-    capacity: Optional[float] = None
+    # A Stock here adds edge capacity and no supply (ADR-0020 §1b).
+    capacity: Optional[float | Stock] = None
     vulnerability_levels: Optional[VulnerabilityLevels] = Field(
         default=None,
         description=(

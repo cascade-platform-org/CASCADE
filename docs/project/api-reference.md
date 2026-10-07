@@ -52,8 +52,12 @@ Runs the propagation engine. Request body (`PropagationRequest`):
 | `config` | `ModelConfiguration` | Functionality scale, categories, heuristic pipelines. |
 | `scope` | `"local" \| "global"` | Local = active canvas only; the client already trims the payload, the server filters again (defence in depth). |
 | `active_canvas_id` | `string?` | Required when `scope = "local"`. |
+| `storage` | `{ [nodeId]: { [category]: number } }?` | Storage (ADR-0020 §1c), written by the client's payload builder: the most each storage node may fill this Propagation. That node's `supply_capacity[category]` is then its draw. A `Stock` anywhere in `project` is refused with `422`: the client sends its number. |
 
-Response (`PropagationResult`): `scope`, `updates: ElementUpdate[]` (deltas only — elements that changed), `computed_at`, `iterations`, `warnings: string[]` (e.g. `"convergence not reached"`).
+Response (`PropagationResult`): `scope`, `updates: ElementUpdate[]` (deltas only — elements that changed), `computed_at`, `iterations`, `warnings: string[]` (e.g. `"convergence not reached"`), and:
+
+- `served_ratio: { [nodeId]: { [category]: number } }` — delivered ÷ demand for every flow consumer, fully served ones included, at the converged state (ADR-0020 §3). It is the cause of a flow Functionality level; a Rule override or a backup deferral can make the two disagree.
+- `stored: { [nodeId]: { [category]: { filled, drawn } } }` — what each storage exchanged with the network. Storage is drawn last (the least draw that still delivers the same amounts, tanks sharing by a common fraction of their draw) and filled last (from what the other sources have left after every consumer, water-filled by a common fraction of each fill).
 
 `ElementUpdate.responsibility_share` values are in `(0, 1]` and sum to 1; zero shares are never emitted.
 

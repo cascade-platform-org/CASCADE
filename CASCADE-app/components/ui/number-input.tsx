@@ -34,6 +34,7 @@ export function NumberInput({
   className,
   disabled,
   onFocus,
+  onClear,
 }: {
   value: number | undefined;
   onChange: (v: number) => void;
@@ -45,6 +46,8 @@ export function NumberInput({
   className?: string;
   disabled?: boolean;
   onFocus?: () => void;
+  /** For a field whose absence means something (the placeholder's value): called instead of committing 0 when left empty. */
+  onClear?: () => void;
 }) {
   /** What the user is typing. `null` = show the number we were given. */
   const [draft, setDraft] = useState<string | null>(null);
@@ -71,7 +74,10 @@ export function NumberInput({
         // A field left empty commits 0, which is what it did before the draft
         // existed — leaving it blank would keep a value the field is no longer
         // showing.
-        if (draft !== null && draft.trim() === "") onChange(0);
+        if (draft !== null && draft.trim() === "") {
+          if (onClear) onClear();
+          else onChange(0);
+        }
         setDraft(null);
       }}
       className={cn(

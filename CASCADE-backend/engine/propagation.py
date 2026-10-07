@@ -30,13 +30,15 @@ from engine import guards
 from engine.flow import (
     ALLOCATIONS,
     DEFAULT_ALLOCATION,
-    flow_category_candidates,
+    CategorySolve,
     is_flow_consumer,
     parse_ratio_thresholds,
+    solve_category,
+    storage_exchange,
 )
 from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
-from schemas.results import ElementUpdate, PropagationRequest, PropagationResult
+from schemas.results import ElementUpdate, PropagationRequest, PropagationResult, StoredAmount
 
 # The heuristic id (api/propagation_routes.py's capability catalog) whose
 # `allocation` param selects the flow pass's scarcity strategy.
@@ -163,6 +165,12 @@ def run(request: PropagationRequest) -> PropagationResult:
                 skip.add(cat)
         requisite_skip[nid] = frozenset(skip)
 
+    # Storage marker (ADR-0020 §1c): node → Category → fill amount this run.
+    storage = request.storage or {}
+    # The latest flow solve per category. On convergence the last round changed
+    # nothing, so its solve is the converged state the result reports.
+    solves: dict[str, CategorySolve] = {}
+
     # --- fixed-point iteration --------------------------------------------
     iterations = 0
     converged = False
@@ -182,11 +190,13 @@ def run(request: PropagationRequest) -> PropagationResult:
         # Solve flow once per SourceToDemands category; collect per-node candidates.
         flow_candidates: dict[str, dict[str, tuple[int, dict[str, float]]]] = {}
         for category in flow_categories:
-            for nid, candidate in flow_category_candidates(
+            solves[category] = solve_category(
                 category, nodes, edges, node_func, edge_func, scale_size,
                 allocation=flow_allocation,
                 ratio_thresholds=ratio_thresholds,
-            ).items():
+                storage=storage,
+            )
+            for nid, candidate in solves[category].candidates.items():
                 flow_candidates.setdefault(nid, {})[category] = candidate
 
         # Resolver for specific-rule conditions against the current round's state.
@@ -373,6 +383,22 @@ def run(request: PropagationRequest) -> PropagationResult:
 
     updates: list[ElementUpdate] = list(acc.values())
 
+    # served_ratio (ADR-0020 §3) and the storage exchange (§1c), both at the
+    # converged state. Storage stages run once here: they order which source
+    # serves, never how much a consumer receives, so they cannot move the
+    # fixed point.
+    served_ratio: dict[str, dict[str, float]] = {}
+    stored: dict[str, dict[str, StoredAmount]] = {}
+    for category, solve in solves.items():
+        for nid, ratio in solve.served_ratio.items():
+            served_ratio.setdefault(nid, {})[category] = ratio
+        if storage:
+            exchange = storage_exchange(
+                category, nodes, edges, node_func, edge_func, scale_size, storage, solve.delivered
+            )
+            for nid, (filled, drawn) in exchange.items():
+                stored.setdefault(nid, {})[category] = StoredAmount(filled=filled, drawn=drawn)
+
     warnings: list[str] = list(rules.warnings) + config_warnings
     if not converged:
         warnings.append("convergence not reached")
@@ -383,6 +409,8 @@ def run(request: PropagationRequest) -> PropagationResult:
         computed_at=datetime.now(tz=timezone.utc),
         iterations=iterations,
         warnings=warnings,
+        served_ratio=served_ratio,
+        stored=stored,
     )
 
 

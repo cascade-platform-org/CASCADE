@@ -21,20 +21,37 @@
  * Event's level would otherwise keep no record of the Event — its damage would
  * vanish the moment supply returned.
  *
- * Stocks (ADR-0020) are not integrated yet; that is build slice 4.
+ * STOCKS (ADR-0020). Each Propagation sends every Stock as its supply number
+ * (`buildPropagationPayload`); right after a period's last propagating Phase,
+ * every Stock integrates once (`lib/stock-integration.ts`) from that
+ * Propagation's `served_ratio` and `stored`, and the new levels land in that
+ * Phase's diff. A later non-propagating Phase (a settlement) reads the period's
+ * closing balance.
  */
 
 import { applyEventToSnapshot } from "@/lib/event-application";
 import { deepEqual, diffGraph, applyGraphDiff } from "@/lib/graph-diff";
 import type { TimelinePlan } from "@/lib/timeline-plan";
+import { integrateStocks, type StockOutcome } from "@/lib/stock-integration";
+import type { PropagationResult } from "@/lib/schemas/propagation";
 import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
 import type { EventDefinition } from "@/lib/schemas/config";
 import type { Edge, GraphDiff, GraphSnapshot, Node } from "@/lib/schemas/network";
+
+/** What one Propagation returns to the step operator. */
+export interface Propagated {
+  snapshot: GraphSnapshot;
+  flow: Pick<PropagationResult, "served_ratio" | "stored">;
+}
 
 interface RunPeriod {
   label: string;
   /** One Graph Diff per Phase, in order (one even for a period whose Step has no Phase). */
   diffs: GraphDiff[];
+  /** The last propagating Phase's delivery ratios, per consumer and Category (ADR-0019 §3). */
+  served: PropagationResult["served_ratio"];
+  /** Each Stock's integration this period, with what its clamps removed. */
+  stocks: StockOutcome[];
 }
 
 export interface RunRecord {
@@ -53,8 +70,8 @@ export interface RunInput {
   events: readonly EventDefinition[];
   /** Top of the Functionality scale. */
   n: number;
-  /** One engine call: the snapshot after a Propagation. */
-  propagate: (snapshot: GraphSnapshot) => Promise<GraphSnapshot>;
+  /** One engine call: the snapshot after a Propagation, and what it delivered. */
+  propagate: (snapshot: GraphSnapshot) => Promise<Propagated>;
   signal?: AbortSignal;
   /** After each Propagation: how many of `plan.engineCalls` are done. */
   onProgress?: (done: number, label: string) => void;
@@ -127,8 +144,10 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
   for (const period of plan.periods) {
     label = period.label;
     // A Step with no Phase still applies its profile: one Phase that does not propagate.
-    const phases = period.phases.length > 0 ? period.phases : [{ events: [], propagate: false }];
+    const phases = period.phases.length > 0 ? period.phases : [{ events: [], propagate: false, integratesAfter: false }];
     const diffs: GraphDiff[] = [];
+    let served: RunPeriod["served"] = {};
+    let stocks: StockOutcome[] = [];
 
     for (const [k, phase] of phases.entries()) {
       if (signal?.aborted) throw new RunStopped(label, new Error("Cancelled"));
@@ -147,12 +166,21 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
 
       let next: GraphSnapshot;
       if (phase.propagate) {
+        let propagated: Propagated;
         try {
-          next = await propagate(imposed);
+          propagated = await propagate(imposed);
         } catch (e) {
           throw new RunStopped(label, e);
         }
         onProgress?.(++done, label);
+        next = propagated.snapshot;
+        if (phase.integratesAfter) {
+          const integration = integrateStocks(next, propagated.flow, n);
+          next = integration.snapshot;
+          served = propagated.flow.served_ratio;
+          stocks = integration.outcomes;
+          warnings.push(...integration.warnings.map((w) => `${label}: ${w}`));
+        }
       } else {
         // No Propagation: the period keeps its shortage, and the Events land on top of it.
         next = applyAll(state, events, false);
@@ -160,7 +188,7 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
       diffs.push(diffGraph(state, next));
       state = next;
     }
-    periods.push({ label, diffs });
+    periods.push({ label, diffs, served, stocks });
   }
   return { start, periods, warnings };
 }

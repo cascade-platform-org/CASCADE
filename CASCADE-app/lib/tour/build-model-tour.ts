@@ -44,6 +44,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { awaitUpdate, type TourStep } from "@/lib/tour/types";
+import { capacityNumber } from "@/lib/stock-math";
 
 /** Nodes on the Canvas the user is building. */
 function nodeCount(): number {
@@ -67,7 +68,7 @@ function someEventDefined(): boolean {
 /** True once any node supplies a non-zero amount of something. */
 function someNodeSupplies(): boolean {
   return Object.values(useCanvasStore.getState().nodes).some((n) =>
-    Object.values(n.supply_capacity ?? {}).some((v) => (v ?? 0) > 0),
+    Object.values(n.supply_capacity ?? {}).some((v) => capacityNumber(v) > 0),
   );
 }
 
@@ -91,7 +92,7 @@ function categoryCount(): number {
 /** Nodes that supply a non-zero amount of anything. */
 function supplierCount(): number {
   return Object.values(useCanvasStore.getState().nodes).filter((n) =>
-    Object.values(n.supply_capacity ?? {}).some((v) => (v ?? 0) > 0),
+    Object.values(n.supply_capacity ?? {}).some((v) => capacityNumber(v) > 0),
   ).length;
 }
 

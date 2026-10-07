@@ -86,7 +86,7 @@ _Avoid_: Time warning, countdown, timer
 An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
-**Temporal Simulation** *(being built for v1.1: the definition is saved in the project and runs; Stocks, Level Mode and Metrics are not built)*:
+**Temporal Simulation** *(being built for v1.1: the definition, runs and Stocks are built; Level Mode and Metrics are not)*:
 A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
@@ -102,7 +102,7 @@ _Avoid_: "time step" and "tick" (retired with Temporal Jump's old wording); Step
 An ordered group inside a Step: its Events apply, then optionally one Propagation runs. Phases let an Event fire between two Propagations of one period. The passes inside one Event application are not Phases.
 _Avoid_: "stage", "sub-step"
 
-**Stock** *(proposed)*:
+**Stock**:
 A value that persists across periods, held inside `Node.supply_capacity[category]` as the richer form of a supply rate (`rate`, `inflow`, `level`, `min`, `max`, `max_draw`, `max_fill`, `retention`, `efficiency`, and the Level Scale references). With `max_fill` it is **storage** (a tank, a reservoir): it fills from the network's own flow of its Category and feeds it, used as the last source and filled as the last sink, sharing by fraction with other storages. `level` is on hand and signed as typed; what the stock offers and accrues is scaled by Functionality, the stored level never. Also allowed on `Edge.capacity`, where it adds edge capacity and no supply. Read and integrated only by the step operator; the engine never sees one and a Rule never writes one. The only stock before this was Functionality Time. ADR-0020.
 _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a Scenario Field
 
