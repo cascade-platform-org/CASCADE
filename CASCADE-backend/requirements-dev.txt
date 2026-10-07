@@ -26,3 +26,10 @@ detect-secrets==1.5.0        # git-history secrets baseline (no Go binary requir
 
 scipy==1.18.0                # Spearman statistics in scripts/paper_shapley_vs_centrality.py;
                              # arrives transitively via wntr, declared here so deptry (DEP003) can see it
+
+# ---------------------------------------------------------------------------
+# Business analysis (docs/business/, gitignored) — reads the client .xlsx exports
+# ---------------------------------------------------------------------------
+
+openpyxl==3.1.5              # xlsx reader for docs/business/Coop-Noncello/analyse_banca_ore.py
+pandas==3.0.6                # same script; also arrives transitively via wntr
