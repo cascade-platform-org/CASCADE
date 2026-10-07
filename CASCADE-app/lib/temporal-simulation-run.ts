@@ -19,6 +19,12 @@ import { resetSnapshot } from "@/lib/scenario-baseline";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
 import { RunStopped, runTimeline } from "@/lib/step-operator";
+import { runTable, runTableCsv, type RunTable } from "@/lib/temporal-metrics";
+import { buildPeriodEntry } from "@/lib/period-entry";
+import { CSV_FILE, saveAs } from "@/lib/file-io";
+import { useScorecardStore } from "@/store/scorecard-store";
+import { useUiStore } from "@/store/ui-store";
+import { nanoid } from "nanoid";
 
 let controller: AbortController | null = null;
 
@@ -85,4 +91,41 @@ export function endTemporalSimulationRun(): boolean {
   controller?.abort();
   sim.endRun();
   return true;
+}
+
+/** The shown run's table (periods × Metrics), or null when no run is shown. */
+function currentRunTable(): RunTable | null {
+  const sim = useTemporalSimulationStore.getState();
+  if (!sim.runRecord) return null;
+  return runTable(sim.runRecord, sim.metrics.map((m) => m.metric), selectN(useConfigStore.getState()));
+}
+
+/** Save the shown run's table as CSV through the app's Save-As path. */
+export async function exportRunCsv(): Promise<void> {
+  const table = currentRunTable();
+  if (!table) return;
+  const name = useTemporalSimulationStore.getState().timeline.name || "temporal-simulation";
+  await saveAs(`${name.replace(/[^a-zA-Z0-9_\-.]+/g, "_").slice(0, 60)}.csv`, runTableCsv(table), CSV_FILE);
+}
+
+/**
+ * Save the period the Run View shows as a `temporal_simulation` Scorecard
+ * entry, with a picture of the canvas as it is painted now. Returns the label.
+ */
+export async function savePeriodToScorecard(): Promise<string | null> {
+  const sim = useTemporalSimulationStore.getState();
+  const table = currentRunTable();
+  if (!sim.runRecord || !table) return null;
+  const image = await useUiStore.getState().captureCanvasFn?.();
+  const entry = buildPeriodEntry({
+    record: sim.runRecord,
+    number: sim.selectedPeriod,
+    table,
+    timelineName: sim.timeline.name || "Temporal Simulation",
+    reading: sim.levelReading,
+    id: nanoid(),
+    ...(image ? { image } : {}),
+  });
+  useScorecardStore.getState().addScorecardEntry(entry);
+  return entry.label;
 }

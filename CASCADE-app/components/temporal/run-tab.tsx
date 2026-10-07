@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
-import { useConfigStore } from "@/store/config-store";
+import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
-import { cancelTemporalSimulationRun, endTemporalSimulationRun, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, savePeriodToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { runTable } from "@/lib/temporal-metrics";
 import {
   EXPLAIN_END_RUN,
   EXPLAIN_EXPORT_CSV,
@@ -19,8 +20,10 @@ import {
 } from "@/lib/temporal-simulation-explainers";
 import { Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 
-/** The standard Metrics, a column each before the custom ones (ADR-0019 §4). */
-const STANDARD_METRICS = ["Operativity", "Coverage", "Stock level"];
+/** Before a run: the standard Metrics' names, a column each before the custom ones (ADR-0019 §4). */
+const STANDARD_METRICS = ["Operativity %", "Coverage", "Stock level"];
+
+const formatValue = (v: number | null) => (v === null ? "—" : Number.isInteger(v) ? String(v) : Math.abs(v) < 10 ? v.toFixed(3) : v.toFixed(1));
 
 export function RunTab() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
@@ -37,6 +40,10 @@ export function RunTab() {
   const reading = useTemporalSimulationStore((s) => s.levelReading);
   const metrics = useTemporalSimulationStore((s) => s.metrics);
   const levelScale = useConfigStore((s) => s.config.level_scale);
+  const record = useTemporalSimulationStore((s) => s.runRecord);
+  const n = useConfigStore(selectN);
+  // The run's table: computed at read time from the run record (ADR-0019 §4).
+  const table = useMemo(() => (record ? runTable(record, metrics.map((m) => m.metric), n) : null), [record, metrics, n]);
   const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
 
@@ -125,8 +132,17 @@ export function RunTab() {
             </>
           )}
           <span className="flex-1" />
-          <SmallButton onClick={() => explain(EXPLAIN_EXPORT_CSV)}><Download size={11} /> Export CSV</SmallButton>
-          <SmallButton onClick={() => explain(EXPLAIN_SAVE_SCORECARD)}><Save size={11} /> Save period to Scorecard</SmallButton>
+          <SmallButton onClick={() => { explain(EXPLAIN_EXPORT_CSV); void exportRunCsv(); }}><Download size={11} /> Export CSV</SmallButton>
+          <SmallButton
+            onClick={() => {
+              explain(EXPLAIN_SAVE_SCORECARD);
+              void savePeriodToScorecard().then((label) => {
+                if (label) useUiStore.getState().pushToast({ message: `Saved to the Scorecard: ${label}`, variant: "success", durationMs: 3000 });
+              });
+            }}
+          >
+            <Save size={11} /> Save period to Scorecard
+          </SmallButton>
         </div>
       )}
 
@@ -137,8 +153,9 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">#</th>
               <th className="py-1 pr-2 font-semibold">Period</th>
               <th className="py-1 pr-2 font-semibold">Phases</th>
-              {STANDARD_METRICS.map((m) => <th key={m} className="py-1 pr-2 font-semibold">{m}</th>)}
-              {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.metric.name || "metric"}</th>)}
+              {table
+                ? table.columns.map((c) => <th key={c.key} className="py-1 pr-2 font-semibold">{c.label}</th>)
+                : [...STANDARD_METRICS, ...metrics.map((m) => m.metric.name || "metric")].map((m, i) => <th key={i} className="py-1 pr-2 font-semibold">{m}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -169,13 +186,14 @@ export function RunTab() {
                     ))}
                   </span>
                 </td>
-                {STANDARD_METRICS.map((m) => <td key={m} className="py-1 pr-2 text-zinc-300" title="Computed at read time from the run record">—</td>)}
-                {metrics.map((m) => <td key={m.id} className="py-1 pr-2 text-zinc-300">—</td>)}
+                {table
+                  ? table.rows[p.number - 1]?.values.map((v, i) => <td key={i} className="py-1 pr-2 tabular-nums text-zinc-700 dark:text-zinc-200">{formatValue(v)}</td>)
+                  : [...STANDARD_METRICS, ...metrics].map((_, i) => <td key={i} className="py-1 pr-2 text-zinc-300" title="Computed from the run record after a run">—</td>)}
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. After a run, click a period to show its end state on the canvas. Metric values show “—” until Metrics are computed (not built yet).</p>
+        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. After a run, click a period to show its end state on the canvas; the Metric columns are computed from the run record.</p>
       </div>
     </div>
   );

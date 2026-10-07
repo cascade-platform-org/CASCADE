@@ -86,7 +86,7 @@ _Avoid_: Time warning, countdown, timer
 An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
-**Temporal Simulation** *(being built for v1.1: the definition, runs, Stocks and Level Mode are built; Metrics are not)*:
+**Temporal Simulation** *(v1.1, built: the definition, runs, Stocks, Level Mode, Metrics, CSV and Scorecard periods)*:
 A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
@@ -183,7 +183,7 @@ Weighted average Functionality across a Canvas or the full multi-canvas, compute
 _Avoid_: Operativity index, health score, operativity (without "Score")
 
 **Scorecard**:
-An atlas of entries the user explicitly saves — never automatic. Discriminated union on `type`: `"propagation"` (stacked `event_ids`, before/after snapshots, optional result) or `"analysis"` (metric name, scope, per-Element scores, snapshot, optional PNG). Every entry renders its snapshots as live mini-graphs of the network — an analysis entry repaints its own **Analysis Heatmap** from the scores it stores, so it keeps showing the Analysis it was saved with whatever is on the canvas now. Persisted as `Project.scorecard`, separate from `update_history`. See ADR-0006, requirements §12.
+An atlas of entries the user explicitly saves — never automatic. Discriminated union on `type`: `"propagation"` (stacked `event_ids`, before/after snapshots, optional result) or `"analysis"` (metric name, scope, per-Element scores, snapshot, optional PNG), or `"temporal_simulation"` (one saved period of a run: end-state snapshot, Metric values computed at save, each Stock's Level Mode value with its reference, optional PNG). Every entry renders its snapshots as live mini-graphs of the network — an analysis entry repaints its own **Analysis Heatmap** from the scores it stores, so it keeps showing the Analysis it was saved with whatever is on the canvas now. Persisted as `Project.scorecard`, separate from `update_history`. See ADR-0006, requirements §12.
 _Avoid_: Report, dashboard; "Scorecard" for a single entry; assuming auto-generation
 
 **Model Graph Update**:

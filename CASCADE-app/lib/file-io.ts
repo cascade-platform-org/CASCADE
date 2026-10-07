@@ -168,8 +168,17 @@ export async function getStorageEstimate(): Promise<StorageEstimate | null> {
  * that are not saving a Project (the Shapley export, for one) use it directly
  * and skip the history/autosave bookkeeping the save* wrappers below add.
  */
-export async function saveAs(filename: string, content: string): Promise<void> {
-  const blob = new Blob([content], { type: "application/json" });
+export interface FileKind {
+  mime: string;
+  description: string;
+  extension: string;
+}
+
+const JSON_FILE: FileKind = { mime: "application/json", description: "JSON file", extension: ".json" };
+export const CSV_FILE: FileKind = { mime: "text/csv", description: "CSV file", extension: ".csv" };
+
+export async function saveAs(filename: string, content: string, kind: FileKind = JSON_FILE): Promise<void> {
+  const blob = new Blob([content], { type: kind.mime });
 
   // Modern path: shows the OS file picker so the user can choose folder + name
   if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
@@ -180,7 +189,7 @@ export async function saveAs(filename: string, content: string): Promise<void> {
         suggestedName: filename,
         // Suggest the same folder as the last save when available
         ...(lastSaveHandle ? { startIn: lastSaveHandle } : {}),
-        types: [{ description: "JSON file", accept: { "application/json": [".json"] } }],
+        types: [{ description: kind.description, accept: { [kind.mime]: [kind.extension] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);

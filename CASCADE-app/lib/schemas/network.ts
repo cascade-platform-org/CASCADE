@@ -465,10 +465,43 @@ export const AnalysisScorecardEntrySchema = z.object({
   image_png: z.string().optional(),
 });
 
+/** One Stock as Level Mode showed it when a period was saved (ADR-0019 §6). */
+export const StockValueSchema = z.object({
+  element: z.string(),
+  /** Absent for an edge Stock. */
+  category: z.string().optional(),
+  /** The level, or its change over the period, per `level_reading`. */
+  value: z.number(),
+  /** The reference used; absent = none. */
+  reference: z.number().optional(),
+});
+
+/**
+ * One period of a Temporal Simulation run, saved (ADR-0019 §4). The run is not
+ * saved, so the entry holds what it shows: the end state, the Metric values at
+ * that period (computed at save) and each Stock's Level Mode value.
+ */
+export const TemporalSimulationScorecardEntrySchema = z.object({
+  type: z.literal("temporal_simulation"),
+  id: z.string(),
+  label: z.string(),
+  created_at: z.string(),
+  timeline_name: z.string(),
+  period_label: z.string(),
+  snapshot: GraphSnapshotSchema,
+  /** Column name → value at the period (standard and custom Metrics); null = no value. */
+  metrics: z.record(z.string(), z.number().nullable()).default({}),
+  level_reading: z.enum(["level", "change"]).default("level"),
+  stock_values: z.array(StockValueSchema).default([]),
+  /** Base64-encoded PNG of the Run View at save. */
+  image_png: z.string().optional(),
+});
+
 /** Discriminated union on `type`. */
 export const ScorecardEntrySchema = z.discriminatedUnion("type", [
   PropagationScorecardEntrySchema,
   AnalysisScorecardEntrySchema,
+  TemporalSimulationScorecardEntrySchema,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -567,5 +600,7 @@ export type RecordDiff = z.infer<typeof RecordDiffSchema>;
 export type FieldChange = z.infer<typeof FieldChangeSchema>;
 export type PropagationScorecardEntry = z.infer<typeof PropagationScorecardEntrySchema>;
 export type AnalysisScorecardEntry = z.infer<typeof AnalysisScorecardEntrySchema>;
+export type TemporalSimulationScorecardEntry = z.infer<typeof TemporalSimulationScorecardEntrySchema>;
+export type StockValue = z.infer<typeof StockValueSchema>;
 export type ScorecardEntry = z.infer<typeof ScorecardEntrySchema>;
 export type Project = z.infer<typeof ProjectSchema>;

@@ -43,7 +43,8 @@ import { SaveScorecardDialog } from "./operativity-scorecard";
 import { SnapshotFlowView } from "./snapshot-flow-view";
 import { buildColorMap } from "@/lib/analysis-legend";
 import { scoresToResult } from "@/lib/topological-analysis";
-import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry } from "@/lib/schemas/network";
+import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry, TemporalSimulationScorecardEntry } from "@/lib/schemas/network";
+import { colorsFor } from "@/lib/level-mode";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
@@ -238,10 +239,17 @@ export function ScorecardPanel() {
                     config={config}
                     onDelete={() => removeScorecardEntry(entry.id)}
                   />
-                ) : (
+                ) : entry.type === "analysis" ? (
                   <AnalysisEntryCard
                     key={entry.id}
                     entry={entry}
+                    onDelete={() => removeScorecardEntry(entry.id)}
+                  />
+                ) : (
+                  <SimulationEntryCard
+                    key={entry.id}
+                    entry={entry}
+                    n={n}
                     onDelete={() => removeScorecardEntry(entry.id)}
                   />
                 )
@@ -823,6 +831,91 @@ function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Temporal Simulation entry card (ADR-0019 §4)
+// ---------------------------------------------------------------------------
+
+/**
+ * One saved period of a Temporal Simulation run. The run is not saved, so the
+ * card shows what the entry holds: the end state (Operativity derived from it,
+ * as for any entry), the Metric values computed at save, and the network
+ * repainted in Level Mode from the stored Stock values and the current Level
+ * Scale.
+ */
+function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulationScorecardEntry; n: number; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const levelScale = useConfigStore((s) => s.config.level_scale);
+  const operativity = useMemo(() => computeOperativityScore(entry.snapshot, n), [entry.snapshot, n]);
+  const levelColors = useMemo(
+    () =>
+      entry.stock_values.length > 0
+        ? colorsFor(entry.stock_values, [...Object.keys(entry.snapshot.nodes), ...Object.keys(entry.snapshot.edges)], levelScale)
+        : undefined,
+    [entry.stock_values, entry.snapshot, levelScale],
+  );
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{entry.label}</p>
+            <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              simulation
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400">
+            {new Date(entry.created_at).toLocaleString()}
+            <span className="ml-2 text-zinc-500">{entry.timeline_name} · period {entry.period_label} · Operativity {operativity.toFixed(1)}%</span>
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? "Collapse" : "Show the network and the period's Metrics"}
+            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          >
+            <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
+          </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+              <button onClick={onDelete} className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Yes</button>
+              <button onClick={() => setConfirmDelete(false)} className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700">No</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)} title="Delete entry" className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-700">
+          <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="border-b border-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+              End of {entry.period_label}
+              {levelColors && ` — Level Mode (${entry.level_reading === "level" ? "level" : "change over the period"})`}
+            </div>
+            <SnapshotFlowView snapshot={entry.snapshot} colors={levelColors} heightClass="h-52" />
+          </div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Metrics at this period</p>
+          <div className="space-y-1">
+            {Object.entries(entry.metrics).map(([name, value]) => (
+              <div key={name} className="flex items-center justify-between text-xs">
+                <span className="truncate text-zinc-600 dark:text-zinc-400">{name}</span>
+                <span className="ml-2 font-mono text-zinc-800 dark:text-zinc-200">{value === null ? "—" : Number.isInteger(value) ? value : value.toFixed(3)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

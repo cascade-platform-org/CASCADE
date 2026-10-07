@@ -652,12 +652,44 @@ class AnalysisScorecardEntry(BaseModel):
     image_png: Optional[str] = None  # Base64-encoded PNG with Analysis Heatmap
 
 
+class StockValue(BaseModel):
+    """One Stock as Level Mode showed it when a period was saved (ADR-0019 §6)."""
+    element: str
+    category: Optional[str] = Field(default=None, description="Absent for an edge Stock.")
+    value: float = Field(..., description="The level, or its change over the period, per `level_reading`.")
+    reference: Optional[float] = Field(default=None, description="The reference used; absent = none.")
+
+
+class TemporalSimulationScorecardEntry(BaseModel):
+    """
+    One period of a Temporal Simulation run, saved (ADR-0019 §4). The run itself
+    is not saved, so the entry holds what it shows: the period's end state (the
+    Scorecard derives Operativity from it as for any entry), the Metric values at
+    that period, computed at save, and each Stock's Level Mode value with the
+    reference used.
+    """
+    type: Literal["temporal_simulation"]
+    id: str
+    label: str
+    created_at: str  # ISO 8601 UTC
+    timeline_name: str
+    period_label: str
+    snapshot: GraphSnapshot
+    metrics: dict[str, Optional[float]] = Field(
+        default_factory=dict,
+        description="Column name → value at the period (standard and custom Metrics); None = no value.",
+    )
+    level_reading: Literal["level", "change"] = "level"
+    stock_values: list[StockValue] = Field(default_factory=list)
+    image_png: Optional[str] = None  # Base64-encoded PNG of the Run View at save
+
+
 # Discriminated union — `type` field selects the variant.
 # Backward compat: old project files without a `type` field are handled by
 # the Zod preprocessor on the frontend; Pydantic defaults `type` to
 # "propagation" via PropagationScorecardEntry's field default.
 ScorecardEntry = Annotated[
-    PropagationScorecardEntry | AnalysisScorecardEntry,
+    PropagationScorecardEntry | AnalysisScorecardEntry | TemporalSimulationScorecardEntry,
     Field(discriminator="type"),
 ]
 

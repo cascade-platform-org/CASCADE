@@ -13,7 +13,7 @@
 import { brandColor } from "@/lib/brand";
 import type { HeatmapLegend } from "@/lib/analysis-legend";
 import type { LevelBand } from "@/lib/schemas/config";
-import type { GraphSnapshot, Stock } from "@/lib/schemas/network";
+import type { GraphSnapshot, Stock, StockValue } from "@/lib/schemas/network";
 
 export type LevelReading = "level" | "change";
 
@@ -60,9 +60,43 @@ function stocksOf(snapshot: GraphSnapshot): { element: string; key: string; stoc
 const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
 
 /**
+ * Each Stock's value at the end of a period, with its reference (absent when
+ * it has none): what Level Mode paints, and what a Scorecard entry stores so it
+ * can repaint later. `before` is the state the period started from.
+ */
+export function stockValues(state: GraphSnapshot, before: GraphSnapshot, reading: LevelReading): StockValue[] {
+  const previous = new Map(stocksOf(before).map((s) => [s.key, s.stock.level]));
+  return stocksOf(state).map(({ element, key, stock }) => {
+    const reference = stockReference(stock, reading);
+    const value = reading === "level" ? stock.level : stock.level - (previous.get(key) ?? stock.level);
+    const category = key === element ? undefined : key.slice(element.length + 1);
+    return { element, ...(category !== undefined ? { category } : {}), value, ...(reference !== null ? { reference } : {}) };
+  });
+}
+
+/** Every Element's colour from its Stocks' values; a node with several shows the most extreme ratio. */
+export function colorsFor(values: readonly StockValue[], elementIds: Iterable<string>, scale: readonly LevelBand[]): Record<string, string> {
+  const colors: Record<string, string> = {};
+  for (const id of elementIds) colors[id] = NO_STOCK;
+  const extremity = new Map<string, number>();
+  for (const { element, value, reference } of values) {
+    if (reference === undefined) {
+      if (!extremity.has(element)) colors[element] = NO_REFERENCE;
+      continue;
+    }
+    const ratio = value / reference;
+    if (Math.abs(ratio) >= (extremity.get(element) ?? -1)) {
+      extremity.set(element, Math.abs(ratio));
+      colors[element] = bandColor(bandFor(ratio, scale));
+    }
+  }
+  return colors;
+}
+
+/**
  * The colour of every Element at the end of a period, and the legend that says
  * what the colours mean. `before` is the state the period started from (for a
- * change). A node with several Stocks shows the most extreme of them.
+ * change).
  */
 export function levelPaint(
   state: GraphSnapshot,
@@ -70,26 +104,9 @@ export function levelPaint(
   scale: readonly LevelBand[],
   reading: LevelReading,
 ): { colors: Record<string, string>; legend: HeatmapLegend } {
-  const colors: Record<string, string> = {};
-  for (const id of [...Object.keys(state.nodes), ...Object.keys(state.edges)]) colors[id] = NO_STOCK;
-
-  const previous = new Map(stocksOf(before).map((s) => [s.key, s.stock.level]));
-  const extremity = new Map<string, number>();
-  let unreferenced = false;
-  for (const { element, key, stock } of stocksOf(state)) {
-    const reference = stockReference(stock, reading);
-    if (reference === null) {
-      unreferenced = true;
-      if (!extremity.has(element)) colors[element] = NO_REFERENCE;
-      continue;
-    }
-    const value = reading === "level" ? stock.level : stock.level - (previous.get(key) ?? stock.level);
-    const ratio = value / reference;
-    if (Math.abs(ratio) >= (extremity.get(element) ?? -1)) {
-      extremity.set(element, Math.abs(ratio));
-      colors[element] = bandColor(bandFor(ratio, scale));
-    }
-  }
+  const values = stockValues(state, before, reading);
+  const colors = colorsFor(values, [...Object.keys(state.nodes), ...Object.keys(state.edges)], scale);
+  const unreferenced = values.some((v) => v.reference === undefined);
 
   const items = [...scale].reverse().map((band, i, bands) => {
     const lower = bands[i + 1]?.below;

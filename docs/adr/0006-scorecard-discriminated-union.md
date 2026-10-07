@@ -1,6 +1,6 @@
 # ADR-0006 — Scorecard Entry as Discriminated Union
 
-**Status:** accepted (2026-06-17). Proposed addition: ADR-0019 §4 adds a `temporal_simulation` entry (one saved period of a run).
+**Status:** accepted (2026-06-17). Extended 2026-10-07 by ADR-0019 §4: a third member, `temporal_simulation` (one saved period of a run: end-state snapshot, Metric values, Level Mode Stock values, optional PNG).
 
 ## Context
 
