@@ -6,8 +6,9 @@
  *
  * The tabs edit the project's document through `store/temporal-simulation-store.ts`,
  * which saves every valid edit into the project; the status line says when an
- * edit is not saved and why. The bottom panel explains each control. Runs are
- * still dry: nothing here writes to the canvas or history or calls the engine.
+ * edit is not saved and why. Run computes on a Reset copy and shows the Run
+ * View (`lib/temporal-simulation-run.ts`); the model is never written. The
+ * bottom panel explains each control.
  */
 
 import React from "react";

@@ -59,6 +59,8 @@ export function ActionBar() {
   const { undo, redo, canUndo, canRedo } = useNetworkHistory();
   const { propagate, isPropagating, serverReachable } = usePropagate();
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
+  // A Temporal Simulation run shows its own copy; the model is read-only until it ends.
+  const simulationRunning = useTemporalSimulationStore((s) => s.running);
 
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -71,6 +73,11 @@ export function ActionBar() {
   function handleReset() {
     // Reset is scope-independent (ADR-0016): it restores the Scenario Baseline,
     // and a half-rewound cascade is a state the model was never in.
+    if (useTemporalSimulationStore.getState().running) {
+      resetFunctionality();
+      pushToast({ message: "Temporal Simulation run ended — the canvas shows your model, unchanged.", variant: "info", durationMs: 3000 });
+      return;
+    }
     const affected = resetFunctionality();
     pushToast(
       affected > 0
@@ -95,7 +102,7 @@ export function ActionBar() {
         scope={scope}
         onScopeChange={setPropagationScope}
         onAction={propagate}
-        disabled={!serverReachable || isPropagating || !canPropagate}
+        disabled={!serverReachable || isPropagating || !canPropagate || simulationRunning}
       />
 
       {/* Analyse — same split control, so scope is picked before opening */}
@@ -201,7 +208,7 @@ export function ActionBar() {
       <ActionButton
         id={TEMPORAL_SIMULATION_ANCHOR_ID}
         onClick={openTemporalSimulation}
-        title="Temporal Simulation: the project’s Timeline, profile and Metrics (runs are a dry plan for now)"
+        title="Temporal Simulation: the project’s Timeline, profile and Metrics, run over many periods"
         className="text-zinc-600 dark:text-zinc-400"
       >
         <CalendarClock size={13} />

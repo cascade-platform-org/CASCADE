@@ -12,7 +12,8 @@ import { useConfigStore, selectN } from "@/store/config-store";
 import { endRun } from "@/lib/temporal-jump-run";
 import { countChangedElements } from "@/lib/graph-diff";
 import { runWithHistory } from "@/lib/run-with-history";
-import { applyBaselineEntries, forceOperational, resetPlan } from "@/lib/scenario-baseline";
+import { resetSnapshot } from "@/lib/scenario-baseline";
+import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 
 // ---------------------------------------------------------------------------
 // Reset
@@ -48,12 +49,14 @@ import { applyBaselineEntries, forceOperational, resetPlan } from "@/lib/scenari
  * honestly when there was nothing to reset.
  */
 export function resetFunctionality(): number {
+  // A Temporal Simulation run is a view on its own copy: Reset only leaves it,
+  // since the model never changed (ADR-0019 §5).
+  if (endTemporalSimulationRun()) return 0;
   const historyStore = useHistoryStore.getState();
   const n = selectN(useConfigStore.getState());
 
   const before = useCanvasStore.getState().toGraphSnapshot();
-  const restored = applyBaselineEntries(before, resetPlan(historyStore.scenarioBaseline()));
-  const after = forceOperational(restored, n);
+  const after = resetSnapshot(before, historyStore.scenarioBaseline(), n);
 
   // Reference identity survives both transforms for an untouched Element, so
   // this counts what genuinely moved rather than the size of the graph.

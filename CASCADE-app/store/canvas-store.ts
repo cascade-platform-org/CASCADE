@@ -62,6 +62,32 @@ function withHistory<T>(
   );
 }
 
+let lockToastAt = 0;
+
+/**
+ * True while a Temporal Simulation run is computing or shown: the model is then
+ * read-only (ADR-0019 §1), so every model writer below refuses. The run read the
+ * model once and the Run View paints its own copy; an edit now would be invisible
+ * and would make End run show a model the run never saw. Says so in a toast, at
+ * most every few seconds. Canvas metadata (label, colour, map viewport) and the
+ * active Canvas stay writable: they are not the model the run computed on.
+ */
+export function modelLocked(): boolean {
+  if (!useTemporalSimulationStore.getState().running) return false;
+  const now = Date.now();
+  if (now - lockToastAt > 3000) {
+    lockToastAt = now;
+    void import("@/store/ui-store").then(({ useUiStore }) =>
+      useUiStore.getState().pushToast({
+        message: "A Temporal Simulation run is shown, so the model is read-only. End run or Reset to edit it.",
+        variant: "info",
+        durationMs: 3500,
+      }),
+    );
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // State shape
 // ---------------------------------------------------------------------------
@@ -259,10 +285,12 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     upsertNode(node) {
+      if (modelLocked()) return;
       set((state) => { state.nodes[node.id] = node; });
     },
 
     removeNode(nodeId) {
+      if (modelLocked()) return;
       set((state) => {
         delete state.nodes[nodeId];
         for (const canvas of Object.values(state.canvases)) {
@@ -280,6 +308,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     updateNode(nodeId, patch) {
+      if (modelLocked()) return;
       set((state) => {
         if (!state.nodes[nodeId]) return;
         state.nodes[nodeId] = { ...state.nodes[nodeId], ...patch };
@@ -291,10 +320,12 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     upsertEdge(edge) {
+      if (modelLocked()) return;
       set((state) => { state.edges[edge.id] = edge; });
     },
 
     removeEdge(edgeId) {
+      if (modelLocked()) return;
       set((state) => {
         delete state.edges[edgeId];
         for (const canvas of Object.values(state.canvases)) {
@@ -304,6 +335,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     updateEdge(edgeId, patch) {
+      if (modelLocked()) return;
       set((state) => {
         if (!state.edges[edgeId]) return;
         state.edges[edgeId] = { ...state.edges[edgeId], ...patch };
@@ -315,6 +347,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     addCanvas(canvas) {
+      if (modelLocked()) return;
       set((state) => {
         if (state.canvases[canvas.id]) return;
         state.canvases[canvas.id] = canvas;
@@ -324,6 +357,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     removeCanvas(canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         if (!state.canvases[canvasId]) return;
         delete state.canvases[canvasId];
@@ -365,6 +399,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     addNodeToCanvas(nodeId, canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         const id = resolveCanvasId(state, canvasId);
         const { graph } = state.canvases[id];
@@ -373,6 +408,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     removeNodeFromCanvas(nodeId, canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         const id = resolveCanvasId(state, canvasId);
         const { graph } = state.canvases[id];
@@ -381,6 +417,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     addEdgeToCanvas(edgeId, canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         const id = resolveCanvasId(state, canvasId);
         const { graph } = state.canvases[id];
@@ -389,6 +426,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     removeEdgeFromCanvas(edgeId, canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         const id = resolveCanvasId(state, canvasId);
         const { graph } = state.canvases[id];
@@ -397,6 +435,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     setGraphType(graphType, canvasId) {
+      if (modelLocked()) return;
       set((state) => {
         const id = resolveCanvasId(state, canvasId);
         state.canvases[id].graph.graph_type = graphType;
@@ -408,6 +447,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     applyPropagationResult(result) {
+      if (modelLocked()) return;
       set((state) => {
         for (const update of result.updates) {
           if (state.nodes[update.id]) {
@@ -424,6 +464,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     restoreSnapshot(snapshot) {
+      if (modelLocked()) return;
       set((state) => {
         state.nodes = snapshot.nodes;
         state.edges = snapshot.edges;
@@ -450,6 +491,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // current state, so there is no chain to replay and no checkpoint to keep.
     // Legacy entries (pre-ADR-0017) still carry snapshots and take the old path.
     undo() {
+      if (modelLocked()) return false;
       const entry = useHistoryStore.getState().shiftToRedo();
       if (!entry) return false;
       if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "backward"));
@@ -458,6 +500,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     redo() {
+      if (modelLocked()) return false;
       const entry = useHistoryStore.getState().shiftFromRedo();
       if (!entry) return false;
       if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "forward"));
@@ -470,6 +513,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     applyEvent(event: EventDefinition, n: number) {
+      if (modelLocked()) return [];
       // `mutation_reversal` is no longer written. It was the Event's own
       // inverse; the entry's Graph Diff records the same thing in the same shape
       // for EVERY update type, and the Scenario Baseline reads it (ADR-0016).
@@ -497,6 +541,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     clearEvent() {
+      if (modelLocked()) return false;
       const historyState = useHistoryStore.getState();
       const entry = historyState.updateHistory.find((h) => h.update_type === "event_applied");
       if (!entry) return false;
@@ -547,6 +592,7 @@ export const useCanvasStore = create<CanvasStore>()(
     // -------------------------------------------------------------------------
 
     copyNodesToCanvas(nodeIds, targetCanvasId) {
+      if (modelLocked()) return;
       const state = get();
       if (!state.canvases[targetCanvasId]) return;
       const nodeSet = new Set(nodeIds);
@@ -570,6 +616,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     moveNodesToCanvas(nodeIds, sourceCanvasId, targetCanvasId) {
+      if (modelLocked()) return;
       const state = get();
       if (!state.canvases[sourceCanvasId] || !state.canvases[targetCanvasId]) return;
       const nodeSet = new Set(nodeIds);
@@ -597,6 +644,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     addInterCanvasEdge({ sourceNodeId, sourceCanvasId, targetNodeId, targetCanvasId, functionality }) {
+      if (modelLocked()) return;
       const state = get();
       const sourceNode = state.nodes[sourceNodeId];
       const targetNode = state.nodes[targetNodeId];
@@ -713,6 +761,7 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     mergeImportedProject(project) {
+      if (modelLocked()) throw new Error("End the Temporal Simulation run before importing into the model.");
       const state = get();
       const incomingCanvas = project.canvases[0];
       if (!incomingCanvas) {

@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { Play, RotateCcw, Eye, Save, AlertTriangle, XCircle, Download } from "lucide-react";
+import { Play, RotateCcw, Save, AlertTriangle, XCircle, Download, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { useAuthStore } from "@/store/auth-store";
+import { useUiStore } from "@/store/ui-store";
+import { cancelTemporalSimulationRun, endTemporalSimulationRun, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import {
   EXPLAIN_END_RUN,
   EXPLAIN_EXPORT_CSV,
   EXPLAIN_SAVE_SCORECARD,
-  EXPLAIN_SHOW_STATE,
   explainDisplay,
   explainRun,
   explainSelectPeriod,
@@ -29,12 +31,19 @@ const STANDARD_METRICS = ["Operativity", "Coverage", "Stock level"];
 
 export function RunTab() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
-  const hasRun = useTemporalSimulationStore((s) => s.running);
+  const running = useTemporalSimulationStore((s) => s.running);
+  const progress = useTemporalSimulationStore((s) => s.runProgress);
+  const runError = useTemporalSimulationStore((s) => s.runError);
+  const runWarnings = useTemporalSimulationStore((s) => s.runRecord?.warnings);
+  // The Run View: a finished run is shown, and its periods can be selected.
+  const hasRun = useTemporalSimulationStore((s) => s.runRecord !== null);
+  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
+  const serverReachable = useUiStore((s) => s.serverReachable);
   const selected = useTemporalSimulationStore((s) => s.selectedPeriod);
   const display = useTemporalSimulationStore((s) => s.display);
   const reading = useTemporalSimulationStore((s) => s.levelReading);
   const metrics = useTemporalSimulationStore((s) => s.metrics);
-  const { explain, markRun, endRun, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
+  const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
 
   const plan = usePlan();
@@ -46,20 +55,44 @@ export function RunTab() {
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={hasRun || plan.periods.length === 0 || errors.length > 0}
+          disabled={running || plan.periods.length === 0 || errors.length > 0 || !canPropagate || !serverReachable}
+          title={!canPropagate ? "Running needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : undefined}
           onClick={() => {
             explain(explainRun(plan, eventLabel));
-            markRun();
+            void startTemporalSimulationRun();
           }}
         >
-          <Play size={11} /> Run (dry)
+          <Play size={11} /> Run
         </SmallButton>
         <span className="text-xs text-zinc-500">
           {plan.periods.length} periods · {plan.engineCalls} Propagations ({plan.engineCalls} Engine Evaluations)
         </span>
         <span className="flex-1" />
-        <SmallButton disabled={!hasRun} onClick={() => { endRun(); explain(EXPLAIN_END_RUN); }} title="Also Reset"><RotateCcw size={11} /> End run</SmallButton>
+        <SmallButton disabled={!running} onClick={() => { endTemporalSimulationRun(); explain(EXPLAIN_END_RUN); }} title="Reset does the same">
+          <RotateCcw size={11} /> End run
+        </SmallButton>
       </div>
+
+      {progress && (
+        <div role="status" className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
+          <span className="shrink-0">Running {progress.label && `· ${progress.label}`}</span>
+          <progress className="h-1.5 flex-1" max={Math.max(1, progress.total)} value={progress.done} />
+          <span className="shrink-0 tabular-nums">{progress.done} / {progress.total} Propagations</span>
+          <SmallButton onClick={cancelTemporalSimulationRun}><Square size={10} /> Cancel</SmallButton>
+        </div>
+      )}
+
+      {runError && (
+        <p role="alert" className="flex gap-1.5 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+          <XCircle size={12} className="mt-0.5 shrink-0" />{runError}
+        </p>
+      )}
+
+      {runWarnings && runWarnings.length > 0 && (
+        <ul className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          {runWarnings.map((w, i) => <li key={i} className="flex gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w}</li>)}
+        </ul>
+      )}
 
       {errors.length > 0 && (
         <ul className="space-y-1 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
@@ -112,7 +145,6 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">Phases</th>
               {STANDARD_METRICS.map((m) => <th key={m} className="py-1 pr-2 font-semibold">{m}</th>)}
               {metrics.map((m) => <th key={m.id} className="py-1 pr-2 font-semibold">{m.metric.name || "metric"}</th>)}
-              <th />
             </tr>
           </thead>
           <tbody>
@@ -145,23 +177,11 @@ export function RunTab() {
                 </td>
                 {STANDARD_METRICS.map((m) => <td key={m} className="py-1 pr-2 text-zinc-300" title="Computed at read time from the run record">—</td>)}
                 {metrics.map((m) => <td key={m.id} className="py-1 pr-2 text-zinc-300">—</td>)}
-                <td className="py-1">
-                  {hasRun && (
-                    <button
-                      type="button"
-                      title="Show full state"
-                      className="text-zinc-400 hover:text-blue-600"
-                      onClick={(e) => { e.stopPropagation(); explain(EXPLAIN_SHOW_STATE); }}
-                    >
-                      <Eye size={12} />
-                    </button>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. Values show “—” because runs are a dry plan until the step operator is built.</p>
+        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. After a run, click a period to show its end state on the canvas. Metric values show “—” until Metrics are computed (not built yet).</p>
       </div>
     </div>
   );

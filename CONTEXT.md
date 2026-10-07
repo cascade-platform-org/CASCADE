@@ -67,7 +67,7 @@ Each field's value from before the current scenario touched it, keyed structural
 _Avoid_: "initial state", "clean state" (a Baseline is per-field and may itself be degraded, not a healthy graph)
 
 **Reset**:
-Ends the current scenario, in two halves that do not depend on each other. **Every Element is forced operational** — full Functionality, Functionality Time 0, no `direct_damage`, `expected_repair_time` or Responsibility Share — consulting nothing; and every write an Event or a Propagation made to a *model* attribute is reverted from the **Scenario Baseline**. Half one needs no record, so Reset repairs a damaged network even where the Baseline is incomplete, at the cost of promoting an Element authored below the scale maximum. A hand edit to a model field survives — that is authoring work. Always whole-scenario, ignoring the local/global scope toggle. Ends the current Situation, ends any **Temporal Jump** run, clears the Analysis Heatmap (*proposed*, ADR-0019: and leaves the **Run View**), and is itself one undoable **Any Graph Update**. Mechanics in ADR-0016.
+Ends the current scenario, in two halves that do not depend on each other. **Every Element is forced operational** — full Functionality, Functionality Time 0, no `direct_damage`, `expected_repair_time` or Responsibility Share — consulting nothing; and every write an Event or a Propagation made to a *model* attribute is reverted from the **Scenario Baseline**. Half one needs no record, so Reset repairs a damaged network even where the Baseline is incomplete, at the cost of promoting an Element authored below the scale maximum. A hand edit to a model field survives — that is authoring work. Always whole-scenario, ignoring the local/global scope toggle. Ends the current Situation, ends any **Temporal Jump** run, clears the Analysis Heatmap, and is itself one undoable **Any Graph Update**. While a **Run View** is shown, Reset only leaves it: the model never changed. Mechanics in ADR-0016.
 _Avoid_: "reset to N" (Reset also reverts Rule-written attributes and ends the scenario; it is not only a Functionality sweep)
 
 **Scenario**:
@@ -86,7 +86,7 @@ _Avoid_: Time warning, countdown, timer
 An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
-**Temporal Simulation** *(being built for v1.1: the definition is saved in the project; runs are not built)*:
+**Temporal Simulation** *(being built for v1.1: the definition is saved in the project and runs; Stocks, Level Mode and Metrics are not built)*:
 A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
@@ -110,8 +110,8 @@ _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a
 A display scale, orthogonal to the Functionality scale, for a **Stock**: ordered bands over the signed ratio `value / reference`, each with a label and a brand colour token, in Client Configuration (never sent to the backend). Exists because an accumulation can be a problem at both extremes while Functionality only worsens. The reference belongs to the Stock and defaults to its own bound. ADR-0019.
 _Avoid_: "level scale" for Functionality levels (those are the Functionality scale); a Rule input (display only)
 
-**Run View** *(proposed)*:
-The canvas showing a **Temporal Simulation** run at a selected period, read-only, the way **Analysis Mode** shows a score. The run lives on its own copy of the model, so leaving the view (Reset or End run) shows the model exactly as it was. Every change over time is authored before the run, as profile values or Phase Events. ADR-0019 §3.
+**Run View**:
+The canvas showing a **Temporal Simulation** run at a selected period, read-only, the way **Analysis Mode** shows a score; the Inspector shows that period too, and every model edit is refused until the view ends. The run lives on its own copy of the model, so leaving the view (Reset or End run) shows the model exactly as it was. Every change over time is authored before the run, as profile values or Phase Events. ADR-0019 §3.
 _Avoid_: "simulation mode" ("Simulation" bare is avoided), "replay"
 
 **Level Mode** *(proposed)*:

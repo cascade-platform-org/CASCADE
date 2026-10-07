@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2); runs are not built yet. Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2) and runs with the Run View (`lib/step-operator.ts`, slice 3); Stocks, Level Mode and Metrics are not built yet. Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -83,21 +83,31 @@ run(timeline):
                                            # authored model, every Element operational;
                                            # the live model and its history are never written
   for each period p:
-    apply profile[p.label]                 # set/add/… operations on rates, inflows, …
-    for each Phase k of p:
-      apply the Phase's Events that fire in p (every N: p's place in its Step is N, 2N…)
-                                           # vulnerabilities, mutations, then operations;
-                                           # each updates the imposed layer (§2a)
+    for each Phase k of p:                 # a Step with no Phase: one non-propagating Phase
+      events = the Phase's Events that fire in p (every N: p's place in its Step is N, 2N…),
+               after profile[p.label] for k = 1  # set/add/… operations on rates, inflows, …
+      imposed = apply events to (state with functionality and responsibility_share
+                                 reset to the imposed layer)
+                                           # vulnerabilities, mutations, then operations
+      imposed layer = imposed's functionality and responsibility_share (§2a)
       if k.propagate:
-        reset functionality and responsibility_share to the imposed layer
+        state = imposed
         payload = buildPropagationPayload(state)
                                            # each Stock → its supply number (ADR-0020 §2)
         apply the Propagation result; keep served_ratio
         if k is p's last propagating Phase:
           integrate every Stock once        # ADR-0020 §2; spilled / unmet recorded
+      else:
+        apply events to state             # the period's shortage stays on view
       record the Phase's diff
   keep the run record; show the Run View (§3)
 ```
+
+Events resolve against the imposed layer. A vulnerability applies only where it worsens,
+so an Event read against the last Propagation's output would leave no record in the layer
+for an Element a shortage had already degraded, and its damage would vanish the moment
+supply returned. (Found while building, 2026-10-07.) The profile rides in the first Phase as one
+more Event, which is why its writes belong to that Phase's diff.
 
 Integration runs right after the **last propagating** Phase, so a later non-propagating
 Phase (a settlement) reads the period's closing balance. A Temporal Jump is one of the

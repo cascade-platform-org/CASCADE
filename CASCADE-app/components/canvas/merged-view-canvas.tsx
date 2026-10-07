@@ -32,6 +32,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
+import { useShownElements } from "@/hooks/useShownElements";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
@@ -72,8 +74,9 @@ function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean): RFEdge {
 // ---------------------------------------------------------------------------
 
 function MergedViewCanvas() {
-  const allNodes = useCanvasStore((s) => s.nodes);
-  const allEdges = useCanvasStore((s) => s.edges);
+  // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
+  const { nodes: allNodes, edges: allEdges } = useShownElements();
+  const runShown = useTemporalSimulationStore((s) => s.running);
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const updateNode = useCanvasStore((s) => s.updateNode);
 
@@ -393,6 +396,7 @@ function MergedViewCanvas() {
         selectionOnDrag={false}
         connectionMode={ConnectionMode.Loose}
         nodesConnectable={false}
+        nodesDraggable={!runShown}
         onlyRenderVisibleElements
         fitView
         minZoom={0.1}

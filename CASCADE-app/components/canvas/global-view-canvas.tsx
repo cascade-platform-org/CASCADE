@@ -32,6 +32,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
+import { useShownElements } from "@/hooks/useShownElements";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
@@ -128,8 +129,8 @@ const NODE_BOX = 72;           // conservative bounding-box size per node (px)
 // ---------------------------------------------------------------------------
 
 function GlobalViewCanvas() {
-  const allNodes = useCanvasStore((s) => s.nodes);
-  const allEdges = useCanvasStore((s) => s.edges);
+  // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
+  const { nodes: allNodes, edges: allEdges } = useShownElements();
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
 

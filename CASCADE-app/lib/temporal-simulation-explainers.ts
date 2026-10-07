@@ -26,7 +26,7 @@ export const EXPLAIN_INTRO: Explanation = {
   title: "Temporal Simulation",
   lines: [
     "A Temporal Simulation is a saved definition, run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks, plus its profile and Metrics. One per project.",
-    "The definition is saved in the project, with its file, autosave and sync. A run is still a dry plan: nothing here changes your model or calls the engine. Each control explains here what it does.",
+    "The definition is saved in the project, with its file, autosave and sync. A run computes on its own copy and is shown read-only in the Run View; your model is never written. Stocks, Level Mode and Metric values are not built yet. Each control explains here what it does.",
     "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],
@@ -48,7 +48,7 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
     lines: [
       "A run computes on its own copy of the model, Reset (both halves), executing every period in order and calling the engine once per propagating Phase.",
       "It is shown in the Run View, read-only; the live model and the undo history are never written. End run (or Reset) shows the model as it was.",
-      "In this prototype, Run computes the plan only (labels, Phases, engine calls); no Propagation is sent.",
+      "Running needs the engine: a signed-in account allowed to Propagate, and the server reachable.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3"],
   },
@@ -336,7 +336,7 @@ function describeOp(op: string): string {
 export function explainRun(plan: TimelinePlan, eventLabel: (id: string) => string): Explanation {
   const first = plan.periods[0];
   return {
-    title: "Run (dry)",
+    title: "Run",
     lines: [
       "1. Copy the model and Reset the copy: the run starts from the authored model with every Element operational. Your model is never written.",
       ...(first ? describePeriod(first, eventLabel).map((l) => `2. ${l}`) : ["2. (no periods)"]),
@@ -344,7 +344,7 @@ export function explainRun(plan: TimelinePlan, eventLabel: (id: string) => strin
       "4. Keep the per-Phase diffs in the run record and open the Run View: the canvas shows the selected period, read-only, until End run. Progress shows period k of n; Cancel or a failure discards the run.",
       plan.errors.length > 0
         ? `Blocked: ${plan.errors.length} error(s) — a period without a valid label, or two periods with one label. Warnings do not block.`
-        : "Prototype: the plan is shown in the table below; nothing was sent to the engine.",
+        : "Each Propagation uses the Propagate button's scope (Local or Global).",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3", "ADR-0008"],
   };
@@ -357,7 +357,7 @@ function describePeriod(p: PlannedPeriod, eventLabel: (id: string) => string): s
     const evs = ph.events.length > 0 ? ph.events.map(eventLabel).join(", ") : "no Events";
     lines.push(
       ph.propagate
-        ? `Phase ${ph.index + 1}: apply ${evs}; reset shortage to the imposed layer; Stocks → supply; Propagate${ph.integratesAfter ? "; integrate every Stock" : ""}.`
+        ? `Phase ${ph.index + 1}: return Functionality to what Events imposed (shortage is recomputed); apply ${evs}; Stocks → supply; Propagate${ph.integratesAfter ? "; integrate every Stock" : ""}.`
         : `Phase ${ph.index + 1}: apply ${evs} (no Propagation).`,
     );
   }
@@ -384,15 +384,6 @@ export const EXPLAIN_STRIP: Explanation = {
     "Below, each profile row is one operation with a cell per period. A written value stays in later periods until something changes it, so an empty cell of a set row shows the carried value in grey.",
   ],
   refs: ["ADR-0019 §1", "ADR-0019 §2"],
-};
-
-export const EXPLAIN_SHOW_STATE: Explanation = {
-  title: "Show full state",
-  lines: [
-    "Rebuilds the whole graph at this period and opens it read-only, so you can inspect one interesting period.",
-    "Nothing per period is stored as a snapshot; reconstruction is cheap at tens of periods.",
-  ],
-  refs: ["ADR-0019 §3"],
 };
 
 export const EXPLAIN_END_RUN: Explanation = {

@@ -32,6 +32,9 @@ import { useShallow } from "zustand/react/shallow";
 import { nanoid } from "nanoid";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
+import { useShownElements } from "@/hooks/useShownElements";
+import { useNetworkHistory } from "@/hooks/useNetworkHistory";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { NodeSearch } from "./node-search";
 import { ZoomSlider } from "./zoom-slider";
 import { Lasso } from "./lasso";
@@ -59,8 +62,9 @@ const PAN_ON_DRAG_MIDDLE: number[] = [1];
 
 function FlowCanvas() {
   const activeCanvas = useCanvasStore(selectActiveCanvas);
-  const allNodes = useCanvasStore((s) => s.nodes);
-  const allEdges = useCanvasStore((s) => s.edges);
+  // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
+  const { nodes: allNodes, edges: allEdges } = useShownElements();
+  const runShown = useTemporalSimulationStore((s) => s.running);
   const allCanvases = useCanvasStore((s) => s.canvases) as Record<string, import("@/lib/schemas/network").Canvas>;
   const updateNode = useCanvasStore((s) => s.updateNode);
   const upsertNode = useCanvasStore((s) => s.upsertNode);
@@ -242,6 +246,7 @@ function FlowCanvas() {
   const activeTool = useUiStore((s) => s.activeTool);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
   const pushToast = useUiStore((s) => s.pushToast);
+  const { undo, redo } = useNetworkHistory();
   const selectedNodeTemplate = useUiStore((s) => s.selectedNodeTemplate);
 
   const n = useConfigStore(selectN);
@@ -531,8 +536,7 @@ function FlowCanvas() {
       // Ctrl+Z — undo
       if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
-        const undone = useCanvasStore.getState().undo();
-        if (!undone) pushToast({ message: "Nothing more to undo", variant: "info", durationMs: 2000 });
+        undo();
         return;
       }
 
@@ -540,8 +544,7 @@ function FlowCanvas() {
       if ((e.key === "y" && (e.ctrlKey || e.metaKey)) ||
           (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
         e.preventDefault();
-        const redone = useCanvasStore.getState().redo();
-        if (!redone) pushToast({ message: "Nothing more to redo", variant: "info", durationMs: 2000 });
+        redo();
         return;
       }
 
@@ -558,7 +561,7 @@ function FlowCanvas() {
       if (e.key === "r" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         const cleared = useCanvasStore.getState().clearEvent();
-        if (!cleared) pushToast({ message: "No event to clear", variant: "info", durationMs: 2000 });
+        if (!cleared && !runShown) pushToast({ message: "No event to clear", variant: "info", durationMs: 2000 });
         return;
       }
 
@@ -587,7 +590,7 @@ function FlowCanvas() {
     deleteSelected, activeCanvas, selectAll, setInspectorOpen,
     selectedNodeIds, selectedEdgeIds, allNodes, allEdges,
     copyToClipboard, clipboard, upsertNode, upsertEdge,
-    addNodeToCanvas, addEdgeToCanvas, pushToast,
+    addNodeToCanvas, addEdgeToCanvas, pushToast, undo, redo, runShown,
   ]);
 
   // ── Right-click on pane → context menu ──
@@ -655,6 +658,9 @@ function FlowCanvas() {
         selectionOnDrag={false}
         connectionMode={ConnectionMode.Loose}
         connectOnClick={activeTool === "add-edge"}
+        // The Run View is read-only: no dragging or connecting (canvas-store refuses the writes anyway).
+        nodesDraggable={!runShown}
+        nodesConnectable={!runShown}
         onlyRenderVisibleElements
         fitView
         minZoom={0.25}

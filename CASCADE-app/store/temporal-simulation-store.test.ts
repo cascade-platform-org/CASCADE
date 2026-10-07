@@ -50,7 +50,7 @@ describe("saving into the project", () => {
 
   it("refuses definition edits while a run is shown", () => {
     store().loadFromProject(doc);
-    store().markRun();
+    store().beginRun(0);
     store().updateTimeline((t) => { t.name = "Changed"; });
     expect(store().timeline.name).toBe("Week");
     expect(store().saved).toEqual(doc);

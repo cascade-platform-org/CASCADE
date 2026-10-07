@@ -17,6 +17,8 @@
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useShownElements } from "@/hooks/useShownElements";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 import { useHistoryAction } from "@/hooks/useHistoryAction";
@@ -33,8 +35,10 @@ export function Inspector() {
   const selectedNodeIds = useNetworkStore((s) => s.selectedNodeIds);
   const selectedEdgeIds = useNetworkStore((s) => s.selectedEdgeIds);
 
-  const allNodes = useCanvasStore((s) => s.nodes);
-  const allEdges = useCanvasStore((s) => s.edges);
+  // The Run View paints the selected period of a Temporal Simulation run (ADR-0019 §3).
+  const { nodes: allNodes, edges: allEdges } = useShownElements();
+  // In the Run View the Inspector shows the selected period, read-only.
+  const runShown = useTemporalSimulationStore((s) => s.running);
 
   const nodeIdArr = [...selectedNodeIds];
   const edgeIdArr = [...selectedEdgeIds];
@@ -72,7 +76,7 @@ export function Inspector() {
     ? "Selection"
     : "Canvas";
 
-  const canDelete = !!(singleNode || singleEdge);
+  const canDelete = !!(singleNode || singleEdge) && !runShown;
 
   return (
     <div
@@ -99,7 +103,13 @@ export function Inspector() {
             )}
           </div>
 
-          {singleNode ? (
+          {runShown && (
+            <p className="border-b border-blue-100 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
+              Run View: the selected period, read-only.
+            </p>
+          )}
+          <fieldset disabled={runShown} className="contents">
+                    {singleNode ? (
             <NodeInspector key={singleNode.id} node={singleNode} />
           ) : singleEdge ? (
             <EdgeInspector key={singleEdge.id} edge={singleEdge} />
@@ -116,6 +126,7 @@ export function Inspector() {
           ) : (
             <CanvasMeta />
           )}
+          </fieldset>
         </>
       )}
     </div>

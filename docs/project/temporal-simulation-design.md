@@ -885,7 +885,7 @@ this will do" panel go, and their text becomes the user-manual chapter.
 |---|---|---|---|
 | 1 | **Attribute Operations on Events** (ADR-0021) — *built 2026-10-06* | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
 | 2 | **The Temporal Simulation in the project** — *built 2026-10-07* | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
-| 3 | **Step operator and Run View** | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
+| 3 | **Step operator and Run View** — *built 2026-10-07* | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
 | 4 | **Stocks and storage** (ADR-0020) | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
 | 5 | **Level Scale and Level Mode** | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
 | 6 | **Metrics and Scorecard** | 3 (coverage and stock level: 4) | the Run table shows Operativity, coverage, stock level and custom Metrics; CSV export; a period saves as a `temporal_simulation` Scorecard entry |
@@ -914,7 +914,12 @@ Plan errors and schema errors block; a cancel, a budget refusal or an engine err
 the run and names the period. The Run View paints the reconstructed period through Analysis
 Mode's display path; the store refuses definition edits until End run or Reset. Tests: the
 same IJDRR Timeline gives the same diffs twice; a reconstructed period equals the running
-state; cancel leaves the model untouched.
+state; cancel leaves the model untouched. Built as: `lib/step-operator.ts` (pure; the engine
+call is passed in), `lib/temporal-simulation-run.ts` (Reset copy, `runEphemeralPropagation`
+with the Propagate scope, one abort controller per run), canvas-store's `modelLocked()` on
+every model writer, and `hooks/useShownElements.ts` for the canvas views and the Inspector.
+Building it corrected ADR-0019 §2: a Phase's Events resolve against the imposed layer, since
+read against a shortage they could leave no record and their damage would vanish.
 
 **Slice 4.** Backend first: the `Stock` union in `supply_capacity` and `Edge.capacity`, one
 engine helper that fails on a stray Stock, `served_ratio` per consumer and Category, and the

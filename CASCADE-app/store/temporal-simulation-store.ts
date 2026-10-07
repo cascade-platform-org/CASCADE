@@ -23,6 +23,8 @@ import { nanoid } from "nanoid";
 import type { CalendarUnit, Timeline, Phase, Step, TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import type { StockDraft } from "@/lib/stock-math";
+import { periodState, type RunRecord } from "@/lib/step-operator";
+import type { GraphSnapshot } from "@/lib/schemas/network";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
 export type SimTab = "timeline" | "run" | "metrics" | "stock" | "text";
@@ -43,10 +45,20 @@ interface TemporalSimulationState {
   /** Why the draft is not saved into the project (schema errors); empty when it is. */
   unsaved: string[];
   stock: StockPreview;
-  /** A run is shown (the Run View): every definition writer below is refused until End run. */
+  /**
+   * A run is computing or shown (the Run View): every definition writer below is
+   * refused, and canvas-store refuses model writes, until End run or Reset.
+   */
   running: boolean;
-  /** The period the Run View shows; meaningful only while `running`. */
+  /** While the run computes: Propagations done of the plan's total, and the period reached. */
+  runProgress: { done: number; total: number; label: string } | null;
+  /** The finished run, in memory only (ADR-0019 §3); null while computing or with no run. */
+  runRecord: RunRecord | null;
+  /** Why the last run stopped (cancel, budget, engine error); cleared by the next run. */
+  runError: string | null;
+  /** The period the Run View shows (1-based), and its reconstructed state, which the canvas paints. */
   selectedPeriod: number;
+  shown: GraphSnapshot | null;
   display: "functionality" | "level";
   levelReading: "level" | "change";
   explanation: Explanation;
@@ -67,7 +79,13 @@ interface TemporalSimulationState {
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
   updateStock: (patch: Partial<StockPreview>) => void;
-  markRun: () => void;
+  beginRun: (total: number) => void;
+  setRunProgress: (done: number, label: string) => void;
+  /** The run finished: show its first period. */
+  finishRun: (record: RunRecord) => void;
+  /** The run stopped: nothing is kept, the model is shown again. */
+  failRun: (message: string) => void;
+  /** Leave the Run View (End run, or Reset). The model never changed, so nothing is reverted. */
   endRun: () => void;
   selectPeriod: (n: number) => void;
   setDisplay: (d: "functionality" | "level") => void;
@@ -110,6 +128,14 @@ function save(s: State) {
   }
 }
 
+function leaveRun(s: State) {
+  s.running = false;
+  s.runProgress = null;
+  s.runRecord = null;
+  s.shown = null;
+  s.display = "functionality";
+}
+
 /** Run a definition edit, refused while a run is shown (ADR-0019 §1), whatever the caller. */
 const editing = (fn: (s: State) => void) => (s: State) => {
   if (s.running) return;
@@ -126,7 +152,11 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     unsaved: [],
     stock: { rate: 160, level: -20, min: -50, delivered: 150, phi: 1 },
     running: false,
+    runProgress: null,
+    runRecord: null,
+    runError: null,
     selectedPeriod: 1,
+    shown: null,
     display: "functionality",
     levelReading: "level",
     explanation: EXPLAIN_INTRO,
@@ -137,8 +167,8 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       Object.assign(s, doc ? docToDraft(doc, nanoid) : starterDraft());
       s.saved = doc;
       s.unsaved = [];
-      s.running = false;
-      s.display = "functionality";
+      leaveRun(s);
+      s.runError = null;
     }),
     setTab: (tab) => set((s) => { s.tab = tab; }),
     explain: (e) => set((s) => { s.explanation = e; }),
@@ -156,9 +186,26 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
     replaceDraft: (d) => set(editing((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; })),
     updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
-    markRun: () => set((s) => { s.running = true; s.selectedPeriod = 1; }),
-    endRun: () => set((s) => { s.running = false; s.display = "functionality"; }),
-    selectPeriod: (n) => set((s) => { s.selectedPeriod = n; }),
+    beginRun: (total) => set((s) => {
+      leaveRun(s);
+      s.running = true;
+      s.runError = null;
+      s.runProgress = { done: 0, total, label: "" };
+    }),
+    setRunProgress: (done, label) => set((s) => { if (s.runProgress) s.runProgress = { ...s.runProgress, done, label }; }),
+    finishRun: (record) => set((s) => {
+      s.runProgress = null;
+      s.runRecord = record;
+      s.selectedPeriod = 1;
+      s.shown = periodState(record, 1);
+    }),
+    failRun: (message) => set((s) => { leaveRun(s); s.runError = message; }),
+    endRun: () => set((s) => leaveRun(s)),
+    selectPeriod: (n) => set((s) => {
+      if (!s.runRecord || n < 1 || n > s.runRecord.periods.length) return;
+      s.selectedPeriod = n;
+      s.shown = periodState(s.runRecord, n);
+    }),
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),
   })),

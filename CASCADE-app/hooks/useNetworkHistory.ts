@@ -3,20 +3,25 @@
  *
  * Wraps canvas-store's undo() / redo() so that neither action-bar nor
  * flow-canvas need to duplicate the "nothing to undo/redo" toast logic.
+ * While a Temporal Simulation run is shown the model is read-only: the buttons
+ * are disabled and canvas-store's refusal explains itself, so no "nothing to
+ * undo" follows it.
  */
 
 import { useCallback } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useUiStore } from "@/store/ui-store";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 
 export function useNetworkHistory() {
-  const canUndo = useHistoryStore((s) => s.updateHistory.length > 0);
-  const canRedo = useHistoryStore((s) => s.redoStack.length > 0);
+  const running = useTemporalSimulationStore((s) => s.running);
+  const canUndo = useHistoryStore((s) => s.updateHistory.length > 0) && !running;
+  const canRedo = useHistoryStore((s) => s.redoStack.length > 0) && !running;
 
   const undo = useCallback(() => {
     const undone = useCanvasStore.getState().undo();
-    if (!undone) {
+    if (!undone && !useTemporalSimulationStore.getState().running) {
       useUiStore.getState().pushToast({
         message: "Nothing more to undo",
         variant: "info",
@@ -27,7 +32,7 @@ export function useNetworkHistory() {
 
   const redo = useCallback(() => {
     const redone = useCanvasStore.getState().redo();
-    if (!redone) {
+    if (!redone && !useTemporalSimulationStore.getState().running) {
       useUiStore.getState().pushToast({
         message: "Nothing more to redo",
         variant: "info",

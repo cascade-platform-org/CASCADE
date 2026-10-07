@@ -282,6 +282,16 @@ export function forceOperational(snapshot: GraphSnapshot, n: number): GraphSnaps
 }
 
 /**
+ * Both halves of Reset (ADR-0016) on a snapshot: machine-written attributes
+ * reverted from the Scenario Baseline, then every Element forced operational.
+ * Pure — the Reset button applies it to the model; a Temporal Simulation run
+ * starts from it on its own copy (ADR-0019 §2).
+ */
+export function resetSnapshot(snapshot: GraphSnapshot, baseline: ScenarioBaseline, n: number): GraphSnapshot {
+  return forceOperational(applyBaselineEntries(snapshot, resetPlan(baseline)), n);
+}
+
+/**
  * What **Clear Event** reverts: that Event's own writes, and every write the
  * Propagation made — a cascade computed from an input that no longer exists is
  * stale, and showing it is worse than showing nothing.

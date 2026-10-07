@@ -21,6 +21,7 @@ import { InterventionPanel } from "@/components/canvas/intervention-panel";
 import { AttributeScanPanel } from "@/components/canvas/attribute-scan-panel";
 import { AnalysisPage } from "@/components/analysis/analysis-page";
 import { TemporalSimulationWindow } from "@/components/temporal/temporal-simulation-window";
+import { RunViewBanner } from "@/components/temporal/run-view-banner";
 import { ToastContainer } from "./toast-container";
 import { AnonymousBanner } from "@/components/auth/AnonymousBanner";
 import { useAuthStore } from "@/store/auth-store";
@@ -123,6 +124,7 @@ export function EditorShell() {
         />
       )}
       <ActionBar />
+      <RunViewBanner />
 
       {/* Main workspace */}
       <div className="flex min-h-0 flex-1">
