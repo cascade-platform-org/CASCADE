@@ -2695,8 +2695,534 @@ export const USER_MANUAL: ManualDoc = {
       ]
     },
     {
-      "id": "keyboard-shortcuts",
+      "id": "temporal-simulation",
       "n": 9,
+      "title": "Temporal Simulation",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "kind": "text",
+              "text": "A Temporal Simulation runs the model over many periods: hours, days, months. Each period applies its changes, then propagates, and quantities that persist from one period to the next (a tank, a budget, hours owed) carry over. A project holds one, saved with it; "
+            },
+            {
+              "kind": "strong",
+              "text": "Simulate"
+            },
+            {
+              "kind": "text",
+              "text": " in the Action Bar opens it."
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "9.1 The definition",
+          "blocks": [
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Timeline."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " A list of "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Steps"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". A Step is a period label, a unit (hour, day, week, month, quarter, year, or none) and a repeat count: "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "2024-01"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", month, 12 is a year of months, labelled "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "2024-01"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " … "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "2024-12"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". Each Step has "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Phases"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". A Phase applies its Events, then optionally propagates. An Event in a Phase fires every period of its Step, or every N-th. An Event meant only for simulations (a repair, a settlement) is marked "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "Temporal Simulation only"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " in Config → Events, which keeps it off the Action Bar."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Profile."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " The grid under the Timeline: one row per value that changes over time (a demand, a supply), one cell per period. A row is an Attribute Operation (§4) with a value per period; a "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "set"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " value stays until the next one, shown greyed in the cells after it."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Metrics."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " Your own read-outs, computed per period (§9.4)."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Text."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " The whole definition as JSON, to edit in bulk or hand to an LLM: "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "Copy with context for an LLM"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " adds a primer, the format and this project's elements; paste the reply back and "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "Apply"
+                  },
+                  {
+                    "kind": "text",
+                    "text": "."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "Every change over time goes in before a run, as a profile value or a Phase Event. Each edit is saved into the project once it is complete; until then, the line under the window's title says what is missing, and the project keeps the last complete definition."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "9.2 Stocks",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "A "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Stock"
+                },
+                {
+                  "kind": "text",
+                  "text": " is a capacity with a level that persists across periods. In the Inspector's "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Capacities"
+                },
+                {
+                  "kind": "text",
+                  "text": ", the database icon beside a supply (or under an edge's capacity) turns the number into a Stock:"
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "head": [
+                "Field",
+                "Means"
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Rate per period"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "what the plain number carried"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Level"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "what is on hand; positive = available to draw, negative = owed"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Min / Max"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "the bounds of the level; Min defaults to 0, Max to none"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Max draw"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "the most the level may add to supply in one period"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Inflow"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "credited each period; defaults to the rate"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Retention / Efficiency"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "multipliers on the level and on the inflow (decay, interest, loss)"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "A Stock supplies its rate plus what its level can give above Min. After each period's last propagating Phase its level moves once: "
+                },
+                {
+                  "kind": "strong",
+                  "text": "level + inflow − delivered"
+                },
+                {
+                  "kind": "text",
+                  "text": ", kept between Min and Max; what the bounds cut off is reported. A damaged Stock credits a share of its inflow, the share its Functionality carries (§2.2)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Storage"
+                },
+                {
+                  "kind": "text",
+                  "text": " (the toggle, nodes only) is a tank: it takes water from its own Category's network and feeds it back. Other sources serve the consumers first and the tank covers only what they cannot; it fills last, from what is left after every consumer, up to Max fill. Tanks reaching the same zone draw and fill by the same fraction of what each offers."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "A node Stock with a rate integrates only while it is its Category's one source; an edge Stock only while its target has one incoming edge of that Category. Otherwise the run skips it and says so. Undeclared edge and throughput capacities in a Category with a Stock default to its largest supply, draw included; the Inspector asks you to declare them."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "9.3 Running",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Run"
+                },
+                {
+                  "kind": "text",
+                  "text": " needs an account allowed to Propagate. It copies the model, resets the copy (§4) and runs every period in order, one Propagation, with the Propagate button's scope, for each propagating Phase; each counts as one Engine Evaluation. A progress bar shows how far it is; "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Cancel"
+                },
+                {
+                  "kind": "text",
+                  "text": ", a refused request or an engine error keeps nothing and names the period it stopped in."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "Between periods, every element's Functionality returns to what Events left it at, and each Propagation recomputes shortage from that period's supply. So a consumer recovers when its supply comes back, while damage an Event caused stands until another Event repairs it. Nothing counts down repair times or backups on its own: a repair is an Event in its period, and time passes only through a Temporal Jump Event placed in a Phase."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "When the run ends, the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Run View"
+                },
+                {
+                  "kind": "text",
+                  "text": " shows it. Pick a period in the Run tab, or step through them in the strip under the Action Bar: the canvas and the Inspector show that period's end. Your model is read-only while a run is shown; "
+                },
+                {
+                  "kind": "strong",
+                  "text": "End run"
+                },
+                {
+                  "kind": "text",
+                  "text": " or "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Reset"
+                },
+                {
+                  "kind": "text",
+                  "text": " returns it exactly as it was. The run itself is not saved."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "9.4 Reading a run",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "The "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Run table"
+                },
+                {
+                  "kind": "text",
+                  "text": " has a row per period: the Operativity Score, the coverage of each flow Category (delivered ÷ demand), each Category's total stock level, then your Metrics. A Metric selects elements with a filter (§4), reads a field (its value at the period's end, or its change over the period or one Phase) and aggregates it: sum, mean, min, max, count, a percentile, or the share of values passing a comparison. "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Export CSV"
+                },
+                {
+                  "kind": "text",
+                  "text": " saves the table."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Level Mode"
+                },
+                {
+                  "kind": "text",
+                  "text": " (Canvas colours → Level) recolours each Stock by its level, or its change over the period, divided by its reference: its own "
+                },
+                {
+                  "kind": "em",
+                  "text": "level reference"
+                },
+                {
+                  "kind": "text",
+                  "text": " or "
+                },
+                {
+                  "kind": "em",
+                  "text": "change reference"
+                },
+                {
+                  "kind": "text",
+                  "text": ", else max(|Min|, |Max|). The bands are the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Level Scale"
+                },
+                {
+                  "kind": "text",
+                  "text": ", under Config → Functionality Scale; elements without a Stock turn light grey."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Save period to Scorecard"
+                },
+                {
+                  "kind": "text",
+                  "text": " keeps the shown period as an entry: its end state, the table's values and the Level Mode colours, with a picture."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "9.5 Importing an aqueduct",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "The EPANET import (File → Import EPANET .inp, "
+                },
+                {
+                  "kind": "em",
+                  "text": "Replace project"
+                },
+                {
+                  "kind": "text",
+                  "text": ") has a "
+                },
+                {
+                  "kind": "strong",
+                  "text": "For a Temporal Simulation"
+                },
+                {
+                  "kind": "text",
+                  "text": " option. Each tank then becomes storage, sized from its geometry and its pipes, and the project gets a starting simulation from the file: hourly periods over its duration, each consumer's demand pattern as profile values, and each timed control as an Event in its hour. Controls that depend on a tank's level are listed as skipped: a full tank already stops taking water."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "Two samples show the whole feature: "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Net1 — an aqueduct over a day"
+                },
+                {
+                  "kind": "text",
+                  "text": " (a pump outage, a repair and an evening surge drain and refill the tank) and the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "IJDRR example"
+                },
+                {
+                  "kind": "text",
+                  "text": ", whose Timeline is a year with two earthquakes and a repair."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keyboard-shortcuts",
+      "n": 10,
       "title": "Keyboard shortcuts",
       "blocks": [
         {

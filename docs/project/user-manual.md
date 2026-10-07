@@ -13,7 +13,8 @@
 6. [Analysis results](#6-analysis-results) ·
 7. [Saving and loading](#7-saving-and-loading) ·
 8. [Server and roles](#8-server-and-roles) ·
-9. [Keyboard shortcuts](#9-keyboard-shortcuts)
+9. [Temporal Simulation](#9-temporal-simulation) ·
+10. [Keyboard shortcuts](#10-keyboard-shortcuts)
 
 **Platform Tutorials**
 
@@ -387,7 +388,123 @@ and `can_propagate` — `analyst` and above. **Sync** needs `can_sync`. Everythi
 else, including topological analysis, works offline. Roles also carry a node cap
 and an engine-evaluation budget per minute.
 
-## 9. Keyboard shortcuts
+## 9. Temporal Simulation
+
+A Temporal Simulation runs the model over many periods: hours, days, months.
+Each period applies its changes, then propagates, and quantities that persist
+from one period to the next (a tank, a budget, hours owed) carry over. A project
+holds one, saved with it; **Simulate** in the Action Bar opens it.
+
+### 9.1 The definition
+
+- **Timeline.** A list of **Steps**. A Step is a period label, a unit (hour,
+  day, week, month, quarter, year, or none) and a repeat count: `2024-01`,
+  month, 12 is a year of months, labelled `2024-01` … `2024-12`. Each Step has
+  **Phases**. A Phase applies its Events, then optionally propagates. An Event
+  in a Phase fires every period of its Step, or every N-th. An Event meant only
+  for simulations (a repair, a settlement) is marked *Temporal Simulation only*
+  in Config → Events, which keeps it off the Action Bar.
+- **Profile.** The grid under the Timeline: one row per value that changes over
+  time (a demand, a supply), one cell per period. A row is an Attribute
+  Operation (§4) with a value per period; a `set` value stays until the next
+  one, shown greyed in the cells after it.
+- **Metrics.** Your own read-outs, computed per period (§9.4).
+- **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
+  *Copy with context for an LLM* adds a primer, the format and this project's
+  elements; paste the reply back and *Apply*.
+
+Every change over time goes in before a run, as a profile value or a Phase
+Event. Each edit is saved into the project once it is complete; until then, the
+line under the window's title says what is missing, and the project keeps the
+last complete definition.
+
+### 9.2 Stocks
+
+A **Stock** is a capacity with a level that persists across periods. In the
+Inspector's **Capacities**, the database icon beside a supply (or under an
+edge's capacity) turns the number into a Stock:
+
+| Field            | Means                                                                 |
+| ---------------- | --------------------------------------------------------------------- |
+| Rate per period  | what the plain number carried                                         |
+| Level            | what is on hand; positive = available to draw, negative = owed         |
+| Min / Max        | the bounds of the level; Min defaults to 0, Max to none                |
+| Max draw         | the most the level may add to supply in one period                    |
+| Inflow           | credited each period; defaults to the rate                            |
+| Retention / Efficiency | multipliers on the level and on the inflow (decay, interest, loss) |
+
+A Stock supplies its rate plus what its level can give above Min. After each
+period's last propagating Phase its level moves once: **level + inflow −
+delivered**, kept between Min and Max; what the bounds cut off is reported. A
+damaged Stock credits a share of its inflow, the share its Functionality
+carries (§2.2).
+
+**Storage** (the toggle, nodes only) is a tank: it takes water from its own
+Category's network and feeds it back. Other sources serve the consumers first
+and the tank covers only what they cannot; it fills last, from what is left
+after every consumer, up to Max fill. Tanks reaching the same zone draw and fill
+by the same fraction of what each offers.
+
+A node Stock with a rate integrates only while it is its Category's one source;
+an edge Stock only while its target has one incoming edge of that Category.
+Otherwise the run skips it and says so. Undeclared edge and throughput
+capacities in a Category with a Stock default to its largest supply, draw
+included; the Inspector asks you to declare them.
+
+### 9.3 Running
+
+**Run** needs an account allowed to Propagate. It copies the model, resets the
+copy (§4) and runs every period in order, one Propagation, with the Propagate
+button's scope, for each propagating Phase; each counts as one Engine
+Evaluation. A progress bar shows how far it is; **Cancel**, a refused request or
+an engine error keeps nothing and names the period it stopped in.
+
+Between periods, every element's Functionality returns to what Events left it
+at, and each Propagation recomputes shortage from that period's supply. So a
+consumer recovers when its supply comes back, while damage an Event caused
+stands until another Event repairs it. Nothing counts down repair times or
+backups on its own: a repair is an Event in its period, and time passes only
+through a Temporal Jump Event placed in a Phase.
+
+When the run ends, the **Run View** shows it. Pick a period in the Run tab, or
+step through them in the strip under the Action Bar: the canvas and the
+Inspector show that period's end. Your model is read-only while a run is shown;
+**End run** or **Reset** returns it exactly as it was. The run itself is not
+saved.
+
+### 9.4 Reading a run
+
+The **Run table** has a row per period: the Operativity Score, the coverage of
+each flow Category (delivered ÷ demand), each Category's total stock level, then
+your Metrics. A Metric selects elements with a filter (§4), reads a field (its
+value at the period's end, or its change over the period or one Phase) and
+aggregates it: sum, mean, min, max, count, a percentile, or the share of values
+passing a comparison. **Export CSV** saves the table.
+
+**Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
+its change over the period, divided by its reference: its own *level reference*
+or *change reference*, else max(|Min|, |Max|). The bands are the **Level
+Scale**, under Config → Functionality Scale; elements without a Stock turn light
+grey.
+
+**Save period to Scorecard** keeps the shown period as an entry: its end state,
+the table's values and the Level Mode colours, with a picture.
+
+### 9.5 Importing an aqueduct
+
+The EPANET import (File → Import EPANET .inp, *Replace project*) has a
+**For a Temporal Simulation** option. Each tank then becomes storage, sized from
+its geometry and its pipes, and the project gets a starting simulation from the
+file: hourly periods over its duration, each consumer's demand pattern as
+profile values, and each timed control as an Event in its hour. Controls that
+depend on a tank's level are listed as skipped: a full tank already stops
+taking water.
+
+Two samples show the whole feature: **Net1 — an aqueduct over a day** (a pump
+outage, a repair and an evening surge drain and refill the tank) and the **IJDRR
+example**, whose Timeline is a year with two earthquakes and a repair.
+
+## 10. Keyboard shortcuts
 
 Every shortcut the editor listens for. They are ignored while you are typing in a
 text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.

@@ -27,7 +27,7 @@ export const EXPLAIN_INTRO: Explanation = {
   lines: [
     "A Temporal Simulation is a saved definition, run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks, plus its profile and Metrics. One per project.",
     "The definition is saved in the project, with its file, autosave and sync. A run computes on its own copy and is shown read-only in the Run View; your model is never written. Stocks integrate once per period, Level Mode recolours them, and the Run table computes the Metrics. Each control explains here what it does.",
-    "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
+    "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],
 };
@@ -69,15 +69,6 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
       "References this project cannot satisfy (an unknown Event id, an Element that does not exist, a filter matching nothing) are warnings: you can still apply.",
     ],
     refs: ["ADR-0019 §7"],
-  },
-  stock: {
-    title: "Stock",
-    lines: [
-      "A Stock is the richer form of a supply rate: inside supply_capacity[category] (or an edge capacity) a number becomes an object with rate, inflow, level and bounds.",
-      "Before each propagating Phase the Stock is turned into a plain supply number; the engine never sees a Stock.",
-      "After the period's last propagating Phase the level is integrated once from what was delivered.",
-    ],
-    refs: ["ADR-0020 §1", "ADR-0020 §2"],
   },
 };
 
@@ -407,7 +398,7 @@ export function explainDisplay(mode: "functionality" | "level", reading: "level"
         lines: [
           reading === "level"
             ? "Each Stock is coloured by its level ÷ reference on the Level Scale: a node Stock colours its node, an edge Stock its edge."
-            : "Each Stock is coloured by its change over the selected period (after − before) ÷ its change_reference.",
+            : "Each Stock is coloured by its change over the selected period (after − before) ÷ its reference (its change_reference, else its bound).",
           "The reference defaults to the Stock's own bound max(|min|, |max|); a Stock with no bound and no override stays neutral, and the legend says so.",
           "Display only: Level Mode feeds no Rule, Operativity Score or Recovery Value. End run or Reset clears it.",
         ],
@@ -496,24 +487,4 @@ export function explainApply(errors: number, warnings: number): Explanation {
         lines: [`${errors} error(s) — listed under the text with their path. Nothing changed.`],
         refs: ["ADR-0019 §7"],
       };
-}
-
-// ---------------------------------------------------------------------------
-// Stock
-// ---------------------------------------------------------------------------
-
-export function explainStockField(field: string): Explanation {
-  const lines: Record<string, string[]> = {
-    rate: ["Per-period capacity basis: exactly what a bare number under this category would carry today."],
-    inflow: ["What integration credits each period; absent = rate. Separate so capacity can rise (cross-training) without crediting more inflow. rate > inflow flags the balance attribution-invalid."],
-    level: ["On hand, signed, typed in its stored sign: positive = available to draw. A liability (hours owed to workers) is negative."],
-    min: ["Floor of the level (absent = 0). The draw never takes the level below it; a clamp at it reports 'unmet'. Policy instrument: 'cap the balance at X' is min = −X in the stored sign."],
-    max: ["Ceiling of the level (absent = none). A clamp at it reports 'spilled'."],
-    max_draw: ["Most the stored level may add to supply in one period (absent = no limit). An Event can open or close it with a set operation."],
-    retention: ["Multiplier on the level each period: < 1 decay (spoilage, evaporation), > 1 growth (interest). The draw already accounts for it."],
-    efficiency: ["Multiplier on the inflow: < 1 transfer or round-trip loss."],
-    delivered: ["D: what the period's last propagating Phase delivered (served_ratio × demand). In the built feature it comes from the engine; here you type it."],
-    phi: ["φ: the Functionality-to-capacity ratio the Propagation returned (1 at the top level, 0 at the bottom). The engine applies it to supply; integration applies it to the credited inflow. The stored level is never scaled."],
-  };
-  return { title: `Stock field: ${field}`, lines: lines[field] ?? [], refs: ["ADR-0020 §1", "ADR-0020 §2"] };
 }

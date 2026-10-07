@@ -878,7 +878,11 @@ tests, its docs and the audit table (CLAUDE.md §8a) green.
 **What the prototype hands over.** The tested pure modules carry over as they are:
 `lib/timeline-plan.ts`, `lib/stock-math.ts`, `lib/element-filter.ts` and
 `lib/temporal-simulation-text.ts`. The prototype's document schema is now the Zod
-mirror `lib/schemas/temporal-simulation.ts` (slice 2). The window becomes the feature's UI; its banner and "What
+mirror `lib/schemas/temporal-simulation.ts` (slice 2). As built (slice 8): the banner is
+gone, the Stock tab (a calculator on a sample Stock) is gone now that Stocks are edited in
+the Inspector, and the explanations are the user manual's §9. The "What this will do"
+panel is kept for the owner's review of v1.1: it is the window's in-context help, and
+removing it touches every control. The window becomes the feature's UI; its banner and "What
 this will do" panel go, and their text becomes the user-manual chapter.
 
 | # | Slice | Needs | Done when |
@@ -890,7 +894,7 @@ this will do" panel go, and their text becomes the user-manual chapter.
 | 5 | **Level Scale and Level Mode** — *built 2026-10-07* | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
 | 6 | **Metrics and Scorecard** — *built 2026-10-07* | 3 (coverage and stock level: 4) | the Run table shows Operativity, coverage, stock level and custom Metrics; CSV export; a period saves as a `temporal_simulation` Scorecard entry |
 | 7 | **EPANET Temporal Simulation importer and samples** — *built 2026-10-07* | 2, 4 | Net1 imports with tanks as storage and a starting simulation; the IJDRR and Net1 samples run end to end; banca ore runs locally |
-| 8 | **Manual and reference docs** | all | user-manual chapter (`npm run docs:manual`), `api-reference.md` (`served_ratio`, `stored`), `local-first-guide.md` (Stock, `temporal_simulation`) |
+| 8 | **Manual and reference docs** — *built 2026-10-07* | all | user-manual chapter (`npm run docs:manual`), `api-reference.md` (`served_ratio`, `stored`), `local-first-guide.md` (Stock, `temporal_simulation`) |
 
 **Slice 1.** Pydantic `ElementFilter` and `AttributeOperation` in `schemas/config.py`,
 `EventDefinition.attribute_operations`; export and Zod. `lib/event-application.ts` applies

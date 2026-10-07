@@ -22,17 +22,11 @@ import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
 import type { CalendarUnit, Timeline, Phase, Step, TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
-import type { StockFields } from "@/lib/stock-math";
 import { periodState, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
-export type SimTab = "timeline" | "run" | "metrics" | "stock" | "text";
-
-export interface StockPreview extends StockFields {
-  delivered: number;
-  phi: number;
-}
+export type SimTab = "timeline" | "run" | "metrics" | "text";
 
 interface TemporalSimulationState {
   open: boolean;
@@ -44,7 +38,6 @@ interface TemporalSimulationState {
   saved: TemporalSimulation | undefined;
   /** Why the draft is not saved into the project (schema errors); empty when it is. */
   unsaved: string[];
-  stock: StockPreview;
   /**
    * A run is computing or shown (the Run View): every definition writer below is
    * refused, and canvas-store refuses model writes, until End run or Reset.
@@ -78,7 +71,6 @@ interface TemporalSimulationState {
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
-  updateStock: (patch: Partial<StockPreview>) => void;
   beginRun: (total: number) => void;
   setRunProgress: (done: number, label: string) => void;
   /** The run finished: show its first period. */
@@ -150,7 +142,6 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     ...starterDraft(),
     saved: undefined,
     unsaved: [],
-    stock: { rate: 160, level: -20, min: -50, delivered: 150, phi: 1 },
     running: false,
     runProgress: null,
     runRecord: null,
@@ -185,7 +176,6 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     })),
     updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
     replaceDraft: (d) => set(editing((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; })),
-    updateStock: (patch) => set((s) => { Object.assign(s.stock, patch); }),
     beginRun: (total) => set((s) => {
       leaveRun(s);
       s.running = true;
