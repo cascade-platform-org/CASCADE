@@ -48,7 +48,7 @@ export function TextTab() {
     if (apply) {
       const draft = docToDraft(parsed.doc, nanoid);
       replaceDraft(draft);
-      // Show the text the draft now serialises to, so the tab reads "Matches the draft".
+      // Show the text the definition now serialises to, so the tab reads "Matches the definition".
       setText(serializeDoc(draftToDoc(draft)));
       explain(explainApply(0, warnings.length));
     }
@@ -81,7 +81,7 @@ export function TextTab() {
         className="min-h-[260px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
       />
       <p className="text-[11px] text-zinc-400">
-        Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the draft."}
+        Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the definition."}
       </p>
 
       {result && result.errors.length > 0 && (

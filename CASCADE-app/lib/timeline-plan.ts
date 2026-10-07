@@ -2,15 +2,12 @@
  * timeline-plan.ts — unroll a Temporal Simulation Timeline into the ordered
  * list of periods a run would execute (ADR-0019 §1–§2).
  *
- * PROTOTYPE. The Timeline types come from `lib/temporal-simulation-schema.ts`
- * until the feature is built schema-first (CLAUDE.md §6).
- *
  * Pure: no store access, no engine call. A plan is what a run *would* do, so the
  * UI can show the sequence, the period labels and the Engine Evaluation cost
  * before anything runs.
  */
 
-import type { CalendarUnit, Timeline } from "@/lib/temporal-simulation-schema";
+import type { CalendarUnit, Timeline } from "@/lib/schemas/temporal-simulation";
 
 interface PlannedPhase {
   index: number;

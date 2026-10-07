@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceLabel, firesEvery, planTimeline } from "./timeline-plan";
-import type { Timeline } from "./temporal-simulation-schema";
+import type { Timeline } from "@/lib/schemas/temporal-simulation";
 
 describe("advanceLabel", () => {
   it("rejects week 53 of a year that has 52 ISO weeks", () => {

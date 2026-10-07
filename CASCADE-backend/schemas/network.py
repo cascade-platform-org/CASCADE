@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
+from schemas.temporal_simulation import TemporalSimulation
+
 if TYPE_CHECKING:
     from .results import PropagationResult
 
@@ -675,5 +677,12 @@ class Project(BaseModel):
             "User-curated atlas of named Scenarios and their Propagation results. "
             "Persisted in the project file. Derived metrics are computed client-side "
             "from each entry's snapshot and never stored here."
+        ),
+    )
+    temporal_simulation: Optional[TemporalSimulation] = Field(
+        default=None,
+        description=(
+            "The project's one Temporal Simulation (ADR-0019): Timeline, profile and "
+            "Metrics. Input only; runs are not saved. The engine never reads it."
         ),
     )

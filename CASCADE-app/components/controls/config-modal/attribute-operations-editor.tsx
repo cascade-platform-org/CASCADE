@@ -17,7 +17,8 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "@/store/canvas-store";
 import { filterLabel } from "@/lib/element-filter";
-import { AttributeOperationSchema, OperationKindSchema, type AttributeOperation, type EventDefinition } from "@/lib/schemas/config";
+import { AttributeOperationSchema, OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { FilterEditor } from "@/components/temporal/filter-editor";
 import { Segmented, TextBackedInput, formatPath, inputCls, parsePath, parseValue } from "@/components/temporal/fields";
 

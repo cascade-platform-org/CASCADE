@@ -1442,6 +1442,97 @@
       "title": "HeuristicConfig",
       "type": "object"
     },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "A view definition evaluated per period over the run record (ADR-0019 \u00a74).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ElementFilter"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Path",
+          "type": "array"
+        },
+        "read": {
+          "enum": [
+            "state",
+            "change"
+          ],
+          "title": "Read",
+          "type": "string"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `change`: the 1-based Phase whose diff is read; absent = the whole period.",
+          "title": "Phase"
+        },
+        "aggregate": {
+          "enum": [
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "count",
+            "share_where",
+            "percentile"
+          ],
+          "title": "Aggregate",
+          "type": "string"
+        },
+        "percentile": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `percentile`.",
+          "title": "Percentile"
+        },
+        "value_filter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValueFilter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "target",
+        "path",
+        "read",
+        "aggregate"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
     "ModelConfiguration": {
       "properties": {
         "version": {
@@ -1767,6 +1858,50 @@
       "title": "Node",
       "type": "object"
     },
+    "Phase": {
+      "additionalProperties": false,
+      "description": "Applies its Events, then optionally runs one Propagation.",
+      "properties": {
+        "events": {
+          "description": "A bare Event id is accepted and read as {event: id, every: 1}.",
+          "items": {
+            "$ref": "#/$defs/PhaseEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "propagate": {
+          "default": true,
+          "title": "Propagate",
+          "type": "boolean"
+        }
+      },
+      "title": "Phase",
+      "type": "object"
+    },
+    "PhaseEvent": {
+      "additionalProperties": false,
+      "description": "An Event a Phase fires: every period of its Step, or the Step's periods N, 2N, 3N\u2026",
+      "properties": {
+        "event": {
+          "description": "EventDefinition id.",
+          "minLength": 1,
+          "title": "Event",
+          "type": "string"
+        },
+        "every": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Every",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event"
+      ],
+      "title": "PhaseEvent",
+      "type": "object"
+    },
     "Position": {
       "properties": {
         "x": {
@@ -1861,6 +1996,18 @@
           },
           "title": "Scorecard",
           "type": "array"
+        },
+        "temporal_simulation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalSimulation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The project's one Temporal Simulation (ADR-0019): Timeline, profile and Metrics. Input only; runs are not saved. The engine never reads it."
         }
       },
       "required": [
@@ -2165,6 +2312,138 @@
         "op"
       ],
       "title": "RecordDiff",
+      "type": "object"
+    },
+    "Step": {
+      "additionalProperties": false,
+      "description": "One period, or the same period pattern repeated; with a unit, repeats advance the label.",
+      "properties": {
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "month",
+            "quarter",
+            "year",
+            "none"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "repeat": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Repeat",
+          "type": "integer"
+        },
+        "phases": {
+          "items": {
+            "$ref": "#/$defs/Phase"
+          },
+          "title": "Phases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "unit",
+        "phases"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
+    "TemporalSimulation": {
+      "additionalProperties": false,
+      "description": "The whole definition: Timeline, profile and Metrics.",
+      "properties": {
+        "format": {
+          "const": "cascade.temporal-simulation/v1",
+          "title": "Format",
+          "type": "string"
+        },
+        "timeline": {
+          "$ref": "#/$defs/Timeline"
+        },
+        "profile": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/AttributeOperation"
+            },
+            "type": "array"
+          },
+          "description": "Period label \u2192 operations applied at the start of that period, in order.",
+          "title": "Profile",
+          "type": "object"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "format",
+        "timeline"
+      ],
+      "title": "TemporalSimulation",
+      "type": "object"
+    },
+    "Timeline": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "steps"
+      ],
+      "title": "Timeline",
+      "type": "object"
+    },
+    "ValueFilter": {
+      "additionalProperties": false,
+      "description": "Keeps only values passing the comparison; also the predicate of `share_where`.",
+      "properties": {
+        "cmp": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "==",
+            "!="
+          ],
+          "title": "Cmp",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cmp",
+        "value"
+      ],
+      "title": "ValueFilter",
       "type": "object"
     },
     "ProjectBundle": {

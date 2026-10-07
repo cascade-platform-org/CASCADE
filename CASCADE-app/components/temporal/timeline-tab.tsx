@@ -9,7 +9,7 @@ import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { EXAMPLE_LABEL, advanceLabel, lastPropagatingIndex } from "@/lib/timeline-plan";
 import { isScenarioEvent, temporalJumpHours } from "@/lib/event-application";
-import { CalendarUnitSchema } from "@/lib/temporal-simulation-schema";
+import { CalendarUnitSchema } from "@/lib/schemas/temporal-simulation";
 import {
   EXPLAIN_ADD_PHASE,
   EXPLAIN_CREATE_EVENT,

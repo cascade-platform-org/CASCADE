@@ -13,7 +13,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { filterLabel, filterMisuse, matchElements } from "@/lib/element-filter";
 import { explainFilter, type Explanation } from "@/lib/temporal-simulation-explainers";
-import type { ElementFilter } from "@/lib/schemas/config";
+import type { ElementFilter } from "@/lib/schemas/attribute-operation";
 import { NODE_TYPES } from "@/lib/schemas/primitives";
 import { Field, inputCls } from "./fields";
 

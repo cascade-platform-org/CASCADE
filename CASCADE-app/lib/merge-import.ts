@@ -1,4 +1,5 @@
-import type { AttributeOperation, ModelConfiguration } from "@/lib/schemas/config";
+import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
+import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { Project } from "@/lib/schemas/network";
 
 /**

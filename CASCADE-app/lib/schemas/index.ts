@@ -11,5 +11,7 @@ export * from "./primitives";
 export * from "./network";
 export * from "./propagation";
 export * from "./config";
+export * from "./attribute-operation";
+export * from "./temporal-simulation";
 export * from "./api";
 export * from "./audit";

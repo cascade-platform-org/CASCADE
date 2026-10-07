@@ -14,6 +14,7 @@
  */
 import { z } from "zod";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
+import { TemporalSimulationSchema } from "./temporal-simulation";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -488,6 +489,11 @@ export const ProjectSchema = z.object({
     },
     z.array(ScorecardEntrySchema).default([]),
   ),
+  /**
+   * The project's one Temporal Simulation (ADR-0019): Timeline, profile and
+   * Metrics. Input only; runs are not saved. The engine never reads it.
+   */
+  temporal_simulation: TemporalSimulationSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------

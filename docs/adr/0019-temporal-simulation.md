@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** proposed (2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Nothing is built. Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2); runs are not built yet. Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -218,7 +218,7 @@ repaints in Level Mode later.
 ### 7. One definition, two forms: the window and plain text
 
 The whole definition — Timeline, profile and Metrics — is one document,
-`{"format": "cascade.temporal-simulation/v0", timeline, profile, metrics}`, validated by one
+`{"format": "cascade.temporal-simulation/v1", timeline, profile, metrics}`, validated by one
 schema whether it is edited in the window or pasted as JSON. Objects are strict, so a
 misspelt key is an error; a reference this project cannot satisfy (an unknown Event id, a
 missing Element, a filter matching nothing) is a warning, and the text still applies.
@@ -233,8 +233,8 @@ that explains each control.
 ## Consequences
 
 - `EventDefinition.temporal_simulation_only` lands ahead of the rest (Pydantic, JSON Schema,
-  Zod; Action Bar, Scorecard and Events tab). The prototype's document schema
-  (`lib/temporal-simulation-schema.ts`) becomes the Pydantic model when the feature is built.
+  Zod; Action Bar, Scorecard and Events tab). The document schema is
+  `schemas/temporal_simulation.py`, mirrored by `lib/schemas/temporal-simulation.ts`.
 - `Project` gains `temporal_simulation` (optional, one per project); the Level Scale stays in
   Client Configuration as a display preference.
 - New Pydantic models (Timeline, Step, Phase, PhaseEvent, Metric, ElementFilter, Level Scale) →

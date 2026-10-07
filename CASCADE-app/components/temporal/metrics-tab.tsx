@@ -6,7 +6,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { matchElements } from "@/lib/element-filter";
 import { explainMetric } from "@/lib/temporal-simulation-explainers";
-import { AggregateSchema, ComparisonSchema, type Metric } from "@/lib/temporal-simulation-schema";
+import { AggregateSchema, ComparisonSchema, type Metric } from "@/lib/schemas/temporal-simulation";
 import type { MetricEntry } from "@/lib/temporal-simulation-text";
 import { NumberInput } from "@/components/ui/number-input";
 import { FilterEditor } from "./filter-editor";

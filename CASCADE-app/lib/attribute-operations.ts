@@ -13,7 +13,7 @@
 
 import { matchElements, type FilterableModel } from "@/lib/element-filter";
 import { writeFieldValue } from "@/lib/graph-diff";
-import type { AttributeOperation } from "@/lib/schemas/config";
+import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { EdgeSchema, NodeSchema } from "@/lib/schemas/network";
 
 type Rec = Record<string, unknown>;

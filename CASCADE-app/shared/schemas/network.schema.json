@@ -1488,6 +1488,300 @@
       "title": "AnalysisScorecardEntry",
       "type": "object"
     },
+    "AttributeOperation": {
+      "additionalProperties": false,
+      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. Applied\nclient-side when the Event fires; the engine never reads it.",
+      "properties": {
+        "element": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Element"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementFilter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "path": {
+          "description": "Field path, e.g. [\"supply_capacity\", \"water\"].",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Path",
+          "type": "array"
+        },
+        "op": {
+          "enum": [
+            "set",
+            "add",
+            "mul",
+            "at_most",
+            "at_least"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "path",
+        "op",
+        "value"
+      ],
+      "title": "AttributeOperation",
+      "type": "object"
+    },
+    "ElementFilter": {
+      "additionalProperties": false,
+      "description": "Selects Elements by conditions that must all hold (ADR-0021).\n\nResolved when it is used, against the model at that moment, so an Element\nadded later is included. `exclude` holds matches unticked by hand.",
+      "properties": {
+        "kind": {
+          "default": "node",
+          "enum": [
+            "node",
+            "edge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "canvas": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canvas id or label.",
+          "title": "Canvas"
+        },
+        "node_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nodes only.",
+          "title": "Node Type"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nodes: tagged, supplied or demanded. Edges: their source's supply.",
+          "title": "Category"
+        },
+        "label_contains": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Case-insensitive; an edge reads as \"source label \u2192 target label\".",
+          "title": "Label Contains"
+        },
+        "exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Matches left out, by Element id.",
+          "title": "Exclude"
+        }
+      },
+      "title": "ElementFilter",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "A view definition evaluated per period over the run record (ADR-0019 \u00a74).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ElementFilter"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Path",
+          "type": "array"
+        },
+        "read": {
+          "enum": [
+            "state",
+            "change"
+          ],
+          "title": "Read",
+          "type": "string"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `change`: the 1-based Phase whose diff is read; absent = the whole period.",
+          "title": "Phase"
+        },
+        "aggregate": {
+          "enum": [
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "count",
+            "share_where",
+            "percentile"
+          ],
+          "title": "Aggregate",
+          "type": "string"
+        },
+        "percentile": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `percentile`.",
+          "title": "Percentile"
+        },
+        "value_filter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValueFilter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "target",
+        "path",
+        "read",
+        "aggregate"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "Phase": {
+      "additionalProperties": false,
+      "description": "Applies its Events, then optionally runs one Propagation.",
+      "properties": {
+        "events": {
+          "description": "A bare Event id is accepted and read as {event: id, every: 1}.",
+          "items": {
+            "$ref": "#/$defs/PhaseEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "propagate": {
+          "default": true,
+          "title": "Propagate",
+          "type": "boolean"
+        }
+      },
+      "title": "Phase",
+      "type": "object"
+    },
+    "PhaseEvent": {
+      "additionalProperties": false,
+      "description": "An Event a Phase fires: every period of its Step, or the Step's periods N, 2N, 3N\u2026",
+      "properties": {
+        "event": {
+          "description": "EventDefinition id.",
+          "minLength": 1,
+          "title": "Event",
+          "type": "string"
+        },
+        "every": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Every",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event"
+      ],
+      "title": "PhaseEvent",
+      "type": "object"
+    },
     "ProjectMeta": {
       "properties": {
         "name": {
@@ -1535,6 +1829,138 @@
         "name"
       ],
       "title": "ProjectMeta",
+      "type": "object"
+    },
+    "Step": {
+      "additionalProperties": false,
+      "description": "One period, or the same period pattern repeated; with a unit, repeats advance the label.",
+      "properties": {
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "month",
+            "quarter",
+            "year",
+            "none"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "repeat": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Repeat",
+          "type": "integer"
+        },
+        "phases": {
+          "items": {
+            "$ref": "#/$defs/Phase"
+          },
+          "title": "Phases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "unit",
+        "phases"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
+    "TemporalSimulation": {
+      "additionalProperties": false,
+      "description": "The whole definition: Timeline, profile and Metrics.",
+      "properties": {
+        "format": {
+          "const": "cascade.temporal-simulation/v1",
+          "title": "Format",
+          "type": "string"
+        },
+        "timeline": {
+          "$ref": "#/$defs/Timeline"
+        },
+        "profile": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/AttributeOperation"
+            },
+            "type": "array"
+          },
+          "description": "Period label \u2192 operations applied at the start of that period, in order.",
+          "title": "Profile",
+          "type": "object"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "format",
+        "timeline"
+      ],
+      "title": "TemporalSimulation",
+      "type": "object"
+    },
+    "Timeline": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "steps"
+      ],
+      "title": "Timeline",
+      "type": "object"
+    },
+    "ValueFilter": {
+      "additionalProperties": false,
+      "description": "Keeps only values passing the comparison; also the predicate of `share_where`.",
+      "properties": {
+        "cmp": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "==",
+            "!="
+          ],
+          "title": "Cmp",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cmp",
+        "value"
+      ],
+      "title": "ValueFilter",
       "type": "object"
     },
     "Project": {
@@ -1613,6 +2039,18 @@
           },
           "title": "Scorecard",
           "type": "array"
+        },
+        "temporal_simulation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalSimulation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The project's one Temporal Simulation (ADR-0019): Timeline, profile and Metrics. Input only; runs are not saved. The engine never reads it."
         }
       },
       "required": [

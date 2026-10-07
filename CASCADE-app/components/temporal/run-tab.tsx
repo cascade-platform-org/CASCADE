@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Play, RotateCcw, Eye, Save, AlertTriangle, XCircle, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { docErrors, draftToDoc } from "@/lib/temporal-simulation-text";
 import {
   EXPLAIN_END_RUN,
   EXPLAIN_EXPORT_CSV,
@@ -29,8 +28,7 @@ const LEVEL_BANDS = [
 const STANDARD_METRICS = ["Operativity", "Coverage", "Stock level"];
 
 export function RunTab() {
-  const timeline = useTemporalSimulationStore((s) => s.timeline);
-  const profile = useTemporalSimulationStore((s) => s.profile);
+  const unsaved = useTemporalSimulationStore((s) => s.unsaved);
   const hasRun = useTemporalSimulationStore((s) => s.running);
   const selected = useTemporalSimulationStore((s) => s.selectedPeriod);
   const display = useTemporalSimulationStore((s) => s.display);
@@ -40,11 +38,8 @@ export function RunTab() {
   const { eventLabel } = useEventLookup();
 
   const plan = usePlan();
-  // The plan's errors, then the schema check the Text tab's Apply runs: either blocks a run.
-  const errors = useMemo(
-    () => [...plan.errors, ...docErrors(draftToDoc({ timeline, profile, metrics }))],
-    [plan, timeline, profile, metrics],
-  );
+  // The plan's errors, then the schema errors that keep the draft out of the project: either blocks a run.
+  const errors = useMemo(() => [...plan.errors, ...unsaved], [plan, unsaved]);
 
   return (
     <div className="space-y-4">
@@ -166,7 +161,7 @@ export function RunTab() {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. Values show “—” because the prototype never calls the engine.</p>
+        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. Values show “—” because runs are a dry plan until the step operator is built.</p>
       </div>
     </div>
   );

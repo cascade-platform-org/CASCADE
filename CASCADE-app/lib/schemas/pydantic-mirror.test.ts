@@ -25,12 +25,14 @@ import * as auth from "@/lib/schemas/auth";
 import * as api from "@/lib/schemas/api";
 import * as propagation from "@/lib/schemas/propagation";
 import * as audit from "@/lib/schemas/audit";
+import * as temporalSimulation from "@/lib/schemas/temporal-simulation";
+import * as attributeOperation from "@/lib/schemas/attribute-operation";
 
 const SCHEMA_DIR = "shared/schemas";
 
 /** Every exported Zod schema, by export name, across the schema modules. */
 const zodExports: Record<string, unknown> = {};
-for (const mod of [network, config, auth, api, propagation, audit]) {
+for (const mod of [network, config, auth, api, propagation, audit, temporalSimulation, attributeOperation]) {
   for (const [name, value] of Object.entries(mod as Record<string, unknown>)) {
     zodExports[name] ??= value;
   }

@@ -15,7 +15,7 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { filterLabel } from "@/lib/element-filter";
 import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
 import { firesEvery } from "@/lib/timeline-plan";
-import { OperationKindSchema, valueFitsOp } from "@/lib/schemas/config";
+import { OperationKindSchema, valueFitsOp } from "@/lib/schemas/attribute-operation";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { FilterEditor } from "./filter-editor";
 import { NumberInput } from "@/components/ui/number-input";

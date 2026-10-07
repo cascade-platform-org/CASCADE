@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
+import { useScorecardStore } from "@/store/scorecard-store";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useUiStore } from "@/store/ui-store";
 import { autosave, pushAutoSnapshot } from "@/lib/file-io";
 import { isWorkingCopyEnabled } from "@/lib/working-copy";
@@ -103,12 +105,19 @@ export function useAutosave(): void {
     // to canvas-store in the same tick; the undo stack is part of what is saved
     // now, so those have to schedule a write too.
     const unsubHistory = useHistoryStore.subscribe(schedule);
+    // The Scorecard and the Temporal Simulation are saved in the project too.
+    // Their stores also hold window state, so only a change to what is saved
+    // schedules a write.
+    const unsubScorecard = useScorecardStore.subscribe((s, prev) => { if (s.scorecard !== prev.scorecard) schedule(); });
+    const unsubSimulation = useTemporalSimulationStore.subscribe((s, prev) => { if (s.saved !== prev.saved) schedule(); });
 
     return () => {
       if (timer) clearTimeout(timer);
       unsubCanvas();
       unsubConfig();
       unsubHistory();
+      unsubScorecard();
+      unsubSimulation();
     };
   }, []);
 }

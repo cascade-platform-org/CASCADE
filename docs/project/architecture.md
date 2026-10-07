@@ -72,13 +72,14 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 
 ### State Management — Zustand
 
-All application state is managed through nine Zustand stores:
+All application state is managed through ten Zustand stores:
 
 - **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
 - **`history-store`** — the Any Graph Update ring buffer (`update_history`) plus the session-only redo stack. Capped at 20 entries **and** at a byte budget, because entries are variable-size Graph Diffs and one bulk deletion can exceed twenty ordinary edits (ADR-0017). Evicted entries are retired into a Scenario Baseline map on the way out, so a scenario can outlive the buffer (ADR-0016).
 - **`network-store`** — UI-only selection and hover state for the active Canvas. Intentionally thin — no graph data. High-frequency updates (every pointer event) stay isolated from the registry.
 - **`config-store`** — `ModelConfiguration`: functionality scale, category definitions, Event definitions, graph-type algorithm pipelines. Owns a draft/commit lifecycle for the Config modal.
 - **`scorecard-store`** — the Scorecard entry list, serialised into `Project.scorecard` via canvas-store.
+- **`temporal-simulation-store`** — the Temporal Simulation window's draft and the saved document, serialised into `Project.temporal_simulation` via canvas-store (ADR-0019). An edit is saved only when it passes the schema; otherwise the window lists why and the project keeps the last valid document.
 - **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
 - **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.

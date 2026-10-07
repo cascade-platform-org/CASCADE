@@ -23,7 +23,7 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import type { PlannedPeriod } from "@/lib/timeline-plan";
 import { filterConditions, filterLabel, type FilterableModel } from "@/lib/element-filter";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
-import { valueFitsOp, type AttributeOperation } from "@/lib/schemas/config";
+import { valueFitsOp, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { EXPLAIN_STRIP, explainSelectPeriod } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { describeCell, describeRow, parseValue, useEventLookup, usePlan } from "./fields";

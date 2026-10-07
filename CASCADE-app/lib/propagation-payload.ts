@@ -29,6 +29,12 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
   return rest;
 }
 
+/** The Temporal Simulation is client-side input (ADR-0019); the engine never reads it. */
+function withoutTemporalSimulation(project: Project): Project {
+  const { temporal_simulation: _unused, ...rest } = project;
+  return rest;
+}
+
 export function buildPropagationPayload({
   project,
   config,
@@ -47,7 +53,7 @@ export function buildPropagationPayload({
     // while the engine reads neither.
     return {
       project: {
-        ...project,
+        ...withoutTemporalSimulation(project),
         canvases: project.canvases.map(stripUnusedInpContent),
         update_history: [],
         scorecard: [],
@@ -95,7 +101,7 @@ export function buildPropagationPayload({
   });
 
   const trimmedProject: Project = {
-    ...project,
+    ...withoutTemporalSimulation(project),
     nodes: trimmedNodes,
     edges: trimmedEdges,
     canvases: [trimmedCanvas],

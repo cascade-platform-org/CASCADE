@@ -7,7 +7,7 @@
  * Divider
  * Event zone: [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
  * Divider
- * Temporal:   [⏱ Time ▾] [Simulate] (prototype)
+ * Temporal:   [⏱ Time ▾] [Simulate]
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -197,11 +197,11 @@ export function ActionBar() {
         <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
       </span>
 
-      {/* Temporal Simulation — prototype window (ADR-0019) */}
+      {/* Temporal Simulation window (ADR-0019) */}
       <ActionButton
         id={TEMPORAL_SIMULATION_ANCHOR_ID}
         onClick={openTemporalSimulation}
-        title="Temporal Simulation (prototype): a saved, replayable run over many periods"
+        title="Temporal Simulation: the project’s Timeline, profile and Metrics (runs are a dry plan for now)"
         className="text-zinc-600 dark:text-zinc-400"
       >
         <CalendarClock size={13} />

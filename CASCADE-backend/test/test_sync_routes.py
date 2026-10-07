@@ -288,3 +288,22 @@ async def test_autosave_path_is_not_parsed_as_a_version_id(migrated_db):
         res = await client.get("/api/projects/autosave", params={"name": "p"})
         assert res.status_code == 404
         assert "working copy" in res.json()["detail"].lower()
+
+
+async def test_temporal_simulation_round_trips_through_a_version(migrated_db):
+    """ADR-0019: the project's Temporal Simulation is saved and loaded with it."""
+    doc = {
+        "format": "cascade.temporal-simulation/v1",
+        "timeline": {"name": "t", "steps": [{"label": "d1", "unit": "day", "phases": [{"events": ["quake"]}]}]},
+        "profile": {"d1": [{"element": "n1", "path": ["supply_capacity", "water"], "op": "mul", "value": 0.5}]},
+    }
+    bundle = _minimal_bundle_json("ts")
+    bundle["project"]["temporal_simulation"] = doc
+    client, _ = await _client_as(migrated_db, ["analyst"])
+    async with client:
+        save_resp = await client.post("/api/projects", json={"name": "ts", "data": bundle})
+        assert save_resp.status_code == 200
+        get_resp = await client.get(f"/api/projects/{save_resp.json()['id']}")
+    loaded = get_resp.json()["data"]["project"]["temporal_simulation"]
+    assert loaded["timeline"]["steps"][0]["phases"][0]["events"][0] == {"event": "quake", "every": 1}
+    assert loaded["profile"] == doc["profile"]

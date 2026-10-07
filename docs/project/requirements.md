@@ -594,13 +594,13 @@ The user may also trigger a Temporal Jump with a custom duration — useful for 
 
 When a Hazard sets `direct_damage = true`, `expected_repair_time` records estimated repair duration. Detailed recovery mechanics are deferred; the data model reserves these fields.
 
-### 9.6 Temporal Simulation *(proposed — not implemented; release v1.1, whole)*
+### 9.6 Temporal Simulation *(in progress — release v1.1, whole)*
 
 A **Temporal Simulation** generalises the Temporal Jump into a saved definition (Timeline, profile, Metrics) run over many periods. Mechanics: ADR-0019 (Timeline, period sequence, recording), ADR-0020 (Stocks, `served_ratio`), ADR-0021 (Attribute Operations); reasoning: `temporal-simulation-design.md`, whose §8 is the build plan. This section states what the product must do.
 
 **Acceptance (v1.1).** Three models run end to end: (1) the IJDRR sample with a committed Timeline (staged hazards, a repair Event, a seasonal demand row); (2) a committed aqueduct sample over a day (EPANET Net1 through the Temporal Simulation importer), whose tanks are storage Stocks filled by pumps and drawn by the town (flow rates and stored volume both bind), with a demand curve, a demand surge and a pump outage, exercising `served_ratio`, `stored`, integration, Level Mode and a Metric; (3) banca ore, run locally from its import script (client data, never committed).
 
-*UI prototype (branch `feat/temporal-simulation-ui`):* the action bar's **Simulate** button opens a window that edits a draft Timeline, profile, Metrics and a sample Stock, plans a dry run, edits the whole definition as text, and explains each interaction. It never touches the model, the history or the engine. The real, tested logic: the plan (`lib/timeline-plan.ts`), the Stock formulas (`lib/stock-math.ts`), the Element Filter (`lib/element-filter.ts`) and the text form (`lib/temporal-simulation-text.ts`); the document schema (`lib/temporal-simulation-schema.ts`) is local until the Pydantic model exists.
+*Built so far (branch `feat/temporal-simulation-ui`, build plan slices 1–2):* Attribute Operations on hand-fired Events, and the definition saved in the project as `Project.temporal_simulation` (Pydantic `schemas/temporal_simulation.py`, Zod `lib/schemas/temporal-simulation.ts`), carried by file, autosave, versions and sync and left out of the Propagation request. The action bar's **Simulate** window edits it; every edit that passes the schema is saved, and otherwise the window says why and the project keeps the last valid definition. Runs are a dry plan until the step operator (slice 3): the window still never touches the model, the history or the engine, and its Stock tab is a formula preview on a sample Stock.
 
 **Timeline.**
 - A project holds one Temporal Simulation (Timeline, profile and Metrics), saved in the project file.

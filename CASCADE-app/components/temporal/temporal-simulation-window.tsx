@@ -1,14 +1,13 @@
 "use client";
 
 /**
- * TemporalSimulationWindow — PROTOTYPE of the Temporal Simulation UI
+ * TemporalSimulationWindow — the project's Temporal Simulation
  * (ADR-0019/0020/0021, requirements §9.6).
  *
- * Every control edits a local draft (`store/temporal-simulation-store.ts`) and
- * shows, in the bottom panel, what the built feature will do. Nothing here
- * writes to the canvas or history or calls the engine; the only real logic is
- * the pure plan (`lib/timeline-plan.ts`) and the Stock formulas
- * (`lib/stock-math.ts`), which the built feature keeps.
+ * The tabs edit the project's document through `store/temporal-simulation-store.ts`,
+ * which saves every valid edit into the project; the status line says when an
+ * edit is not saved and why. The bottom panel explains each control. Runs are
+ * still dry: nothing here writes to the canvas or history or calls the engine.
  */
 
 import React from "react";
@@ -33,6 +32,24 @@ const TABS: { id: SimTab; label: string; icon: React.ReactNode; definition?: tru
   { id: "stock", label: "Stock", icon: <Database size={15} /> },
   { id: "text", label: "Text", icon: <Braces size={15} />, definition: true },
 ];
+
+/** Whether the definition is in the project, and why not when it is not. */
+function SaveStatus() {
+  const unsaved = useTemporalSimulationStore((s) => s.unsaved);
+  const started = useTemporalSimulationStore((s) => s.saved !== undefined);
+  if (unsaved.length > 0) {
+    return (
+      <div role="status" className="border-b border-red-200 bg-red-50 px-4 py-1.5 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+        Not saved in the project — {unsaved[0]}{unsaved.length > 1 ? ` (and ${unsaved.length - 1} more)` : ""}. The project keeps the last valid version.
+      </div>
+    );
+  }
+  return (
+    <div role="status" className="border-b border-zinc-200 px-4 py-1.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+      {started ? "Saved in the project." : "A starter Timeline. Your first edit saves it into the project."}
+    </div>
+  );
+}
 
 /** "What this will do": the only subscriber to `explanation`, so explaining re-renders this panel alone. */
 function ExplanationPanel() {
@@ -69,7 +86,7 @@ export function TemporalSimulationWindow() {
     <FloatingWindow
       open={open && !configModalOpen}
       onClose={closeWindow}
-      title="Temporal Simulation — prototype"
+      title="Temporal Simulation"
       icon={<CalendarClock size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
       flyToOnClose={TEMPORAL_SIMULATION_ANCHOR_ID}
       storageKey="cascade.temporal-simulation.window"
@@ -96,9 +113,7 @@ export function TemporalSimulationWindow() {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
-          Prototype: this edits a draft and explains each interaction below. Your model, the history and the engine are never touched.
-        </div>
+        <SaveStatus />
         {locked && (
           <div className="border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
             A run is shown, so the definition is read-only. End run (Run tab) to edit it; every change over time goes in before the run.

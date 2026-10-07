@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Small shared controls for the Temporal Simulation prototype window. Every
+ * Small shared controls for the Temporal Simulation window. Every
  * control takes an `onExplain` fired on focus or click, which is how the window
  * shows "what this will do" for the control being used.
  */

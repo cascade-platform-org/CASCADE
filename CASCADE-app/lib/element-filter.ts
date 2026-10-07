@@ -8,7 +8,7 @@
 
 import type { Canvas, Edge, Node } from "@/lib/schemas/network";
 import { elementLabel } from "@/lib/coalition";
-import type { ElementFilter } from "@/lib/schemas/config";
+import type { ElementFilter } from "@/lib/schemas/attribute-operation";
 
 export interface FilterableModel {
   nodes: Record<string, Node>;

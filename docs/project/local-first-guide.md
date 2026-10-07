@@ -201,6 +201,40 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 `source_inp_content` instead of the normal CASCADE engine — see
 `docs/adr/0013-epanet-mode-canvas.md` and `api-reference.md`.
 
+#### Temporal Simulation (`temporal_simulation`)
+
+Optional, one per project (ADR-0019): the whole definition, in the same JSON the
+window's Text tab copies and pastes. Every object is strict, so a misspelt key is
+an error. It is input only: a run is not saved, and the Propagation request leaves
+it out.
+
+```json
+"temporal_simulation": {
+  "format": "cascade.temporal-simulation/v1",
+  "timeline": {
+    "name": "One week",
+    "steps": [
+      { "label": "2023-03-06", "unit": "day", "repeat": 7,
+        "phases": [{ "events": ["quake", { "event": "repair", "every": 2 }], "propagate": true }] }
+    ]
+  },
+  "profile": {
+    "2023-03-07": [{ "element": "node-reservoir", "path": ["supply_capacity", "water"], "op": "mul", "value": 0.5 }]
+  },
+  "metrics": []
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `timeline.steps[]` | `label`, `unit` (`hour` \| `day` \| `week` \| `month` \| `quarter` \| `year` \| `none`), `repeat` (default 1) and `phases[]`. With a unit, each repeat advances the label (`2023-03-06`, `2023-03-07`, …); with `none` repeats are numbered `label#2`, `label#3`. |
+| `phases[]` | `events` (an Event id fires every period of its Step; `{event, every: N}` fires on the Step's periods N, 2N, …) and `propagate` (default `true`). |
+| `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021). |
+| `metrics[]` | Read-outs per period: `name`, `target` (an Element Filter), `path`, `read` (`state` \| `change`), optional `phase`, `aggregate`, optional `percentile` and `value_filter`. |
+
+A project saves only a definition that passes the schema; while an edit in the
+window does not, the window says why and the file keeps the last valid one.
+
 #### Node fields reference
 
 | Field | Type | Description |

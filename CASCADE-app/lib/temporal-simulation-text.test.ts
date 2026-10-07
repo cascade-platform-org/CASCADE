@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { EXAMPLE_DOC, docErrors, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
-import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulationDoc } from "./temporal-simulation-schema";
+import { EXAMPLE_DOC, checkDoc, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
+import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import type { FilterableModel } from "./element-filter";
 import type { Node } from "./schemas/network";
 
-const doc: TemporalSimulationDoc = {
+const doc: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
   timeline: {
     name: "t",
@@ -47,7 +47,7 @@ describe("profile rows", () => {
   });
 
   it("keeps each period's order when grouping would swap it", () => {
-    const d: TemporalSimulationDoc = { ...doc, profile: { "2023-01": [pool("add", 1), water(2)], "2023-02": [water(3), pool("add", 4)] } };
+    const d: TemporalSimulation = { ...doc, profile: { "2023-01": [pool("add", 1), water(2)], "2023-02": [water(3), pool("add", 4)] } };
     const draft = docToDraft(d, ids());
     expect(draft.profile).toHaveLength(3);
     expect(draftToDoc(draft).profile).toEqual(d.profile);
@@ -100,17 +100,18 @@ describe("parseDocText", () => {
   });
 });
 
-describe("docErrors", () => {
-  it("checks a draft the way Apply checks text", () => {
-    expect(docErrors(doc)).toEqual([]);
-    const bad: TemporalSimulationDoc = { ...doc, profile: { "2023-01": [{ element: "pool", path: [], op: "add", value: "x" }] } };
-    expect(docErrors(bad).join("\n")).toMatch(/profile\.2023-01\.0/);
+describe("checkDoc", () => {
+  it("checks a draft the way Apply checks text, and normalises bare Event ids", () => {
+    const ok = checkDoc({ ...doc, timeline: { name: "t", steps: [{ label: "a", unit: "day", phases: [{ events: ["quake"] }] }] } });
+    expect(ok.ok && ok.doc.timeline.steps[0].phases[0]).toEqual({ events: [{ event: "quake", every: 1 }], propagate: true });
+    const bad = checkDoc({ ...doc, profile: { "2023-01": [{ element: "pool", path: [], op: "add", value: "x" }] } });
+    expect(!bad.ok && bad.errors.join("\n")).toMatch(/profile\.2023-01\.0/);
   });
 });
 
 describe("docWarnings", () => {
   it("flags unknown Events, unused labels, missing Elements and empty filters", () => {
-    const d: TemporalSimulationDoc = {
+    const d: TemporalSimulation = {
       ...doc,
       profile: {
         ...doc.profile,

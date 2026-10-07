@@ -1,9 +1,10 @@
 /**
  * temporal-simulation-explainers.ts — the "What this will do" texts of the
- * Temporal Simulation prototype window.
+ * Temporal Simulation window.
  *
- * PROTOTYPE. Every control in the window edits a local draft and shows one of
- * these texts instead of acting on the model. Each text states the behaviour
+ * The definition tabs edit the project's document; the run and its Stocks are
+ * not built yet, so those controls show one of these texts instead of acting
+ * on the model. Each text states the behaviour
  * the specification commits to (ADR-0019/0020/0021, requirements §9.6), so
  * reading them while clicking through is a review of the specification itself.
  * Kept in one module so the wording can be reviewed in one place.
@@ -11,8 +12,8 @@
 
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
 import { filterConditions, type FilterableModel } from "@/lib/element-filter";
-import type { CalendarUnit, Metric } from "@/lib/temporal-simulation-schema";
-import type { AttributeOperation, ElementFilter } from "@/lib/schemas/config";
+import type { CalendarUnit, Metric } from "@/lib/schemas/temporal-simulation";
+import type { AttributeOperation, ElementFilter } from "@/lib/schemas/attribute-operation";
 
 export interface Explanation {
   title: string;
@@ -22,10 +23,10 @@ export interface Explanation {
 }
 
 export const EXPLAIN_INTRO: Explanation = {
-  title: "Temporal Simulation (prototype)",
+  title: "Temporal Simulation",
   lines: [
     "A Temporal Simulation is a saved definition, run over many periods: a Timeline of Steps, each applying Events and Propagations and integrating Stocks, plus its profile and Metrics. One per project.",
-    "Nothing in this window changes your model or calls the engine. Each control edits a draft and explains here what the built feature will do.",
+    "The definition is saved in the project, with its file, autosave and sync. A run is still a dry plan: nothing here changes your model or calls the engine. Each control explains here what it does.",
     "Tabs: Timeline (Steps, Phases and the profile grid), Run (the plan, the Run View, Level Mode, End run), Metrics (custom read-outs), Stock (the two formulas on a sample Stock), Text (the whole definition as JSON, for bulk edits and LLMs).",
   ],
   refs: ["ADR-0019", "requirements §9.6"],
@@ -494,14 +495,14 @@ export function explainApply(errors: number, warnings: number): Explanation {
     ? {
         title: "Applied",
         lines: [
-          "The text replaced the draft Timeline, profile and Metrics. The other tabs now show it.",
+          "The text replaced the Timeline, profile and Metrics, and is saved in the project. The other tabs now show it.",
           warnings > 0 ? `${warnings} warning(s) remain — references this project cannot satisfy. Fix them here or in the tabs.` : "No warnings.",
         ],
         refs: ["ADR-0019 §7"],
       }
     : {
         title: "Not applied",
-        lines: [`${errors} error(s) — listed under the text with their path. The draft is unchanged.`],
+        lines: [`${errors} error(s) — listed under the text with their path. Nothing changed.`],
         refs: ["ADR-0019 §7"],
       };
 }

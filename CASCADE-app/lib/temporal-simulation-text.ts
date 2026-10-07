@@ -2,14 +2,14 @@
  * temporal-simulation-text.ts — the plain-text form of a Temporal Simulation
  * definition, for bulk editing and for LLM round-trips.
  *
- * The text is JSON validated by `TemporalSimulationDocSchema`, the same schema
+ * The text is JSON validated by `TemporalSimulationSchema`, the same schema
  * the window edits through, so a definition written by hand, in the window or by
  * an LLM is one object. Pure: no store access.
  */
 
 import type { ZodError } from "zod";
-import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationDocSchema, type Metric, type TemporalSimulationDoc, type Timeline } from "@/lib/temporal-simulation-schema";
-import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/config";
+import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
+import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
@@ -77,7 +77,7 @@ function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () 
   return rows;
 }
 
-export function draftToDoc(d: SimulationDraft): TemporalSimulationDoc {
+export function draftToDoc(d: SimulationDraft): TemporalSimulation {
   return {
     format: TEMPORAL_SIMULATION_FORMAT,
     timeline: d.timeline,
@@ -86,7 +86,7 @@ export function draftToDoc(d: SimulationDraft): TemporalSimulationDoc {
   };
 }
 
-export function docToDraft(doc: TemporalSimulationDoc, newId: () => string): SimulationDraft {
+export function docToDraft(doc: TemporalSimulation, newId: () => string): SimulationDraft {
   return {
     timeline: doc.timeline,
     profile: profileToRows(doc.profile, newId),
@@ -95,7 +95,7 @@ export function docToDraft(doc: TemporalSimulationDoc, newId: () => string): Sim
 }
 
 /** JSON text; a Phase Event that fires every period is written as its bare id. */
-export function serializeDoc(doc: TemporalSimulationDoc): string {
+export function serializeDoc(doc: TemporalSimulation): string {
   const compact = {
     ...doc,
     timeline: {
@@ -126,7 +126,7 @@ export function extractJson(text: string): string {
 const formatIssues = (err: ZodError): string[] =>
   err.issues.map((i) => `${i.path.length ? i.path.join(".") : "(root)"}: ${i.message}`);
 
-export type ParseResult = { ok: true; doc: TemporalSimulationDoc } | { ok: false; errors: string[] };
+export type ParseResult = { ok: true; doc: TemporalSimulation } | { ok: false; errors: string[] };
 
 export function parseDocText(text: string): ParseResult {
   let raw: unknown;
@@ -135,18 +135,21 @@ export function parseDocText(text: string): ParseResult {
   } catch (e) {
     return { ok: false, errors: [`Not valid JSON: ${(e as Error).message}`] };
   }
-  const parsed = TemporalSimulationDocSchema.safeParse(raw);
+  return checkDoc(raw);
+}
+
+/**
+ * Validate a document: its normalised form (bare Event ids expanded, defaults
+ * filled), or its schema errors worded as `parseDocText` words them, so the
+ * tabs' edits get the check pasted text gets.
+ */
+export function checkDoc(raw: unknown): ParseResult {
+  const parsed = TemporalSimulationSchema.safeParse(raw);
   return parsed.success ? { ok: true, doc: parsed.data } : { ok: false, errors: formatIssues(parsed.error) };
 }
 
-/** Schema errors in a document, worded as `parseDocText` words them: the tabs' edits get the check pasted text gets. */
-export function docErrors(doc: TemporalSimulationDoc): string[] {
-  const parsed = TemporalSimulationDocSchema.safeParse(doc);
-  return parsed.success ? [] : formatIssues(parsed.error);
-}
-
 /** Problems a valid document can still have against THIS project. Reported; applying is still allowed. */
-export function docWarnings(doc: TemporalSimulationDoc, events: EventDefinition[], model: FilterableModel): string[] {
+export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], model: FilterableModel): string[] {
   const out: string[] = [];
   const eventIds = new Set(events.map((e) => e.id));
   const unknownEvents = new Set<string>();
@@ -302,7 +305,7 @@ A Metric is a read-out computed per period from the recorded run: for the Elemen
 and aggregate (sum, mean, min, max, count, share_where, percentile). It never changes the run.`;
 
 /** A complete, valid definition used as the worked example (tested to parse). */
-export const EXAMPLE_DOC: TemporalSimulationDoc = {
+export const EXAMPLE_DOC: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
   timeline: {
     name: "Six months of a dry season, with quarterly maintenance",
@@ -337,7 +340,7 @@ export const EXAMPLE_DOC: TemporalSimulationDoc = {
 
 /** A self-contained prompt: the primer, the format, a worked example, this project, and the current definition. */
 export function llmContext(
-  doc: TemporalSimulationDoc,
+  doc: TemporalSimulation,
   config: Pick<ModelConfiguration, "events" | "categories" | "functionality_scale">,
   model: FilterableModel,
 ): string {

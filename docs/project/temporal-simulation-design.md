@@ -877,14 +877,14 @@ tests, its docs and the audit table (CLAUDE.md §8a) green.
 
 **What the prototype hands over.** The tested pure modules carry over as they are:
 `lib/timeline-plan.ts`, `lib/stock-math.ts`, `lib/element-filter.ts` and
-`lib/temporal-simulation-text.ts`. `lib/temporal-simulation-schema.ts` becomes the Zod
-mirror of the Pydantic models. The window becomes the feature's UI; its banner and "What
+`lib/temporal-simulation-text.ts`. The prototype's document schema is now the Zod
+mirror `lib/schemas/temporal-simulation.ts` (slice 2). The window becomes the feature's UI; its banner and "What
 this will do" panel go, and their text becomes the user-manual chapter.
 
 | # | Slice | Needs | Done when |
 |---|---|---|---|
 | 1 | **Attribute Operations on Events** (ADR-0021) — *built 2026-10-06* | — | a hand-fired Event applies `set/add/mul/at_most/at_least` to one Element or a filter; Graph Diff and Scenario Baseline address the full path; Reset reverts it |
-| 2 | **The Temporal Simulation in the project** | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
+| 2 | **The Temporal Simulation in the project** — *built 2026-10-07* | 1 | `Project.temporal_simulation` (Timeline with `hour`, profile, Metrics) round-trips through file, sync and versions; the window edits it |
 | 3 | **Step operator and Run View** | 2 | a run on the IJDRR sample computes on its own copy with progress and cancel, shows any period read-only, and End run leaves the model byte-identical |
 | 4 | **Stocks and storage** (ADR-0020) | 3 (engine part: none) | the engine returns `served_ratio` and `stored`, allocates storage last and shares it by fraction; Stocks integrate per period; the Inspector edits a Stock |
 | 5 | **Level Scale and Level Mode** | 4 | the Run View recolours by level or change, with the Analysis legend machinery |
@@ -900,7 +900,12 @@ operations editor reusing the FilterEditor and the profile row editor.
 
 **Slice 2.** Pydantic `Timeline`, `Step`, `Phase`, `PhaseEvent`, `Metric` and the document;
 `Project.temporal_simulation` (optional). `file-io` and sync carry it like the Scorecard.
-The window binds to the project; the Text tab and the LLM copy work on the saved document.
+The window binds to the project; the Text tab and the LLM copy work on the saved document. Built
+as: the store keeps the window's draft and saves it into the project on every edit that
+passes the schema; an edit that does not is listed in the window's status line and the
+project keeps the last valid document, so a project file always loads. `ElementFilter` and
+`AttributeOperation` moved to `lib/schemas/attribute-operation.ts`, a leaf module, because
+the Project schema now holds them and `config.ts` imports `network.ts`.
 
 **Slice 3.** `lib/step-operator.ts` runs ADR-0019 §2: Reset of a copy (both halves), per
 period the profile, then per Phase its Events (vulnerabilities, mutations, operations), the
