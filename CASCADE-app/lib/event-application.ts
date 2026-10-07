@@ -32,6 +32,7 @@
 import { nanoid } from "nanoid";
 
 import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
+import { canvasesById, filterLabel } from "@/lib/element-filter";
 import { DIFF_ABSENT } from "@/lib/schemas/network";
 import type { Node, Edge, GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -318,7 +319,7 @@ export function applyEventToSnapshot(
   const warnings: string[] = [];
   const operations = event.attribute_operations ?? [];
   if (operations.length > 0) {
-    const canvases = Object.fromEntries(snapshot.canvases.map((c) => [c.id, c]));
+    const canvases = canvasesById(snapshot.canvases);
     for (const op of operations) {
       for (const id of operationTargets(op, { ...writer.registries(), canvases })) {
         const el = writer.current(id);
@@ -326,7 +327,7 @@ export function applyEventToSnapshot(
         const kind = id in snapshot.nodes ? "node" : "edge";
         const out = applyOperationTo(el as unknown as Record<string, unknown>, kind, op, n);
         if ("error" in out) {
-          warnings.push(`${event.label} → ${("label" in el && el.label) || id}: ${out.error}`);
+          warnings.push(`${event.label} → ${filterLabel(id, writer.registries())}: ${out.error}`);
           continue;
         }
         const field = op.path[0];

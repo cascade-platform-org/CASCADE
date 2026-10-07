@@ -1,6 +1,6 @@
 """Served-ratio → Functionality level table (ADR-0003), configured project-wide
 as `ModelConfiguration.flow_ratio_thresholds` — beside the Functionality scale
-it is expressed in terms of (engine/propagation.py::_resolve_ratio_thresholds,
+it is expressed in terms of (engine/flow.py::resolve_ratio_thresholds,
 engine/flow.py).
 
 Topology throughout: one source (supply 60) feeding two equal-priority

@@ -211,7 +211,7 @@ export async function saveAs(filename: string, content: string, kind: FileKind =
   URL.revokeObjectURL(url);
 }
 
-function safeName(name: string): string {
+export function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_").slice(0, 60) || "cascade";
 }
 

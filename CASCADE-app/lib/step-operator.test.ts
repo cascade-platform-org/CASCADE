@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RunStopped, periodState, runTimeline, type Propagated, type RunInput } from "./step-operator";
+import { RunStopped, periodState, runTimeline, walkPeriods, type Propagated, type RunInput } from "./step-operator";
 import { planTimeline } from "./timeline-plan";
 import { isEmptyDiff } from "./graph-diff";
 import type { EventDefinition } from "./schemas/config";
@@ -64,6 +64,13 @@ describe("runTimeline", () => {
     const record = await runTimeline(input(days, { propagate: async (s) => { const out = cascade(s); seen.push(out); return lift(out); } }));
     expect((await runTimeline(input(days))).periods).toEqual(record.periods);
     seen.forEach((state, i) => expect(periodState(record, i + 1)).toEqual(state));
+  });
+
+  it("walks between periods either way, matching the walk from the start", async () => {
+    const record = await runTimeline(input([["cut"], ["quake"], ["repair"]]));
+    const third = periodState(record, 3);
+    [0, 1, 2].forEach((t) => expect(walkPeriods(record, third, 3, t)).toEqual(periodState(record, t)));
+    expect(walkPeriods(record, periodState(record, 1), 1, 3)).toEqual(third);
   });
 
   it("applies the profile in the first Phase, also for a Step with no Phase", async () => {

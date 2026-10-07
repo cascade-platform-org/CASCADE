@@ -216,6 +216,8 @@ from engine.flow import _func_ratio  # noqa: E402
     ],
 )
 def test_func_ratio_endpoints_pinned_middle_midpoints(func, n, expected):
+    # The client's copy, `capacityShare` in CASCADE-app/lib/stock-math.ts (ADR-0020 §2),
+    # pins the same table in lib/stock-math.test.ts; change both together.
     assert _func_ratio(func, n) == pytest.approx(expected)
 
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bandFor, levelPaint, stockReference } from "./level-mode";
 import { brandColor } from "./brand";
-import { DEFAULT_LEVEL_SCALE } from "./schemas/config";
+import { DEFAULT_LEVEL_SCALE, LevelBandSchema } from "./schemas/config";
 import type { GraphSnapshot, Stock } from "./schemas/network";
 
 const stock = (over: Partial<Stock>): Stock => ({ rate: 0, level: 0, retention: 1, efficiency: 1, ...over });
@@ -38,5 +38,12 @@ describe("Level Mode", () => {
       "large surplus (≥ 0.50)", "surplus (0.10 to 0.50)", "balanced (-0.10 to 0.10)", "deficit (-0.50 to -0.10)",
       "large deficit (< -0.50)", "no reference: set min/max or a reference", "no Stock",
     ]);
+  });
+});
+
+describe("LevelBandSchema", () => {
+  it("takes only a step the brand ramps define, so a band always has a colour", () => {
+    expect(LevelBandSchema.safeParse({ label: "a", role: "danger", step: 950 }).success).toBe(true);
+    expect(LevelBandSchema.safeParse({ label: "a", role: "danger", step: 250 }).success).toBe(false);
   });
 });

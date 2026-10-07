@@ -7,6 +7,8 @@ The network is a pumped town with tanks on a junction:
 Edges carry no capacity, so they default to the category's largest supply and
 never bind; what binds is supply, demand, draw and fill.
 """
+import asyncio
+
 import pytest
 from pydantic import ValidationError
 
@@ -14,7 +16,8 @@ from engine.flow import solve_category
 from engine.propagation import run
 from schemas.config import CategoryDefinition, ConfigMeta, FunctionalityScaleLevel, ModelConfiguration
 from schemas.network import Canvas, CategoryDependencyProfile, Edge, Graph, Node, Project, ProjectMeta, Stock
-from schemas.results import PropagationRequest
+from schemas.results import BatchPropagationRequest, PropagationRequest
+from services.propagation_service import propagate_batch
 
 N = 3
 
@@ -33,8 +36,8 @@ def _edge(eid, s, t):
     return Edge(id=eid, source=s, target=t, functionality=N)
 
 
-def _run(pump, town, tanks, pump_func=N, tank_func=N):
-    """`tanks`: {id: (draw, fill)}. Returns the PropagationResult."""
+def _request(pump, town, tanks, pump_func=N, tank_func=N):
+    """`tanks`: {id: (draw, fill)}."""
     nodes = [_node("P", supply=pump, func=pump_func), _node("J"), _node("C", demand=town)]
     edges = [_edge("pj", "P", "J"), _edge("jc", "J", "C")]
     for tid, (draw, _fill) in tanks.items():
@@ -51,7 +54,11 @@ def _run(pump, town, tanks, pump_func=N, tank_func=N):
         categories=[CategoryDefinition(name="water", category_type="SourceToDemands")],
     )
     storage = {tid: {"water": fill} for tid, (_draw, fill) in tanks.items()}
-    return run(PropagationRequest(project=project, config=config, scope="global", storage=storage or None))
+    return PropagationRequest(project=project, config=config, scope="global", storage=storage or None)
+
+
+def _run(pump, town, tanks, pump_func=N, tank_func=N):
+    return run(_request(pump, town, tanks, pump_func, tank_func))
 
 
 def _stored(result, tid):
@@ -119,3 +126,10 @@ def test_the_engine_fails_loudly_on_a_stray_stock():
     edges = [_edge("pc", "P", "C")]
     with pytest.raises(TypeError, match="the engine reads only numbers"):
         solve_category("water", nodes, edges, {"P": N, "C": N}, {"pc": N}, N)
+
+
+def test_a_batched_scenario_keeps_its_storage():
+    single = _request(pump=5, town=8, tanks={"T": (10, 4)})
+    batch = BatchPropagationRequest(**{name: getattr(single, name) for name in PropagationRequest.model_fields}, coalitions=[[]])
+    [batched] = asyncio.run(propagate_batch(batch))
+    assert batched.stored == run(single).stored != {}

@@ -21,7 +21,7 @@ type Rec = Record<string, unknown>;
 const isObject = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The value at `path` (undefined when absent), or why the path cannot be followed. */
-function readPath(record: Rec, path: readonly string[]): { value: unknown } | { error: string } {
+export function readPath(record: Rec, path: readonly string[]): { value: unknown } | { error: string } {
   let current: unknown = record;
   for (let depth = 0; depth < path.length; depth++) {
     if (current === undefined) return { value: undefined };

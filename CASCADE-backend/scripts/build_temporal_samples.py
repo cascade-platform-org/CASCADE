@@ -21,8 +21,9 @@ from pathlib import Path
 from typing import Any
 
 from api.import_routes import _run_import
+from core.importers.inp.temporal import steps_firing
 from schemas.import_inp import ImportInpRequest
-from schemas.temporal_simulation import TemporalSimulation
+from schemas.temporal_simulation import CalendarUnit, TemporalSimulation
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = ROOT / "CASCADE-app" / "samples" / "public"
@@ -30,18 +31,8 @@ NET1 = ROOT / "raw-networks" / "aqueducts" / "Net1.inp"
 FORMAT = "cascade.temporal-simulation/v1"
 
 
-def _steps(first_label: str, unit: str, length: int, fires: dict[int, list[str]], labels: list[str]) -> list[dict[str, Any]]:
-    """Steps of one propagating Phase, with each firing period a Step of its own."""
-    bounds = sorted({0, *fires, *(k + 1 for k in fires)} - {length})
-    return [
-        {
-            "label": labels[b] if b else first_label,
-            "unit": unit,
-            "repeat": (bounds[i + 1] if i + 1 < len(bounds) else length) - b,
-            "phases": [{"events": fires.get(b, []), "propagate": True}],
-        }
-        for i, b in enumerate(bounds)
-    ]
+def _steps(labels: list[str], unit: CalendarUnit, fires: dict[int, list[str]]) -> list[dict[str, Any]]:
+    return [step.model_dump(mode="json") for step in steps_firing(labels, unit, fires)]
 
 
 def build_net1() -> None:
@@ -74,7 +65,7 @@ def build_net1() -> None:
     labels = [f"2023-01-01T{h:02d}" for h in range(24)]
     simulation["timeline"] = {
         "name": "Net1 — a day with a pump outage and an evening surge",
-        "steps": _steps(labels[0], "hour", 24, {6: ["evt-blackout-pump-failure"], 12: ["evt-pump-restored"], 18: ["evt-demand-surge-top10"]}, labels),
+        "steps": _steps(labels, "hour", {6: ["evt-blackout-pump-failure"], 12: ["evt-pump-restored"], 18: ["evt-demand-surge-top10"]}),
     }
     simulation["metrics"] = [{
         "name": "Tank 2 level",
@@ -113,7 +104,7 @@ def build_ijdrr() -> None:
         "format": FORMAT,
         "timeline": {
             "name": "A year: two earthquakes and a repair",
-            "steps": _steps(labels[0], "month", 12, {2: [quake], 5: ["evt-repair-source"], 8: [quake]}, labels),
+            "steps": _steps(labels, "month", {2: [quake], 5: ["evt-repair-source"], 8: [quake]}),
         },
         "profile": {
             label: [{"element": city, "path": ["category_dependency_profiles", "electric", "demand"], "op": "set", "value": v}]

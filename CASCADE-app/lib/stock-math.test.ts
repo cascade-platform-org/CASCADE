@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capacityNumber, integrateStock, integrateStorage, stockSupply, storageSink, storageSource, type StockFields } from "./stock-math";
+import { capacityNumber, capacityShare, integrateStock, integrateStorage, stockSupply, storageSink, storageSource, type StockFields } from "./stock-math";
 
 describe("stockSupply", () => {
   it("is rate plus the level above the floor in the ordinary case", () => {
@@ -53,5 +53,18 @@ describe("storage", () => {
     expect(capacityNumber(5)).toBe(5);
     expect(capacityNumber({ ...tank, retention: 1, efficiency: 1 })).toBe(200);
     expect(capacityNumber({ rate: 10, level: 4, retention: 1, efficiency: 1 })).toBe(14);
+  });
+});
+
+describe("capacityShare", () => {
+  // The engine's φ table (`test_func_ratio_endpoints_pinned_middle_midpoints` in
+  // CASCADE-backend/test/test_engine_flow.py); change both together.
+  it.each([
+    [3, 3, 1], [1, 3, 0], [2, 3, 0.5],
+    [4, 4, 1], [1, 4, 0], [2, 4, 0.375], [3, 4, 0.625],
+    [5, 5, 1], [1, 5, 0], [3, 5, 0.5],
+    [1, 1, 1],
+  ])("functionality %i of %i carries %f", (f, n, share) => {
+    expect(capacityShare(f, n)).toBeCloseTo(share);
   });
 });

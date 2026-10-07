@@ -82,6 +82,9 @@ neutral: { 50: [0.985, 0.0], 100: [0.967, 0.0], 200: [0.92, 0.0], 300: [0.871, 0
   accent: { 50: [0.97, 0.01], 100: [0.932, 0.022], 200: [0.882, 0.04], 300: [0.809, 0.071], 400: [0.707, 0.115], 500: [0.623, 0.102], 600: [0.546, 0.088], 700: [0.488, 0.079], 800: [0.424, 0.07], 900: [0.379, 0.062], 950: [0.282, 0.047] },
 };
 
+/** The steps every ramp defines, ascending. */
+export const RAMP_STEPS: readonly number[] = Object.keys(RAMPS.neutral).map(Number);
+
 /** The raw `[lightness, chroma]` of one ramp step — what the stylesheet emits. */
 export function rampStep(role: BrandRole, step: number): [number, number] {
   const entry = RAMPS[role][step];

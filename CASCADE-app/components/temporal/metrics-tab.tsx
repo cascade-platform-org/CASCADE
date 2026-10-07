@@ -10,7 +10,7 @@ import { AggregateSchema, ComparisonSchema, type Metric } from "@/lib/schemas/te
 import type { MetricEntry } from "@/lib/temporal-simulation-text";
 import { NumberInput } from "@/components/ui/number-input";
 import { FilterEditor } from "./filter-editor";
-import { Field, SmallButton, TextBackedInput, formatPath, inputCls, numOrUndef, parsePath } from "./fields";
+import { Field, SmallButton, TextBackedInput, formatPath, inputCls, parsePath } from "./fields";
 
 export function MetricsTab() {
   const metrics = useTemporalSimulationStore((s) => s.metrics);
@@ -48,14 +48,14 @@ export function MetricsTab() {
               </select>
             </Field>
             <Field label="Phase (change only)">
-              <input
-                type="number"
+              <NumberInput
                 min={1}
                 className={inputCls}
                 disabled={m.read !== "change"}
                 placeholder="whole period"
-                value={m.phase ?? ""}
-                onChange={(e) => edit(i, { phase: numOrUndef(e.target.value) })}
+                value={m.phase}
+                onChange={(phase) => edit(i, { phase })}
+                onClear={() => edit(i, { phase: undefined })}
               />
             </Field>
             <Field label="Aggregate">

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_ANCHOR_ID, TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useUiStore } from "@/store/ui-store";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -27,7 +28,7 @@ import {
   selectOverflowEvents,
   selectN,
 } from "@/store/config-store";
-import { useCanvasStore } from "@/store/canvas-store";
+import { modelLocked, useCanvasStore } from "@/store/canvas-store";
 import { countChangedElements } from "@/lib/graph-diff";
 import { extendRun, nextJumpHours, remainingJumpHours, revertRun } from "@/lib/temporal-jump-run";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
@@ -73,8 +74,9 @@ export function ActionBar() {
   function handleReset() {
     // Reset is scope-independent (ADR-0016): it restores the Scenario Baseline,
     // and a half-rewound cascade is a state the model was never in.
-    if (useTemporalSimulationStore.getState().running) {
-      resetFunctionality();
+    // A Temporal Simulation run is a view on its own copy: Reset only leaves it,
+    // since the model never changed (ADR-0019 §5).
+    if (endTemporalSimulationRun()) {
       pushToast({ message: "Temporal Simulation run ended — the canvas shows your model, unchanged.", variant: "info", durationMs: 3000 });
       return;
     }
@@ -594,7 +596,8 @@ function applyEventFromActionBar(
   pushToast: ReturnType<typeof useUiStore.getState>["pushToast"],
 ) {
   const storeState = useCanvasStore.getState();
-  if (!storeState.activeCanvasId) return;
+  // A shown Temporal Simulation run makes the model read-only; modelLocked says so.
+  if (!storeState.activeCanvasId || modelLocked()) return;
 
   const N = useConfigStore.getState().getFunctionalityN();
   const snapshotBefore = storeState.toGraphSnapshot();

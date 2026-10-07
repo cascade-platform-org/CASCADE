@@ -7,6 +7,7 @@
  * after changing the Pydantic models.
  */
 import { z } from "zod";
+import { RAMP_STEPS } from "@/lib/brand";
 import { NodeSchema } from "./network";
 import { AttributeOperationSchema } from "./attribute-operation";
 
@@ -155,7 +156,7 @@ export const LevelBandSchema = z
     /** Upper bound of the ratio; absent on the last band. */
     below: z.number().optional(),
     role: z.enum(["neutral", "danger", "warning", "success", "accent"]),
-    step: z.number().int().min(50).max(950),
+    step: z.number().int().refine((s) => RAMP_STEPS.includes(s), "a step of the brand ramps (50, 100…900, 950)"),
   })
   .strict();
 export type LevelBand = z.infer<typeof LevelBandSchema>;

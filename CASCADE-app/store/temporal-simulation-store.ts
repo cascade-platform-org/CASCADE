@@ -22,7 +22,7 @@ import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
 import type { CalendarUnit, Timeline, Phase, Step, TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
-import { periodState, type RunRecord } from "@/lib/step-operator";
+import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
@@ -136,7 +136,7 @@ const editing = (fn: (s: State) => void) => (s: State) => {
 };
 
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     open: false,
     tab: "timeline",
     ...starterDraft(),
@@ -191,11 +191,13 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     }),
     failRun: (message) => set((s) => { leaveRun(s); s.runError = message; }),
     endRun: () => set((s) => leaveRun(s)),
-    selectPeriod: (n) => set((s) => {
-      if (!s.runRecord || n < 1 || n > s.runRecord.periods.length) return;
-      s.selectedPeriod = n;
-      s.shown = periodState(s.runRecord, n);
-    }),
+    selectPeriod: (n) => {
+      // Walk from the shown period, outside the draft: the cost is the periods between.
+      const { runRecord, shown, selectedPeriod } = get();
+      if (!runRecord || !shown || n < 1 || n > runRecord.periods.length) return;
+      const next = walkPeriods(runRecord, shown, selectedPeriod, n);
+      set((s) => { s.selectedPeriod = n; s.shown = next; });
+    },
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),
   })),

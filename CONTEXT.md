@@ -94,11 +94,11 @@ _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for
 The saved input of a Temporal Simulation: an ordered list of Steps whose Phases hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
 _Avoid_: "schedule", "script", "run" (a run is one execution of a Timeline)
 
-**Step** *(proposed)*:
+**Step**:
 One period of a Timeline, or the same period `repeat`ed: a label, a calendar unit (hour, day, week, month, quarter, year or none) that only names periods, and ordered **Phases**. A period is the unit of metrics; recording is per Phase.
 _Avoid_: "time step" and "tick" (retired with Temporal Jump's old wording); Step is a Timeline element only
 
-**Phase** *(proposed)*:
+**Phase**:
 An ordered group inside a Step: its Events apply, then optionally one Propagation runs. Phases let an Event fire between two Propagations of one period. The passes inside one Event application are not Phases.
 _Avoid_: "stage", "sub-step"
 
@@ -107,7 +107,7 @@ A value that persists across periods, held inside `Node.supply_capacity[category
 _Avoid_: "balance", "buffer", "reservoir" (domain examples, not the term); not a Scenario Field
 
 **Level Scale**:
-A display scale, orthogonal to the Functionality scale, for a **Stock**: ordered bands over the signed ratio `value / reference`, each with a label and a brand colour token, in Client Configuration (never sent to the backend). Exists because an accumulation can be a problem at both extremes while Functionality only worsens. The reference belongs to the Stock and defaults to its own bound. ADR-0019.
+A display scale, orthogonal to the Functionality scale, for a **Stock**: ordered bands over the signed ratio `value / reference`, each with a label and a brand colour token, in Client Configuration (the engine never reads it). Exists because an accumulation can be a problem at both extremes while Functionality only worsens. The reference belongs to the Stock and defaults to its own bound. ADR-0019.
 _Avoid_: "level scale" for Functionality levels (those are the Functionality scale); a Rule input (display only)
 
 **Run View**:

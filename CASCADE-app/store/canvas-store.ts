@@ -77,13 +77,11 @@ export function modelLocked(): boolean {
   const now = Date.now();
   if (now - lockToastAt > 3000) {
     lockToastAt = now;
-    void import("@/store/ui-store").then(({ useUiStore }) =>
-      useUiStore.getState().pushToast({
-        message: "A Temporal Simulation run is shown, so the model is read-only. End run or Reset to edit it.",
-        variant: "info",
-        durationMs: 3500,
-      }),
-    );
+    useUiStore.getState().pushToast({
+      message: "A Temporal Simulation run is shown, so the model is read-only. End run or Reset to edit it.",
+      variant: "info",
+      durationMs: 3500,
+    });
   }
   return true;
 }

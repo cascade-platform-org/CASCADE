@@ -8,7 +8,7 @@
 
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { AlertTriangle, Check, ClipboardCopy, Bot, RotateCcw, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, Check, ClipboardCopy, Bot, RotateCcw, Upload } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
@@ -23,7 +23,7 @@ import {
   serializeDoc,
 } from "@/lib/temporal-simulation-text";
 import { EXPLAIN_COPY, EXPLAIN_COPY_LLM, explainApply } from "@/lib/temporal-simulation-explainers";
-import { SmallButton } from "./fields";
+import { Notices, SmallButton } from "./fields";
 
 export function TextTab() {
   const { timeline, profile, metrics } = useTemporalSimulationStore(useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics })));
@@ -84,11 +84,7 @@ export function TextTab() {
         Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the definition."}
       </p>
 
-      {result && result.errors.length > 0 && (
-        <ul className="max-h-32 space-y-0.5 overflow-y-auto rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
-          {result.errors.map((e, i) => <li key={i} className="flex gap-1"><XCircle size={11} className="mt-0.5 shrink-0" />{e}</li>)}
-        </ul>
-      )}
+      {result && <Notices tone="error" items={result.errors} />}
       {result && result.errors.length === 0 && (
         <div className="max-h-32 overflow-y-auto rounded-md border border-zinc-200 p-2 text-[11px] dark:border-zinc-700">
           <p className="mb-1 font-medium text-green-700 dark:text-green-400">{result.applied ? "Applied." : "Valid."} {result.warnings.length} warning(s).</p>

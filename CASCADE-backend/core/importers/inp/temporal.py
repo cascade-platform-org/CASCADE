@@ -42,7 +42,7 @@ from core.importers.inp.map import FLOW_UNIT_SCALE, TANK_RESERVE_EVENT_ID, _wn_n
 from schemas.config import AttributeOperation, EventDefinition
 from schemas.network import Edge, Stock
 from schemas.sync import ProjectBundle
-from schemas.temporal_simulation import Phase, PhaseEvent, Step, TemporalSimulation, Timeline
+from schemas.temporal_simulation import CalendarUnit, Phase, PhaseEvent, Step, TemporalSimulation, Timeline
 
 PERIOD_S = 3600  # one period = one hour (ADR-0019: the `hour` unit)
 
@@ -58,6 +58,7 @@ def _tank_volume(tank: Any, level_m: float) -> float:
 
 def _tanks_to_storage(wn: wntr.network.WaterNetworkModel, bundle: ProjectBundle) -> None:
     project = bundle.project
+    directions = {(e.source, e.target) for e in project.edges.values()}
     for tid in wn.tank_name_list:
         node = project.nodes.get(tid)
         if node is None:
@@ -66,8 +67,8 @@ def _tanks_to_storage(wn: wntr.network.WaterNetworkModel, bundle: ProjectBundle)
         # Each pipe of the tank carries water both ways: add any missing direction.
         for edge in [e for e in project.edges.values() if tid in (e.source, e.target)]:
             reverse_id = f"{edge.id}~rev"
-            exists = any(e.source == edge.target and e.target == edge.source for e in project.edges.values())
-            if not exists and reverse_id not in project.edges:
+            if (edge.target, edge.source) not in directions and reverse_id not in project.edges:
+                directions.add((edge.target, edge.source))
                 project.edges[reverse_id] = Edge(
                     id=reverse_id, source=edge.target, target=edge.source, functionality=edge.functionality,
                     capacity=edge.capacity, properties={**(edge.properties or {}), "storage_return": True},
@@ -187,6 +188,25 @@ def _control_events(
     return fires
 
 
+def steps_firing(labels: list[str], unit: CalendarUnit, fires: dict[int, list[str]]) -> list[Step]:
+    """One propagating Phase per period, firing `fires[k]` in period k (0-based).
+
+    A Phase Event fires in every period of its Step, so each firing period is a
+    Step of its own and the periods between them are one Step each.
+    """
+    count = len(labels)
+    boundaries = sorted({0, *fires, *(k + 1 for k in fires)} - {count})
+    return [
+        Step(
+            label=labels[begin],
+            unit=unit,
+            repeat=(boundaries[i + 1] if i + 1 < len(boundaries) else count) - begin,
+            phases=[Phase(events=[PhaseEvent(event=e) for e in fires.get(begin, [])], propagate=True)],
+        )
+        for i, begin in enumerate(boundaries)
+    ]
+
+
 def to_temporal_simulation(
     wn: wntr.network.WaterNetworkModel,
     bundle: ProjectBundle,
@@ -205,22 +225,9 @@ def to_temporal_simulation(
     _tanks_to_storage(wn, bundle)
     profile = _demand_profile(wn, bundle, merged_map, labels)
     fires = _control_events(wn, bundle, hours, start_hour, warnings)
-
-    # A Phase Event fires in every period of its Step, so each control hour is a
-    # Step of its own and the hours between them are one Step each.
-    boundaries = sorted({0, *fires, *(h + 1 for h in fires)} - {hours})
-    steps = [
-        Step(
-            label=labels[begin],
-            unit="hour",
-            repeat=(boundaries[i + 1] if i + 1 < len(boundaries) else hours) - begin,
-            phases=[Phase(events=[PhaseEvent(event=e) for e in fires.get(begin, [])], propagate=True)],
-        )
-        for i, begin in enumerate(boundaries)
-    ]
     bundle.project.temporal_simulation = TemporalSimulation(
         format="cascade.temporal-simulation/v1",
-        timeline=Timeline(name=f"{bundle.project.meta.name} — {hours} h", steps=steps),
+        timeline=Timeline(name=f"{bundle.project.meta.name} — {hours} h", steps=steps_firing(labels, "hour", fires)),
         profile=profile,
         metrics=[],
     )

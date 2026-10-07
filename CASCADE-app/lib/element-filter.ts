@@ -8,6 +8,7 @@
 
 import type { Canvas, Edge, Node } from "@/lib/schemas/network";
 import { elementLabel } from "@/lib/coalition";
+import { inCategory } from "@/lib/stock-checks";
 import type { ElementFilter } from "@/lib/schemas/attribute-operation";
 
 export interface FilterableModel {
@@ -16,15 +17,10 @@ export interface FilterableModel {
   canvases: Record<string, Canvas>;
 }
 
-const lower = (s: string) => s.toLowerCase();
+/** A snapshot's Canvas list as the id-keyed map a filter resolves `canvas` against. */
+export const canvasesById = (canvases: readonly Canvas[]): Record<string, Canvas> => Object.fromEntries(canvases.map((c) => [c.id, c]));
 
-function nodeCategories(n: Node): Set<string> {
-  return new Set([
-    ...(n.node_categories ?? []),
-    ...Object.keys(n.supply_capacity ?? {}),
-    ...Object.keys(n.category_dependency_profiles ?? {}),
-  ]);
-}
+const lower = (s: string) => s.toLowerCase();
 
 function canvasMembers(model: FilterableModel, ref: string, kind: "node" | "edge"): Set<string> | null {
   const canvas = model.canvases[ref] ?? Object.values(model.canvases).find((c) => c.label === ref);
@@ -54,7 +50,7 @@ export function matchElements(filter: ElementFilter, model: FilterableModel): st
       .filter((n) =>
         common(n.id) &&
         (filter.node_type === undefined || lower(n.node_type ?? "") === lower(filter.node_type)) &&
-        (filter.category === undefined || nodeCategories(n).has(filter.category)),
+        (filter.category === undefined || inCategory(n, filter.category)),
       )
       .map((n) => n.id)
       .sort();

@@ -37,6 +37,8 @@ import {
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
+import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { formatMetric } from "@/lib/temporal-metrics";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
 import { SaveScorecardDialog } from "./operativity-scorecard";
@@ -207,7 +209,9 @@ export function ScorecardPanel() {
                 //    measured against the network's own state rather than on top
                 //    of someone else's cascade. Reset is scope-independent and
                 //    reaches back through the loaded history (ADR-0016), so this
-                //    works on a project that shipped mid-scenario.
+                //    works on a project that shipped mid-scenario. A Temporal
+                //    Simulation run shown on the canvas ends first.
+                endTemporalSimulationRun();
                 resetFunctionality();
                 // 2. Apply the event on the live canvas
                 const eventDef = config.events.find((e) => e.id === ev.eventId);
@@ -475,7 +479,6 @@ interface AnalysisEntryCardProps {
 
 function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const topEntries = useMemo(
     () => Object.entries(entry.scores).sort(([, a], [, b]) => b - a).slice(0, 5),
@@ -513,24 +516,7 @@ function AnalysisEntryCard({ entry, onDelete }: AnalysisEntryCardProps) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            title={expanded ? "Collapse" : "Show the network and top elements"}
-            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
-          </button>
-          {confirmDelete ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
-              <button onClick={onDelete} className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Yes</button>
-              <button onClick={() => setConfirmDelete(false)} className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700">No</button>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmDelete(true)} title="Delete entry" className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
-              <Trash2 size={14} />
-            </button>
-          )}
+          <CardActions expanded={expanded} onToggle={() => setExpanded((v) => !v)} titles={["Collapse", "Show the network and top elements"]} onDelete={onDelete} />
         </div>
       </div>
 
@@ -583,7 +569,6 @@ interface EntryCardProps {
 
 function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   // Shared Operativity weighting — keeps card scores in step with the selector.
   const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
 
@@ -652,39 +637,7 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            title={expanded ? "Collapse snapshots" : "Expand canvas snapshots"}
-            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
-          </button>
-
-          {confirmDelete ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
-              <button
-                onClick={onDelete}
-                className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              >
-                No
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              title="Delete entry"
-              className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
+          <CardActions expanded={expanded} onToggle={() => setExpanded((v) => !v)} titles={["Collapse snapshots", "Expand canvas snapshots"]} onDelete={onDelete} />
         </div>
       </div>
 
@@ -727,6 +680,47 @@ function EntryCard({ entry, n, config, onDelete }: EntryCardProps) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Card actions: expand, and delete with a confirmation
+// ---------------------------------------------------------------------------
+
+function CardActions({
+  expanded,
+  onToggle,
+  titles,
+  onDelete,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  /** The expand button's title when expanded, and when collapsed. */
+  titles: [string, string];
+  onDelete: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  return (
+    <>
+      <button
+        onClick={onToggle}
+        title={expanded ? titles[0] : titles[1]}
+        className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+      >
+        <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
+      </button>
+      {confirmDelete ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+          <button onClick={onDelete} className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Yes</button>
+          <button onClick={() => setConfirmDelete(false)} className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700">No</button>
+        </div>
+      ) : (
+        <button onClick={() => setConfirmDelete(true)} title="Delete entry" className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
+          <Trash2 size={14} />
+        </button>
+      )}
+    </>
   );
 }
 
@@ -848,8 +842,8 @@ function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after
  */
 function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulationScorecardEntry; n: number; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const levelScale = useConfigStore((s) => s.config.level_scale);
+  const config = useConfigStore((s) => s.config);
+  const levelScale = config.level_scale;
   const operativity = useMemo(() => computeOperativityScore(entry.snapshot, n), [entry.snapshot, n]);
   const levelColors = useMemo(
     () =>
@@ -871,28 +865,12 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
           </div>
           <p className="text-xs text-zinc-400">
             {new Date(entry.created_at).toLocaleString()}
-            <span className="ml-2 text-zinc-500">{entry.timeline_name} · period {entry.period_label} · Operativity {operativity.toFixed(1)}%</span>
+            <span className="ml-2 text-zinc-500">{entry.timeline_name} · period {entry.period_label}</span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            title={expanded ? "Collapse" : "Show the network and the period's Metrics"}
-            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
-          </button>
-          {confirmDelete ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
-              <button onClick={onDelete} className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">Yes</button>
-              <button onClick={() => setConfirmDelete(false)} className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700">No</button>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmDelete(true)} title="Delete entry" className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
-              <Trash2 size={14} />
-            </button>
-          )}
+          <ScorePill label="Operativity" value={operativity} config={config} />
+          <CardActions expanded={expanded} onToggle={() => setExpanded((v) => !v)} titles={["Collapse", "Show the network and the period's Metrics"]} onDelete={onDelete} />
         </div>
       </div>
 
@@ -910,7 +888,7 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
             {Object.entries(entry.metrics).map(([name, value]) => (
               <div key={name} className="flex items-center justify-between text-xs">
                 <span className="truncate text-zinc-600 dark:text-zinc-400">{name}</span>
-                <span className="ml-2 font-mono text-zinc-800 dark:text-zinc-200">{value === null ? "—" : Number.isInteger(value) ? value : value.toFixed(3)}</span>
+                <span className="ml-2 font-mono text-zinc-800 dark:text-zinc-200">{formatMetric(value)}</span>
               </div>
             ))}
           </div>

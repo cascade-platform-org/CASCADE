@@ -2,12 +2,9 @@
  * temporal-simulation-explainers.ts — the "What this will do" texts of the
  * Temporal Simulation window.
  *
- * The definition tabs edit the project's document; the run and its Stocks are
- * not built yet, so those controls show one of these texts instead of acting
- * on the model. Each text states the behaviour
- * the specification commits to (ADR-0019/0020/0021, requirements §9.6), so
- * reading them while clicking through is a review of the specification itself.
- * Kept in one module so the wording can be reviewed in one place.
+ * Each text states the behaviour the specification commits to
+ * (ADR-0019/0020/0021, requirements §9.6). Kept in one module so the wording
+ * can be reviewed in one place.
  */
 
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";

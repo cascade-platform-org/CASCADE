@@ -507,8 +507,19 @@
           "type": "string"
         },
         "step": {
-          "maximum": 950,
-          "minimum": 50,
+          "enum": [
+            50,
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900,
+            950
+          ],
           "title": "Step",
           "type": "integer"
         }

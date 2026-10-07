@@ -12,11 +12,14 @@
  * (CLAUDE.md §7). Pure; the Run table and the CSV export both read `runTable`.
  */
 
+import { readPath } from "@/lib/attribute-operations";
 import { applyGraphDiff } from "@/lib/graph-diff";
-import { matchElements } from "@/lib/element-filter";
+import { canvasesById, matchElements } from "@/lib/element-filter";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
+import { demandOf } from "@/lib/stock-integration";
+import { stocksIn } from "@/lib/stock-math";
 import type { RunRecord } from "@/lib/step-operator";
-import type { GraphSnapshot, Node, Stock } from "@/lib/schemas/network";
+import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { Metric } from "@/lib/schemas/temporal-simulation";
 
 interface RunColumn {
@@ -30,6 +33,13 @@ export interface RunTable {
   rows: { label: string; values: (number | null)[] }[];
 }
 
+/** The standard Metrics' names (ADR-0019 §4); after a run, coverage and stock level get a column per Category. */
+export const STANDARD_COLUMNS = { operativity: "Operativity %", coverage: "Coverage", stock: "Stock level" } as const;
+
+/** A table value as the Run table and a saved period show it; null is no value. */
+export const formatMetric = (v: number | null): string =>
+  v === null ? "—" : Number.isInteger(v) ? String(v) : Math.abs(v) < 10 ? v.toFixed(3) : v.toFixed(1);
+
 /** The states of one period: its start, then after each Phase. */
 function phaseStates(record: RunRecord, number: number, start: GraphSnapshot): GraphSnapshot[] {
   const states = [start];
@@ -37,13 +47,9 @@ function phaseStates(record: RunRecord, number: number, start: GraphSnapshot): G
   return states;
 }
 
-function numberAt(record: unknown, path: readonly string[]): number | undefined {
-  let current = record;
-  for (const key of path) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return typeof current === "number" ? current : undefined;
+function numberAt(record: object | undefined, path: readonly string[]): number | undefined {
+  const read = record === undefined ? undefined : readPath(record as Record<string, unknown>, path);
+  return read && "value" in read && typeof read.value === "number" ? read.value : undefined;
 }
 
 const passes = (value: number, f: NonNullable<Metric["value_filter"]>): boolean => {
@@ -67,7 +73,7 @@ function percentile(sorted: number[], p: number): number {
 /** One Metric over one period, given that period's states (start, then after each Phase). */
 export function evaluateMetric(metric: Metric, states: GraphSnapshot[]): number | null {
   const end = states[states.length - 1];
-  const model = { nodes: end.nodes, edges: end.edges, canvases: Object.fromEntries(end.canvases.map((c) => [c.id, c])) };
+  const model = { nodes: end.nodes, edges: end.edges, canvases: canvasesById(end.canvases) };
   const element = (s: GraphSnapshot, id: string) => s.nodes[id] ?? s.edges[id];
   const [before, after] =
     metric.phase !== undefined ? [states[metric.phase - 1], states[Math.min(metric.phase, states.length - 1)]] : [states[0], end];
@@ -100,29 +106,24 @@ export function evaluateMetric(metric: Metric, states: GraphSnapshot[]): number 
   }
 }
 
-const demandOf = (node: Node | undefined, category: string) => node?.category_dependency_profiles?.[category]?.demand ?? 0;
-
-/** Each Category's Stocks, as (Category, Stock): node Stocks by key, an edge Stock by its source's one supplied Category. */
-function stocksByCategory(s: GraphSnapshot): [string, Stock][] {
-  const out: [string, Stock][] = [];
-  for (const node of Object.values(s.nodes)) {
-    for (const [category, v] of Object.entries(node.supply_capacity ?? {})) if (typeof v !== "number") out.push([category, v]);
+/** Each Category's summed Stock level: node Stocks by key, an edge Stock by its source's one supplied Category. */
+function stockLevels(s: GraphSnapshot): Map<string, number> {
+  const levels = new Map<string, number>();
+  for (const { element, category, stock } of stocksIn(s)) {
+    const supplied = category === undefined ? Object.keys(s.nodes[s.edges[element].source]?.supply_capacity ?? {}) : [category];
+    if (supplied.length === 1) levels.set(supplied[0], (levels.get(supplied[0]) ?? 0) + stock.level);
   }
-  for (const edge of Object.values(s.edges)) {
-    const supplied = Object.keys(s.nodes[edge.source]?.supply_capacity ?? {});
-    if (edge.capacity !== undefined && typeof edge.capacity !== "number" && supplied.length === 1) out.push([supplied[0], edge.capacity]);
-  }
-  return out;
+  return levels;
 }
 
 /** The run's table. `n` is the top Functionality level; `metrics` are the project's own, in order. */
 export function runTable(record: RunRecord, metrics: readonly Metric[], n: number): RunTable {
   const coverageCats = [...new Set(record.periods.flatMap((p) => Object.values(p.served).flatMap((r) => Object.keys(r))))].sort();
-  const stockCats = [...new Set(stocksByCategory(record.start).map(([c]) => c))].sort();
+  const stockCats = [...stockLevels(record.start).keys()].sort();
   const columns: RunColumn[] = [
-    { key: "operativity", label: "Operativity %" },
-    ...coverageCats.map((c) => ({ key: `coverage:${c}`, label: `Coverage · ${c}` })),
-    ...stockCats.map((c) => ({ key: `stock:${c}`, label: `Stock level · ${c}` })),
+    { key: "operativity", label: STANDARD_COLUMNS.operativity },
+    ...coverageCats.map((c) => ({ key: `coverage:${c}`, label: `${STANDARD_COLUMNS.coverage} · ${c}` })),
+    ...stockCats.map((c) => ({ key: `stock:${c}`, label: `${STANDARD_COLUMNS.stock} · ${c}` })),
     ...metrics.map((m, i) => ({ key: `metric:${i}`, label: m.name || `Metric ${i + 1}` })),
   ];
 
@@ -142,8 +143,8 @@ export function runTable(record: RunRecord, metrics: readonly Metric[], n: numbe
       }
       return demand > 0 ? delivered / demand : null;
     };
-    const stockLevel = (category: string) =>
-      stocksByCategory(end).filter(([c]) => c === category).reduce((sum, [, s]) => sum + s.level, 0);
+    const levels = stockLevels(end);
+    const stockLevel = (category: string) => levels.get(category) ?? 0;
     rows.push({
       label: period.label,
       values: [

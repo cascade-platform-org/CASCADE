@@ -19,9 +19,9 @@ import { resetSnapshot } from "@/lib/scenario-baseline";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
 import { RunStopped, runTimeline } from "@/lib/step-operator";
-import { runTable, runTableCsv, type RunTable } from "@/lib/temporal-metrics";
+import { runTableCsv, type RunTable } from "@/lib/temporal-metrics";
 import { buildPeriodEntry } from "@/lib/period-entry";
-import { CSV_FILE, saveAs } from "@/lib/file-io";
+import { CSV_FILE, safeName, saveAs } from "@/lib/file-io";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
@@ -93,29 +93,19 @@ export function endTemporalSimulationRun(): boolean {
   return true;
 }
 
-/** The shown run's table (periods × Metrics), or null when no run is shown. */
-function currentRunTable(): RunTable | null {
-  const sim = useTemporalSimulationStore.getState();
-  if (!sim.runRecord) return null;
-  return runTable(sim.runRecord, sim.metrics.map((m) => m.metric), selectN(useConfigStore.getState()));
-}
-
-/** Save the shown run's table as CSV through the app's Save-As path. */
-export async function exportRunCsv(): Promise<void> {
-  const table = currentRunTable();
-  if (!table) return;
+/** Save the shown run's table (the Run tab's) as CSV through the app's Save-As path. */
+export async function exportRunCsv(table: RunTable): Promise<void> {
   const name = useTemporalSimulationStore.getState().timeline.name || "temporal-simulation";
-  await saveAs(`${name.replace(/[^a-zA-Z0-9_\-.]+/g, "_").slice(0, 60)}.csv`, runTableCsv(table), CSV_FILE);
+  await saveAs(`${safeName(name)}.csv`, runTableCsv(table), CSV_FILE);
 }
 
 /**
  * Save the period the Run View shows as a `temporal_simulation` Scorecard
  * entry, with a picture of the canvas as it is painted now. Returns the label.
  */
-export async function savePeriodToScorecard(): Promise<string | null> {
+export async function savePeriodToScorecard(table: RunTable): Promise<string | null> {
   const sim = useTemporalSimulationStore.getState();
-  const table = currentRunTable();
-  if (!sim.runRecord || !table) return null;
+  if (!sim.runRecord) return null;
   const image = await useUiStore.getState().captureCanvasFn?.();
   const entry = buildPeriodEntry({
     record: sim.runRecord,

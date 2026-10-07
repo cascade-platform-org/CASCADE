@@ -287,8 +287,8 @@ Node fields:
 - ["direct_damage"], ["expected_repair_time"]
 - ["importance"], ["cost_of_disservice_per_day"], ["properties", "<key>"]
 Edge fields: ["capacity"], ["functionality"], ["functionality_time"], ["direct_damage"], ["properties", "<key>"].
-Stocks (a value that accumulates across periods: a reservoir level, an hours balance) are specified but not
-built yet; until then operate on the plain numbers above.
+A supply or edge capacity may be a Stock (a value that accumulates across periods: a reservoir level, an
+hours balance); its fields are reached the same way, e.g. ["supply_capacity", "<category>", "rate"].
 
 Operations: set (write the value), add, mul, at_most (cap at the value), at_least (raise to the value).
 The last four need a number. An operation on a field the Element does not have is rejected (except set).

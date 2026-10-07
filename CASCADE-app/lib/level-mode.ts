@@ -12,6 +12,7 @@
 
 import { brandColor } from "@/lib/brand";
 import type { HeatmapLegend } from "@/lib/analysis-legend";
+import { stocksIn, type PlacedStock } from "@/lib/stock-math";
 import type { LevelBand } from "@/lib/schemas/config";
 import type { GraphSnapshot, Stock, StockValue } from "@/lib/schemas/network";
 
@@ -43,19 +44,7 @@ export function bandFor(ratio: number, scale: readonly LevelBand[]): LevelBand {
 
 const bandColor = (band: LevelBand) => brandColor(band.role, band.step);
 
-/** Every Stock of a snapshot, keyed by the Element that carries it. */
-function stocksOf(snapshot: GraphSnapshot): { element: string; key: string; stock: Stock }[] {
-  const out: { element: string; key: string; stock: Stock }[] = [];
-  for (const node of Object.values(snapshot.nodes)) {
-    for (const [category, value] of Object.entries(node.supply_capacity ?? {})) {
-      if (typeof value !== "number") out.push({ element: node.id, key: `${node.id}/${category}`, stock: value });
-    }
-  }
-  for (const edge of Object.values(snapshot.edges)) {
-    if (edge.capacity !== undefined && typeof edge.capacity !== "number") out.push({ element: edge.id, key: edge.id, stock: edge.capacity });
-  }
-  return out;
-}
+const keyOf = (s: PlacedStock) => `${s.element}/${s.category ?? ""}`;
 
 const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
 
@@ -65,11 +54,11 @@ const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
  * can repaint later. `before` is the state the period started from.
  */
 export function stockValues(state: GraphSnapshot, before: GraphSnapshot, reading: LevelReading): StockValue[] {
-  const previous = new Map(stocksOf(before).map((s) => [s.key, s.stock.level]));
-  return stocksOf(state).map(({ element, key, stock }) => {
+  const previous = new Map(stocksIn(before).map((s) => [keyOf(s), s.stock.level]));
+  return stocksIn(state).map((placed) => {
+    const { element, category, stock } = placed;
     const reference = stockReference(stock, reading);
-    const value = reading === "level" ? stock.level : stock.level - (previous.get(key) ?? stock.level);
-    const category = key === element ? undefined : key.slice(element.length + 1);
+    const value = reading === "level" ? stock.level : stock.level - (previous.get(keyOf(placed)) ?? stock.level);
     return { element, ...(category !== undefined ? { category } : {}), value, ...(reference !== null ? { reference } : {}) };
   });
 }

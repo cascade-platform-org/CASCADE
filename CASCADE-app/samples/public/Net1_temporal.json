@@ -681,7 +681,10 @@
             "phases": [
               {
                 "events": [
-                  "evt-blackout-pump-failure"
+                  {
+                    "event": "evt-blackout-pump-failure",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }
@@ -705,7 +708,10 @@
             "phases": [
               {
                 "events": [
-                  "evt-pump-restored"
+                  {
+                    "event": "evt-pump-restored",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }
@@ -729,7 +735,10 @@
             "phases": [
               {
                 "events": [
-                  "evt-demand-surge-top10"
+                  {
+                    "event": "evt-demand-surge-top10",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }

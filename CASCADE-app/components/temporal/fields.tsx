@@ -7,6 +7,7 @@
  */
 
 import React, { useMemo, useState } from "react";
+import { AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConfigStore } from "@/store/config-store";
 import { useCanvasStore } from "@/store/canvas-store";
@@ -88,16 +89,32 @@ export function Segmented<T extends string>({
   );
 }
 
-/** Parse a number input; empty → undefined. */
-export const numOrUndef = (v: string): number | undefined => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
+const NOTICE_TONE = {
+  error: { box: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300", Icon: XCircle },
+  warning: { box: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300", Icon: AlertTriangle },
+};
+
+/** Messages of one tone, one per line with its icon; nothing when there are none. */
+export function Notices({ tone, items, alert }: { tone: keyof typeof NOTICE_TONE; items: readonly string[]; alert?: boolean }) {
+  if (items.length === 0) return null;
+  const { box, Icon } = NOTICE_TONE[tone];
+  return (
+    <ul role={alert ? "alert" : undefined} className={cn("max-h-32 space-y-1 overflow-y-auto rounded-md border p-2 text-xs", box)}>
+      {items.map((m, i) => <li key={i} className="flex gap-1.5"><Icon size={12} className="mt-0.5 shrink-0" />{m}</li>)}
+    </ul>
+  );
+}
 
 /** A path list shown as "a, b, c"; typed back the same way. */
 export const formatPath = (path: string[]): string => path.join(", ");
 export const parsePath = (text: string): string[] => text.split(",").map((p) => p.trim()).filter(Boolean);
 
-/** Numbers and booleans are typed as text and read back as their type; anything else stays a string. */
+/**
+ * Numbers and booleans are typed as text and read back as their type; anything
+ * else stays a string. "1,5" (a decimal comma, typed or pasted) reads as 1.5.
+ */
 export function parseValue(text: string): number | boolean | string {
-  const t = text.trim();
+  const t = text.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
   if (t !== "" && !Number.isNaN(Number(t))) return Number(t);
   if (t === "true" || t === "false") return t === "true";
   return text;

@@ -11,12 +11,11 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useConfigStore } from "@/store/config-store";
-import { brandColor, BRAND_HUE, type BrandRole } from "@/lib/brand";
+import { brandColor, BRAND_HUE, type BrandRole, RAMP_STEPS } from "@/lib/brand";
 import { DEFAULT_LEVEL_SCALE, levelScaleProblem, type LevelBand } from "@/lib/schemas/config";
 import { NumberInput, TextInput } from "./primitives";
 
 const ROLES = Object.keys(BRAND_HUE) as BrandRole[];
-const STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 
 export function LevelScaleEditor() {
   const scale = useConfigStore(useShallow((s) => s.draft.level_scale));
@@ -44,7 +43,7 @@ export function LevelScaleEditor() {
             {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
           <select className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-800" value={band.step} onChange={(e) => edit(i, { step: Number(e.target.value) })}>
-            {STEPS.map((st) => <option key={st} value={st}>{st}</option>)}
+            {RAMP_STEPS.map((st) => <option key={st} value={st}>{st}</option>)}
           </select>
           <button
             type="button"

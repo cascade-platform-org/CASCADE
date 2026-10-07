@@ -56,7 +56,7 @@ class PropagationRequest(BaseModel):
 MAX_COALITIONS_PER_BATCH = 50
 
 
-class BatchPropagationRequest(BaseModel):
+class BatchPropagationRequest(PropagationRequest):
     """
     Body for POST /api/propagate/batch.
 
@@ -69,23 +69,9 @@ class BatchPropagationRequest(BaseModel):
     The batch is bounded (`MAX_COALITIONS_PER_BATCH`) rather than unbounded: the
     caller chunks, which is what keeps progress reporting and cancellation
     working and keeps a single request from occupying an engine worker
-    indefinitely.
+    indefinitely. Every other field is the single request's, so a batched
+    Scenario carries exactly what a single one does.
     """
-    project: Project
-    config: ModelConfiguration
-    scope: Literal["local", "global"]
-    active_canvas_id: Optional[str] = Field(
-        default=None, description="Canvas to restrict propagation when scope = local."
-    )
-    storage: Optional[dict[str, dict[str, float]]] = Field(
-        default=None,
-        description=(
-            "Storage (ADR-0020 §1c), written by the client's payload builder: node → "
-            "Category → the most it may fill this Propagation. That node's "
-            "supply_capacity[Category] is then its draw, used only for demand the "
-            "other sources cannot cover; filling comes after every consumer."
-        ),
-    )
     coalitions: list[list[str]] = Field(
         ...,
         min_length=1,
@@ -96,11 +82,6 @@ class BatchPropagationRequest(BaseModel):
             "Project are ignored, exactly as they are on the single-run path."
         ),
     )
-
-    @model_validator(mode="after")
-    def _numbers_only(self):
-        _reject_stocks(self.project)
-        return self
 
 
 class ElementUpdate(BaseModel):

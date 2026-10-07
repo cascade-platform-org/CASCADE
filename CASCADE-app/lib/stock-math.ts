@@ -14,7 +14,7 @@
  * A clamp is reported: `spilled` above M, `unmet` below m.
  */
 
-import type { CapacityValue, Stock } from "@/lib/schemas/network";
+import type { CapacityValue, GraphSnapshot, Stock } from "@/lib/schemas/network";
 
 /** The Stock fields the formulas read; `retention` and `efficiency` default to 1. */
 export type StockFields = Omit<Stock, "retention" | "efficiency"> & { retention?: number; efficiency?: number };
@@ -52,8 +52,8 @@ export function capacityShare(functionality: number, n: number): number {
   return (functionality - 0.5) / n;
 }
 
-/** Storage (ADR-0020 §1c): a node Stock that fills from the network. */
-export const isStorage = (s: StockFields): boolean => s.max_fill !== undefined;
+/** Storage (ADR-0020 §1c): a node Stock that fills from the network. A plain number is not. */
+export const isStorage = (s: StockFields | number): s is StockFields => typeof s !== "number" && s.max_fill !== undefined;
 
 export function stockSupply(s: StockFields): StockSupply {
   const headroom = Math.max(0, retained(s) + efficient(s) - s.rate - floorOf(s));
@@ -73,6 +73,27 @@ export const storageSink = (s: StockFields): number =>
 export function capacityNumber(value: CapacityValue): number {
   if (typeof value === "number") return value;
   return isStorage(value) ? storageSource(value) : stockSupply(value).supply;
+}
+
+/** A Stock where it sits: a node's under its Category's key, an edge's with no Category. */
+export interface PlacedStock {
+  element: string;
+  category?: string;
+  stock: Stock;
+}
+
+/** Every Stock of a snapshot, node Stocks first. */
+export function stocksIn(snapshot: Pick<GraphSnapshot, "nodes" | "edges">): PlacedStock[] {
+  const out: PlacedStock[] = [];
+  for (const node of Object.values(snapshot.nodes)) {
+    for (const [category, value] of Object.entries(node.supply_capacity ?? {})) {
+      if (typeof value !== "number") out.push({ element: node.id, category, stock: value });
+    }
+  }
+  for (const edge of Object.values(snapshot.edges)) {
+    if (edge.capacity !== undefined && typeof edge.capacity !== "number") out.push({ element: edge.id, stock: edge.capacity });
+  }
+  return out;
 }
 
 function clampLevel(s: StockFields, raw: number): StockIntegration {

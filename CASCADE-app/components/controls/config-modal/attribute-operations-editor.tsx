@@ -12,15 +12,12 @@
  * operation would fail every Propagation.
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { useShallow } from "zustand/react/shallow";
-import { useCanvasStore } from "@/store/canvas-store";
-import { filterLabel } from "@/lib/element-filter";
-import { AttributeOperationSchema, OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
+import { AttributeOperationSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import type { EventDefinition } from "@/lib/schemas/config";
-import { FilterEditor } from "@/components/temporal/filter-editor";
-import { Segmented, TextBackedInput, formatPath, inputCls, parsePath, parseValue } from "@/components/temporal/fields";
+import { OpSelect, TargetModeToggle, TargetPicker } from "@/components/temporal/operation-target";
+import { TextBackedInput, formatPath, parsePath, parseValue } from "@/components/temporal/fields";
 
 /** Why an operation is invalid, or null. */
 function operationProblem(op: AttributeOperation): string | null {
@@ -49,16 +46,6 @@ export function AttributeOperationsEditor({
   operations: AttributeOperation[];
   onChange: (next: AttributeOperation[]) => void;
 }) {
-  const { nodes, edges } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges })));
-  const elementOptions = useMemo(
-    () =>
-      [...Object.keys(nodes), ...Object.keys(edges)]
-        .map((id) => ({ id, label: `${filterLabel(id, { nodes, edges })} (${id in nodes ? "node" : "edge"})` }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .map((o) => <option key={o.id} value={o.id}>{o.label}</option>),
-    [nodes, edges],
-  );
-
   // The text inputs keep their own text, keyed by row position; a move or a removal
   // shifts positions, so it bumps the epoch and the inputs reload from the operations.
   const [epoch, setEpoch] = useState(0);
@@ -83,15 +70,9 @@ export function AttributeOperationsEditor({
         return (
           <div key={`${epoch}-${i}`} className="space-y-1.5 rounded border border-zinc-200 p-2 dark:border-zinc-700">
             <div className="grid grid-cols-[auto_2fr_1fr_1fr_auto] items-center gap-1.5">
-              <Segmented
-                value={op.where ? "filter" : "element"}
-                options={[{ id: "element", label: "One Element" }, { id: "filter", label: "Filter" }]}
-                onChange={(m) => edit(i, m === "filter" ? { element: undefined, where: { kind: "node" } } : { where: undefined, element: "" })}
-              />
+              <TargetModeToggle target={op} onChange={(patch) => edit(i, patch)} />
               <TextBackedInput key={`${epoch}-${i}-path`} initial={formatPath(op.path)} placeholder="supply_capacity, water" onCommit={(t) => edit(i, { path: parsePath(t) })} />
-              <select className={inputCls} value={op.op} onChange={(e) => edit(i, { op: OperationKindSchema.parse(e.target.value) })}>
-                {OperationKindSchema.options.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
+              <OpSelect value={op.op} onChange={(kind) => edit(i, { op: kind })} />
               <TextBackedInput key={`${epoch}-${i}-value`} initial={String(op.value)} placeholder="value" onCommit={(t) => edit(i, { value: parseValue(t) })} />
               <div className="flex gap-1 text-zinc-400">
                 <button type="button" title="Move up" disabled={i === 0} className="hover:text-zinc-700 disabled:opacity-30" onClick={() => move(i, -1)}><ArrowUp size={12} /></button>
@@ -99,14 +80,7 @@ export function AttributeOperationsEditor({
                 <button type="button" title="Remove" className="hover:text-red-600" onClick={() => restructure(operations.filter((_, k) => k !== i))}><Trash2 size={12} /></button>
               </div>
             </div>
-            {op.where ? (
-              <FilterEditor value={op.where} onChange={(where) => edit(i, { where })} />
-            ) : (
-              <select className={inputCls} value={op.element ?? ""} onChange={(e) => edit(i, { element: e.target.value })}>
-                <option value="">— choose an Element —</option>
-                {elementOptions}
-              </select>
-            )}
+            <TargetPicker target={op} onChange={(patch) => edit(i, patch)} />
             {problem && <p className="text-[11px] text-red-600 dark:text-red-400">{problem}</p>}
           </div>
         );

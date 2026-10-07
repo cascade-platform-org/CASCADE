@@ -78,9 +78,8 @@ function splitSeries(text: string): string[] {
   return parts.map((p) => p.trim());
 }
 
-/** A cell's text as a value; "1,5" (a decimal comma, typed or pasted) reads as 1.5. */
-const cellValue = (text: string): Value | undefined =>
-  text.trim() === "" ? undefined : parseValue(text.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2"));
+/** A cell's text as a value; empty is no value. */
+const cellValue = (text: string): Value | undefined => (text.trim() === "" ? undefined : parseValue(text));
 
 const periodTitle = (p: PlannedPeriod, eventLabel: (id: string) => string) =>
   `${p.label}: ${p.phases.map((ph) => `P${ph.index + 1} ${ph.events.map(eventLabel).join(", ") || "no Events"}${ph.propagate ? " → Propagate" : ""}`).join(" · ")}`;

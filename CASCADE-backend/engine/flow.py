@@ -623,6 +623,25 @@ def parse_ratio_thresholds(raw: list[float] | None, n: int) -> list[float] | Non
     return [float(value) for value in raw]
 
 
+def resolve_ratio_thresholds(raw: list[float] | None, n: int) -> tuple[list[float] | None, list[str]]:
+    """The served-ratio → level table for a run, and a warning when it is ignored.
+
+    The table says what a *level* means, so it is one per project, read off the
+    Model Configuration beside the Functionality scale. None means the linear
+    split. A malformed table is warned about: its required length depends on the
+    scale, so falling back in silence would look like it had been applied.
+    """
+    if raw is None:
+        return None, []
+    table = parse_ratio_thresholds(raw, n)
+    if table is None:
+        return None, [
+            f"flow_ratio_thresholds ignored (linear split used): expected "
+            f"{n - 1} ascending values in [0, 1] for a {n}-level scale"
+        ]
+    return table, []
+
+
 def _ratio_to_level(
     served_ratio: float, n: int, thresholds: list[float] | None = None
 ) -> int:

@@ -32,7 +32,7 @@ from engine.flow import (
     DEFAULT_ALLOCATION,
     CategorySolve,
     is_flow_consumer,
-    parse_ratio_thresholds,
+    resolve_ratio_thresholds,
     solve_category,
     storage_exchange,
 )
@@ -66,35 +66,6 @@ def _resolve_flow_allocation(request: PropagationRequest) -> str:
             if allocation in ALLOCATIONS:
                 return allocation
     return DEFAULT_ALLOCATION
-
-
-def _resolve_ratio_thresholds(
-    request: PropagationRequest, scale_size: int
-) -> tuple[list[float] | None, list[str]]:
-    """Served-ratio → Functionality level table for this run (ADR-0003).
-
-    Read straight off the Model Configuration, beside the Functionality scale
-    it is expressed in terms of. Unlike `allocation` — which is genuinely
-    per-graph-type, since two networks may ration scarcity differently — this
-    table says what a *level* means, and a level means one thing across the
-    project or the Operativity Score averages unlike things.
-
-    Returns `(table, warnings)`. None means the linear split. A malformed table
-    is **warned about** rather than silently defaulted: its required length
-    depends on the scale, so falling back in silence would look like it had
-    been applied.
-    """
-    raw = request.config.flow_ratio_thresholds
-    if raw is None:
-        return None, []
-    table = parse_ratio_thresholds(raw, scale_size)
-    if table is None:
-        return None, [
-            f"flow_ratio_thresholds ignored (linear split used): expected "
-            f"{scale_size - 1} ascending values in [0, 1] for a "
-            f"{scale_size}-level scale"
-        ]
-    return table, []
 
 
 def run(request: PropagationRequest) -> PropagationResult:
@@ -140,7 +111,7 @@ def run(request: PropagationRequest) -> PropagationResult:
     max_rounds = (len(nodes) + 1) * scale_size + 5
 
     # Level table is validated against the scale, so it resolves after N.
-    ratio_thresholds, config_warnings = _resolve_ratio_thresholds(request, scale_size)
+    ratio_thresholds, config_warnings = resolve_ratio_thresholds(request.config.flow_ratio_thresholds, scale_size)
 
     # For each node, precompute which SourceToDemands categories to skip in the
     # Requisite pass. A category is skipped only when BOTH hold:

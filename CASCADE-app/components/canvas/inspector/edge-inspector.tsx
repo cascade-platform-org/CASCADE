@@ -17,7 +17,7 @@ import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { Edge } from "@/lib/schemas/network";
 import { Section, Field, NumberInput, Toggle, vulnHint } from "./primitives";
 import { CauseBanner } from "./cause-banner";
-import { StockEditor, stockFromRate } from "./stock-editor";
+import { StockEditor, toggleStock } from "./stock-editor";
 import { RulesEditor, PropertiesEditor } from "./editors";
 import { brandColor } from "@/lib/brand";
 
@@ -126,7 +126,7 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
             type="button"
             className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:underline dark:text-blue-400"
             onClick={() =>
-              patch({ capacity: typeof edge.capacity === "object" ? edge.capacity.rate : stockFromRate(edge.capacity ?? 0) })
+              patch({ capacity: toggleStock(edge.capacity ?? 0) })
             }
           >
             <Database size={11} />

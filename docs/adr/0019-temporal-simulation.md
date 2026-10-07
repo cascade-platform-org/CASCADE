@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built: the document in the project (`Project.temporal_simulation`, `schemas/temporal_simulation.py`, build plan slice 2) runs with the Run View (`lib/step-operator.ts`, slice 3), Stocks (ADR-0020, slice 4), Level Mode (`lib/level-mode.ts`, slice 5), and Metrics with the CSV export and the `temporal_simulation` Scorecard entry (`lib/temporal-metrics.ts`, `lib/period-entry.ts`, slice 6), the EPANET importer and samples (slice 7) and the user manual §9 (slice 8). Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built in release v1.1 (build plan: `temporal-simulation-design.md` §8). Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -149,7 +149,7 @@ Propagation only worsens Functionality, and ADR-0003 assigns improvement to the 
   2026-10-06). Reopening a project means running again; a saved run would add megabytes to
   every save, sync and download plus a content hash to tell when it is stale. A result worth
   keeping is a period saved to the Scorecard.
-- **A run is a view, not an edit** (decided 2026-10-06). It computes on its own copy and
+- **A run is a read-only view** (decided 2026-10-06). It computes on its own copy and
   never writes the live model or `update_history`. The **Run View** shows it as Analysis Mode
   shows a score: the canvas paints the selected period's reconstructed state, read-only.
   Leaving it (Reset, or End run) shows the model exactly as it was. A run therefore needs no
@@ -208,8 +208,8 @@ that machinery protected nothing.
 ### 6. A Level Scale shows a stock, orthogonal to Functionality; Level Mode recolours like Analysis
 
 Functionality only worsens and is derived by the engine, so it cannot show an accumulation
-whose extremes are both problems. A **Level Scale** in **Client Configuration** (never sent
-to the backend) is an ordered list of bands over the signed ratio `value / reference`, each
+whose extremes are both problems. A **Level Scale** in **Client Configuration** (the engine
+never reads it) is an ordered list of bands over the signed ratio `value / reference`, each
 with a label and a brand colour token; the default has five (large deficit, deficit,
 balanced, surplus, large surplus). The reference belongs to the Stock: by default its own
 bound `max(|min|, |max|)`, overridable by `Stock.level_reference` (level) and

@@ -9,7 +9,7 @@
  */
 
 import { stockValues, type LevelReading } from "@/lib/level-mode";
-import { periodState, type RunRecord } from "@/lib/step-operator";
+import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { RunTable } from "@/lib/temporal-metrics";
 import type { TemporalSimulationScorecardEntry } from "@/lib/schemas/network";
 
@@ -26,7 +26,7 @@ export function buildPeriodEntry(input: {
 }): TemporalSimulationScorecardEntry {
   const { record, number, table, reading, now = () => new Date() } = input;
   const snapshot = periodState(record, number);
-  const before = number > 1 ? periodState(record, number - 1) : record.start;
+  const before = walkPeriods(record, snapshot, number, number - 1);
   const period = record.periods[number - 1];
   return {
     type: "temporal_simulation",

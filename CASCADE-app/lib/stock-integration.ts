@@ -39,7 +39,7 @@ export interface Integration {
 
 type Flow = Pick<PropagationResult, "served_ratio" | "stored">;
 
-const demandOf = (node: Node | undefined, category: string): number =>
+export const demandOf = (node: Node | undefined, category: string): number =>
   node?.category_dependency_profiles?.[category]?.demand ?? 0;
 
 /** What every consumer of `category` received in this Propagation. */
@@ -70,7 +70,7 @@ export function integrateStocks(snapshot: GraphSnapshot, flow: Flow, n: number):
   const sources = new Map<string, string[]>();
   for (const node of Object.values(snapshot.nodes)) {
     for (const [category, value] of Object.entries(node.supply_capacity ?? {})) {
-      if (typeof value === "number" || !isStorage(value)) sources.set(category, [...(sources.get(category) ?? []), node.id]);
+      if (!isStorage(value)) sources.set(category, [...(sources.get(category) ?? []), node.id]);
     }
   }
   const drawnIn = (category: string) =>

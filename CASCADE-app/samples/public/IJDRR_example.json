@@ -1725,7 +1725,10 @@
             "phases": [
               {
                 "events": [
-                  "oQtVYPRrdEgfa_3HQvQUQ"
+                  {
+                    "event": "oQtVYPRrdEgfa_3HQvQUQ",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }
@@ -1749,7 +1752,10 @@
             "phases": [
               {
                 "events": [
-                  "evt-repair-source"
+                  {
+                    "event": "evt-repair-source",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }
@@ -1773,7 +1779,10 @@
             "phases": [
               {
                 "events": [
-                  "oQtVYPRrdEgfa_3HQvQUQ"
+                  {
+                    "event": "oQtVYPRrdEgfa_3HQvQUQ",
+                    "every": 1
+                  }
                 ],
                 "propagate": true
               }

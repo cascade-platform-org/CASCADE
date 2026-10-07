@@ -15,7 +15,7 @@
 import type { Project, Canvas } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { PropagationRequest } from "@/lib/schemas/api";
-import { isStorage, stockSupply, storageSink, storageSource } from "@/lib/stock-math";
+import { capacityNumber, isStorage, stockSupply, storageSink } from "@/lib/stock-math";
 
 /**
  * Drop `source_inp_content` (the embedded original .inp text) from canvases
@@ -53,11 +53,8 @@ function withStockNumbers(project: Project): { project: Project; storage: Storag
     if (!supply || Object.values(supply).every((v) => typeof v === "number")) continue;
     const numbers: Record<string, number> = {};
     for (const [category, value] of Object.entries(supply)) {
-      if (typeof value === "number") numbers[category] = value;
-      else if (isStorage(value)) {
-        numbers[category] = storageSource(value);
-        (storage[id] ??= {})[category] = storageSink(value);
-      } else numbers[category] = stockSupply(value).supply;
+      numbers[category] = capacityNumber(value);
+      if (isStorage(value)) (storage[id] ??= {})[category] = storageSink(value);
     }
     if (nodes === project.nodes) nodes = { ...project.nodes };
     nodes[id] = { ...node, supply_capacity: numbers };

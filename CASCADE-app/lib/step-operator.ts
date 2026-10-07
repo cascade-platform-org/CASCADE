@@ -193,11 +193,22 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
   return { start, periods, warnings };
 }
 
-/** The state at the end of period `number` (1-based), walked forward from the start. */
-export function periodState(record: RunRecord, number: number): GraphSnapshot {
-  let state = record.start;
-  for (const period of record.periods.slice(0, number)) {
-    for (const diff of period.diffs) state = applyGraphDiff(state, diff, "forward");
+/**
+ * The state at the end of period `to` (1-based; 0 is the start), walked from a
+ * known one: `state` at the end of period `from`. Diffs carry both directions,
+ * so the walk goes forwards or backwards and costs only the periods between.
+ */
+export function walkPeriods(record: RunRecord, known: GraphSnapshot, from: number, to: number): GraphSnapshot {
+  let state = known;
+  for (let k = from; k < to; k++) {
+    for (const diff of record.periods[k].diffs) state = applyGraphDiff(state, diff, "forward");
+  }
+  for (let k = from; k > to; k--) {
+    const diffs = record.periods[k - 1].diffs;
+    for (let i = diffs.length - 1; i >= 0; i--) state = applyGraphDiff(state, diffs[i], "backward");
   }
   return state;
 }
+
+/** The state at the end of period `number` (1-based), walked forward from the start. */
+export const periodState = (record: RunRecord, number: number): GraphSnapshot => walkPeriods(record, record.start, 0, number);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Play, RotateCcw, Save, AlertTriangle, XCircle, Download, Square } from "lucide-react";
+import { Play, RotateCcw, Save, Download, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -9,7 +9,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
 import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, savePeriodToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
-import { runTable } from "@/lib/temporal-metrics";
+import { STANDARD_COLUMNS, formatMetric, runTable } from "@/lib/temporal-metrics";
 import {
   EXPLAIN_END_RUN,
   EXPLAIN_EXPORT_CSV,
@@ -18,12 +18,10 @@ import {
   explainRun,
   explainSelectPeriod,
 } from "@/lib/temporal-simulation-explainers";
-import { Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
+import { Notices, Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 
-/** Before a run: the standard Metrics' names, a column each before the custom ones (ADR-0019 §4). */
-const STANDARD_METRICS = ["Operativity %", "Coverage", "Stock level"];
-
-const formatValue = (v: number | null) => (v === null ? "—" : Number.isInteger(v) ? String(v) : Math.abs(v) < 10 ? v.toFixed(3) : v.toFixed(1));
+/** Before a run: the standard Metrics' names, a column each before the custom ones. */
+const STANDARD_METRICS = Object.values(STANDARD_COLUMNS);
 
 export function RunTab() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
@@ -83,29 +81,10 @@ export function RunTab() {
         </div>
       )}
 
-      {runError && (
-        <p role="alert" className="flex gap-1.5 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
-          <XCircle size={12} className="mt-0.5 shrink-0" />{runError}
-        </p>
-      )}
-
-      {runWarnings && runWarnings.length > 0 && (
-        <ul className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          {runWarnings.map((w, i) => <li key={i} className="flex gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w}</li>)}
-        </ul>
-      )}
-
-      {errors.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
-          {errors.map((e, i) => <li key={i} className="flex gap-1.5"><XCircle size={12} className="mt-0.5 shrink-0" />{e}</li>)}
-        </ul>
-      )}
-
-      {plan.warnings.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          {plan.warnings.map((w, i) => <li key={i} className="flex gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w}</li>)}
-        </ul>
-      )}
+      <Notices tone="error" alert items={runError ? [runError] : []} />
+      <Notices tone="warning" items={runWarnings ?? []} />
+      <Notices tone="error" items={errors} />
+      <Notices tone="warning" items={plan.warnings} />
 
       {hasRun && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
@@ -132,11 +111,11 @@ export function RunTab() {
             </>
           )}
           <span className="flex-1" />
-          <SmallButton onClick={() => { explain(EXPLAIN_EXPORT_CSV); void exportRunCsv(); }}><Download size={11} /> Export CSV</SmallButton>
+          <SmallButton onClick={() => { explain(EXPLAIN_EXPORT_CSV); if (table) void exportRunCsv(table); }}><Download size={11} /> Export CSV</SmallButton>
           <SmallButton
             onClick={() => {
               explain(EXPLAIN_SAVE_SCORECARD);
-              void savePeriodToScorecard().then((label) => {
+              if (table) void savePeriodToScorecard(table).then((label) => {
                 if (label) useUiStore.getState().pushToast({ message: `Saved to the Scorecard: ${label}`, variant: "success", durationMs: 3000 });
               });
             }}
@@ -187,7 +166,7 @@ export function RunTab() {
                   </span>
                 </td>
                 {table
-                  ? table.rows[p.number - 1]?.values.map((v, i) => <td key={i} className="py-1 pr-2 tabular-nums text-zinc-700 dark:text-zinc-200">{formatValue(v)}</td>)
+                  ? table.rows[p.number - 1]?.values.map((v, i) => <td key={i} className="py-1 pr-2 tabular-nums text-zinc-700 dark:text-zinc-200">{formatMetric(v)}</td>)
                   : [...STANDARD_METRICS, ...metrics].map((_, i) => <td key={i} className="py-1 pr-2 text-zinc-300" title="Computed from the run record after a run">—</td>)}
               </tr>
             ))}

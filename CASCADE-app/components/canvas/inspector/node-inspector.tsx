@@ -19,7 +19,7 @@ import { useHistoryAction } from "@/hooks/useHistoryAction";
 import type { CapacityValue, Edge, Node } from "@/lib/schemas/network";
 import { undeclaredCapacities } from "@/lib/stock-checks";
 import { capacityNumber, isStorage } from "@/lib/stock-math";
-import { StockEditor, stockFromRate } from "./stock-editor";
+import { StockEditor, toggleStock } from "./stock-editor";
 import type { CategoryDependencyProfile } from "@/lib/schemas/network";
 import {
   Section, Field, TextInput, NumberInput, Toggle,
@@ -44,16 +44,19 @@ import { brandColor } from "@/lib/brand";
  * is surfaced where it is entered rather than left to be discovered in the
  * results.
  */
+const WARNING_BOX =
+  "mt-2 rounded-md border-l-2 border-amber-400 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200";
+
 function SupplyDemandConflictWarning({ node }: { node: Node }) {
   // Storage supplies and takes one Category by design (ADR-0020 §1c).
   const conflicting = Object.entries(node.supply_capacity ?? {})
-    .filter(([, value]) => typeof value === "number" || !isStorage(value))
+    .filter(([, value]) => !isStorage(value))
     .map(([cat]) => cat)
     .filter((cat) => (node.category_dependency_profiles?.[cat]?.demand ?? 0) > 0);
   if (conflicting.length === 0) return null;
 
   return (
-    <p className="mt-2 rounded-md border-l-2 border-amber-400 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200">
+    <p className={WARNING_BOX}>
       This node both supplies and demands{" "}
       <span className="font-medium">{conflicting.join(", ")}</span>. It will act
       as a source and a consumer of the same category at once, partly serving its
@@ -75,14 +78,13 @@ function SupplyWarnings({ node, nodes, edges }: { node: Node; nodes: Record<stri
   const undeclared = stockCats
     .map((cat) => ({ cat, ...undeclaredCapacities(cat, nodes, edges) }))
     .filter((u) => u.edges + u.nodes > 0);
-  const box = "mt-2 rounded-md border-l-2 border-amber-400 bg-amber-50 px-2 py-1.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200";
   return (
     <>
       {node.node_type === "Service" && supplied.length > 0 && (
-        <p className={box}>A Service node supplying {supplied.join(", ")}: a node that produces is usually a Source.</p>
+        <p className={WARNING_BOX}>A Service node supplying {supplied.join(", ")}: a node that produces is usually a Source.</p>
       )}
       {undeclared.map((u) => (
-        <p key={u.cat} className={box}>
+        <p key={u.cat} className={WARNING_BOX}>
           {u.cat} holds a Stock, and {u.edges > 0 && `${u.edges} edge${u.edges > 1 ? "s" : ""}`}
           {u.edges > 0 && u.nodes > 0 && " and "}
           {u.nodes > 0 && `${u.nodes} node${u.nodes > 1 ? "s" : ""}`} in it declare no capacity. Those default to the
@@ -162,17 +164,10 @@ function SupplyCapacityEditor({
             />
           )}
           {typeof cap === "number" ? (
-            <input
-              type="number"
+            <NumberInput
               min={0}
               value={cap}
-              onChange={(e) =>
-                commit(
-                  rows.map((r, j): [string, CapacityValue] =>
-                    j === i ? [r[0], Number(e.target.value)] : r,
-                  ),
-                )
-              }
+              onChange={(v) => commit(rows.map((r, j): [string, CapacityValue] => (j === i ? [r[0], v] : r)))}
               className={`flex-1 ${INLINE_INPUT_CLASS}`}
             />
           ) : (
@@ -183,7 +178,7 @@ function SupplyCapacityEditor({
           <button
             title={typeof cap === "number" ? "Make it a Stock: a level that persists across Temporal Simulation periods" : "Back to a plain number (keeps the rate)"}
             onClick={() =>
-              commit(rows.map((r, j): [string, CapacityValue] => (j === i ? [r[0], typeof cap === "number" ? stockFromRate(cap) : cap.rate] : r)))
+              commit(rows.map((r, j): [string, CapacityValue] => (j === i ? [r[0], toggleStock(cap)] : r)))
             }
             className={typeof cap === "number" ? "text-zinc-300 hover:text-blue-600" : "text-blue-600 hover:text-zinc-500"}
           >

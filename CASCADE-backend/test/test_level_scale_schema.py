@@ -22,3 +22,11 @@ def test_level_scale_defaults_to_five_ascending_bands_and_rejects_disorder():
         ])
     with pytest.raises(ValidationError, match="the last has none"):
         ModelConfiguration(**base, level_scale=[{"label": "a", "below": 1, "role": "danger", "step": 500}])
+
+
+def test_a_band_step_is_one_the_brand_ramps_define():
+    from schemas.config import LevelBand
+
+    assert LevelBand(label="a", role="danger", step=950).step == 950
+    with pytest.raises(ValidationError):
+        LevelBand(label="a", role="danger", step=250)

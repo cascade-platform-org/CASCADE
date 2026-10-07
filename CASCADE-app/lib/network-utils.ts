@@ -13,7 +13,6 @@ import { endRun } from "@/lib/temporal-jump-run";
 import { countChangedElements } from "@/lib/graph-diff";
 import { runWithHistory } from "@/lib/run-with-history";
 import { resetSnapshot } from "@/lib/scenario-baseline";
-import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 
 // ---------------------------------------------------------------------------
 // Reset
@@ -49,9 +48,6 @@ import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
  * honestly when there was nothing to reset.
  */
 export function resetFunctionality(): number {
-  // A Temporal Simulation run is a view on its own copy: Reset only leaves it,
-  // since the model never changed (ADR-0019 §5).
-  if (endTemporalSimulationRun()) return 0;
   const historyStore = useHistoryStore.getState();
   const n = selectN(useConfigStore.getState());
 

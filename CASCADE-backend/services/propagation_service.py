@@ -30,7 +30,7 @@ from core.graph import filter_project_by_scope, with_failed_elements
 from core.importers.inp import InpParseError, load_inp
 from core.importers.inp.map import compute_junction_demands
 from engine import propagation as _engine
-from engine.flow import _ratio_to_level, parse_ratio_thresholds
+from engine.flow import _ratio_to_level, resolve_ratio_thresholds
 from schemas.network import Project
 from schemas.results import (
     BatchPropagationRequest,
@@ -93,17 +93,12 @@ async def propagate_batch(request: BatchPropagationRequest) -> list[PropagationR
     Propagation takes, including the EPANET-mode branch and the timeout, so a
     batched result cannot differ from the same Scenario run on its own.
     """
+    # Every single-request field but the Project, so a batched Scenario carries all of them.
+    shared = {name: getattr(request, name) for name in PropagationRequest.model_fields if name != "project"}
     results: list[PropagationResult] = []
     for coalition in request.coalitions:
         results.append(
-            await propagate(
-                PropagationRequest(
-                    project=with_failed_elements(request.project, coalition),
-                    config=request.config,
-                    scope=request.scope,
-                    active_canvas_id=request.active_canvas_id,
-                )
-            )
+            await propagate(PropagationRequest(**shared, project=with_failed_elements(request.project, coalition)))
         )
     return results
 
@@ -220,20 +215,9 @@ def _run_epanet(scoped: Project, request: PropagationRequest) -> PropagationResu
     ratios = solve_epanet_snapshot(wn, demands, broken_link_ids)
     # Same quantization rule the normal flow heuristic uses (engine.flow._ratio_to_level),
     # including a configured level table — see module docstring for why this file, not
-    # epanet_solve_service.py, does it. Resolved against `n_levels`, the N this path
-    # quantizes with, so a table validates against the number it is actually used with.
-    # Validated against `n_levels`, the N this path quantizes with, so a table
-    # is judged against the number it is actually used with.
-    raw_thresholds = request.config.flow_ratio_thresholds
-    ratio_thresholds = parse_ratio_thresholds(raw_thresholds, n_levels)
-    threshold_warnings = (
-        []
-        if raw_thresholds is None or ratio_thresholds is not None
-        else [
-            f"flow_ratio_thresholds ignored (linear split used): expected "
-            f"{n_levels - 1} ascending values in [0, 1] for a {n_levels}-level scale"
-        ]
-    )
+    # epanet_solve_service.py, does it. Validated against `n_levels`, the N this path
+    # quantizes with.
+    ratio_thresholds, threshold_warnings = resolve_ratio_thresholds(request.config.flow_ratio_thresholds, n_levels)
     levels = {
         jid: _ratio_to_level(ratio, n_levels, ratio_thresholds) for jid, ratio in ratios.items()
     }

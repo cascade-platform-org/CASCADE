@@ -11,11 +11,14 @@
  */
 
 import { useState } from "react";
-import { StockSchema, type Stock } from "@/lib/schemas/network";
+import { StockSchema, type CapacityValue, type Stock } from "@/lib/schemas/network";
 import { NumberInput, Toggle, cn } from "./primitives";
 
 /** A plain capacity becomes a Stock carrying the same rate, with nothing stored yet. */
-export const stockFromRate = (rate: number): Stock => ({ rate, level: 0, retention: 1, efficiency: 1 });
+const stockFromRate = (rate: number): Stock => ({ rate, level: 0, retention: 1, efficiency: 1 });
+
+/** A plain number becomes a Stock at that rate; a Stock goes back to its rate. */
+export const toggleStock = (value: CapacityValue): CapacityValue => (typeof value === "number" ? stockFromRate(value) : value.rate);
 
 type NumberKey = "rate" | "inflow" | "level" | "min" | "max" | "max_draw" | "max_fill" | "retention" | "efficiency";
 

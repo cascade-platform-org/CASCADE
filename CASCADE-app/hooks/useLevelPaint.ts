@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { levelPaint } from "@/lib/level-mode";
-import { periodState } from "@/lib/step-operator";
+import { walkPeriods } from "@/lib/step-operator";
 
 /**
  * Level Mode's colours and legend for the period the Run View shows, or null
@@ -20,7 +20,7 @@ export function useLevelPaint() {
   const scale = useConfigStore((s) => s.config.level_scale);
   return useMemo(() => {
     if (display !== "level" || !shown || !record) return null;
-    const before = selected > 1 ? periodState(record, selected - 1) : record.start;
+    const before = walkPeriods(record, shown, selected, selected - 1);
     return levelPaint(shown, before, scale, reading);
   }, [display, reading, shown, record, selected, scale]);
 }

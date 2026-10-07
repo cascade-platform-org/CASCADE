@@ -1,6 +1,6 @@
 # Temporal Simulation — platform design proposal
 
-**Status: proposed, not built.** The decisions are recorded as proposed ADRs —
+**Status: built in release v1.1** (§8). The decisions are recorded in ADRs —
 [0019](../adr/0019-temporal-simulation.md) (Timeline, Phases, the period sequence, run
 recording), [0020](../adr/0020-stocks-live-in-supply-capacity.md) (Stocks, `served_ratio`)
 and [0021](../adr/0021-event-attribute-operations.md) (Event Attribute Operations) — and
@@ -882,8 +882,7 @@ mirror `lib/schemas/temporal-simulation.ts` (slice 2). As built (slice 8): the b
 gone, the Stock tab (a calculator on a sample Stock) is gone now that Stocks are edited in
 the Inspector, and the explanations are the user manual's §9. The "What this will do"
 panel is kept for the owner's review of v1.1: it is the window's in-context help, and
-removing it touches every control. The window becomes the feature's UI; its banner and "What
-this will do" panel go, and their text becomes the user-manual chapter.
+removing it touches every control.
 
 | # | Slice | Needs | Done when |
 |---|---|---|---|

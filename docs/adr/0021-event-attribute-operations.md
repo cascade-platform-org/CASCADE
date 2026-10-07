@@ -1,6 +1,6 @@
 # ADR-0021 — Events carry Attribute Operations on the current value
 
-**Status:** accepted (2026-10-06). Built for hand-fired Events: `lib/attribute-operations.ts`, the last pass of `lib/event-application.ts`, the Config → Events editor; Config's Save refuses an invalid operation, since the configuration travels with every Propagation request. Inside a Temporal Simulation run (not built yet) writes land in the run record only. Reasoning:
+**Status:** accepted (2026-10-06). Built for hand-fired Events: `lib/attribute-operations.ts`, the last pass of `lib/event-application.ts`, the Config → Events editor; Config's Save refuses an invalid operation, since the configuration travels with every Propagation request. Inside a Temporal Simulation run, writes land in the run record only. Reasoning:
 `docs/project/temporal-simulation-design.md` §2.3.
 
 ## Context

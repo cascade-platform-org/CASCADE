@@ -198,6 +198,8 @@ class GraphTypeConfig(BaseModel):
 
 
 BrandRole = Literal["neutral", "danger", "warning", "success", "accent"]
+# The steps every brand ramp defines (CASCADE-app/lib/brand.ts RAMP_STEPS).
+BrandStep = Literal[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 
 
 class LevelBand(BaseModel):
@@ -209,7 +211,7 @@ class LevelBand(BaseModel):
     label: str
     below: Optional[float] = Field(default=None, description="Upper bound of the ratio; absent on the last band.")
     role: BrandRole
-    step: int = Field(..., ge=50, le=950)
+    step: BrandStep
 
 
 def _default_level_scale() -> list[LevelBand]:

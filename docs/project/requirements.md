@@ -623,7 +623,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved definition 
 - Every engine call (Propagate, Analysis, Scorecard, Timeline) sends a Stock as its current supply number; the engine never receives a `Stock`.
 - A node Stock with a `rate` requires its node to be the only source of its Category (storage is exempt); an edge Stock requires its target to have exactly one incoming flow edge. Otherwise that Stock is not integrated and a warning is shown.
 - When an edge Stock's `rate` exceeds its `inflow` (capacity lent by others, e.g. cross-training), coverage is reported and the period's balance is flagged attribution-invalid.
-- Before each propagating Phase a Stock contributes `rate + min(max_draw, max(0, retention·level + efficiency·inflow − rate − min))` to supply (scaled by Functionality like any supply). Right after the period's last propagating Phase the level is integrated once from what that Phase delivered (ADR-0020 §2). The engine never reads or writes a Stock, and a Rule never writes one.
+- Before each propagating Phase a Stock contributes its supply number (ADR-0020 §2), scaled by Functionality like any supply. Right after the period's last propagating Phase the level is integrated once from what that Phase delivered (ADR-0020 §2). The engine never reads or writes a Stock, and a Rule never writes one.
 - `max` or `min` truncating a period reports the amount (`spilled`, `unmet`).
 - End run or Reset leaves the Run View; every Stock shows its authored level, since a run never writes the model. A hand edit of a Stock field survives Reset.
 - The Propagation result exposes `served_ratio` per consumer and Category.
@@ -635,7 +635,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved definition 
 
 **Recording and metrics.**
 - A run record stores the start state, one Graph Diff per Phase (the period's integration belongs to the diff of the Phase it follows), no image per period; the full state of any period is rebuilt on request. It lives in memory for the session and is not saved: reopening a project means running again. The Timeline, its profile and its Metrics are part of the project file.
-- A run is a view, not an edit: it computes on its own copy of the model (Reset, both halves) and is shown in the **Run View**, read-only, as Analysis Mode shows a score. The live model and its undo history are never written, so Reset or End run shows the model exactly as before. Turning a period into the working scenario is not in v1.1.
+- A run is a read-only view: it computes on its own copy of the model (Reset, both halves) and is shown in the **Run View**, read-only, as Analysis Mode shows a score. The live model and its undo history are never written, so Reset or End run shows the model exactly as before. Turning a period into the working scenario is not in v1.1.
 - Standard Metrics (Operativity Score; coverage per Category = delivered ÷ demand; stock level per Category = signed sum of its Stocks' levels) and user-defined ones (target filter, attribute, read `state` or `change` = after − before, aggregate, optional filter) are evaluated at read time from recorded state and shown at every period. A metric at period *t* reads only periods up to *t*. The periods × Metrics table exports as CSV; post-hoc summaries are left to the spreadsheet.
 - **Save period to Scorecard** writes a `temporal_simulation` entry: Timeline name and period label, the period's end-state snapshot, its Metric values (computed at save, since the run is not kept), its Level Mode values with their references, and a PNG.
 
@@ -645,7 +645,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved definition 
 
 **UI.** The supply editor is offered on every Node Type; a non-blocking warning appears on a Service node with any `supply_capacity` entry, and on a Category that holds a Stock while an edge or throughput capacity in it is undeclared. The Stock's level is labelled "positive = available to draw". The existing warning for a node with both supply and demand of one Category is unchanged except for storage, which does both by design; any other Stock sits on a supplying node or on a consumer's single incoming edge.
 
-**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs and whether a simulation entry is a new type in ADR-0006's union; backlog Stocks (`couples`); per-source `utilisation` and source-side fairness between ordinary sources (storage has its own rule); automatic repair; backups whose countdown stops when supply returns.
+**Open (§16):** whether `PropagationScorecardEntry` migrates to diffs; backlog Stocks (`couples`); per-source `utilisation` and source-side fairness between ordinary sources (storage has its own rule); automatic repair; backups whose countdown stops when supply returns.
 
 ---
 
@@ -971,8 +971,8 @@ without a separate validation script — the same comparison
 | Additional category types beyond `SourceToDemands` and `Requisite` | Extensibility confirmed; types TBD |
 | Exact scorecard layout and visual design | To be defined during UI design |
 | Server sync conflict resolution strategy | Resolved by design — sync never merges. Every save is an independent new version (§13.4); there is nothing to reconcile because nothing is ever overwritten. |
-| Detailed recovery mechanics for `direct_damage` nodes | Deferred. *Proposed* Temporal Simulation (§9.6) repairs only through an Event; automatic repair stays open |
-| Temporal Simulation (release v1.1): a saved, re-runnable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Specified, not built** — §9.6; ADR-0019/0020/0021 (proposed); working design `temporal-simulation-design.md`. Exposing `served_ratio` and storage's `stored` amends ADR-0003; `utilisation` (per source) and source-side fairness between ordinary sources are deferred. Open: backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
+| Detailed recovery mechanics for `direct_damage` nodes | Deferred. The Temporal Simulation (§9.6) repairs only through an Event; automatic repair stays open |
+| Temporal Simulation (release v1.1): a saved, re-runnable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Implemented** — §9.6; ADR-0019/0020/0021; design `temporal-simulation-design.md`. Exposing `served_ratio` and storage's `stored` amends ADR-0003; `utilisation` (per source) and source-side fairness between ordinary sources are deferred. Open: backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 
 ---

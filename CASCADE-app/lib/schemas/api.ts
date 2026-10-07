@@ -125,12 +125,7 @@ export const MAX_COALITIONS_PER_BATCH = 50;
  * hundreds of coalitions over an unchanged Project, and re-sending that Project
  * every time dominated the cost of a run.
  */
-export const BatchPropagationRequestSchema = z.object({
-  project: ProjectSchema,
-  config: ModelConfigurationSchema,
-  scope: z.enum(["local", "global"]),
-  active_canvas_id: z.string().optional(),
-  storage: z.record(z.string(), z.record(z.string(), z.number())).optional(),
+export const BatchPropagationRequestSchema = PropagationRequestSchema.extend({
   coalitions: z.array(z.array(z.string())).min(1).max(MAX_COALITIONS_PER_BATCH),
 });
 

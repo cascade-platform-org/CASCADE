@@ -9,33 +9,19 @@
 import { useMemo, useState } from "react";
 import { Copy, Trash2, X } from "lucide-react";
 import { nanoid } from "nanoid";
-import { useShallow } from "zustand/react/shallow";
-import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { filterLabel } from "@/lib/element-filter";
 import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
 import { firesEvery } from "@/lib/timeline-plan";
-import { OperationKindSchema, valueFitsOp } from "@/lib/schemas/attribute-operation";
+import { valueFitsOp } from "@/lib/schemas/attribute-operation";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
-import { FilterEditor } from "./filter-editor";
 import { NumberInput } from "@/components/ui/number-input";
-import { Field, Segmented, SmallButton, TextBackedInput, describeRow, formatPath, inputCls, parsePath, parseValue, usePlan } from "./fields";
+import { OpSelect, TargetModeToggle, TargetPicker } from "./operation-target";
+import { Field, SmallButton, TextBackedInput, describeRow, formatPath, inputCls, parsePath, parseValue, usePlan } from "./fields";
 
 export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; onClose: () => void; onSelect: (id: string) => void }) {
   const { updateProfile, updateRow } = useTemporalSimulationStore.getState();
   const plan = usePlan();
   const labels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
-  const { nodes, edges } = useCanvasStore(useShallow((s) => ({ nodes: s.nodes, edges: s.edges })));
-
-  // Built once per model change.
-  const elementOptions = useMemo(
-    () =>
-      [...Object.keys(nodes), ...Object.keys(edges)]
-        .map((id) => ({ id, label: `${filterLabel(id, { nodes, edges })} (${id in nodes ? "node" : "edge"})` }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .map((o) => <option key={o.id} value={o.id}>{o.label}</option>),
-    [nodes, edges],
-  );
 
   function edit(patch: Partial<Omit<ProfileRow, "id" | "values">>) {
     updateRow(row.id, (r) => { Object.assign(r, patch); });
@@ -75,11 +61,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
 
       <div className="grid grid-cols-[auto_2fr_1fr] items-end gap-2">
         <Field label="Applies to">
-          <Segmented
-            value={row.where ? "filter" : "element"}
-            options={[{ id: "element", label: "One Element" }, { id: "filter", label: "Filter" }]}
-            onChange={(m) => edit(m === "filter" ? { element: undefined, where: { kind: "node" } } : { where: undefined, element: "" })}
-          />
+          <TargetModeToggle target={row} onChange={edit} />
         </Field>
         <Field label="Path (comma-separated)">
           <TextBackedInput
@@ -90,28 +72,19 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
           />
         </Field>
         <Field label="Op">
-          <select className={inputCls} value={row.op} onChange={(e) => edit({ op: OperationKindSchema.parse(e.target.value) })}>
-            {OperationKindSchema.options.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <OpSelect value={row.op} onChange={(op) => edit({ op })} />
         </Field>
       </div>
 
       <ValueWriter row={row} labels={labels} />
 
       <div className="mt-2">
-        {row.where ? (
-          // FilterEditor explains its own change, so this skips `describeRow`.
-          <FilterEditor
-            onExplain={useTemporalSimulationStore.getState().explain}
-            value={row.where}
-            onChange={(where) => updateRow(row.id, (r) => { r.where = where; })}
-          />
-        ) : (
-          <select className={inputCls} value={row.element ?? ""} onChange={(e) => edit({ element: e.target.value })}>
-            <option value="">— choose an Element —</option>
-            {elementOptions}
-          </select>
-        )}
+        {/* FilterEditor explains its own change, so a filter edit skips `describeRow`. */}
+        <TargetPicker
+          target={row}
+          onExplain={useTemporalSimulationStore.getState().explain}
+          onChange={(patch) => (patch.where ? updateRow(row.id, (r) => { r.where = patch.where; }) : edit(patch))}
+        />
       </div>
     </div>
   );
