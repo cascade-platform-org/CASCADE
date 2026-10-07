@@ -27,6 +27,7 @@ from core.importers.inp import (
     load_inp,
     skeletonize_to_target,
 )
+from core.importers.inp.temporal import to_temporal_simulation
 from schemas.auth import AuthUser
 from schemas.import_inp import ImportInpRequest, ImportInpResponse
 
@@ -37,7 +38,10 @@ router = APIRouter(prefix="/api/import", tags=["import"])
 _DEFAULT_TARGET_NODES = 300
 
 
-def _run_import(body: ImportInpRequest, target_nodes: int) -> ImportInpResponse:
+def _run_import(body: ImportInpRequest, target_nodes: int, temporal: bool = False) -> ImportInpResponse:
+    """The import pipeline. `temporal` also makes the bundle a Temporal
+    Simulation model (tanks as storage, a starting simulation from the file's
+    time data), after the same mapping the published importer does."""
     warnings: list[str] = []
 
     wn = load_inp(body.content)
@@ -94,6 +98,8 @@ def _run_import(body: ImportInpRequest, target_nodes: int) -> ImportInpResponse:
         merged_map=merged_map,
         warnings=warnings,
     )
+    if temporal:
+        to_temporal_simulation(wn, bundle, merged_map, warnings)
     return ImportInpResponse(
         bundle=bundle,
         warnings=warnings,
@@ -101,6 +107,24 @@ def _run_import(body: ImportInpRequest, target_nodes: int) -> ImportInpResponse:
         imported_nodes=len(bundle.project.nodes),
         skeleton_threshold_m=threshold,
     )
+
+
+def _target_nodes(body: ImportInpRequest, user: AuthUser) -> int:
+    """Node budget: explicit request wins; else the caller's entitlement; else
+    a sensible default for unbounded roles."""
+    if body.target_nodes is not None:
+        return body.target_nodes
+    ent = user.entitlement
+    return ent.max_nodes if ent and ent.max_nodes is not None else _DEFAULT_TARGET_NODES
+
+
+async def _import(body: ImportInpRequest, user: AuthUser, temporal: bool) -> ImportInpResponse:
+    try:
+        return await run_in_threadpool(_run_import, body, _target_nodes(body, user), temporal)
+    except (InpParseError, GeoTransformError, SkeletonError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 @router.post(
@@ -115,18 +139,17 @@ async def import_inp(
     body: ImportInpRequest,
     user: AuthUser = Depends(get_current_user),
 ) -> ImportInpResponse:
-    # Node budget: explicit request wins; else the caller's entitlement; else
-    # a sensible default for unbounded roles.
-    target_nodes = body.target_nodes
-    if target_nodes is None:
-        ent = user.entitlement
-        target_nodes = (
-            ent.max_nodes if ent and ent.max_nodes is not None else _DEFAULT_TARGET_NODES
-        )
+    return await _import(body, user, temporal=False)
 
-    try:
-        return await run_in_threadpool(_run_import, body, target_nodes)
-    except (InpParseError, GeoTransformError, SkeletonError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-        ) from exc
+
+@router.post(
+    "/inp/temporal",
+    response_model=ImportInpResponse,
+    response_model_exclude_none=True,
+    summary="Convert an EPANET .inp to a Temporal Simulation model: tanks as storage, a starting simulation",
+)
+async def import_inp_temporal(
+    body: ImportInpRequest,
+    user: AuthUser = Depends(get_current_user),
+) -> ImportInpResponse:
+    return await _import(body, user, temporal=True)

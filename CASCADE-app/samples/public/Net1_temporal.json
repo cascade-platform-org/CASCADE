@@ -1,0 +1,1891 @@
+{
+  "project": {
+    "version": "2.0",
+    "meta": {
+      "name": "Net1 — an aqueduct over a day",
+      "description": "Imported from EPANET .inp (9 junctions, 12 pipes)."
+    },
+    "nodes": {
+      "9": {
+        "id": "9",
+        "functionality": 3,
+        "label": "9",
+        "node_type": "Source",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 0.0,
+          "y": 375.0
+        },
+        "supply_capacity": {
+          "water": 10000000.0
+        },
+        "properties": {
+          "inp_id": "9",
+          "kind": "reservoir",
+          "head_m": 243.84
+        }
+      },
+      "2": {
+        "id": "2",
+        "functionality": 3,
+        "label": "2",
+        "node_type": "Source",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 750.0,
+          "y": 0.0
+        },
+        "supply_capacity": {
+          "water": {
+            "rate": 0.0,
+            "level": 1890585.274,
+            "min": 1575487.729,
+            "max": 2363231.593,
+            "max_draw": 410433.058,
+            "max_fill": 410433.058,
+            "retention": 1.0,
+            "efficiency": 1.0,
+            "change_reference": 69399.215
+          }
+        },
+        "properties": {
+          "inp_id": "2",
+          "kind": "tank",
+          "volume_m3": 2835.9,
+          "elevation_m": 259.08,
+          "storage": true
+        }
+      },
+      "12": {
+        "id": "12",
+        "functionality": 3,
+        "label": "12",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 750.0,
+          "y": 375.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 15141.647136000001
+          }
+        },
+        "properties": {
+          "inp_id": "12",
+          "elevation_m": 213.36
+        }
+      },
+      "10": {
+        "id": "10",
+        "functionality": 3,
+        "label": "10",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 187.5,
+          "y": 375.0
+        },
+        "properties": {
+          "inp_id": "10",
+          "elevation_m": 216.41
+        }
+      },
+      "22": {
+        "id": "22",
+        "functionality": 3,
+        "label": "22",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 750.0,
+          "y": 937.5
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 20188.862848
+          }
+        },
+        "properties": {
+          "inp_id": "22",
+          "elevation_m": 211.84
+        }
+      },
+      "31": {
+        "id": "31",
+        "functionality": 3,
+        "label": "31",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 375.0,
+          "y": 1500.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10094.431424
+          }
+        },
+        "properties": {
+          "inp_id": "31",
+          "elevation_m": 213.36
+        }
+      },
+      "21": {
+        "id": "21",
+        "functionality": 3,
+        "label": "21",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 375.0,
+          "y": 937.5
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 15141.647136000001
+          }
+        },
+        "properties": {
+          "inp_id": "21",
+          "elevation_m": 213.36
+        }
+      },
+      "13": {
+        "id": "13",
+        "functionality": 3,
+        "label": "13",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 1125.0,
+          "y": 375.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10094.431424
+          }
+        },
+        "properties": {
+          "inp_id": "13",
+          "elevation_m": 211.84
+        }
+      },
+      "23": {
+        "id": "23",
+        "functionality": 3,
+        "label": "23",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 1125.0,
+          "y": 937.5
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 15141.647136000001
+          }
+        },
+        "properties": {
+          "inp_id": "23",
+          "elevation_m": 210.31
+        }
+      },
+      "11": {
+        "id": "11",
+        "functionality": 3,
+        "label": "11",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 375.0,
+          "y": 375.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 15141.647136000001
+          }
+        },
+        "properties": {
+          "inp_id": "11",
+          "elevation_m": 216.41
+        }
+      },
+      "32": {
+        "id": "32",
+        "functionality": 3,
+        "label": "32",
+        "node_type": "Service",
+        "node_categories": [
+          "water"
+        ],
+        "position": {
+          "x": 750.0,
+          "y": 1500.0
+        },
+        "category_dependency_profiles": {
+          "water": {
+            "dependency_level": 3,
+            "demand": 10094.431424
+          }
+        },
+        "properties": {
+          "inp_id": "32",
+          "elevation_m": 216.41
+        }
+      },
+      "pump_9": {
+        "id": "pump_9",
+        "functionality": 3,
+        "label": "Pump 9",
+        "node_type": "Infrastructure",
+        "node_categories": [
+          "water",
+          "pumping"
+        ],
+        "position": {
+          "x": 93.75,
+          "y": 375.0
+        },
+        "vulnerability_levels": {
+          "evt-blackout-pump-failure": 2
+        },
+        "properties": {
+          "inp_id": "9",
+          "kind": "pump",
+          "pump_type": "HEAD"
+        }
+      }
+    },
+    "edges": {
+      "e_10": {
+        "id": "e_10",
+        "source": "10",
+        "target": "11",
+        "functionality": 3,
+        "capacity": 410433.0580689731,
+        "properties": {
+          "inp_id": "10",
+          "kind": "pipe",
+          "length_m": 3209.54,
+          "diameter_m": 0.4572,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.8318
+        }
+      },
+      "e_11__fwd": {
+        "id": "e_11__fwd",
+        "source": "11",
+        "target": "12",
+        "functionality": 3,
+        "capacity": 248286.66475777386,
+        "properties": {
+          "inp_id": "11",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.3556,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 1.1058,
+          "direction": "forward"
+        }
+      },
+      "e_11__rev": {
+        "id": "e_11__rev",
+        "source": "12",
+        "target": "11",
+        "functionality": 3,
+        "capacity": 248286.66475777386,
+        "properties": {
+          "inp_id": "11",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.3556,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 1.1058,
+          "direction": "reverse"
+        }
+      },
+      "e_12": {
+        "id": "e_12",
+        "source": "12",
+        "target": "13",
+        "functionality": 3,
+        "capacity": 126676.86977437446,
+        "properties": {
+          "inp_id": "12",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.254,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 2.3499
+        }
+      },
+      "e_21__fwd": {
+        "id": "e_21__fwd",
+        "source": "21",
+        "target": "22",
+        "functionality": 3,
+        "capacity": 126676.86977437446,
+        "properties": {
+          "inp_id": "21",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.254,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.7533,
+          "direction": "forward"
+        }
+      },
+      "e_21__rev": {
+        "id": "e_21__rev",
+        "source": "22",
+        "target": "21",
+        "functionality": 3,
+        "capacity": 126676.86977437446,
+        "properties": {
+          "inp_id": "21",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.254,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.7533,
+          "direction": "reverse"
+        }
+      },
+      "e_22__fwd": {
+        "id": "e_22__fwd",
+        "source": "22",
+        "target": "23",
+        "functionality": 3,
+        "capacity": 182414.69247509915,
+        "properties": {
+          "inp_id": "22",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.3048,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.7645,
+          "direction": "forward"
+        }
+      },
+      "e_22__rev": {
+        "id": "e_22__rev",
+        "source": "23",
+        "target": "22",
+        "functionality": 3,
+        "capacity": 182414.69247509915,
+        "properties": {
+          "inp_id": "22",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.3048,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.7645,
+          "direction": "reverse"
+        }
+      },
+      "e_31__fwd": {
+        "id": "e_31__fwd",
+        "source": "31",
+        "target": "32",
+        "functionality": 3,
+        "capacity": 45603.67311877479,
+        "properties": {
+          "inp_id": "31",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.1524,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.5534,
+          "direction": "forward"
+        }
+      },
+      "e_31__rev": {
+        "id": "e_31__rev",
+        "source": "32",
+        "target": "31",
+        "functionality": 3,
+        "capacity": 45603.67311877479,
+        "properties": {
+          "inp_id": "31",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.1524,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.5534,
+          "direction": "reverse"
+        }
+      },
+      "e_110__fwd": {
+        "id": "e_110__fwd",
+        "source": "2",
+        "target": "12",
+        "functionality": 3,
+        "capacity": 410433.0580689731,
+        "properties": {
+          "inp_id": "110",
+          "kind": "pipe",
+          "length_m": 60.96,
+          "diameter_m": 0.4572,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 3.4606,
+          "direction": "forward"
+        }
+      },
+      "e_110__rev": {
+        "id": "e_110__rev",
+        "source": "12",
+        "target": "2",
+        "functionality": 3,
+        "capacity": 410433.0580689731,
+        "properties": {
+          "inp_id": "110",
+          "kind": "pipe",
+          "length_m": 60.96,
+          "diameter_m": 0.4572,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 3.4606,
+          "direction": "reverse"
+        }
+      },
+      "e_111": {
+        "id": "e_111",
+        "source": "11",
+        "target": "21",
+        "functionality": 3,
+        "capacity": 126676.86977437446,
+        "properties": {
+          "inp_id": "111",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.254,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 2.4718
+        }
+      },
+      "e_112": {
+        "id": "e_112",
+        "source": "12",
+        "target": "22",
+        "functionality": 3,
+        "capacity": 182414.69247509915,
+        "properties": {
+          "inp_id": "112",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.3048,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 2.9891
+        }
+      },
+      "e_113__fwd": {
+        "id": "e_113__fwd",
+        "source": "13",
+        "target": "23",
+        "functionality": 3,
+        "capacity": 81073.19665559963,
+        "properties": {
+          "inp_id": "113",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.2032,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 1.1816,
+          "direction": "forward"
+        }
+      },
+      "e_113__rev": {
+        "id": "e_113__rev",
+        "source": "23",
+        "target": "13",
+        "functionality": 3,
+        "capacity": 81073.19665559963,
+        "properties": {
+          "inp_id": "113",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.2032,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 1.1816,
+          "direction": "reverse"
+        }
+      },
+      "e_121": {
+        "id": "e_121",
+        "source": "21",
+        "target": "31",
+        "functionality": 3,
+        "capacity": 81073.19665559963,
+        "properties": {
+          "inp_id": "121",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.2032,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 0.887
+        }
+      },
+      "e_122": {
+        "id": "e_122",
+        "source": "22",
+        "target": "32",
+        "functionality": 3,
+        "capacity": 45603.67311877479,
+        "properties": {
+          "inp_id": "122",
+          "kind": "pipe",
+          "length_m": 1609.34,
+          "diameter_m": 0.1524,
+          "roughness": 100.0,
+          "velocity_ms": 2.5,
+          "sweep_peak_ms": 1.1068
+        }
+      },
+      "e_9__in": {
+        "id": "e_9__in",
+        "source": "9",
+        "target": "pump_9",
+        "functionality": 3,
+        "capacity": 94635.29460000001,
+        "properties": {
+          "inp_id": "9",
+          "kind": "pump",
+          "pump_type": "HEAD"
+        }
+      },
+      "e_9__out": {
+        "id": "e_9__out",
+        "source": "pump_9",
+        "target": "10",
+        "functionality": 3,
+        "capacity": 94635.29460000001,
+        "properties": {
+          "inp_id": "9",
+          "kind": "pump",
+          "pump_type": "HEAD"
+        }
+      }
+    },
+    "canvases": [
+      {
+        "id": "canvas-inp-2667e570",
+        "label": "Net1",
+        "color": "#0ea5e9",
+        "graph": {
+          "graph_type": "water_network",
+          "node_ids": [
+            "10",
+            "11",
+            "12",
+            "13",
+            "2",
+            "21",
+            "22",
+            "23",
+            "31",
+            "32",
+            "9",
+            "pump_9"
+          ],
+          "edge_ids": [
+            "e_10",
+            "e_110__fwd",
+            "e_110__rev",
+            "e_111",
+            "e_112",
+            "e_113__fwd",
+            "e_113__rev",
+            "e_11__fwd",
+            "e_11__rev",
+            "e_12",
+            "e_121",
+            "e_122",
+            "e_21__fwd",
+            "e_21__rev",
+            "e_22__fwd",
+            "e_22__rev",
+            "e_31__fwd",
+            "e_31__rev",
+            "e_9__in",
+            "e_9__out"
+          ]
+        }
+      }
+    ],
+    "update_history": [],
+    "scorecard": [],
+    "temporal_simulation": {
+      "format": "cascade.temporal-simulation/v1",
+      "timeline": {
+        "name": "Net1 — a day with a pump outage and an evening surge",
+        "steps": [
+          {
+            "label": "2023-01-01T00",
+            "unit": "hour",
+            "repeat": 6,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T06",
+            "unit": "hour",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "evt-blackout-pump-failure"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T07",
+            "unit": "hour",
+            "repeat": 5,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T12",
+            "unit": "hour",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "evt-pump-restored"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T13",
+            "unit": "hour",
+            "repeat": 5,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T18",
+            "unit": "hour",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "evt-demand-surge-top10"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2023-01-01T19",
+            "unit": "hour",
+            "repeat": 5,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          }
+        ]
+      },
+      "profile": {
+        "2023-01-01T00": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 12618.039
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          }
+        ],
+        "2023-01-01T02": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          }
+        ],
+        "2023-01-01T04": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 17665.255
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          }
+        ],
+        "2023-01-01T06": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 10094.431
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 20188.863
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 10094.431
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 10094.431
+          }
+        ],
+        "2023-01-01T08": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 17665.255
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 13248.941
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 8832.627
+          }
+        ],
+        "2023-01-01T10": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 15141.647
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 11356.235
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          }
+        ],
+        "2023-01-01T12": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 12618.039
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 9463.529
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6309.02
+          }
+        ],
+        "2023-01-01T14": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 10094.431
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          }
+        ],
+        "2023-01-01T16": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          }
+        ],
+        "2023-01-01T18": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 2523.608
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 2523.608
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 2523.608
+          }
+        ],
+        "2023-01-01T20": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5678.118
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 3785.412
+          }
+        ],
+        "2023-01-01T22": [
+          {
+            "element": "11",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "12",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "13",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          },
+          {
+            "element": "21",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 10094.431
+          },
+          {
+            "element": "23",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 7570.824
+          },
+          {
+            "element": "31",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          },
+          {
+            "element": "32",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5047.216
+          }
+        ]
+      },
+      "metrics": [
+        {
+          "name": "Tank 2 level",
+          "target": {
+            "kind": "node",
+            "node_type": "Source",
+            "label_contains": "2"
+          },
+          "path": [
+            "supply_capacity",
+            "water",
+            "level"
+          ],
+          "read": "state",
+          "aggregate": "sum"
+        }
+      ]
+    }
+  },
+  "config": {
+    "version": "1.0",
+    "meta": {
+      "name": "Net1 — imported configuration"
+    },
+    "functionality_scale": [
+      {
+        "level": 1,
+        "label": "critical",
+        "color": "#ef4444"
+      },
+      {
+        "level": 2,
+        "label": "operational_warning",
+        "color": "#f97316"
+      },
+      {
+        "level": 3,
+        "label": "operational",
+        "color": "#22c55e"
+      }
+    ],
+    "categories": [
+      {
+        "name": "water",
+        "category_type": "SourceToDemands",
+        "color": "#0ea5e9",
+        "icon": "Droplet"
+      },
+      {
+        "name": "pumping",
+        "category_type": "Requisite",
+        "color": "#f59e0b",
+        "icon": "Fan"
+      },
+      {
+        "name": "valve",
+        "category_type": "Requisite",
+        "color": "#8b5cf6",
+        "icon": "CircleDot"
+      }
+    ],
+    "events": [
+      {
+        "id": "evt-blackout-pump-failure",
+        "label": "Blackout — Pump Failures",
+        "type": "hazard",
+        "icon": "ZapOff",
+        "frequency_per_10y": 0.0,
+        "default_repair_time": 6,
+        "temporal_simulation_only": false,
+        "attribute_mutations": {}
+      },
+      {
+        "id": "evt-demand-surge-top10",
+        "label": "Demand Surge — Top 10% Consumers",
+        "type": "disservice",
+        "icon": "TrendingUp",
+        "frequency_per_10y": 0.0,
+        "temporal_simulation_only": false,
+        "attribute_mutations": {
+          "22.category_dependency_profiles": {
+            "water": {
+              "dependency_level": 3,
+              "demand": 40377.725696
+            }
+          }
+        }
+      },
+      {
+        "id": "evt-pump-restored",
+        "label": "Pumps restored",
+        "type": "disservice",
+        "icon": "Wrench",
+        "frequency_per_10y": 0,
+        "temporal_simulation_only": true,
+        "attribute_operations": [
+          {
+            "element": "pump_9",
+            "path": [
+              "functionality"
+            ],
+            "op": "set",
+            "value": 3
+          },
+          {
+            "element": "pump_9",
+            "path": [
+              "direct_damage"
+            ],
+            "op": "set",
+            "value": false
+          }
+        ]
+      }
+    ],
+    "graph_types": [
+      {
+        "name": "water_network",
+        "heuristics": []
+      }
+    ],
+    "level_scale": [
+      {
+        "label": "large deficit",
+        "below": -0.5,
+        "role": "danger",
+        "step": 600
+      },
+      {
+        "label": "deficit",
+        "below": -0.1,
+        "role": "danger",
+        "step": 300
+      },
+      {
+        "label": "balanced",
+        "below": 0.1,
+        "role": "neutral",
+        "step": 500
+      },
+      {
+        "label": "surplus",
+        "below": 0.5,
+        "role": "accent",
+        "step": 300
+      },
+      {
+        "label": "large surplus",
+        "role": "accent",
+        "step": 600
+      }
+    ],
+    "node_defaults": {}
+  }
+}

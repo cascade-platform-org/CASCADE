@@ -57,6 +57,8 @@ export function ImportInpSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<{ name: string; content: string } | null>(null);
   const [mode, setMode] = useState<ImportMode>("replace");
+  // The Temporal Simulation importer; replace only, since a project holds one Temporal Simulation.
+  const [forSimulation, setForSimulation] = useState(false);
   const [targetNodes, setTargetNodes] = useState("100");
   const [sourceCrs, setSourceCrs] = useState("EPSG:3004");
   const [customCrs, setCustomCrs] = useState(false);
@@ -99,6 +101,7 @@ export function ImportInpSection() {
     setError(null);
     try {
       const result = await importInp(file.name, file.content, {
+        temporalSimulation: mode === "replace" && forSimulation,
         targetNodes: Number(targetNodes),
         sourceCrs: sourceCrs.trim() || undefined,
         demandMode,
@@ -231,6 +234,16 @@ export function ImportInpSection() {
               </button>
             ))}
           </div>
+
+          {mode === "replace" && (
+            <label className="flex items-start gap-2 text-[11px] text-zinc-600 dark:text-zinc-400">
+              <input type="checkbox" checked={forSimulation} onChange={(e) => setForSimulation(e.target.checked)} className="mt-0.5" />
+              <span>
+                For a Temporal Simulation: tanks become storage, and the file&apos;s duration, demand patterns and timed
+                controls become the project&apos;s simulation. Level-based controls are listed as skipped.
+              </span>
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <label className="block">

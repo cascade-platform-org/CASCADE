@@ -656,6 +656,9 @@ export async function syncDeleteWorkingCopy(name: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export interface ImportInpKnobs {
+  /** The Temporal Simulation importer (POST /api/import/inp/temporal, ADR-0020):
+   *  tanks as storage and a starting simulation from the file's time data. */
+  temporalSimulation?: boolean;
   targetNodes?: number;
   sourceCrs?: string;
   demandMode?: "peak" | "base" | "avg";
@@ -682,7 +685,7 @@ export async function importInp(
   knobs: ImportInpKnobs = {},
 ): Promise<ImportInpResponse> {
   return unwrap(
-    await request("/api/import/inp", {
+    await request(knobs.temporalSimulation ? "/api/import/inp/temporal" : "/api/import/inp", {
       method: "POST",
       body: {
         filename,

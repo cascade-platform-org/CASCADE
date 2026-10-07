@@ -1701,7 +1701,178 @@
         }
       }
     ],
-    "scorecard": []
+    "scorecard": [],
+    "temporal_simulation": {
+      "format": "cascade.temporal-simulation/v1",
+      "timeline": {
+        "name": "A year: two earthquakes and a repair",
+        "steps": [
+          {
+            "label": "2024-01",
+            "unit": "month",
+            "repeat": 2,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-03",
+            "unit": "month",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "oQtVYPRrdEgfa_3HQvQUQ"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-04",
+            "unit": "month",
+            "repeat": 2,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-06",
+            "unit": "month",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "evt-repair-source"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-07",
+            "unit": "month",
+            "repeat": 2,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-09",
+            "unit": "month",
+            "repeat": 1,
+            "phases": [
+              {
+                "events": [
+                  "oQtVYPRrdEgfa_3HQvQUQ"
+                ],
+                "propagate": true
+              }
+            ]
+          },
+          {
+            "label": "2024-10",
+            "unit": "month",
+            "repeat": 3,
+            "phases": [
+              {
+                "events": [],
+                "propagate": true
+              }
+            ]
+          }
+        ]
+      },
+      "profile": {
+        "2024-01": [
+          {
+            "element": "node-mYW8d9_h",
+            "path": [
+              "category_dependency_profiles",
+              "electric",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6
+          }
+        ],
+        "2024-04": [
+          {
+            "element": "node-mYW8d9_h",
+            "path": [
+              "category_dependency_profiles",
+              "electric",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5
+          }
+        ],
+        "2024-06": [
+          {
+            "element": "node-mYW8d9_h",
+            "path": [
+              "category_dependency_profiles",
+              "electric",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6.5
+          }
+        ],
+        "2024-09": [
+          {
+            "element": "node-mYW8d9_h",
+            "path": [
+              "category_dependency_profiles",
+              "electric",
+              "demand"
+            ],
+            "op": "set",
+            "value": 5
+          }
+        ],
+        "2024-12": [
+          {
+            "element": "node-mYW8d9_h",
+            "path": [
+              "category_dependency_profiles",
+              "electric",
+              "demand"
+            ],
+            "op": "set",
+            "value": 6
+          }
+        ]
+      },
+      "metrics": [
+        {
+          "name": "Services fully operational",
+          "target": {
+            "kind": "node",
+            "node_type": "Service"
+          },
+          "path": [
+            "functionality"
+          ],
+          "read": "state",
+          "aggregate": "share_where",
+          "value_filter": {
+            "cmp": ">=",
+            "value": 3
+          }
+        }
+      ]
+    }
   },
   "config": {
     "version": "1.0",
@@ -1749,6 +1920,32 @@
         "type": "hazard",
         "frequency_per_10y": 1,
         "attribute_mutations": {}
+      },
+      {
+        "id": "evt-repair-source",
+        "label": "Repair the Electric Source",
+        "type": "disservice",
+        "icon": "Wrench",
+        "frequency_per_10y": 0,
+        "temporal_simulation_only": true,
+        "attribute_operations": [
+          {
+            "element": "node-3dR9MeCn",
+            "path": [
+              "functionality"
+            ],
+            "op": "set",
+            "value": 3
+          },
+          {
+            "element": "node-3dR9MeCn",
+            "path": [
+              "direct_damage"
+            ],
+            "op": "set",
+            "value": false
+          }
+        ]
       }
     ],
     "graph_types": [

@@ -19,5 +19,12 @@
     "description": "Worked example network for the IJDRR submission, including Personnel elements. This is also the network the guided tour runs on.",
     "file": "IJDRR_example.json",
     "sizeLabel": "40 KB"
+  },
+  {
+    "id": "net1-temporal",
+    "label": "Net1 — an aqueduct over a day",
+    "description": "EPANET Net1 imported for a Temporal Simulation: the tank is storage, filled by the pump and drawn by the town, over 24 hours with a pump outage, a repair and an evening demand surge.",
+    "file": "Net1_temporal.json",
+    "sizeLabel": "44 KB"
   }
 ]

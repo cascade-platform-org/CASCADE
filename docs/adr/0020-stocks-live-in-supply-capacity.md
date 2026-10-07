@@ -217,7 +217,11 @@ work. (A Temporal Simulation run never writes the model, ADR-0019 §3.)
   demand pattern (base demand × multiplier per hour); each time-based control (`AT TIME`,
   `AT CLOCKTIME`) as a Temporal-Simulation-only Event in its period. Level-based controls are
   conditionals, which v1.1 lacks; they are listed as skipped in the import report (a full
-  tank already stops taking water). No Metrics or hazards are added. `logical.py` and `rules_eval.py` read only the keys.
+  tank already stops taking water). No Metrics or hazards are added. *Built 2026-10-07* (`core/importers/inp/temporal.py`, `POST /api/import/inp/temporal`):
+  the profile is one `set` per consumer in every hour its demand changes (a `set` carries one
+  number, and consumers sharing a pattern differ in base demand); each control hour is a
+  one-period Step, since a Phase Event fires in every period of its Step; a tank's volumes are
+  written as the flow that moves them in one hour, the run's period. `logical.py` and `rules_eval.py` read only the keys.
 - The Graph Diff differ (ADR-0017) and the Scenario Baseline key (ADR-0016) gain the path
   form of §4.
 - **UI:** the supply editor is offered on every Node Type. A non-blocking warning on a
