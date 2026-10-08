@@ -31,7 +31,7 @@ import {
   hashSnapshot,
 } from "@/lib/scorecard-utils";
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
-import { applyEventToSnapshot, temporalJumpEvent } from "@/lib/event-application";
+import { passTime, temporalJumpId } from "@/lib/event-application";
 import { deriveSituation, situationSnapshots, situationEventIds } from "@/lib/situation";
 import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
 
@@ -154,9 +154,9 @@ export function SaveScorecardDialog({
   // canvas uses, so the dialog cannot drift from what applying it would really do.
   const temporalSnapshot: GraphSnapshot | undefined =
     temporalJumpHours && temporalValid && after
-      ? applyEventToSnapshot(after, temporalJumpEvent(temporalJumpHours), n).snapshot
+      ? passTime(after, temporalJumpHours, temporalJumpId()).snapshot
       : temporalJumpHours && temporalValid && !after
-        ? applyEventToSnapshot(before, temporalJumpEvent(temporalJumpHours), n).snapshot
+        ? passTime(before, temporalJumpHours, temporalJumpId()).snapshot
         : undefined;
 
   const scoreBefore = computeOperativityScore(before, n, oiWeightAttr);

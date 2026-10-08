@@ -57,20 +57,16 @@ export const EventDefinitionSchema = z.object({
   /**
    * hazard: damage and degradation by vulnerability; disservice: degradation by
    * vulnerability; restorative: only Attribute Operations (a repair, a
-   * recovery), no vulnerability levels; temporal_jump: time passes.
+   * recovery), no vulnerability levels. Time passing is no Event: a Phase's
+   * `advance_hours`, or the Time control.
    */
-  type: z.enum(["hazard", "disservice", "restorative", "temporal_jump"]),
+  type: z.enum(["hazard", "disservice", "restorative"]),
   /** Lucide icon name shown on the Action Bar button. Falls back to type icon if absent. */
   icon: z.string().optional(),
-  /** Expected number of occurrences in a 10-year period. Not meaningful for temporal_jump. */
+  /** Expected number of occurrences in a 10-year period. Not meaningful for a Restorative Event. */
   frequency_per_10y: z.number().min(0).default(0),
   /** Hours until the disservice self-resolves. Disservices only. */
   expected_recovery_time: z.number().int().min(0).optional(),
-  /**
-   * Hours to advance the clock. Temporal Jump events only.
-   * Used as the default duration when saving to Scorecard.
-   */
-  duration_hours: z.number().int().min(1).optional(),
   /**
    * Fallback repair time (hours) for Elements this Hazard damages that have no
    * `direct_damage_effects` entry. Hazards only. Leaving it unset means such an
@@ -88,7 +84,7 @@ export const EventDefinitionSchema = z.object({
   /**
    * True for an Event used only inside a Temporal Simulation (ADR-0019): hidden
    * from the Action Bar and from the Scorecard's uncovered-Event list. Any type
-   * may be Temporal-Simulation-only, a Temporal Jump included.
+   * may be Temporal-Simulation-only.
    */
   temporal_simulation_only: z.boolean().optional(),
   /**
@@ -198,7 +194,8 @@ export const ModelConfigurationSchema = z.object({
   categories: z.array(CategoryDefinitionSchema),
   /** Every Event definition. One saved before 2026-10-08 has its `attribute_mutations` migrated. */
   events: z.preprocess(
-    (events) => (Array.isArray(events) ? events.map(migrateEventMutations) : events),
+    // A `temporal_jump` Event (possible before 2026-10-08) is dropped: time passing is a Phase's advance_hours.
+    (events) => (Array.isArray(events) ? events.filter((e) => e?.type !== "temporal_jump").map(migrateEventMutations) : events),
     z.array(EventDefinitionSchema).default([]),
   ),
   /**

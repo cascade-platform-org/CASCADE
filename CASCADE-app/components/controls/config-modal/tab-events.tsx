@@ -76,40 +76,20 @@ export function TabEvents() {
                   <option value="hazard">Hazard</option>
                   <option value="disservice">Disservice</option>
                   <option value="restorative">Restorative</option>
-                  {/* A hand-fired jump comes from the Time control; a Timeline's jump is an Event. */}
-                  {ev.temporal_simulation_only && <option value="temporal_jump">Temporal Jump</option>}
                 </select>
               </div>
               <div>
                 <label className="mb-0.5 block text-xs text-zinc-400">Used in</label>
                 <select
                   value={ev.temporal_simulation_only ? "temporal-simulation" : "scenario"}
-                  onChange={(e) => {
-                    const only = e.target.value === "temporal-simulation";
-                    updateEvent(ev.id, {
-                      temporal_simulation_only: only || undefined,
-                      // A Temporal Jump exists only inside a Timeline.
-                      ...(!only && ev.type === "temporal_jump" ? { type: "disservice" as const } : {}),
-                    });
-                  }}
+                  onChange={(e) => updateEvent(ev.id, { temporal_simulation_only: e.target.value === "temporal-simulation" || undefined })}
                   className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                 >
                   <option value="scenario">Scenario (Action Bar)</option>
                   <option value="temporal-simulation">Temporal Simulation only</option>
                 </select>
               </div>
-              {ev.type === "temporal_jump" && (
-                <div>
-                  <label className="mb-0.5 block text-xs text-zinc-400">Advances time by (h)</label>
-                  <NumberInput
-                    value={ev.duration_hours}
-                    min={1}
-                    className="w-full"
-                    onChange={(v) => updateEvent(ev.id, { duration_hours: v })}
-                  />
-                </div>
-              )}
-              {/* Frequency is not meaningful for a Temporal Jump (schema). */}
+              {/* Frequency belongs to an Event that strikes; a Restorative Event has none. */}
               {isVulnerabilityEvent(ev) && (
                 <div>
                   <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y</label>

@@ -7,8 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # hazard: damage and degradation by vulnerability; disservice: degradation by
 # vulnerability; restorative: only Attribute Operations, the way a repair or a
-# recovery is written (no vulnerability levels); temporal_jump: time passes.
-EventKind = Literal["hazard", "disservice", "restorative", "temporal_jump"]
+# recovery is written (no vulnerability levels). Time passing is no Event: it is
+# a Timeline Phase's `advance_hours`, or the Time control (ADR-0019, 2026-10-08).
+EventKind = Literal["hazard", "disservice", "restorative"]
 
 
 class FunctionalityScaleLevel(BaseModel):
@@ -124,13 +125,6 @@ class EventDefinition(BaseModel):
     expected_recovery_time: Optional[int] = Field(
         default=None, ge=0, description="Hours until self-resolution. Disservices only."
     )
-    duration_hours: Optional[int] = Field(
-        default=None, ge=1,
-        description=(
-            "Hours to advance the clock. Temporal Jump events only. "
-            "Used as the default when saving to Scorecard."
-        ),
-    )
     default_repair_time: Optional[int] = Field(
         default=None,
         ge=0,
@@ -147,7 +141,7 @@ class EventDefinition(BaseModel):
         description=(
             "True for an Event used only inside a Temporal Simulation Phase: it is hidden "
             "from the Action Bar and from the Scorecard's uncovered-Event list. Any type may "
-            "be Temporal-Simulation-only, a Temporal Jump included. "
+            "be Temporal-Simulation-only. "
             "Client-side only; the engine never reads it."
         ),
     )
@@ -281,7 +275,10 @@ class ModelConfiguration(BaseModel):
     categories: list[CategoryDefinition]
     events: list[EventDefinition] = Field(
         default_factory=list,
-        description="Hazard and Disservice definitions. Both types are Events.",
+        description=(
+            "Every Event definition. A `temporal_jump` Event (possible before "
+            "2026-10-08) is dropped on load: time passing is a Phase's advance_hours."
+        ),
     )
     graph_types: list[GraphTypeConfig] = Field(
         default_factory=list,
@@ -306,6 +303,13 @@ class ModelConfiguration(BaseModel):
             "Value = partial Node — any Node field except id and position can be preset."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_temporal_jump_events(cls, data: Any) -> Any:
+        if isinstance(data, dict) and isinstance(data.get("events"), list):
+            data = {**data, "events": [e for e in data["events"] if not (isinstance(e, dict) and e.get("type") == "temporal_jump")]}
+        return data
 
     @model_validator(mode="after")
     def _level_scale_ascends(self) -> "ModelConfiguration":

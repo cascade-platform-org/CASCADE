@@ -26,6 +26,8 @@ export const PhaseSchema = z
       .array(z.union([z.string().min(1).transform((event) => ({ event, every: 1 })), PhaseEventSchema]))
       .default([]),
     propagate: z.boolean().default(true),
+    /** Hours that pass at the start of the Phase, before its Events (backups count down); absent or 0: none. */
+    advance_hours: z.number().int().min(0).optional(),
   })
   .strict();
 export type Phase = z.infer<typeof PhaseSchema>;

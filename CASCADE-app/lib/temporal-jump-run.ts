@@ -25,7 +25,6 @@
 import { useCanvasStore } from "@/store/canvas-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useUiStore } from "@/store/ui-store";
-import { temporalJumpEvent } from "@/lib/event-application";
 import { runWithHistory } from "@/lib/run-with-history";
 
 // ---------------------------------------------------------------------------
@@ -71,14 +70,14 @@ export function nextJumpHours(snapshot: Parameters<typeof remainingJumpHours>[0]
 /**
  * Advance simulated time by `hours`, starting a run if none is in progress.
  *
- * The graph write goes through `applyEvent`, which pushes its own
+ * The graph write goes through `temporalJump`, which pushes its own
  * `event_applied` entry — pushing a second one here would double the undo stack
  * per jump and let Clear Event find the entry that carries no reversal.
  *
  * No Propagation is run: whether a jump is followed by one is the caller's
  * policy (the auto-propagate toggle), and the engine call is async.
  */
-export function extendRun(hours: number, n: number): void {
+export function extendRun(hours: number): void {
   const canvas = useCanvasStore.getState();
   if (useUiStore.getState().temporalJumpRevertSnapshot === null) {
     // First jump of the run: remember the Scenario to come back to, and the
@@ -89,7 +88,7 @@ export function extendRun(hours: number, n: number): void {
       useHistoryStore.getState().updateHistory[0]?.id ?? null,
     );
   }
-  canvas.applyEvent(temporalJumpEvent(hours), n);
+  canvas.temporalJump(hours);
   useUiStore.getState().addTemporalElapsedHours(hours);
 }
 

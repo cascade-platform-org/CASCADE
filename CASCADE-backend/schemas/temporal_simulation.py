@@ -31,7 +31,7 @@ class PhaseEvent(BaseModel):
 
 
 class Phase(BaseModel):
-    """Applies its Events, then optionally runs one Propagation."""
+    """Lets time pass, applies its Events, then optionally runs one Propagation."""
     model_config = ConfigDict(extra="forbid")
 
     events: list[PhaseEvent] = Field(
@@ -39,6 +39,14 @@ class Phase(BaseModel):
         description="A bare Event id is accepted and read as {event: id, every: 1}.",
     )
     propagate: bool = True
+    advance_hours: int = Field(
+        default=0, ge=0,
+        description=(
+            "Hours that pass at the start of the Phase, before its Events: every "
+            "positive Functionality Time counts down and an expired one drops to "
+            "Functionality 1, as the Time control does. 0: no time passes."
+        ),
+    )
 
     @field_validator("events", mode="before")
     @classmethod

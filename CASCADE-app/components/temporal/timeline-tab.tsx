@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus, Plus, Trash2, X } from "lucide-react";
+import { CalendarPlus, Clock, Plus, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { EXAMPLE_LABEL, advanceLabel } from "@/lib/timeline-plan";
-import { isScenarioEvent, temporalJumpHours } from "@/lib/event-application";
+import { isScenarioEvent } from "@/lib/event-application";
 import { CalendarUnitSchema } from "@/lib/schemas/temporal-simulation";
 import {
   EXPLAIN_ADD_PHASE,
@@ -17,6 +18,7 @@ import {
   explainAddStep,
   explainLabel,
   explainEventEvery,
+  explainAdvanceHours,
   explainPhaseEvent,
   explainPropagate,
   explainRepeat,
@@ -39,10 +41,7 @@ const NEW_EVENT: Omit<EventDefinition, "id"> = {
 function EventOptions({ events }: { events: EventDefinition[] }) {
   const only = events.filter((e) => !isScenarioEvent(e));
   const scenario = events.filter(isScenarioEvent);
-  const label = (e: EventDefinition) => {
-    const hours = temporalJumpHours(e);
-    return hours === undefined ? e.label : `${e.label} (+${hours} h)`;
-  };
+  const label = (e: EventDefinition) => e.label;
   return (
     <>
       {only.length > 0 && <optgroup label="Temporal Simulation only">{only.map((e) => <option key={e.id} value={e.id}>{label(e)}</option>)}</optgroup>}
@@ -57,15 +56,11 @@ export function TimelineTab() {
   const explain = useTemporalSimulationStore((s) => s.explain);
   const events = useConfigStore((s) => s.config.events);
   const openConfigModal = useUiStore((s) => s.openConfigModal);
-  const { byId, eventLabel } = useEventLookup();
+  const { eventLabel } = useEventLookup();
   /** The profile row whose target, path and op are being edited. */
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   // Only the selected row: editing another row does not re-render the Steps below.
   const row = useTemporalSimulationStore((s) => s.profile.find((r) => r.id === selectedRow));
-  const jumpHours = (id: string) => {
-    const ev = byId.get(id);
-    return ev && temporalJumpHours(ev);
-  };
 
   function addStep() {
     const last = timeline.steps[timeline.steps.length - 1];
@@ -83,7 +78,7 @@ export function TimelineTab() {
       onSaved: (id) => {
         update((t) => { t.steps[si]?.phases[pi]?.events.push({ event: id, every: 1 }); });
         const ev = useConfigStore.getState().config.events.find((e) => e.id === id);
-        if (ev) explain(explainPhaseEvent(ev.label, true, temporalJumpHours(ev)));
+        if (ev) explain(explainPhaseEvent(ev.label, true));
       },
     });
   }
@@ -176,6 +171,23 @@ export function TimelineTab() {
                     />
                     then Propagate
                   </label>
+                  <label className="flex shrink-0 items-center gap-1 text-xs text-zinc-500" title="Hours that pass at the start of this Phase: backups count down">
+                    <Clock size={11} />
+                    <NumberInput
+                      min={0}
+                      className={cn(inputCls, "w-14")}
+                      placeholder="0"
+                      value={phase.advance_hours || undefined}
+                      onFocus={() => explain(explainAdvanceHours(phase.advance_hours ?? 0))}
+                      onChange={(v) => {
+                        const h = Math.max(0, Math.floor(v));
+                        update((t) => { if (h > 0) t.steps[si].phases[pi].advance_hours = h; else delete t.steps[si].phases[pi].advance_hours; });
+                        explain(explainAdvanceHours(h));
+                      }}
+                      onClear={() => { update((t) => { delete t.steps[si].phases[pi].advance_hours; }); explain(explainAdvanceHours(0)); }}
+                    />
+                    h
+                  </label>
                   <button
                     type="button"
                     title="Remove Phase"
@@ -225,7 +237,7 @@ export function TimelineTab() {
                         const id = e.target.value;
                         if (!id) return;
                         update((t) => { t.steps[si].phases[pi].events.push({ event: id, every: 1 }); });
-                        explain(explainPhaseEvent(eventLabel(id), true, jumpHours(id)));
+                        explain(explainPhaseEvent(eventLabel(id), true));
                       }}
                     >
                       <option value="">+ add Event…</option>

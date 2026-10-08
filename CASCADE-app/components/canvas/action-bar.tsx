@@ -26,7 +26,6 @@ import {
   useConfigStore,
   selectActionBarEvents,
   selectOverflowEvents,
-  selectN,
 } from "@/store/config-store";
 import { modelLocked, useCanvasStore } from "@/store/canvas-store";
 import { countChangedElements } from "@/lib/graph-diff";
@@ -245,7 +244,6 @@ function TemporalJumpControls({
   propagate: () => Promise<boolean>;
   isPropagating: boolean;
 }) {
-  const n = useConfigStore(selectN);
   const scope = useUiStore((s) => s.propagationScope);
   const autoPropagate = useUiStore((s) => s.temporalAutoPropagate);
   const setAutoPropagate = useUiStore((s) => s.setTemporalAutoPropagate);
@@ -288,7 +286,7 @@ function TemporalJumpControls({
   }
 
   async function applyJump(hours: number) {
-    extendRun(hours, n);
+    extendRun(hours);
     if (autoPropagate) {
       await propagate();
     }
@@ -662,7 +660,6 @@ function EventIcon({ type, icon, size }: { type: EventDefinition["type"]; icon?:
     const Resolved = resolveIcon(icon) as React.FC<{ size?: number; strokeWidth?: number }> | null;
     if (Resolved) return <Resolved size={size} strokeWidth={2} />;
   }
-  if (type === "temporal_jump") return <Clock size={size} />;
   if (type === "restorative") return <Wrench size={size} />;
   return type === "hazard" ? <Zap size={size} /> : <Waves size={size} />;
 }

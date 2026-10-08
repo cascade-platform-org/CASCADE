@@ -3050,7 +3050,7 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "text",
-                  "text": "Between periods, every element's Functionality returns to what Events left it at, and each Propagation recomputes shortage from that period's supply. So a consumer recovers when its supply comes back, while damage an Event caused stands until another Event repairs it. Nothing counts down repair times or backups on its own: a repair is an Event in its period, and time passes only through a Temporal Jump Event placed in a Phase."
+                  "text": "Between periods, every element's Functionality returns to what Events left it at, and each Propagation recomputes shortage from that period's supply. So a consumer recovers when its supply comes back, while damage an Event caused stands until another Event repairs it. Nothing counts down repair times or backups on its own: a repair is an Event in its period, and time passes only where a Phase lets hours pass (the clock field in its row)."
                 }
               ]
             },

@@ -200,7 +200,7 @@ describe("Event → Propagate → Temporal Jump → Reset: Reset ends the run, n
 
     useCanvasStore.getState().applyEvent(quake, N);
     propagate([{ id: "n2", functionality: 2 }]);
-    extendRun(6, N); // past the 5h reserve — n1 expires to Functionality 1
+    extendRun(6); // past the 5h reserve — n1 expires to Functionality 1
     expect(useCanvasStore.getState().nodes.n1.functionality).toBe(1);
 
     expect(resetFunctionality()).toBeGreaterThan(0);
@@ -218,7 +218,7 @@ describe("Event → Propagate → Temporal Jump → Reset: Reset ends the run, n
     useCanvasStore.setState((s) => ({ nodes: { ...s.nodes, n1: { ...s.nodes.n1, functionality_time: 5 } } }));
     useCanvasStore.getState().applyEvent(quake, N);
     propagate([{ id: "n2", functionality: 2 }]);
-    extendRun(6, N);
+    extendRun(6);
 
     expect(revertRun("global")).toBe(6); // the ordinary path — a real run to unwind
     expect(resetFunctionality()).toBeGreaterThan(0);
@@ -258,7 +258,7 @@ describe("findUnsavedRuns after a Temporal Jump run is reverted: the stale run d
   it("excludes only the Propagation that ran mid-jump, not the one that ran before it", async () => {
     useCanvasStore.getState().applyEvent(quake, N);
     propagate([{ id: "n2", functionality: 1 }]); // P1 — before the jump, stays valid however the jump ends
-    extendRun(4, N); // pushes its own event_applied(temporal_jump), then:
+    extendRun(4); // pushes its own event_applied(temporal_jump), then:
     propagate([{ id: "n2", functionality: 1, functionality_time: 2 }]); // P2 — runs WHILE the jump is live
 
     const live = useCanvasStore.getState().toGraphSnapshot();

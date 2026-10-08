@@ -21,7 +21,7 @@ import {
   ABSENT,
   applyEventToSnapshot,
   reverseMutations,
-  temporalJumpEvent,
+  passTime,
 } from "@/lib/event-application";
 import type { Node, Edge, GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -223,12 +223,10 @@ describe("Temporal Jump", () => {
         responsibility_share: { "some-upstream": 1 },
       }),
     ]);
-    const jump = temporalJumpEvent(6);
-
-    const after = applyEventToSnapshot(before, jump, N).snapshot;
+    const after = passTime(before, 6, "tj-1").snapshot;
     expect(after.nodes.expiring.functionality).toBe(1);
     expect(after.nodes.expiring.functionality_time).toBe(0);
-    expect(after.nodes.expiring.responsibility_share).toEqual({ [jump.id]: 1 });
+    expect(after.nodes.expiring.responsibility_share).toEqual({ "tj-1": 1 });
   });
 
   it("clamps an overshoot to zero and leaves Elements not on backup alone", () => {
@@ -241,7 +239,7 @@ describe("Temporal Jump", () => {
       [edge("e1", { functionality_time: 2 })],
     );
 
-    const after = applyEventToSnapshot(before, temporalJumpEvent(4), N).snapshot;
+    const after = passTime(before, 4, "tj-1").snapshot;
     expect(after.nodes.holding.functionality_time).toBe(6);
     expect(after.nodes.holding.functionality).toBe(N); // not yet expired
     expect(after.nodes.idle).toBe(before.nodes.idle); // untouched, by reference
@@ -252,7 +250,7 @@ describe("Temporal Jump", () => {
 
   it("round-trips an expiry back to a still-holding Element", () => {
     const before = snap([node("n1", { functionality: 2, functionality_time: 3 })]);
-    const { snapshot: after, reversal } = applyEventToSnapshot(before, temporalJumpEvent(5), N);
+    const { snapshot: after, reversal } = passTime(before, 5, "tj-1");
 
     const reverted = reverseMutations(after, reversal);
     expect(reverted.nodes.n1).toEqual(before.nodes.n1);

@@ -467,7 +467,7 @@ at, and each Propagation recomputes shortage from that period's supply. So a
 consumer recovers when its supply comes back, while damage an Event caused
 stands until another Event repairs it. Nothing counts down repair times or
 backups on its own: a repair is an Event in its period, and time passes only
-through a Temporal Jump Event placed in a Phase.
+where a Phase lets hours pass (the clock field in its row).
 
 When the run ends, the **Run View** shows it. Pick a period in the Run tab, or
 step through them in the strip under the Action Bar: the canvas and the

@@ -150,7 +150,7 @@ describe("clearEvent", () => {
     // endRun() first: ui-store's run state isn't reset by this file's own
     // beforeEach, and a leftover run from another test would mask a bug here.
     endRun();
-    extendRun(6, N);
+    extendRun(6);
 
     const entry = useHistoryStore.getState().updateHistory[0];
     expect(entry.event_id).toMatch(/^tj-/);
@@ -305,7 +305,7 @@ describe("Reset and Temporal Jumps", () => {
   // `extendRun` and `revertRun` are the SHIPPED operations (lib/temporal-jump-run.ts).
   // They used to live in action-bar.tsx, so this file re-implemented both — which
   // meant these tests verified the copy rather than the code the −Xh button runs.
-  const applyJump = (hours: number) => extendRun(hours, N);
+  const applyJump = (hours: number) => extendRun(hours);
   const revertJumps = () => revertRun("global");
 
   beforeEach(() => {

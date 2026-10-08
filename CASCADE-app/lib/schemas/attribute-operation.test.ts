@@ -32,4 +32,9 @@ describe("retired attribute_mutations", () => {
     expect(parsed.events[0]).toMatchObject({ id: "r", type: "restorative" });
     expect(parsed.events[0].attribute_operations).toBeUndefined();
   });
+
+  it("and a temporal_jump Event (time passing is a Phase's advance_hours now) is dropped", () => {
+    const parsed = ModelConfigurationSchema.parse({ ...base, events: [{ id: "tj", label: "+24 h", type: "temporal_jump", duration_hours: 24 }, { id: "q", label: "Quake", type: "hazard" }] });
+    expect(parsed.events.map((e) => e.id)).toEqual(["q"]);
+  });
 });

@@ -73,6 +73,17 @@ describe("runTimeline", () => {
     expect(walkPeriods(record, periodState(record, 1), 1, 3)).toEqual(third);
   });
 
+  it("lets a Phase's hours pass first: a backup counts down, and its expiry stands through later Propagations", async () => {
+    const timeline: Timeline = {
+      name: "t",
+      steps: [{ label: "2023-01-01", unit: "day", repeat: 3, phases: [{ events: [], propagate: true, advance_hours: 3 }] }],
+    };
+    const held: GraphSnapshot = { ...start, nodes: { ...start.nodes, a: node("a", { functionality_time: 5 }) } };
+    const record = await runTimeline({ ...input([]), start: held, plan: planTimeline(timeline) });
+    expect([1, 2, 3].map((t) => [periodState(record, t).nodes.a.functionality_time, f(periodState(record, t), "a")])).toEqual([[2, N], [0, 1], [0, 1]]);
+    expect(periodState(record, 2).nodes.a.responsibility_share).toEqual({ "tj-2023-01-02": 1 });
+  });
+
   it("applies the profile in the first Phase, also for a Step with no Phase", async () => {
     const timeline: Timeline = {
       name: "t",

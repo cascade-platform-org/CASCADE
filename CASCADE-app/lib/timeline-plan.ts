@@ -14,6 +14,8 @@ interface PlannedPhase {
   /** Ids of the Phase's Events that fire in this period (an `every: N` Event fires on N, 2N…). */
   events: string[];
   propagate: boolean;
+  /** Hours that pass at the Phase's start, before its Events (0: none). */
+  advanceHours: number;
   /** True for the period's last propagating Phase — integration follows it. */
   integratesAfter: boolean;
 }
@@ -166,6 +168,7 @@ export function planTimeline(timeline: Timeline): TimelinePlan {
           index,
           events: phase.events.filter((e) => firesEvery(r, e.every)).map((e) => e.event),
           propagate: phase.propagate,
+          advanceHours: phase.advance_hours ?? 0,
           integratesAfter: index === lastPropagating,
         })),
       });

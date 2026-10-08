@@ -211,7 +211,7 @@ write, so it cannot tell "the value before the last Propagation" when an Event a
 Propagation both wrote the same field; the step operator tracks the imposed layer itself as
 it applies each Event.
 
-**Time is an Event.** A period has no duration. A Temporal Jump Event in a Phase advances simulated time by the hours its definition says, with exactly
+**Time is an Event.** *(Superseded 2026-10-08: time passing is a Phase's `advance_hours`, ADR-0019 §1.)* A period has no duration. A Temporal Jump Event in a Phase advances simulated time by the hours its definition says, with exactly
 today's semantics: it subtracts its hours from every positive `functionality_time` and
 expires a countdown reaching 0 to Functionality 1. The modeller decides how much time a
 period represents for backups, and a model without backups needs no jump at all. The jump is

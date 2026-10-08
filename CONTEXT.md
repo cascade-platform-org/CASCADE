@@ -87,15 +87,15 @@ Integer hours on an Element signalling pending timed degradation: > 0 means func
 _Avoid_: Time warning, countdown, timer
 
 **Temporal Jump**:
-An Event kind advancing simulated time by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1, then a Propagation follows. Full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
+Simulated time advancing by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1 (`passTime`). Not an Event kind (since 2026-10-08): fired by hand from the Time control, a Propagation follows, and it is recorded as an Event (a `tj-` id) with full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 
 **Temporal Simulation** *(release v1.1; user manual §9)*:
-A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump, which stays one Event kind; a period has no duration, and simulated time passes only where a Phase holds a Temporal Jump Event. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup a jump expired, stand until a later Event restores them. Mechanics in ADR-0019.
+A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump; a period has no duration, and simulated time passes only where a Phase's `advance_hours` says so. A project holds one, with its Metrics. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup that ran out, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Timeline**:
-The saved input of a Temporal Simulation: an ordered list of Steps whose Phases hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
+The saved input of a Temporal Simulation: an ordered list of Steps whose Phases let hours pass (`advance_hours`) and hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
 _Avoid_: "schedule", "script", "run" (a run is one execution of a Timeline)
 
 **Step**:
@@ -103,7 +103,7 @@ One period of a Timeline, or the same period `repeat`ed: a label, a calendar uni
 _Avoid_: "time step" and "tick" (retired with Temporal Jump's old wording); Step is a Timeline element only
 
 **Phase**:
-An ordered group inside a Step: its Events apply, then optionally one Propagation runs. Phases let an Event fire between two Propagations of one period. The passes inside one Event application are not Phases.
+An ordered group inside a Step: its `advance_hours` pass (a Temporal Jump), its Events apply, then optionally one Propagation runs. Phases let an Event fire between two Propagations of one period. The passes inside one Event application are not Phases.
 _Avoid_: "stage", "sub-step"
 
 **Stock**:

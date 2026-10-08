@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1). Built in release v1.1 (build plan: `temporal-simulation-design.md` §8). Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1; 2026-10-08: a Phase's `advance_hours` replaces Temporal Jump Events). Built in release v1.1 (build plan: `temporal-simulation-design.md` §8). Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -45,9 +45,11 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
 - The **profile** holds the per-period exogenous inputs as Attribute Operations keyed by
   period label, so it uses ADR-0021's addressing and validation and adds no second write
   mechanism.
-- **A period has no duration.** Simulated time passes only through Temporal Jump Events
-  the modeller places in a Phase, with the hours they choose; only
-  `functionality_time` reads them. Rates and stocks are per period and involve no hours.
+- **A period has no duration.** Simulated time passes only where a Phase's
+  `advance_hours` says so (revised 2026-10-08: before, a Temporal Jump Event placed in a
+  Phase; time passing is no Event kind now, which removed a fake Event with a frequency,
+  an icon and no vulnerability). The hours pass at the Phase's start, before its Events;
+  only `functionality_time` reads them. Rates and stocks are per period and involve no hours.
 - **The Timeline stores inputs only, and every change over time is authored before the
   run**, as a profile value or a Phase Event: "at period 5" is an Event in period 5. **While
   a run is on the canvas, the model and the Temporal Simulation are read-only** (browsing

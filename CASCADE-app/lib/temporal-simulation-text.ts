@@ -204,7 +204,8 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
         "unit": ${alternatives(CalendarUnitSchema.options)},
         "repeat": int >= 1,            // consecutive periods; the label advances by the unit (none: label#2, label#3…)
         "phases": [                    // run in order inside each period
-          { "events": [                // applied in order
+          { "advance_hours": int >= 0, // optional: hours that pass first (backups count down); absent = none
+            "events": [                // applied in order
               EventId,                 // fires every period of the Step
               { "event": EventId, "every": N }   // fires on the Step's periods N, 2N, 3N…
             ],
@@ -237,7 +238,7 @@ Filter (every given condition must hold; resolved again each time it is used):
     "exclude": [ElementId…] (matches to leave out) }
 
 Semantics to respect:
-- A period has no duration. Time passes only through a Temporal Jump Event placed in a Phase.
+- A period has no duration. Time passes only through a Phase's "advance_hours".
 - A run starts with a Reset. Shortage is recomputed before every Propagation; Event-imposed damage stays until an Event changes it.
 - Stocks (supply_capacity.<category> or an edge capacity as an object with rate, inflow, level, min, max, max_draw, max_fill,
   retention, efficiency, level_reference, change_reference) are integrated once per period, right after the last propagating
@@ -271,9 +272,9 @@ refers to them by id. Events used only in simulations are marked "Temporal Simul
 ## What a Temporal Simulation is
 
 A saved definition, run over many periods (hours, days, months…). A period has no duration of its own: time passes only
-where a temporal jump Event is placed. Each period runs, in order:
+where a Phase's "advance_hours" says so. Each period runs, in order:
 1. its profile operations (the per-period inputs: rates, demands, capacities);
-2. each Phase in order: apply the Phase's Events that fire this period, then,
+2. each Phase in order: let its "advance_hours" pass (backups count down), apply the Phase's Events that fire this period, then,
    if "propagate" is true, run one Propagation. Before every Propagation, degradation caused by shortage is
    reset, so a shortage lasts only as long as its cause; damage imposed by an Event stays until another
    Event changes it (a repair is an Event).
@@ -391,7 +392,7 @@ export function llmContext(
     `Categories: ${config.categories.map((c) => `${c.name} (${c.category_type})`).join(", ") || "(none)"}`,
     "Events (id — label — type — used in):",
     ...(events.length
-      ? events.map((e) => `- ${e.id} — ${e.label} — ${e.type}${e.type === "temporal_jump" && e.duration_hours ? ` (${e.duration_hours} h)` : ""} — ${e.temporal_simulation_only ? "Temporal Simulation only" : "scenario"}`)
+      ? events.map((e) => `- ${e.id} — ${e.label} — ${e.type} — ${e.temporal_simulation_only ? "Temporal Simulation only" : "scenario"}`)
       : ["- (none yet)"]),
     `Canvases: ${Object.values(model.canvases).map((c) => `${c.id} (${c.label})`).join(", ") || "(none)"}`,
     `Node types: ${nodeTypes.join(", ") || "(none)"}`,

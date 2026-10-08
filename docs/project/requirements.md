@@ -232,7 +232,7 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 |---|---|---|
 | `id` | string | Unique identifier |
 | `label` | string | Human-readable name |
-| `type` | enum | `hazard` \| `disservice` \| `restorative` \| `temporal_jump`. A `restorative` Event (green) has no vulnerability levels and only applies its `attribute_operations`: a repair or a recovery (ADR-0021). (a Temporal Jump only as a Temporal-Simulation-only Event; hand-fired jumps come from the Time control) |
+| `type` | enum | `hazard` \| `disservice` \| `restorative`. A `restorative` Event (green) has no vulnerability levels and only applies its `attribute_operations`: a repair or a recovery (ADR-0021). (a Temporal Jump only as a Temporal-Simulation-only Event; hand-fired jumps come from the Time control) |
 | `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
 | `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements a *hazard* flags as `direct_damage` — for a hazard that is determined by `vulnerability_levels[event.id] > 0`. (A specific rule may independently set `direct_damage` on any element — ADR-0015.) |
 | `default_repair_time` | integer (hours)? | Fallback `expected_repair_time` for affected Elements with no `direct_damage_effects` entry; hazards only. |
@@ -550,23 +550,19 @@ An attribute on an Element (integer, hours). Value > 0 means the Element will de
 - `backup` and `backup_duration` (per-category block) extend the effective time before the Element's Functionality Time expires.
 - On expiry (`functionality_time` drops to ≤ 0): `functionality_time` is clamped to 0 and `functionality` is set to 1 (critical).
 
-### 9.2 Temporal Jump Event
+### 9.2 Temporal Jump
 
-A Temporal Jump is an Event with `type = "temporal_jump"`. It is always system-generated (not user-authored). It carries a single parameter:
+A Temporal Jump advances simulated time by N hours. It is no Event type (since 2026-10-08): the Time control fires it by hand, and a Timeline Phase's `advance_hours` inside a Temporal Simulation (§9.6).
 
-| Field | Type | Description |
-|---|---|---|
-| `duration_hours` | integer ≥ 1 | How many hours to advance the clock |
-
-**Application (client-side, same as any Event):**
+**Application (client-side, `passTime`):**
 
 For each Element with `functionality_time > 0`:
-1. `functionality_time -= duration_hours`
+1. `functionality_time -= N`
 2. If `functionality_time ≤ 0`: set `functionality_time = 0` and `functionality = 1`
 
 A Propagation immediately follows to cascade the effects of any expired Elements.
 
-**Stored in history** as an `event_applied` entry (`event_id` = the Temporal Jump's synthetic id, `type = "temporal_jump"`). Undoable with CTRL+Z. Clearable with CTRL+R like any Event — which means clearing it also clears the cascade (ADR-0016), and gives back the elapsed hours the −Xh control tracks.
+**Stored in history** as an `event_applied` entry (`event_id` = a synthetic `tj-` id, `temporal_jump_hours` = N). Undoable with CTRL+Z. Clearable with CTRL+R like any Event — which means clearing it also clears the cascade (ADR-0016), and gives back the elapsed hours the −Xh control tracks.
 
 ### 9.2a Reverting a run of jumps
 
@@ -607,7 +603,7 @@ A **Temporal Simulation** generalises the Temporal Jump into a saved definition 
 - A run is refused while a period has no valid label or two periods share one; a Step with no Phase, or an `every` larger than its Step, is only a warning.
 - An Event in a Phase fires every period of its Step, or every *N*-th one (the Step's periods *N*, 2*N*…), which removes hand-unrolling.
 - A **profile** gives per-period inputs as Attribute Operations keyed by period label.
-- A period has no duration. Simulated time passes only through Temporal Jump Events the modeller places in a Phase, with the hours they choose.
+- A period has no duration. Simulated time passes only where a Phase lets hours pass (`advance_hours`, at the Phase's start, before its Events).
 - **A run starts from a Reset copy of the model** (both halves), so every run starts from the authored model with every Element operational; the live model is never written. Initial damage is an Event in the first Step.
 - The Timeline is authored as an editable table of Steps and Phases, with the profile as a grid under it on the same period columns (one row per operation, one cell per period; an empty `set` cell shows the value carried into it). Every change over time is authored before the run, as a profile value or a Phase Event. While a run is on the canvas the model and the Temporal Simulation are read-only (browsing periods, the Functionality ↔ Level switch and saving a period to the Scorecard stay available); Reset ends the run, and every run starts from the beginning. On the same build, the same Timeline produces the same result.
 - The step operator runs client-side and calls `POST /api/propagate` once per propagating Phase, each an ordinary Engine Evaluation. A run shows progress, can be cancelled, and is atomic: a cancel, budget refusal or engine error leaves the model untouched.
@@ -734,7 +730,7 @@ When the user clicks "Save to Scorecard" the dialog opens and shows:
    - `after_propagation` — shown if a Propagation has been run; absent card otherwise.
    - `after_temporal_jump` — shown if a Temporal Jump event followed the most recent Propagation in history; absent card otherwise.
 3. **Temporal Jump option** — shown only when `after_propagation` is present but `after_temporal_jump` is absent. Contains:
-   - Hours input (default: `duration_hours` from the triggering Event if available, otherwise 48 h).
+   - Hours input (default 48 h).
    - **"Compute"** button — fires an ephemeral Temporal Jump + Propagation: applies the jump client-side on a copy of `after_propagation`, calls `POST /api/propagate`, and displays the result as the third card. **The main graph state is not modified.** If the server is unreachable, the card shows an error and saving proceeds without `after_temporal_jump`.
 4. **Save** button — captures the GlobalViewCanvas as a base64 PNG for each available snapshot (temporarily restores each snapshot to the store, renders, captures, then restores the original state), then commits all snapshots + images to `Project.scorecard`. Dialog closes.
 
@@ -797,7 +793,7 @@ The Scorecard panel surfaces three categories of gaps:
 |---|---|---|
 | **Type 1 — Unsaved runs** | An `event_applied` (one or more, stacked) + `propagation` session exists in `update_history` but has not been saved to the Scorecard. | Cross-reference `update_history` sessions against `scorecard[].event_ids`. |
 | **Type 2 — Incomplete entries** | A saved entry is missing `after_propagation` or `after_temporal_jump`. | Check optional fields on each `ScorecardEntry`. |
-| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (`type ≠ temporal_jump`) has no Scorecard entry with a matching id in `event_ids`. | Cross-reference `config.events` against the flattened `scorecard[].event_ids`. |
+| **Type 3 — Uncovered events** | An `EventDefinition` in the Model Configuration (a Hazard or Disservice) has no Scorecard entry with a matching id in `event_ids`. | Cross-reference `config.events` against the flattened `scorecard[].event_ids`. |
 
 **UI treatment:**
 - Type 1: "Unrecorded runs" section at the top of the Scorecard panel — each unsaved pair shown with a "Save" button.

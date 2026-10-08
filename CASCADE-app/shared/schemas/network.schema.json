@@ -1925,7 +1925,7 @@
     },
     "Phase": {
       "additionalProperties": false,
-      "description": "Applies its Events, then optionally runs one Propagation.",
+      "description": "Lets time pass, applies its Events, then optionally runs one Propagation.",
       "properties": {
         "events": {
           "description": "A bare Event id is accepted and read as {event: id, every: 1}.",
@@ -1939,6 +1939,13 @@
           "default": true,
           "title": "Propagate",
           "type": "boolean"
+        },
+        "advance_hours": {
+          "default": 0,
+          "description": "Hours that pass at the start of the Phase, before its Events: every positive Functionality Time counts down and an expired one drops to Functionality 1, as the Time control does. 0: no time passes.",
+          "minimum": 0,
+          "title": "Advance Hours",
+          "type": "integer"
         }
       },
       "title": "Phase",

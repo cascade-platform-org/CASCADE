@@ -259,8 +259,7 @@
           "enum": [
             "hazard",
             "disservice",
-            "restorative",
-            "temporal_jump"
+            "restorative"
           ],
           "title": "Type",
           "type": "string"
@@ -297,20 +296,6 @@
           "description": "Hours until self-resolution. Disservices only.",
           "title": "Expected Recovery Time"
         },
-        "duration_hours": {
-          "anyOf": [
-            {
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Hours to advance the clock. Temporal Jump events only. Used as the default when saving to Scorecard.",
-          "title": "Duration Hours"
-        },
         "default_repair_time": {
           "anyOf": [
             {
@@ -343,7 +328,7 @@
         },
         "temporal_simulation_only": {
           "default": false,
-          "description": "True for an Event used only inside a Temporal Simulation Phase: it is hidden from the Action Bar and from the Scorecard's uncovered-Event list. Any type may be Temporal-Simulation-only, a Temporal Jump included. Client-side only; the engine never reads it.",
+          "description": "True for an Event used only inside a Temporal Simulation Phase: it is hidden from the Action Bar and from the Scorecard's uncovered-Event list. Any type may be Temporal-Simulation-only. Client-side only; the engine never reads it.",
           "title": "Temporal Simulation Only",
           "type": "boolean"
         },
@@ -568,7 +553,7 @@
           "type": "array"
         },
         "events": {
-          "description": "Hazard and Disservice definitions. Both types are Events.",
+          "description": "Every Event definition. A `temporal_jump` Event (possible before 2026-10-08) is dropped on load: time passing is a Phase's advance_hours.",
           "items": {
             "$ref": "#/$defs/EventDefinition"
           },

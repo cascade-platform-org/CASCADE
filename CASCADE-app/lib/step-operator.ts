@@ -7,8 +7,9 @@
  * and returns a run record: the start state and one Graph Diff per Phase. It
  * writes nothing anywhere; the Run View reconstructs any period from the record.
  *
- * Per period: the profile's operations, then per Phase its Events, then (if the
- * Phase propagates) one Propagation. The profile rides in the first Phase, so
+ * Per period: the profile's operations, then per Phase its `advance_hours` of
+ * time (backups count down), its Events, then (if the Phase propagates) one
+ * Propagation. The profile rides in the first Phase, so
  * its writes land in that Phase's diff (§3).
  *
  * THE IMPOSED LAYER (§2a). Propagation only worsens Functionality, so before
@@ -29,7 +30,7 @@
  * closing balance.
  */
 
-import { applyEventToSnapshot } from "@/lib/event-application";
+import { applyEventToSnapshot, passTime } from "@/lib/event-application";
 import { deepEqual, diffGraph, applyGraphDiff } from "@/lib/graph-diff";
 import type { TimelinePlan } from "@/lib/timeline-plan";
 import { integrateStocks, type StockOutcome } from "@/lib/stock-integration";
@@ -144,7 +145,7 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
   for (const period of plan.periods) {
     label = period.label;
     // A Step with no Phase still applies its profile: one Phase that does not propagate.
-    const phases = period.phases.length > 0 ? period.phases : [{ events: [], propagate: false, integratesAfter: false }];
+    const phases = period.phases.length > 0 ? period.phases : [{ events: [], propagate: false, advanceHours: 0, integratesAfter: false }];
     const diffs: GraphDiff[] = [];
     let served: RunPeriod["served"] = {};
     let stocks: StockOutcome[] = [];
@@ -160,8 +161,11 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
         else warnings.push(`${label}: Event "${id}" is not in the configuration and was skipped.`);
       }
 
+      // Time passes first (backups count down; an expiry is imposed like an Event's damage).
+      const passed = (s: GraphSnapshot) => (phase.advanceHours > 0 ? passTime(s, phase.advanceHours, `tj-${label}`).snapshot : s);
+
       // Events resolve against the imposed state; what they leave there is the new layer.
-      const imposed = applyAll(withLayer(state, layer), events, true);
+      const imposed = applyAll(passed(withLayer(state, layer)), events, true);
       layer = layerOf(imposed);
 
       let next: GraphSnapshot;
@@ -183,7 +187,7 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
         }
       } else {
         // No Propagation: the period keeps its shortage, and the Events land on top of it.
-        next = applyAll(state, events, false);
+        next = applyAll(passed(state), events, false);
       }
       diffs.push(diffGraph(state, next));
       state = next;

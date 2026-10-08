@@ -92,3 +92,20 @@ def test_standard_metrics_default_to_all_three_and_take_only_known_ones():
     assert TemporalSimulation.model_validate({**base, "standard_metrics": []}).standard_metrics == []
     with pytest.raises(ValidationError):
         TemporalSimulation.model_validate({**base, "standard_metrics": ["throughput"]})
+
+
+def test_a_phase_lets_hours_pass_and_a_temporal_jump_event_is_dropped_on_load():
+    from schemas.config import ConfigMeta, FunctionalityScaleLevel, ModelConfiguration
+    from schemas.temporal_simulation import Phase
+
+    assert Phase().advance_hours == 0
+    assert Phase(advance_hours=24).advance_hours == 24
+    with pytest.raises(ValidationError):
+        Phase(advance_hours=-1)
+    config = ModelConfiguration(
+        version="1", meta=ConfigMeta(name="t"),
+        functionality_scale=[FunctionalityScaleLevel(level=i, label=str(i), color="#000") for i in (1, 2)],
+        categories=[],
+        events=[{"id": "tj", "label": "+24 h", "type": "temporal_jump", "duration_hours": 24}, {"id": "q", "label": "Quake", "type": "hazard"}],
+    )
+    assert [e.id for e in config.events] == ["q"]

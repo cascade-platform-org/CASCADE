@@ -30,7 +30,7 @@ import type { PropagationResult, EventDefinition } from "@/lib/schemas";
 import { assignElementUpdate } from "@/lib/element-update";
 import { pickHandles } from "@/lib/edge-routing";
 import { nanoid } from "nanoid";
-import { applyEventToSnapshot } from "@/lib/event-application";
+import { applyEventToSnapshot, passTime, temporalJumpId } from "@/lib/event-application";
 import { applyGraphDiff } from "@/lib/graph-diff";
 import { clearEventReversal } from "@/lib/scenario-baseline";
 import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry";
@@ -167,6 +167,11 @@ export interface CanvasActions {
    */
   /** Applies the Event; returns the Attribute Operations it refused, with reasons. */
   applyEvent: (event: EventDefinition, n: number) => string[];
+  /**
+   * Let `hours` pass (a hand-fired Temporal Jump): one `event_applied` entry with
+   * a `tj-` id and `temporal_jump_hours`, so Undo and Clear Event treat it as an Event.
+   */
+  temporalJump: (hours: number) => void;
   /**
    * Revert the most recent event_applied entry AND everything the Propagation
    * wrote, via the Scenario Baseline (ADR-0016). Falls back, for entries written
@@ -524,18 +529,25 @@ export const useCanvasStore = create<CanvasStore>()(
           draft.edges = snapshot.edges;
         }),
         `Apply event: ${event.label}`,
-        {
-          updateType: "event_applied",
-          eventId: event.id,
-          canvasId: null,
-          // temporal_jump_hours carries the schema's ge=1 constraint — only set
-          // it when there is a genuine positive duration to report.
-          ...(event.type === "temporal_jump" && event.duration_hours
-            ? { extra: { temporal_jump_hours: event.duration_hours } }
-            : {}),
-        },
+        { updateType: "event_applied", eventId: event.id, canvasId: null },
       );
       return warnings;
+    },
+
+    temporalJump(hours: number) {
+      if (modelLocked()) return;
+      const id = temporalJumpId();
+      const { snapshot } = passTime(get().toGraphSnapshot(), hours, id);
+      withHistory(
+        get,
+        () => set((draft) => {
+          draft.nodes = snapshot.nodes;
+          draft.edges = snapshot.edges;
+        }),
+        `Temporal Jump (+${hours}h)`,
+        // temporal_jump_hours carries the schema's ge=1 constraint; a jump is at least 1 h.
+        { updateType: "event_applied", eventId: id, canvasId: null, extra: { temporal_jump_hours: hours } },
+      );
     },
 
     clearEvent() {
@@ -575,8 +587,8 @@ export const useCanvasStore = create<CanvasStore>()(
       // `event_cleared` entry pushed above is what makes CTRL+Z bring it back.
       historyState.removeUpdateEntry(entry.id);
 
-      // A Temporal Jump IS an Event (`temporalJumpEvent` goes through
-      // applyEvent), so Ctrl+R can pick one. The −Xh control tracks elapsed
+      // A Temporal Jump is recorded as an Event (`temporalJump`), so Ctrl+R
+      // can pick one. The −Xh control tracks elapsed
       // hours separately, and left alone it would go on offering to rewind to a
       // snapshot taken before a jump that is no longer in the scenario.
       if (eventId?.startsWith("tj-")) {

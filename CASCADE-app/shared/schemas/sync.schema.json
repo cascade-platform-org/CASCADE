@@ -990,8 +990,7 @@
           "enum": [
             "hazard",
             "disservice",
-            "restorative",
-            "temporal_jump"
+            "restorative"
           ],
           "title": "Type",
           "type": "string"
@@ -1028,20 +1027,6 @@
           "description": "Hours until self-resolution. Disservices only.",
           "title": "Expected Recovery Time"
         },
-        "duration_hours": {
-          "anyOf": [
-            {
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Hours to advance the clock. Temporal Jump events only. Used as the default when saving to Scorecard.",
-          "title": "Duration Hours"
-        },
         "default_repair_time": {
           "anyOf": [
             {
@@ -1074,7 +1059,7 @@
         },
         "temporal_simulation_only": {
           "default": false,
-          "description": "True for an Event used only inside a Temporal Simulation Phase: it is hidden from the Action Bar and from the Scorecard's uncovered-Event list. Any type may be Temporal-Simulation-only, a Temporal Jump included. Client-side only; the engine never reads it.",
+          "description": "True for an Event used only inside a Temporal Simulation Phase: it is hidden from the Action Bar and from the Scorecard's uncovered-Event list. Any type may be Temporal-Simulation-only. Client-side only; the engine never reads it.",
           "title": "Temporal Simulation Only",
           "type": "boolean"
         },
@@ -1630,7 +1615,7 @@
           "type": "array"
         },
         "events": {
-          "description": "Hazard and Disservice definitions. Both types are Events.",
+          "description": "Every Event definition. A `temporal_jump` Event (possible before 2026-10-08) is dropped on load: time passing is a Phase's advance_hours.",
           "items": {
             "$ref": "#/$defs/EventDefinition"
           },
@@ -1932,7 +1917,7 @@
     },
     "Phase": {
       "additionalProperties": false,
-      "description": "Applies its Events, then optionally runs one Propagation.",
+      "description": "Lets time pass, applies its Events, then optionally runs one Propagation.",
       "properties": {
         "events": {
           "description": "A bare Event id is accepted and read as {event: id, every: 1}.",
@@ -1946,6 +1931,13 @@
           "default": true,
           "title": "Propagate",
           "type": "boolean"
+        },
+        "advance_hours": {
+          "default": 0,
+          "description": "Hours that pass at the start of the Phase, before its Events: every positive Functionality Time counts down and an expired one drops to Functionality 1, as the Time control does. 0: no time passes.",
+          "minimum": 0,
+          "title": "Advance Hours",
+          "type": "integer"
         }
       },
       "title": "Phase",

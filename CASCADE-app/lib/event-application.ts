@@ -3,7 +3,7 @@
  *
  * This is the single home for what an Event *does* to a multi-canvas: the
  * imposed Functionality from `vulnerability_levels`, the Hazard `direct_damage`
- * fan-out, `attribute_operations`, and Temporal Jump expiry. It is a
+ * fan-out and `attribute_operations` (time passing is `passTime`, below). It is a
  * pure transform over a GraphSnapshot, so the live canvas and every what-if
  * path (Save-to-Scorecard, Scorecard gap-fill, the "Run" button on an uncovered
  * Event) get the same answer from the same code.
@@ -149,39 +149,46 @@ class ElementWriter {
 }
 
 /**
- * Build the synthetic Event that advances simulated time by `hours`.
- *
- * A Temporal Jump is an Event kind, not a separate mechanism (CONTEXT.md →
- * Temporal Jump), so it travels through `applyEventToSnapshot` like any other
- * and lands in history as a normal entry. It is always system-generated, never
- * user-authored, which is why it is minted here rather than read from the Model
- * Configuration.
+ * A fresh id for one hand-fired Temporal Jump. The `tj-` prefix is READ BACK by
+ * `canvas-store.clearEvent` to recognise the history entry as a jump; the hours
+ * travel on the entry's own `temporal_jump_hours`.
  */
-export function temporalJumpEvent(hours: number): EventDefinition {
-  return {
-    id: `tj-${nanoid(6)}`,
-    // The `tj-` prefix is READ BACK by `canvas-store.clearEvent` to recognise
-    // this Event as a Temporal Jump — the synthetic EventDefinition itself is
-    // never persisted, only its effects. The hours travel structurally via
-    // `duration_hours` below, recorded onto the history entry's own
-    // `temporal_jump_hours` field (see canvas-store.applyEvent), not parsed
-    // back out of this label.
-    label: `Temporal Jump (+${hours}h)`,
-    type: "temporal_jump",
-    frequency_per_10y: 0,
-    duration_hours: hours,
-  };
+export const temporalJumpId = (): string => `tj-${nanoid(6)}`;
+
+/**
+ * Let `hours` pass: every positive Functionality Time counts down, and an
+ * expired one spends its reserve and drops the Element to Functionality 1,
+ * attributed to `causeId` (requirements §9.2). Time passing is no Event kind
+ * (ADR-0019, revised 2026-10-08): the Time control records it as an
+ * `event_applied` entry with a `temporalJumpId`, a Timeline Phase through its
+ * `advance_hours`. Untouched Elements keep their identity.
+ */
+export function passTime(snapshot: GraphSnapshot, hours: number, causeId: string): EventApplication {
+  const writer = new ElementWriter(snapshot);
+  const reversal: MutationReversal = {};
+  const capture = (id: string, field: string, value: unknown) => { if (!(`${id}.${field}` in reversal)) reversal[`${id}.${field}`] = value; };
+  for (const { id, el } of writer.all()) {
+    const ft = el.functionality_time ?? 0;
+    if (ft <= 0) continue;
+    capture(id, "functionality_time", ft);
+    const remaining = ft - hours;
+    if (remaining <= 0) {
+      capture(id, "functionality", el.functionality);
+      capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
+      writer.write(id, { functionality_time: 0, functionality: 1, responsibility_share: { [causeId]: 1.0 } });
+    } else {
+      writer.write(id, { functionality_time: remaining });
+    }
+  }
+  return { snapshot: writer.result(), reversal, warnings: [] };
 }
 
-/** Hazards and Disservices degrade by vulnerability; a Restorative Event or a Temporal Jump has no vulnerability slider. */
+/** Hazards and Disservices degrade by vulnerability; a Restorative Event has no vulnerability slider. */
 export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type === "hazard" || e.type === "disservice";
 
 /** Events a user fires by hand. Temporal-Simulation-only Events live in Timelines (ADR-0019). */
 export const isScenarioEvent = (e: EventDefinition): boolean => !e.temporal_simulation_only;
 
-/** Hours a Temporal Jump advances; undefined for any other Event. */
-export const temporalJumpHours = (e: EventDefinition): number | undefined =>
-  e.type === "temporal_jump" ? e.duration_hours ?? 0 : undefined;
 
 /**
  * Apply one Event to a Scenario.
@@ -190,7 +197,6 @@ export const temporalJumpHours = (e: EventDefinition): number | undefined =>
  * every phase reads the ORIGINAL Element state, never a previous phase's output,
  * so a later phase overwriting an earlier one is a deliberate last-writer-wins:
  *
- *   0. Temporal Jump — advance `functionality_time`, expire to Functionality 1
  *   1. `vulnerability_levels` — impose `N − level`, only where it worsens
  *      (Hazards and Disservices; a Restorative Event has no vulnerability)
  *   2. `direct_damage` — Hazards only, on every Element the Event affects
@@ -237,30 +243,6 @@ export function applyEventToSnapshot(
     capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
     writer.write(id, { functionality, responsibility_share: eventCause });
   };
-
-  // ── 0. Temporal Jump ──────────────────────────────────────────────────────
-  // Only Elements already holding on backup (Functionality Time > 0) move; on
-  // expiry the reserve is spent and the Element drops to 1 (requirements §9.2).
-  if (event.type === "temporal_jump") {
-    const hours = temporalJumpHours(event) ?? 0;
-    for (const { id, el } of writer.all()) {
-      const ft = el.functionality_time ?? 0;
-      if (ft <= 0) continue;
-      capture(id, "functionality_time", ft);
-      const remaining = ft - hours;
-      if (remaining <= 0) {
-        capture(id, "functionality", el.functionality);
-        capture(id, "responsibility_share", el.responsibility_share ?? ABSENT);
-        writer.write(id, {
-          functionality_time: 0,
-          functionality: 1,
-          responsibility_share: eventCause,
-        });
-      } else {
-        writer.write(id, { functionality_time: remaining });
-      }
-    }
-  }
 
   // ── 1. vulnerability_levels ───────────────────────────────────────────────
   // A missing or zero entry means immune. The imposed level applies only if it

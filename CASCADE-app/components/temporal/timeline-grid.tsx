@@ -36,7 +36,6 @@ type Value = AttributeOperation["value"];
 
 /** One Event in the overview and in its legend; an unknown Event is grey. */
 function EventMarker({ type }: { type: EventDefinition["type"] | undefined }) {
-  if (type === "temporal_jump") return <Clock size={9} className="shrink-0 text-blue-600 dark:text-blue-400" />;
   return (
     <span
       className={cn(
@@ -46,6 +45,9 @@ function EventMarker({ type }: { type: EventDefinition["type"] | undefined }) {
     />
   );
 }
+
+/** A Phase that lets time pass (its `advance_hours`). */
+const TimeMarker = () => <Clock size={9} className="shrink-0 text-blue-600 dark:text-blue-400" />;
 
 /** What a row acts on, in a few words; a filter in the words its explanation uses. */
 function rowTarget(row: ProfileRow, model: FilterableModel): string {
@@ -168,7 +170,7 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
   const plan = usePlan();
   const labels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
 
-  const jumps = plan.periods.flatMap((p) => p.phases.flatMap((ph) => ph.events)).filter((id) => byId.get(id)?.type === "temporal_jump").length;
+  const jumps = plan.periods.flatMap((p) => p.phases).filter((ph) => ph.advanceHours > 0).length;
   const columns = { gridTemplateColumns: `${LABEL_COL}px repeat(${plan.periods.length}, ${PERIOD_COL}px)` };
   const stepStarts = new Set(plan.periods.filter((p) => p.repetition === 0).map((p) => p.label));
   const known = new Set(labels);
@@ -258,7 +260,8 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
               >
                 <span className="flex h-[30px] items-end gap-px">
                   {p.phases.map((ph) => (
-                    <span key={ph.index} className="flex flex-1 flex-col-reverse items-center gap-px">
+                    <span key={ph.index} className="flex flex-1 flex-col-reverse items-center gap-px" title={ph.advanceHours > 0 ? `${ph.advanceHours} h pass` : undefined}>
+                      {ph.advanceHours > 0 && <TimeMarker />}
                       {ph.events.slice(0, MAX_MARKERS).map((id, i) => <EventMarker key={i} type={byId.get(id)?.type} />)}
                       {ph.events.length > MAX_MARKERS && <span className="text-[8px] leading-none text-zinc-500">+{ph.events.length - MAX_MARKERS}</span>}
                     </span>
@@ -345,7 +348,7 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
         <span className="flex items-center gap-1"><EventMarker type="hazard" />hazard</span>
         <span className="flex items-center gap-1"><EventMarker type="disservice" />disservice</span>
         <span className="flex items-center gap-1"><EventMarker type="restorative" />restorative</span>
-        <span className="flex items-center gap-1"><EventMarker type="temporal_jump" />time jump</span>
+        <span className="flex items-center gap-1"><TimeMarker />time passes</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-green-500" />Phase + Propagation</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm border border-zinc-300 dark:border-zinc-600" />Phase, Events only</span>
         <span className="flex items-center gap-1"><span className="text-zinc-300 dark:text-zinc-600">160</span>value carried from earlier</span>

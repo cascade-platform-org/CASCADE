@@ -126,7 +126,7 @@ export function explainUnit(unit: CalendarUnit): Explanation {
     title: "Calendar unit",
     lines: [
       `Repeats advance the label by one ${unit === "none" ? "number" : unit}. Label format: ${LABEL_FORMATS[unit]}.`,
-      "The unit only names periods. A period has no duration: time passes only through Temporal Jump Events you place in a Phase.",
+      "The unit only names periods. A period has no duration: time passes only where a Phase lets hours pass (its clock field).",
     ],
     refs: ["ADR-0019 §1"],
   };
@@ -175,19 +175,22 @@ export function explainPropagate(on: boolean): Explanation {
   };
 }
 
-export function explainPhaseEvent(label: string, added: boolean, jumpHours?: number): Explanation {
-  if (added && jumpHours !== undefined) {
-    return {
-      title: "Temporal Jump added to a Phase",
-      lines: [
-        `"${label}" advances simulated time by ${jumpHours} h at this point of every period of the Step: it subtracts ${jumpHours} from every positive Functionality Time and expires a countdown reaching 0 to Functionality 1.`,
-        "A period has no duration of its own; this jump is how much time it represents for backups. A model without backups needs no jump.",
-        "An expired backup stays at Functionality 1 until a later Event restores it. A countdown keeps draining after its shortage ends — clear it with an Event (set functionality_time 0) in the period supply returns.",
-        "Placed before the Phase's Propagation, that Propagation already sees the expiries; placed in a Phase after it, the next period does. Reserves count elapsed hours: a month is ~730 h.",
-      ],
-      refs: ["ADR-0019 §1", "ADR-0019 §2a"],
-    };
-  }
+export function explainAdvanceHours(hours: number): Explanation {
+  return {
+    title: hours > 0 ? `Time passes: ${hours} h` : "No time passes in this Phase",
+    lines: hours > 0
+      ? [
+          `At the start of this Phase in every period of the Step, before its Events, ${hours} h pass: every positive Functionality Time counts down by ${hours}, and one reaching 0 drops its Element to Functionality 1 (a Temporal Jump).`,
+          "A period has no duration of its own; this is how much time it represents for backups. A model without backups needs none.",
+          "An expired backup stays at Functionality 1 until an Event restores it (a Restorative Event, say). A countdown keeps draining after its shortage ends — clear it with an operation (set functionality_time 0) in the period supply returns.",
+          "The Phase's own Propagation already sees the expiries. Reserves count elapsed hours: a month is ~730 h.",
+        ]
+      : ["Backups do not count down here. Time passes only where a Phase says so."],
+    refs: ["ADR-0019 §1", "ADR-0019 §2a"],
+  };
+}
+
+export function explainPhaseEvent(label: string, added: boolean): Explanation {
   return {
     title: added ? "Event added to a Phase" : "Event removed from a Phase",
     lines: [
@@ -364,7 +367,7 @@ export function explainSelectPeriod(p: PlannedPeriod, eventLabel: (id: string) =
 export const EXPLAIN_STRIP: Explanation = {
   title: "Timeline at a glance",
   lines: [
-    "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, green restorative, clock = a time jump (the only way time passes).",
+    "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, green restorative; a clock where the Phase lets time pass (the only way time passes).",
     "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events.",
     "An Event set to every N periods shows only in the periods it fires in. Click a period for exactly what runs in it.",
     "Below, each profile row is one operation with a cell per period. A written value stays in later periods until something changes it, so an empty cell of a set row shows the carried value in grey.",
@@ -467,7 +470,7 @@ export const EXPLAIN_CREATE_EVENT: Explanation = {
   title: "Create Event",
   lines: [
     "Opens Config → Events with a new Event marked “Temporal Simulation only”: it never appears in the Action Bar or the Scorecard's uncovered list, only here.",
-    "It can be a Hazard, a Disservice, or a Temporal Jump with its hours — the way a Timeline advances time. When you Save the Config it joins this Phase; Cancel leaves the Phase as it was.",
+    "It can be a Hazard, a Disservice or a Restorative Event (a repair). When you Save the Config it joins this Phase; Cancel leaves the Phase as it was.",
   ],
   refs: ["ADR-0019 §1", "requirements §6.4"],
 };
