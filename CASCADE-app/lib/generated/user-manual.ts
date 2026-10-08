@@ -3164,7 +3164,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " keeps every ticked period of the Run table (all of them unless you untick some) as an entry each: its end state, the table's values with each Metric's minimum and mean across the run, and its Stocks. A saved entry's network switches between Functionality, Stock level and Stock change. Periods saved together share the run's start, so each stores only what changed."
+                  "text": " keeps the ticked periods of the Run table (all of them unless you untick some) together, as one entry: per period its end state, the table's values and its Stocks, with each Metric's minimum and mean across the run. On the Scorecard, a slider steps through the saved periods and the network switches between Functionality, Stock level and Stock change. The run's start is stored once and each period only what changed since it."
                 }
               ]
             }

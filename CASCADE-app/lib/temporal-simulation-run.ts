@@ -18,9 +18,9 @@ import { propagateSnapshot } from "@/lib/ephemeral-propagation";
 import { resetSnapshot } from "@/lib/scenario-baseline";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
-import { RunStopped, runTimeline, type RunRecord } from "@/lib/step-operator";
+import { RunStopped, runTimeline } from "@/lib/step-operator";
 import { runTableCsv, type RunTable } from "@/lib/temporal-metrics";
-import { buildPeriodEntries } from "@/lib/period-entry";
+import { buildRunEntry } from "@/lib/period-entry";
 import { CSV_FILE, safeName, saveAs } from "@/lib/file-io";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useUiStore } from "@/store/ui-store";
@@ -99,35 +99,25 @@ export async function exportRunCsv(table: RunTable): Promise<void> {
   await saveAs(`${safeName(name)}.csv`, runTableCsv(table), CSV_FILE);
 }
 
-/** Each run's start state's key in the Scorecard, so saving from one run again reuses its base. */
-const runBases = new WeakMap<RunRecord, string>();
-
 /**
- * Save periods of the shown run as `temporal_simulation` Scorecard entries, one
- * each, sharing the run's start state (each entry holds a Graph Diff from it).
- * The period the Run View shows also gets a picture of the canvas. Returns how
- * many were saved.
+ * Save the ticked periods of the shown run as one `temporal_simulation`
+ * Scorecard entry: the run's start once, each period as a Graph Diff from it.
+ * The period the Run View shows also gets a picture of the canvas. Returns the
+ * entry's label.
  */
-export async function savePeriodsToScorecard(table: RunTable, numbers: readonly number[]): Promise<number> {
+export async function saveRunToScorecard(table: RunTable, numbers: readonly number[]): Promise<string | null> {
   const sim = useTemporalSimulationStore.getState();
   const record = sim.runRecord;
-  if (!record || numbers.length === 0) return 0;
-  const scorecard = useScorecardStore.getState();
-  let baseId = runBases.get(record);
-  if (baseId === undefined || !(baseId in scorecard.bases)) {
-    baseId = nanoid();
-    runBases.set(record, baseId);
-  }
+  if (!record || numbers.length === 0) return null;
   const shown = numbers.includes(sim.selectedPeriod) ? await useUiStore.getState().captureCanvasFn?.() : undefined;
-  const entries = buildPeriodEntries({
+  const entry = buildRunEntry({
     record,
-    numbers: [...numbers].sort((a, b) => a - b),
+    numbers,
     table,
     timelineName: sim.timeline.name || "Temporal Simulation",
-    baseId,
-    newId: nanoid,
+    id: nanoid(),
     ...(shown ? { image: { number: sim.selectedPeriod, png: shown } } : {}),
   });
-  scorecard.addSimulationPeriods(baseId, record.start, entries);
-  return entries.length;
+  useScorecardStore.getState().addScorecardEntry(entry);
+  return entry.label;
 }

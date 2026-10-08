@@ -476,14 +476,25 @@ export const StockValueSchema = z.object({
   reference: z.number().optional(),
 });
 
+/** One period of a saved run: its end state as a Graph Diff from the entry's `start`, its row, its Stocks' changes. */
+export const SimulationPeriodSchema = z.object({
+  label: z.string(),
+  diff: GraphDiffSchema,
+  /** Column name → value at the period (standard and custom Metrics); null = no value. */
+  metrics: z.record(z.string(), z.number().nullable()).default({}),
+  /** Each Stock's change over the period, with its reference; the level is read off the end state. */
+  stock_values: z.array(StockValueSchema).default([]),
+  /** Base64-encoded PNG of the Run View at save. */
+  image_png: z.string().optional(),
+});
+export type SimulationPeriod = z.infer<typeof SimulationPeriodSchema>;
+
 /**
- * One period of a Temporal Simulation run, saved (ADR-0019 §4). The run is not
- * saved, so the entry holds what it shows: the end state, the Metric values at
- * that period and across the run (computed at save) and each Stock's Level Mode
- * value. The end state is a Graph Diff from the run's start, kept once in
- * `Project.scorecard_bases` (`base_id`); an entry saved before 2026-10-08 holds
- * the whole `snapshot`. Exactly one of the two (Pydantic checks it;
- * `lib/period-entry.ts` reads either).
+ * A Temporal Simulation run saved to the Scorecard (ADR-0019 §4): the periods
+ * ticked at save, packed in one entry. The run is not saved, so the entry holds
+ * what it shows: the run's start once, each period's end state as a Graph Diff
+ * from it, the table's values per period, and each Metric's minimum and mean
+ * across the whole run.
  */
 export const TemporalSimulationScorecardEntrySchema = z.object({
   type: z.literal("temporal_simulation"),
@@ -491,20 +502,12 @@ export const TemporalSimulationScorecardEntrySchema = z.object({
   label: z.string(),
   created_at: z.string(),
   timeline_name: z.string(),
-  period_label: z.string(),
-  snapshot: GraphSnapshotSchema.optional(),
-  base_id: z.string().optional(),
-  diff: GraphDiffSchema.optional(),
-  /** Column name → value at the period (standard and custom Metrics); null = no value. */
-  metrics: z.record(z.string(), z.number().nullable()).default({}),
+  start: GraphSnapshotSchema,
+  periods: z.array(SimulationPeriodSchema).min(1),
   /** Column name → the smallest value across the run's periods. */
   metric_min: z.record(z.string(), z.number().nullable()).default({}),
   /** Column name → the mean across the run's periods that have a value. */
   metric_mean: z.record(z.string(), z.number().nullable()).default({}),
-  level_reading: z.enum(["level", "change"]).default("level"),
-  stock_values: z.array(StockValueSchema).default([]),
-  /** Base64-encoded PNG of the Run View at save. */
-  image_png: z.string().optional(),
 });
 
 /** Discriminated union on `type`. */
@@ -563,9 +566,25 @@ export const ProjectSchema = z.object({
   scorecard: z.preprocess(
     (val) => {
       if (!Array.isArray(val)) return val;
-      return val.map((entry: unknown) => {
+      // A saved period that diffed against a shared base (an hour on 2026-10-08; no run could save one) is dropped.
+      return val.filter((entry: unknown) => !(typeof entry === "object" && entry !== null && "base_id" in entry)).map((entry: unknown) => {
         if (typeof entry !== "object" || entry === null) return entry;
         const migrated = { ...(entry as Record<string, unknown>) };
+        // A Temporal Simulation entry saved before 2026-10-08: one period with its whole end state.
+        if (migrated.type === "temporal_simulation" && "snapshot" in migrated && !("periods" in migrated)) {
+          const { snapshot, period_label, metrics, level_reading, stock_values, image_png, ...rest } = migrated;
+          return {
+            ...rest,
+            start: snapshot,
+            periods: [{
+              label: period_label ?? "",
+              diff: { nodes: [], edges: [], canvases: [] },
+              metrics: metrics ?? {},
+              stock_values: level_reading === "change" ? stock_values ?? [] : [],
+              ...(image_png ? { image_png } : {}),
+            }],
+          };
+        }
         if (!("type" in migrated)) migrated.type = "propagation";
         if ("event_id" in migrated && !("event_ids" in migrated)) {
           const oldId = migrated.event_id;
@@ -577,11 +596,6 @@ export const ProjectSchema = z.object({
     },
     z.array(ScorecardEntrySchema).default([]),
   ),
-  /**
-   * Start states of Temporal Simulation runs, each shared by the periods saved
-   * from it to the Scorecard (an entry's `base_id`); removed once unused.
-   */
-  scorecard_bases: z.record(z.string(), GraphSnapshotSchema).optional(),
   /**
    * The project's one Temporal Simulation (ADR-0019): Timeline, profile and
    * Metrics. Input only; runs are not saved. The engine never reads it.

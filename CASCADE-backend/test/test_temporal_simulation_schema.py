@@ -111,19 +111,29 @@ def test_a_phase_lets_hours_pass_and_a_temporal_jump_event_is_dropped_on_load():
     assert [e.id for e in config.events] == ["q"]
 
 
-def test_a_saved_period_holds_a_diff_against_a_shared_base_or_a_whole_snapshot():
+def test_a_saved_run_packs_its_periods_and_older_entries_load():
     from schemas.network import TemporalSimulationScorecardEntry
 
-    head = {"type": "temporal_simulation", "id": "e", "label": "l", "created_at": "2023-01-01T00:00:00Z", "timeline_name": "t", "period_label": "p"}
+    head = {"type": "temporal_simulation", "id": "e", "label": "l", "created_at": "2023-01-01T00:00:00Z", "timeline_name": "t"}
     snapshot = {"nodes": {}, "edges": {}, "canvases": []}
     diff = {"nodes": [], "edges": [], "canvases": []}
+    entry = TemporalSimulationScorecardEntry.model_validate({
+        **head, "start": snapshot, "metric_min": {"x": 1}, "metric_mean": {"x": 2},
+        "periods": [{"label": "p1", "diff": diff, "metrics": {"x": 1}}, {"label": "p2", "diff": diff, "metrics": {"x": 3}}],
+    })
+    assert [p.label for p in entry.periods] == ["p1", "p2"]
+    with pytest.raises(ValidationError):
+        TemporalSimulationScorecardEntry.model_validate({**head, "start": snapshot, "periods": []})
+
+    # One period with its whole end state (saved before 2026-10-08).
+    older = TemporalSimulationScorecardEntry.model_validate({
+        **head, "period_label": "p", "snapshot": snapshot, "metrics": {"x": 1}, "level_reading": "level", "stock_values": [{"element": "a", "value": 2}],
+    })
+    assert (older.periods[0].label, older.periods[0].metrics, older.periods[0].stock_values) == ("p", {"x": 1}, [])
+
+    # The hour-old form that diffed against a shared base is dropped, and so is the key.
     project = Project.model_validate({
         "version": "2.0", "meta": {"name": "p"}, "nodes": {}, "edges": {}, "canvases": [],
-        "scorecard": [{**head, "base_id": "b", "diff": diff, "metric_min": {"x": 1}, "metric_mean": {"x": 2}}],
-        "scorecard_bases": {"b": snapshot},
+        "scorecard": [{**head, "period_label": "p", "base_id": "b", "diff": diff}], "scorecard_bases": {"b": snapshot},
     })
-    assert project.scorecard_bases["b"].nodes == {}
-    assert TemporalSimulationScorecardEntry.model_validate({**head, "snapshot": snapshot}).snapshot is not None
-    for wrong in ({}, {"snapshot": snapshot, "base_id": "b", "diff": diff}, {"base_id": "b"}):
-        with pytest.raises(ValidationError, match="snapshot"):
-            TemporalSimulationScorecardEntry.model_validate({**head, **wrong})
+    assert project.scorecard == []

@@ -83,26 +83,27 @@ describe("the project file", () => {
     expect(store().profile[0].values).toEqual({ "2023-03-07": 0.5 });
   });
 
-  it("keeps a saved run's start once, until its last period entry is deleted, through the project file", () => {
-    const base = { nodes: { a: { id: "a", functionality: 3 } }, edges: {}, canvases: [] };
-    const entry = (id: string) => ({
-      type: "temporal_simulation" as const, id, label: id, created_at: "2023-01-01T00:00:00Z", timeline_name: "t", period_label: id,
-      base_id: "b", diff: { nodes: [], edges: [], canvases: [] }, metrics: {}, metric_min: {}, metric_mean: {}, level_reading: "change" as const, stock_values: [],
+  it("round-trips a saved run, and loads an older one-period entry as a run of one", () => {
+    const start = { nodes: { a: { id: "a", functionality: 3 } }, edges: {}, canvases: [] };
+    const head = { type: "temporal_simulation" as const, id: "r", label: "r", created_at: "2023-01-01T00:00:00Z", timeline_name: "t" };
+    useScorecardStore.getState().addScorecardEntry({
+      ...head, start, metric_min: { x: 1 }, metric_mean: { x: 2 },
+      periods: [{ label: "p1", diff: { nodes: [], edges: [], canvases: [] }, metrics: { x: 1 }, stock_values: [] }],
     });
-    const scorecard = () => useScorecardStore.getState();
-    scorecard().addSimulationPeriods("b", base, [entry("p1"), entry("p2")]);
-    scorecard().addSimulationPeriods("b", { ...base, nodes: {} }, []);
-    expect(scorecard().bases.b).toEqual(base);
-
     const file = ProjectSchema.parse(JSON.parse(JSON.stringify(useCanvasStore.getState().toProject())));
     useCanvasStore.getState().reset();
     useCanvasStore.getState().fromProject(file);
-    expect(scorecard().bases.b).toEqual(base);
+    expect(useScorecardStore.getState().scorecard[0]).toMatchObject({ start, periods: [{ label: "p1" }] });
 
-    scorecard().removeScorecardEntry("p1");
-    expect(scorecard().bases.b).toBeDefined();
-    scorecard().removeScorecardEntry("p2");
-    expect(scorecard().bases).toEqual({});
+    const older = ProjectSchema.parse({
+      ...file,
+      scorecard: [
+        { ...head, id: "o", period_label: "p", snapshot: start, metrics: { x: 4 }, level_reading: "change", stock_values: [{ element: "a", value: 1 }] },
+        { ...head, id: "gone", period_label: "p", base_id: "b", diff: { nodes: [], edges: [], canvases: [] } },
+      ],
+    });
+    expect(older.scorecard).toHaveLength(1);
+    expect(older.scorecard[0]).toMatchObject({ id: "o", start, periods: [{ label: "p", metrics: { x: 4 }, stock_values: [{ element: "a", value: 1 }] }] });
   });
 
   it("leaves a project without a simulation without the key", () => {

@@ -659,49 +659,65 @@ class StockValue(BaseModel):
     reference: Optional[float] = Field(default=None, description="The reference used; absent = none.")
 
 
+_EMPTY_DIFF: dict[str, list[Any]] = {"nodes": [], "edges": [], "canvases": []}
+
+
+class SimulationPeriod(BaseModel):
+    """One period of a saved Temporal Simulation run: its end state as a Graph
+    Diff from the entry's `start`, its table row, and each Stock's change over it."""
+    label: str
+    diff: GraphDiff
+    metrics: dict[str, Optional[float]] = Field(
+        default_factory=dict,
+        description="Column name → value at the period (standard and custom Metrics); None = no value.",
+    )
+    stock_values: list[StockValue] = Field(
+        default_factory=list,
+        description="Each Stock's change over the period, with its reference; the level is read off the end state.",
+    )
+    image_png: Optional[str] = None  # Base64-encoded PNG of the Run View at save
+
+
 class TemporalSimulationScorecardEntry(BaseModel):
     """
-    One period of a Temporal Simulation run, saved (ADR-0019 §4). The run itself
-    is not saved, so the entry holds what it shows: the period's end state (the
-    Scorecard derives Operativity from it as for any entry), the Metric values at
-    that period and across the run, computed at save, and each Stock's Level Mode
-    value with the reference used.
-
-    The end state is a Graph Diff from the run's start, stored once in
-    `Project.scorecard_bases` and shared by every period saved from that run
-    (2026-10-08). An entry saved earlier holds the whole `snapshot` instead.
+    A Temporal Simulation run saved to the Scorecard (ADR-0019 §4): the periods
+    ticked at save, packed in one entry. The run itself is not saved, so the
+    entry holds what it shows: the run's start state once, each period's end
+    state as a Graph Diff from it (the Scorecard derives Operativity from it as
+    for any entry), the table's values per period, and each Metric's minimum and
+    mean across the whole run.
     """
     type: Literal["temporal_simulation"]
     id: str
     label: str
     created_at: str  # ISO 8601 UTC
     timeline_name: str
-    period_label: str
-    snapshot: Optional[GraphSnapshot] = Field(default=None, description="The whole end state (entries saved before 2026-10-08).")
-    base_id: Optional[str] = Field(default=None, description="Key in Project.scorecard_bases: the run's start state.")
-    diff: Optional[GraphDiff] = Field(default=None, description="From the base to the period's end state.")
-    metrics: dict[str, Optional[float]] = Field(
-        default_factory=dict,
-        description="Column name → value at the period (standard and custom Metrics); None = no value.",
-    )
+    start: GraphSnapshot
+    periods: list[SimulationPeriod] = Field(..., min_length=1)
     metric_min: dict[str, Optional[float]] = Field(
         default_factory=dict, description="Column name → the smallest value across the run's periods.",
     )
     metric_mean: dict[str, Optional[float]] = Field(
         default_factory=dict, description="Column name → the mean across the run's periods that have a value.",
     )
-    level_reading: Literal["level", "change"] = Field(
-        default="level",
-        description="The reading `stock_values` hold; a level reading is also derived from the end state.",
-    )
-    stock_values: list[StockValue] = Field(default_factory=list)
-    image_png: Optional[str] = None  # Base64-encoded PNG of the Run View at save
 
-    @model_validator(mode="after")
-    def _one_end_state(self) -> "TemporalSimulationScorecardEntry":
-        if (self.snapshot is None) == (self.base_id is None or self.diff is None):
-            raise ValueError("give either `snapshot`, or `base_id` and `diff`")
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _one_period_entry(cls, data: Any) -> Any:
+        """An entry saved before 2026-10-08 is one period with its whole end state."""
+        if isinstance(data, dict) and "snapshot" in data and "periods" not in data:
+            data = dict(data)
+            reading = data.pop("level_reading", "level")
+            values = data.pop("stock_values", [])
+            # A level reading is read off the end state now; only a change is kept.
+            period = {"label": data.pop("period_label", ""), "diff": _EMPTY_DIFF, "metrics": data.pop("metrics", {}),
+                      "stock_values": values if reading == "change" else []}
+            if data.get("image_png"):
+                period["image_png"] = data["image_png"]
+            data.pop("image_png", None)
+            data["start"] = data.pop("snapshot")
+            data["periods"] = [period]
+        return data
 
 
 # Discriminated union — `type` field selects the variant.
@@ -759,20 +775,24 @@ class Project(BaseModel):
             "Capped at 20 entries by the store layer."
         ),
     )
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_unpacked_simulation_entries(cls, data: Any) -> Any:
+        """For about an hour on 2026-10-08 a saved period diffed against a shared
+        `scorecard_bases` start; no run could save one, so such an entry and the
+        key are dropped rather than failing the whole project."""
+        if isinstance(data, dict) and ("scorecard_bases" in data or isinstance(data.get("scorecard"), list)):
+            data = {k: v for k, v in data.items() if k != "scorecard_bases"}
+            if isinstance(data.get("scorecard"), list):
+                data["scorecard"] = [e for e in data["scorecard"] if not (isinstance(e, dict) and "base_id" in e)]
+        return data
+
     scorecard: list[ScorecardEntry] = Field(
         default_factory=list,
         description=(
             "User-curated atlas of named Scenarios and their Propagation results. "
             "Persisted in the project file. Derived metrics are computed client-side "
             "from each entry's snapshot and never stored here."
-        ),
-    )
-    scorecard_bases: dict[str, GraphSnapshot] = Field(
-        default_factory=dict,
-        description=(
-            "Start states of Temporal Simulation runs, each shared by the periods saved "
-            "from it as Scorecard entries holding a Graph Diff (`base_id`). The client "
-            "removes a base once no entry refers to it."
         ),
     )
     temporal_simulation: Optional[TemporalSimulation] = Field(

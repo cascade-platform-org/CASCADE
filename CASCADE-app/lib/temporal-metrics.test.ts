@@ -66,30 +66,27 @@ describe("runTable", () => {
   });
 });
 
-describe("buildPeriodEntries", () => {
-  it("saves each period as a diff from the run's start, with its row, the run's min and mean, and each Stock's change", async () => {
-    const { buildPeriodEntries, entryEndState } = await import("./period-entry");
+describe("buildRunEntry", () => {
+  it("packs the ticked periods: the start once, each period a diff from it with its row and Stock changes, and the run's min and mean", async () => {
+    const { buildRunEntry, periodEndState } = await import("./period-entry");
     const { periodState } = await import("./step-operator");
     const start: GraphSnapshot = { nodes: { pool: { id: "pool", functionality: N, supply_capacity: { hours: stock({ rate: 10, level: 5, min: -20 }) } } }, edges: {}, canvases: [] };
-    const plan = planTimeline({ name: "t", steps: [{ label: "2023-01", unit: "month", repeat: 2, phases: [{ events: [], propagate: true }] }] });
+    const plan = planTimeline({ name: "t", steps: [{ label: "2023-01", unit: "month", repeat: 3, phases: [{ events: [], propagate: true }] }] });
     const record = await runTimeline({ start, plan, profile: {}, events: [], n: N, propagate: async (s) => ({ snapshot: s, flow: { served_ratio: {}, stored: {} } }) });
     const table = runTable(record, [], N);
-    let id = 0;
-    const entries = buildPeriodEntries({ record, numbers: [1, 2], table, timelineName: "Year", baseId: "b", newId: () => `e${id++}`, now: () => new Date(0) });
-    expect(entries.map((e) => e.id)).toEqual(["e0", "e1"]);
-    expect(entries[1]).toMatchObject({
+    const entry = buildRunEntry({ record, numbers: [3, 2], table, timelineName: "Year", id: "x", now: () => new Date(0) });
+    expect(entry).toMatchObject({
       type: "temporal_simulation",
-      label: "Year — 2023-02",
-      period_label: "2023-02",
-      base_id: "b",
-      metrics: { "Operativity %": 100, "Stock level · hours": 25 },
+      label: "Year — 2023-02 – 2023-03 (2 periods)",
+      start: record.start,
       metric_min: { "Stock level · hours": 15 },
-      metric_mean: { "Stock level · hours": 20 },
-      level_reading: "change",
+      metric_mean: { "Stock level · hours": 25 },
+    });
+    expect(entry.periods.map((p) => p.label)).toEqual(["2023-02", "2023-03"]);
+    expect(entry.periods[0]).toMatchObject({
+      metrics: { "Operativity %": 100, "Stock level · hours": 25 },
       stock_values: [{ element: "pool", category: "hours", value: 10, reference: 20 }],
     });
-    expect(entries[1]).not.toHaveProperty("snapshot");
-    expect(entryEndState(entries[1], { b: record.start })).toEqual(periodState(record, 2));
-    expect(entryEndState(entries[1], {})).toBeNull();
+    expect(periodEndState(entry, entry.periods[1])).toEqual(periodState(record, 3));
   });
 });

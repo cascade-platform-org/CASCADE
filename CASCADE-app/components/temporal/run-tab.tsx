@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
-import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, savePeriodsToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, saveRunToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import type { RunRecord } from "@/lib/step-operator";
 import { STANDARD_COLUMNS, formatMetric, runTable } from "@/lib/temporal-metrics";
 import {
@@ -125,12 +125,12 @@ export function RunTab() {
           <SmallButton
             onClick={() => {
               explain(EXPLAIN_SAVE_SCORECARD);
-              if (table) void savePeriodsToScorecard(table, toSave).then((count) => {
-                if (count > 0) useUiStore.getState().pushToast({ message: `Saved ${count} period${count === 1 ? "" : "s"} to the Scorecard.`, variant: "success", durationMs: 3000 });
+              if (table) void saveRunToScorecard(table, toSave).then((label) => {
+                if (label) useUiStore.getState().pushToast({ message: `Saved to the Scorecard: ${label}`, variant: "success", durationMs: 3000 });
               });
             }}
             disabled={toSave.length === 0}
-            title="Saves the ticked periods, one Scorecard entry each"
+            title="Saves the ticked periods together, as one Scorecard entry"
           >
             <Save size={11} /> Save {toSave.length} period{toSave.length === 1 ? "" : "s"} to Scorecard
           </SmallButton>
