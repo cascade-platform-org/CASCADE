@@ -43,7 +43,7 @@ from core.importers.inp.map import FLOW_UNIT_SCALE, TANK_RESERVE_EVENT_ID, _wn_n
 from schemas.config import AttributeOperation, EventDefinition
 from schemas.network import Edge, Stock
 from schemas.sync import ProjectBundle
-from schemas.temporal_simulation import CalendarUnit, Phase, PhaseEvent, Step, TemporalSimulation, Timeline
+from schemas.temporal_simulation import FIRST_SIMULATION_ID, CalendarUnit, Phase, PhaseEvent, Step, StoredTemporalSimulation, Timeline
 
 PERIOD_S = 3600  # one period = one hour (ADR-0019: the `hour` unit)
 
@@ -228,9 +228,10 @@ def to_temporal_simulation(
     _tanks_to_storage(wn, bundle)
     profile = _demand_profile(wn, bundle, merged_map, labels)
     fires = _control_events(wn, bundle, hours, start_hour, warnings)
-    bundle.project.temporal_simulation = TemporalSimulation(
+    bundle.project.temporal_simulations = [StoredTemporalSimulation(
+        id=FIRST_SIMULATION_ID,
         format="cascade.temporal-simulation/v1",
         timeline=Timeline(name=f"{bundle.project.meta.name} — {hours} h", steps=steps_firing(labels, "hour", fires)),
         profile=profile,
         metrics=[],
-    )
+    )]

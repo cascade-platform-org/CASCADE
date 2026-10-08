@@ -33,13 +33,15 @@ beforeEach(() => {
   canvas.addCanvas({ id: "c1", label: "Main", graph: { graph_type: "generic", node_ids: [], edge_ids: [] } });
   canvas.upsertNode({ id: "a", label: "A", functionality: n, vulnerability_levels: { quake: 1 } });
   canvas.addNodeToCanvas("a", "c1");
-  sim().loadFromProject({
+  sim().loadFromProject([{
+    id: "s",
     format: TEMPORAL_SIMULATION_FORMAT,
     standard_metrics: [...STANDARD_METRICS],
+    scope: "global",
     timeline: { name: "t", steps: [{ label: "2023-01-01", unit: "day", repeat: 3, phases: [{ events: [{ event: "quake", every: 2 }], propagate: true }] }] },
     profile: {},
     metrics: [],
-  });
+  }]);
 });
 
 describe("a run from the window", () => {

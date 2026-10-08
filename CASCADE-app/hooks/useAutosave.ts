@@ -105,11 +105,11 @@ export function useAutosave(): void {
     // to canvas-store in the same tick; the undo stack is part of what is saved
     // now, so those have to schedule a write too.
     const unsubHistory = useHistoryStore.subscribe(schedule);
-    // The Scorecard and the Temporal Simulation are saved in the project too.
+    // The Scorecard and the Temporal Simulations are saved in the project too.
     // Their stores also hold window state, so only a change to what is saved
     // schedules a write.
     const unsubScorecard = useScorecardStore.subscribe((s, prev) => { if (s.scorecard !== prev.scorecard) schedule(); });
-    const unsubSimulation = useTemporalSimulationStore.subscribe((s, prev) => { if (s.saved !== prev.saved) schedule(); });
+    const unsubSimulation = useTemporalSimulationStore.subscribe((s, prev) => { if (s.simulations !== prev.simulations) schedule(); });
 
     return () => {
       if (timer) clearTimeout(timer);

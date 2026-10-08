@@ -14,6 +14,7 @@ import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { postPropagate, postPropagateBatch } from "@/lib/api-client";
 import { mergeUpdatesIntoSnapshot } from "@/lib/element-update";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { PropagationScope } from "@/lib/schemas/primitives";
 import type { Propagated } from "@/lib/step-operator";
 
 /**
@@ -29,11 +30,15 @@ export async function runEphemeralPropagation(snapshot: GraphSnapshot): Promise<
  * (`served_ratio`, `stored`): what a Temporal Simulation integrates its Stocks
  * from (ADR-0020). Writes nothing to any store.
  */
-export async function propagateSnapshot(snapshot: GraphSnapshot): Promise<Propagated> {
+export async function propagateSnapshot(
+  snapshot: GraphSnapshot,
+  /** The scope and Canvas to use; absent, the Propagate button's, read now. */
+  fixed?: { scope: PropagationScope; canvasId: string | null },
+): Promise<Propagated> {
   const canvasState = useCanvasStore.getState();
   const config = useConfigStore.getState().config;
-  const scope = useUiStore.getState().propagationScope;
-  const activeCanvasId = canvasState.activeCanvasId;
+  const scope = fixed?.scope ?? useUiStore.getState().propagationScope;
+  const activeCanvasId = fixed ? fixed.canvasId : canvasState.activeCanvasId;
 
   const project = canvasState.toProject();
   const snapshotProject = {

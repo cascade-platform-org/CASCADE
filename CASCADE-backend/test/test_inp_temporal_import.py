@@ -57,7 +57,7 @@ def test_a_tank_becomes_storage_filling_and_draining_through_its_pipes(imported)
 
 
 def test_controls_become_events_in_their_hours_and_conditionals_are_skipped(imported):
-    steps = imported.bundle.project.temporal_simulation.timeline.steps
+    steps = imported.bundle.project.temporal_simulations[0].timeline.steps
     assert [(s.label, s.repeat, [e.event for e in s.phases[0].events]) for s in steps] == [
         ("2023-01-01T00", 3, []),
         ("2023-01-01T03", 1, ["control-control-1"]),
@@ -74,7 +74,7 @@ def test_controls_become_events_in_their_hours_and_conditionals_are_skipped(impo
 
 
 def test_the_profile_sets_each_demand_in_every_hour_it_changes(imported):
-    profile = imported.bundle.project.temporal_simulation.profile
+    profile = imported.bundle.project.temporal_simulations[0].profile
     j2 = [(label, op.value) for label, ops in profile.items() for op in ops if op.element == "J2"]
     unit = 10 / 1000 * FLOW_UNIT_SCALE  # 10 L/s
     assert [v for _, v in j2] == [unit * m for m in (1.0, 2.0, 0.5, 1.0, 2.0, 0.5, 1.0, 2.0)]
@@ -84,5 +84,5 @@ def test_the_profile_sets_each_demand_in_every_hour_it_changes(imported):
 
 def test_the_published_importer_is_unchanged():
     plain = _run_import(ImportInpRequest(filename="timed.inp", content=TIMED_INP), 300)
-    assert plain.bundle.project.temporal_simulation is None
+    assert plain.bundle.project.temporal_simulations == []
     assert isinstance(plain.bundle.project.nodes["T1"].supply_capacity["water"], float)

@@ -7,6 +7,7 @@ import type { Node } from "./schemas/network";
 const doc: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
   standard_metrics: [...STANDARD_METRICS],
+  scope: "global",
   timeline: {
     name: "t",
     steps: [{ label: "2023-01", unit: "month", repeat: 2, phases: [{ events: [{ event: "settle", every: 1 }, { event: "audit", every: 2 }], propagate: true }] }],
@@ -56,7 +57,7 @@ describe("profile rows", () => {
 
   it("writes periods in Timeline order", () => {
     const rows = docToDraft({ ...doc, profile: { "2023-02": [pool("set", 1)], "2023-01": [pool("set", 2)] } }, ids()).profile;
-    expect(Object.keys(draftToDoc({ timeline: doc.timeline, profile: rows, metrics: [], standardMetrics: [...STANDARD_METRICS] }).profile)).toEqual(["2023-01", "2023-02"]);
+    expect(Object.keys(draftToDoc({ timeline: doc.timeline, profile: rows, metrics: [], standardMetrics: [...STANDARD_METRICS], scope: "global" }).profile)).toEqual(["2023-01", "2023-02"]);
   });
 });
 

@@ -396,7 +396,12 @@ and an engine-evaluation budget per minute.
 A Temporal Simulation runs the model over many periods: hours, days, months.
 Each period applies its changes, then propagates, and quantities that persist
 from one period to the next (a tank, a budget, hours owed) carry over. A project
-holds one, saved with it; **Simulate** in the Action Bar opens it.
+holds as many as you like, saved with it; **Simulate** in the Action Bar opens
+them. The picker at the top of the window selects the one the tabs edit and
+**Run** runs, and adds (**New**), copies (**Duplicate**) or removes (**Delete**)
+one; its name is its Timeline's name. The scope side of the Simulate button sets
+the selected one's scope, *global* or *local* on the active canvas, saved with
+it.
 
 ### 9.1 The definition
 
@@ -457,9 +462,10 @@ included; the Inspector asks you to declare them.
 ### 9.3 Running
 
 **Run** needs an account allowed to Propagate. It copies the model, resets the
-copy (§4) and runs every period in order, one Propagation, with the Propagate
-button's scope, for each propagating Phase; each counts as one Engine
-Evaluation. A progress bar shows how far it is; **Cancel**, a refused request or
+copy (§4) and runs every period in order, one Propagation, with the Temporal
+Simulation's own scope, for each propagating Phase; each counts as one Engine
+Evaluation. One run at a time: to run another Temporal Simulation, end this
+run first. A progress bar shows how far it is; **Cancel**, a refused request or
 an engine error keeps nothing and names the period it stopped in.
 
 Between periods, every element's Functionality returns to what Events left it
@@ -471,8 +477,9 @@ where a Phase lets hours pass (the clock field in its row).
 
 When the run ends, the **Run View** shows it. Pick a period in the Run tab, or
 step through them in the strip under the Action Bar: the canvas and the
-Inspector show that period's end. Your model is read-only while a run is shown;
-**End run** or **Reset** returns it exactly as it was. The run itself is not
+Inspector show that period's end. Your model and your Temporal Simulations are
+read-only while a run is shown; using a blocked control makes **End run** pulse.
+**End run** or **Reset** returns the model exactly as it was. The run itself is not
 saved.
 
 ### 9.4 Reading a run

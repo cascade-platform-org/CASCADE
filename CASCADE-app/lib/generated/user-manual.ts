@@ -2712,7 +2712,7 @@ export const USER_MANUAL: ManualDoc = {
           "spans": [
             {
               "kind": "text",
-              "text": "A Temporal Simulation runs the model over many periods: hours, days, months. Each period applies its changes, then propagates, and quantities that persist from one period to the next (a tank, a budget, hours owed) carry over. A project holds one, saved with it; "
+              "text": "A Temporal Simulation runs the model over many periods: hours, days, months. Each period applies its changes, then propagates, and quantities that persist from one period to the next (a tank, a budget, hours owed) carry over. A project holds as many as you like, saved with it; "
             },
             {
               "kind": "strong",
@@ -2720,7 +2720,55 @@ export const USER_MANUAL: ManualDoc = {
             },
             {
               "kind": "text",
-              "text": " in the Action Bar opens it."
+              "text": " in the Action Bar opens them. The picker at the top of the window selects the one the tabs edit and "
+            },
+            {
+              "kind": "strong",
+              "text": "Run"
+            },
+            {
+              "kind": "text",
+              "text": " runs, and adds ("
+            },
+            {
+              "kind": "strong",
+              "text": "New"
+            },
+            {
+              "kind": "text",
+              "text": "), copies ("
+            },
+            {
+              "kind": "strong",
+              "text": "Duplicate"
+            },
+            {
+              "kind": "text",
+              "text": ") or removes ("
+            },
+            {
+              "kind": "strong",
+              "text": "Delete"
+            },
+            {
+              "kind": "text",
+              "text": ") one; its name is its Timeline's name. The scope side of the Simulate button sets the selected one's scope, "
+            },
+            {
+              "kind": "em",
+              "text": "global"
+            },
+            {
+              "kind": "text",
+              "text": " or "
+            },
+            {
+              "kind": "em",
+              "text": "local"
+            },
+            {
+              "kind": "text",
+              "text": " on the active canvas, saved with it."
             }
           ]
         },
@@ -3033,7 +3081,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " needs an account allowed to Propagate. It copies the model, resets the copy (§4) and runs every period in order, one Propagation, with the Propagate button's scope, for each propagating Phase; each counts as one Engine Evaluation. A progress bar shows how far it is; "
+                  "text": " needs an account allowed to Propagate. It copies the model, resets the copy (§4) and runs every period in order, one Propagation, with the Temporal Simulation's own scope, for each propagating Phase; each counts as one Engine Evaluation. One run at a time: to run another Temporal Simulation, end this run first. A progress bar shows how far it is; "
                 },
                 {
                   "kind": "strong",
@@ -3067,7 +3115,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " shows it. Pick a period in the Run tab, or step through them in the strip under the Action Bar: the canvas and the Inspector show that period's end. Your model is read-only while a run is shown; "
+                  "text": " shows it. Pick a period in the Run tab, or step through them in the strip under the Action Bar: the canvas and the Inspector show that period's end. Your model and your Temporal Simulations are read-only while a run is shown; using a blocked control makes "
+                },
+                {
+                  "kind": "strong",
+                  "text": "End run"
+                },
+                {
+                  "kind": "text",
+                  "text": " pulse. "
                 },
                 {
                   "kind": "strong",
@@ -3083,7 +3139,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " returns it exactly as it was. The run itself is not saved."
+                  "text": " returns the model exactly as it was. The run itself is not saved."
                 }
               ]
             }

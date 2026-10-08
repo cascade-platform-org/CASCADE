@@ -108,7 +108,7 @@ export function Inspector() {
               Run View: the selected period, read-only.
             </p>
           )}
-          <fieldset disabled={runShown} className="contents">
+          <fieldset data-run-locked disabled={runShown} className="contents">
                     {singleNode ? (
             <NodeInspector key={singleNode.id} node={singleNode} />
           ) : singleEdge ? (

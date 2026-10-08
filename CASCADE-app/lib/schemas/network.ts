@@ -15,7 +15,7 @@
 import { z } from "zod";
 import { UNSAFE_KEY_MESSAGE, isSafeKey } from "./field-path";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
-import { TemporalSimulationSchema } from "./temporal-simulation";
+import { StoredTemporalSimulationSchema, migrateProjectSimulations } from "./temporal-simulation";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -529,7 +529,8 @@ export const ProjectMetaSchema = z.object({
   updated_at: z.string().optional(),
 });
 
-export const ProjectSchema = z.object({
+/** The Project's fields: what Pydantic's `Project` describes, before any migration. */
+export const ProjectFieldsSchema = z.object({
   version: z.literal("2.0"),
   meta: ProjectMetaSchema,
   /**
@@ -598,11 +599,14 @@ export const ProjectSchema = z.object({
     z.array(ScorecardEntrySchema).default([]),
   ),
   /**
-   * The project's one Temporal Simulation (ADR-0019): Timeline, profile and
-   * Metrics. Input only; runs are not saved. The engine never reads it.
+   * The project's Temporal Simulations (ADR-0019): each a Timeline, profile,
+   * Metrics and scope. Input only; runs are not saved. The engine never reads them.
    */
-  temporal_simulation: TemporalSimulationSchema.optional(),
+  temporal_simulations: z.array(StoredTemporalSimulationSchema).optional(),
 });
+
+/** A project file, migrated (`migrateProjectSimulations`) and validated. */
+export const ProjectSchema = z.preprocess(migrateProjectSimulations, ProjectFieldsSchema);
 
 // ---------------------------------------------------------------------------
 // Inferred TypeScript types

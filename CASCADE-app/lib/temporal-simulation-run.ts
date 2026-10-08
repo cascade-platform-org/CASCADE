@@ -5,8 +5,8 @@
  * The store-facing side of `lib/step-operator.ts`, which stays pure. A run reads
  * the model once, Resets a copy of it, and hands the copy to the step operator
  * with the ordinary Propagation call (`propagateSnapshot`: the Propagate
- * button's payload and scope, one metered Engine Evaluation each, no store
- * written). The model is never written: canvas-store refuses model writes while
+ * button's payload, one metered Engine Evaluation each, no store written), at
+ * the Simulation's own scope, fixed when the run starts. The model is never written: canvas-store refuses model writes while
  * `running`, and the Run View paints the run record's periods instead.
  */
 
@@ -40,6 +40,14 @@ export async function startTemporalSimulationRun(): Promise<void> {
   const plan = planTimeline(checked.doc.timeline);
   if (plan.errors.length > 0 || plan.periods.length === 0) return;
 
+  const { scope, canvas = null } = checked.doc;
+  const { canvases, activeCanvasId } = useCanvasStore.getState();
+  if (scope === "local" && (canvas === null || !(canvas in canvases))) {
+    sim.failRun(`This Simulation runs locally on the Canvas "${canvas}", which the project no longer has. Pick a scope on the Simulate button.`);
+    return;
+  }
+  const fixed = { scope, canvasId: scope === "local" ? canvas : activeCanvasId };
+
   const config = useConfigStore.getState();
   const n = selectN(config);
   const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
@@ -58,7 +66,7 @@ export async function startTemporalSimulationRun(): Promise<void> {
       profile: checked.doc.profile,
       events: config.config.events,
       n,
-      propagate: (snapshot) => (ended() ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot)),
+      propagate: (snapshot) => (ended() ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
       signal: mine.signal,
       onProgress: (done, label) => useTemporalSimulationStore.getState().setRunProgress(done, label),
     });

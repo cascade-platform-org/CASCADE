@@ -23,7 +23,7 @@ from typing import Any
 from api.import_routes import _run_import
 from core.importers.inp.temporal import steps_firing
 from schemas.import_inp import ImportInpRequest
-from schemas.temporal_simulation import CalendarUnit, TemporalSimulation
+from schemas.temporal_simulation import FIRST_SIMULATION_ID, CalendarUnit, StoredTemporalSimulation
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = ROOT / "CASCADE-app" / "samples" / "public"
@@ -54,7 +54,7 @@ def build_net1() -> None:
             *({"element": p, "path": ["direct_damage"], "op": "set", "value": False} for p in pumps),
         ],
     })
-    simulation = project["temporal_simulation"]
+    simulation = project["temporal_simulations"][0]
     # Level Mode reads a tank's change against one hour of the town's demand, so
     # draining and refilling show up; against its own bound they are under 5%.
     town_hour = sum(op["value"] for op in simulation["profile"]["2023-01-01T00"])
@@ -74,7 +74,7 @@ def build_net1() -> None:
         "read": "state",
         "aggregate": "sum",
     }]
-    TemporalSimulation.model_validate(simulation)
+    StoredTemporalSimulation.model_validate(simulation)
     (SAMPLES / "Net1_temporal.json").write_text(json.dumps({"project": project, "config": config}, indent=2, ensure_ascii=False) + "\n")
 
 
@@ -100,7 +100,9 @@ def build_ijdrr() -> None:
     }]
     labels = [f"2024-{m:02d}" for m in range(1, 13)]
     city_demand = {"2024-01": 6, "2024-04": 5, "2024-06": 6.5, "2024-09": 5, "2024-12": 6}
-    project["temporal_simulation"] = {
+    project.pop("temporal_simulation", None)
+    project["temporal_simulations"] = [{
+        "id": FIRST_SIMULATION_ID,
         "format": FORMAT,
         "timeline": {
             "name": "A year: two earthquakes and a repair",
@@ -118,8 +120,8 @@ def build_ijdrr() -> None:
             "aggregate": "share_where",
             "value_filter": {"cmp": ">=", "value": n},
         }],
-    }
-    TemporalSimulation.model_validate(project["temporal_simulation"])
+    }]
+    StoredTemporalSimulation.model_validate(project["temporal_simulations"][0])
     path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False))  # the file has no trailing newline
 
 

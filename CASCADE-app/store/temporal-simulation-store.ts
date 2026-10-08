@@ -1,15 +1,20 @@
 /**
- * temporal-simulation-store.ts — the project's Temporal Simulation (ADR-0019)
+ * temporal-simulation-store.ts — the project's Temporal Simulations (ADR-0019)
  * and the window's state.
  *
- * Two forms of one definition. The DRAFT (`timeline`, `profile` rows, `metrics`)
- * is what the window edits: profile rows and Metric ids exist for the grid. The
- * SAVED document (`saved`) is what `Project.temporal_simulation` holds, so it
- * reaches file, autosave and sync through canvas-store's `toProject()`, like the
- * Scorecard. Every definition edit saves the draft into the project when it
- * passes the schema; otherwise `unsaved` says why and the project keeps its last
- * valid document. That rule keeps a half-written row from ever producing a
- * project file that would fail to load.
+ * A project keeps any number of Temporal Simulations (`simulations`, what
+ * `Project.temporal_simulations` holds, so they reach file, autosave and sync
+ * through canvas-store's `toProject()`, like the Scorecard); the window edits
+ * the SELECTED one (`selectedId`). Two forms of it: the DRAFT (`timeline`,
+ * `profile` rows, `metrics`, `scope`) is what the window edits, where profile
+ * rows and Metric ids exist for the grid; its saved document is the list entry.
+ * Every definition edit saves the draft into the list when it passes the
+ * schema; otherwise `unsaved` says why and the list keeps the last valid
+ * document. That rule keeps a half-written row from ever producing a project
+ * file that would fail to load.
+ *
+ * One run at a time: while a run is computing or shown, the definition, the
+ * selection and the list are all read-only.
  *
  * A project without a Temporal Simulation shows a starter Timeline, saved on
  * its first edit. Nothing here touches the canvas, the history or the engine.
@@ -20,7 +25,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
-import { STANDARD_METRICS, type CalendarUnit, type Timeline, type Phase, type Step, type StandardMetric, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { FIRST_SIMULATION_ID, STANDARD_METRICS, type CalendarUnit, type Timeline, type Phase, type SimulationScope, type Step, type StandardMetric, type StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -36,8 +41,13 @@ interface TemporalSimulationState {
   metrics: MetricEntry[];
   /** The standard Metrics the Run table shows, before the project's own. */
   standardMetrics: StandardMetric[];
-  /** `Project.temporal_simulation`: the last draft that passed the schema; undefined until the first edit. */
-  saved: TemporalSimulation | undefined;
+  /** Every Propagation of a run uses it; `canvas` is the Canvas a local run propagates. */
+  scope: SimulationScope;
+  canvas?: string;
+  /** `Project.temporal_simulations`: each Simulation's last draft that passed the schema. */
+  simulations: StoredTemporalSimulation[];
+  /** The Simulation the window edits and Run runs; not in `simulations` until its first valid edit. */
+  selectedId: string;
   /** Why the draft is not saved into the project (schema errors); empty when it is. */
   unsaved: string[];
   /**
@@ -57,11 +67,23 @@ interface TemporalSimulationState {
   display: "functionality" | "level";
   levelReading: "level" | "change";
   explanation: Explanation;
+  /** Counts the refusals a shown run caused; each one makes every End run button pulse. */
+  endRunCue: number;
 
   openWindow: () => void;
   closeWindow: () => void;
-  /** The project's document, or the starter when it has none (project load, new project). */
-  loadFromProject: (doc: TemporalSimulation | undefined) => void;
+  /** The project's Simulations, selecting the first; the starter when it has none (project load, new project). */
+  loadFromProject: (simulations: StoredTemporalSimulation[] | undefined) => void;
+  /** Edit another Simulation; a draft that never passed the schema is dropped. */
+  selectSimulation: (id: string) => void;
+  /** A new starter Simulation, saved and selected. */
+  addSimulation: () => void;
+  /** A copy of the selected Simulation's saved document, named "… (copy)", saved and selected. */
+  duplicateSimulation: () => void;
+  /** Remove one; the selection moves to a neighbour, or to a new starter when none is left. */
+  deleteSimulation: (id: string) => void;
+  /** Global, or local on one Canvas. */
+  setScope: (scope: SimulationScope, canvas?: string) => void;
   setTab: (tab: SimTab) => void;
   explain: (e: Explanation) => void;
   updateTimeline: (fn: (t: Timeline) => void) => void;
@@ -86,6 +108,8 @@ interface TemporalSimulationState {
   selectPeriod: (n: number) => void;
   setDisplay: (d: "functionality" | "level") => void;
   setLevelReading: (r: "level" | "change") => void;
+  /** Something the run blocks was used: point at End run. */
+  cueEndRun: () => void;
 }
 
 export const newPhase = (propagate: boolean): Phase => ({ events: [], propagate });
@@ -109,20 +133,41 @@ const STARTER_TIMELINE: Timeline = {
   ],
 };
 
-const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [], standardMetrics: [...STANDARD_METRICS] });
+const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [], standardMetrics: [...STANDARD_METRICS], scope: "global" });
+
+const newSimulationId = () => `simulation-${nanoid(8)}`;
 
 type State = Draft<TemporalSimulationState>;
 
-/** After a definition edit: save the draft into the project if it passes the schema, else say why not. */
+/** After a definition edit: save the draft into the list if it passes the schema, else say why not. */
 function save(s: State) {
   const checked = checkDoc(draftToDoc(current(s)));
-  if (checked.ok) {
-    s.saved = checked.doc;
-    s.unsaved = [];
-  } else {
+  if (!checked.ok) {
     s.unsaved = checked.errors;
+    return;
   }
+  const doc = { id: s.selectedId, ...checked.doc };
+  const i = s.simulations.findIndex((x) => x.id === s.selectedId);
+  if (i >= 0) s.simulations[i] = doc;
+  else s.simulations.push(doc);
+  s.unsaved = [];
 }
+
+/** Show one draft in the window: a saved Simulation, or the starter. */
+function showDraft(s: State, id: string, draft: SimulationDraft) {
+  s.selectedId = id;
+  s.timeline = draft.timeline;
+  s.profile = draft.profile;
+  s.metrics = draft.metrics;
+  s.standardMetrics = draft.standardMetrics;
+  s.scope = draft.scope;
+  if (draft.canvas === undefined) delete s.canvas;
+  else s.canvas = draft.canvas;
+  s.unsaved = [];
+}
+
+/** Select the saved Simulation `id`. */
+const showSaved = (s: State, doc: StoredTemporalSimulation) => showDraft(s, doc.id, docToDraft(doc, nanoid));
 
 function leaveRun(s: State) {
   s.running = false;
@@ -134,9 +179,15 @@ function leaveRun(s: State) {
 
 /** Run a definition edit, refused while a run is shown (ADR-0019 §1), whatever the caller. */
 const editing = (fn: (s: State) => void) => (s: State) => {
-  if (s.running) return;
+  if (s.running) { s.endRunCue++; return; }
   fn(s);
   save(s);
+};
+
+/** Change the list or the selection, refused while a run is shown: the run belongs to the selected Simulation. */
+const listing = (fn: (s: State) => void) => (s: State) => {
+  if (s.running) { s.endRunCue++; return; }
+  fn(s);
 };
 
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
@@ -144,7 +195,8 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     open: false,
     tab: "timeline",
     ...starterDraft(),
-    saved: undefined,
+    simulations: [],
+    selectedId: FIRST_SIMULATION_ID,
     unsaved: [],
     running: false,
     runProgress: null,
@@ -155,16 +207,46 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     display: "functionality",
     levelReading: "level",
     explanation: EXPLAIN_INTRO,
+    endRunCue: 0,
 
     openWindow: () => set((s) => { s.open = true; s.explanation = EXPLAIN_INTRO; }),
     closeWindow: () => set((s) => { s.open = false; }),
-    loadFromProject: (doc) => set((s) => {
-      Object.assign(s, doc ? docToDraft(doc, nanoid) : starterDraft());
-      s.saved = doc;
-      s.unsaved = [];
+    loadFromProject: (simulations) => set((s) => {
+      s.simulations = simulations ?? [];
+      if (s.simulations.length > 0) showSaved(s, s.simulations[0]);
+      else showDraft(s, FIRST_SIMULATION_ID, starterDraft());
       leaveRun(s);
       s.runError = null;
     }),
+    selectSimulation: (id) => set(listing((s) => {
+      const doc = s.simulations.find((x) => x.id === id);
+      if (doc) showSaved(s, doc);
+    })),
+    addSimulation: () => set(listing((s) => {
+      showDraft(s, newSimulationId(), { ...starterDraft(), timeline: { ...structuredClone(STARTER_TIMELINE), name: "New Temporal Simulation" } });
+      save(s);
+    })),
+    duplicateSimulation: () => set(listing((s) => {
+      const doc = s.simulations.find((x) => x.id === s.selectedId);
+      if (!doc) return;
+      const copy = structuredClone(current(doc));
+      showSaved(s, { ...copy, id: newSimulationId(), timeline: { ...copy.timeline, name: `${copy.timeline.name} (copy)` } });
+      save(s);
+    })),
+    deleteSimulation: (id) => set(listing((s) => {
+      const i = s.simulations.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      s.simulations.splice(i, 1);
+      if (s.selectedId !== id) return;
+      const next = s.simulations[Math.min(i, s.simulations.length - 1)];
+      if (next) showSaved(s, next);
+      else showDraft(s, newSimulationId(), starterDraft());
+    })),
+    setScope: (scope, canvas) => set(editing((s) => {
+      s.scope = scope;
+      if (scope === "local" && canvas !== undefined) s.canvas = canvas;
+      if (scope === "global") delete s.canvas;
+    })),
     setTab: (tab) => set((s) => { s.tab = tab; }),
     explain: (e) => set((s) => { s.explanation = e; }),
     // Definition writers.
@@ -183,7 +265,15 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       // Kept in the standard order, so the table's columns never move.
       s.standardMetrics = STANDARD_METRICS.filter((m) => (m === metric ? shown : s.standardMetrics.includes(m)));
     })),
-    replaceDraft: (d) => set(editing((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; s.standardMetrics = d.standardMetrics; })),
+    replaceDraft: (d) => set(editing((s) => {
+      s.timeline = d.timeline;
+      s.profile = d.profile;
+      s.metrics = d.metrics;
+      s.standardMetrics = d.standardMetrics;
+      s.scope = d.scope;
+      if (d.canvas === undefined) delete s.canvas;
+      else s.canvas = d.canvas;
+    })),
     beginRun: (total) => set((s) => {
       leaveRun(s);
       s.running = true;
@@ -208,14 +298,15 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     },
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),
+    cueEndRun: () => set((s) => { s.endRunCue++; }),
   })),
 );
 
-// The project has unsaved changes whenever its document changes, as for an
+// The project has unsaved changes whenever its Simulations change, as for an
 // Element edit (canvas-store). Deferred import: ui-store is not needed at load.
 if (typeof window !== "undefined") {
   useTemporalSimulationStore.subscribe((state, prev) => {
-    if (state.saved !== prev.saved) {
+    if (state.simulations !== prev.simulations) {
       void import("@/store/ui-store").then(({ useUiStore }) => useUiStore.getState().markDirty());
     }
   });

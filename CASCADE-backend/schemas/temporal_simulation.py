@@ -1,8 +1,8 @@
 """
 schemas/temporal_simulation.py — a project's Temporal Simulation (ADR-0019).
 
-One document per project, at `Project.temporal_simulation`: the Timeline, the
-profile and the Metrics. It is input only; a run is computed client-side on its
+A project keeps any number of them, at `Project.temporal_simulations`, each
+with its Timeline, profile, Metrics and Propagation scope. It is input only; a run is computed client-side on its
 own copy and is not saved. The same document is the plain-text form the window
 copies and pastes (ADR-0019 §7), so every object forbids unknown keys: a
 misspelt key is an error.
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from schemas.config import AttributeOperation, ElementFilter
 from schemas.field_path import FieldPath
@@ -107,8 +107,11 @@ StandardMetric = Literal["operativity", "coverage", "stock_level"]
 STANDARD_METRICS: tuple[StandardMetric, ...] = ("operativity", "coverage", "stock_level")
 
 
+SimulationScope = Literal["global", "local"]
+
+
 class TemporalSimulation(BaseModel):
-    """The whole definition: Timeline, profile and Metrics."""
+    """The whole definition: Timeline, profile, Metrics and Propagation scope."""
     model_config = ConfigDict(extra="forbid")
 
     format: Literal["cascade.temporal-simulation/v1"]
@@ -126,3 +129,30 @@ class TemporalSimulation(BaseModel):
             "level per Category. All three when absent."
         ),
     )
+    scope: SimulationScope = Field(
+        default="global",
+        description=(
+            "Every Propagation of a run uses this scope (CONTEXT.md): global, every "
+            "Canvas; local, the Canvas `canvas` only. Fixed when the run starts."
+        ),
+    )
+    canvas: Optional[str] = Field(default=None, min_length=1, description="For `local`: the Canvas id the run propagates.")
+
+    @model_validator(mode="after")
+    def _canvas_with_local_scope(self) -> "TemporalSimulation":
+        if self.scope == "local" and self.canvas is None:
+            raise ValueError("a local scope needs `canvas`, the Canvas id it runs on")
+        if self.scope == "global" and self.canvas is not None:
+            raise ValueError("`canvas` is only for a local scope")
+        return self
+
+
+FIRST_SIMULATION_ID = "simulation-1"
+"""The id a project's first Temporal Simulation gets: a migrated one, an imported one."""
+
+
+class StoredTemporalSimulation(TemporalSimulation):
+    """One of a project's Temporal Simulations: the definition, with the id the
+    window selects it by. Its plain text leaves the id out."""
+
+    id: str = Field(..., min_length=1)

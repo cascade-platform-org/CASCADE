@@ -1,6 +1,6 @@
 # ADR-0019 — Temporal Simulation: a saved Timeline of Steps and Phases, recorded as Graph Diffs
 
-**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1; 2026-10-08: a Phase's `advance_hours` replaces Temporal Jump Events). Built in release v1.1 (build plan: `temporal-simulation-design.md` §8). Reasoning, stress
+**Status:** accepted (drafted 2026-10-02, revised 2026-10-05: no period duration; Temporal-Simulation-only Events; plain-text form; revised and accepted 2026-10-06: one per project with its Metrics; a run is a read-only Run View on its own copy, not saved; client-side runs with progress and cancel; hour unit; profile grid; release v1.1; 2026-10-08: a Phase's `advance_hours` replaces Temporal Jump Events; a project holds several, each with its own scope). Built in release v1.1 (build plan: `temporal-simulation-design.md` §8). Reasoning, stress
 tests and open questions: `docs/project/temporal-simulation-design.md`. Requirements: §9.6.
 
 ## Context
@@ -56,11 +56,19 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   periods, the Functionality ↔ Level switch and saving a period to the Scorecard stay
   available); Reset ends the run, and every run starts from the beginning. There is no
   partial replay.
-- A project holds **one** Temporal Simulation, in the project file under its own key
-  (`Project.temporal_simulation`): the whole document of §7 (Timeline, profile, Metrics); the
-  run record is not saved (§3). The profile is input, roughly model-sized (~40 KB for banca ore), and
-  ADR-0017's single-downloadable-file principle applies. A variant to compare is another
-  project version or a copy of the project.
+- A project holds **any number** of Temporal Simulations, in the project file under their own
+  key (`Project.temporal_simulations`): each the whole document of §7 (Timeline, profile,
+  Metrics, scope) with an `id`; the run record is not saved (§3). The profile is input, roughly
+  model-sized (~40 KB for banca ore), and ADR-0017's single-downloadable-file principle
+  applies. **One runs at a time**: while a run is shown, the definitions, the selection and
+  the list are read-only like the model, and using a blocked control makes End run pulse.
+  Runs compare through their Scorecard entries (§4). *Revised 2026-10-08:* before, a project
+  held one, as `temporal_simulation`, and a variant to compare was a copy of the project; a
+  project file in that form loads it as the list's only entry (`simulation-1`).
+- **Each Temporal Simulation carries its Propagation scope** (`scope`: `global`, or `local`
+  with the `canvas` it propagates), picked on the Simulate button's scope side and fixed when
+  the run starts (*revised 2026-10-08*: before, every Propagation of a run read the Propagate
+  button's scope at that moment, so a scope change mid-run changed the run).
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
   is not ruled out later. The profile is a **grid on the same period columns**: one row
   per operation (target, path, op), one cell per period. A written value stays in later
@@ -263,7 +271,7 @@ that explains each control.
 - `EventDefinition.temporal_simulation_only` lands ahead of the rest (Pydantic, JSON Schema,
   Zod; Action Bar, Scorecard and Events tab). The document schema is
   `schemas/temporal_simulation.py`, mirrored by `lib/schemas/temporal-simulation.ts`.
-- `Project` gains `temporal_simulation` (optional, one per project); the Level Scale stays in
+- `Project` gains `temporal_simulations` (a list, with an `id` each); the Level Scale stays in
   Client Configuration as a display preference.
 - New Pydantic models (Timeline, Step, Phase, PhaseEvent, Metric, ElementFilter, Level Scale) →
   `export_json_schema.py` → Zod → `pydantic-mirror.test.ts`, per CLAUDE.md §6.

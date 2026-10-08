@@ -4,12 +4,15 @@
  * RunViewBanner — under the Action Bar while a Temporal Simulation run is
  * computing or shown (ADR-0019 §3). The canvas then paints a run period, not
  * the model, so this has to be visible with the window closed: which period,
- * stepping through periods, and End run.
+ * stepping through periods, and End run, which pulses when something the run
+ * blocks is used (`end-run-cue.ts`).
  */
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { cn } from "@/lib/utils";
+import { CUE_CLASS, useEndRunCue, useRunLockedPresses } from "./end-run-cue";
 
 export function RunViewBanner() {
   const running = useTemporalSimulationStore((s) => s.running);
@@ -17,6 +20,9 @@ export function RunViewBanner() {
   const record = useTemporalSimulationStore((s) => s.runRecord);
   const selected = useTemporalSimulationStore((s) => s.selectedPeriod);
   const { selectPeriod, openWindow } = useTemporalSimulationStore.getState();
+  const { cued, ref } = useEndRunCue<HTMLButtonElement>();
+  // Mounted once with the editor, so the one listener for blocked controls lives here.
+  useRunLockedPresses();
   if (!running) return null;
 
   const total = record?.periods.length ?? 0;
@@ -37,7 +43,7 @@ export function RunViewBanner() {
         <span>Running… {progress ? `${progress.done} / ${progress.total} Propagations${progress.label ? ` · ${progress.label}` : ""}` : ""}. The model is read-only until the run ends.</span>
       )}
       <span className="flex-1" />
-      <button type="button" className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40" onClick={() => endTemporalSimulationRun()}>
+      <button ref={ref} type="button" className={cn("flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40", cued && CUE_CLASS)} onClick={() => endTemporalSimulationRun()}>
         <X size={12} /> End run
       </button>
     </div>

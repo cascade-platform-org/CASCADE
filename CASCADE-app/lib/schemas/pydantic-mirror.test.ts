@@ -42,6 +42,8 @@ for (const mod of [network, config, auth, api, propagation, audit, temporalSimul
 const ALIASES: Record<string, string> = {
   // Pydantic pluralises; Zod does not.
   GeoCoords: "GeoCoordSchema",
+  // ProjectSchema migrates first (z.preprocess), which hides the object's shape.
+  Project: "ProjectFieldsSchema",
 };
 
 /**

@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * TemporalSimulationWindow — the project's Temporal Simulation
+ * TemporalSimulationWindow — the project's Temporal Simulations
  * (ADR-0019/0020/0021, requirements §9.6).
  *
- * The tabs edit the project's document through `store/temporal-simulation-store.ts`,
- * which saves every valid edit into the project; the status line says when an
+ * The picker on top selects which Simulation the tabs edit and Run runs; the
+ * tabs edit it through `store/temporal-simulation-store.ts`, which saves every
+ * valid edit into the project; the status line says when an
  * edit is not saved and why. Run computes on a Reset copy and shows the Run
  * View (`lib/temporal-simulation-run.ts`); the model is never written. The
  * bottom panel explains each control.
  */
 
 import React from "react";
-import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces } from "lucide-react";
+import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces, Plus, Copy, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
@@ -23,6 +24,8 @@ import { TimelineTab } from "./timeline-tab";
 import { RunTab } from "./run-tab";
 import { MetricsTab } from "./metrics-tab";
 import { TextTab } from "./text-tab";
+import { SmallButton } from "./fields";
+import { useCanvasStore } from "@/store/canvas-store";
 
 /** `definition`: the tab edits the Temporal Simulation, so it is read-only while a run is shown. */
 const TABS: { id: SimTab; label: string; icon: React.ReactNode; definition?: true }[] = [
@@ -35,7 +38,7 @@ const TABS: { id: SimTab; label: string; icon: React.ReactNode; definition?: tru
 /** Whether the definition is in the project, and why not when it is not. */
 function SaveStatus() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
-  const started = useTemporalSimulationStore((s) => s.saved !== undefined);
+  const started = useTemporalSimulationStore((s) => s.simulations.some((x) => x.id === s.selectedId));
   if (unsaved.length > 0) {
     return (
       <div role="status" className="border-b border-red-200 bg-red-50 px-4 py-1.5 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
@@ -46,6 +49,51 @@ function SaveStatus() {
   return (
     <div role="status" className="border-b border-zinc-200 px-4 py-1.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
       {started ? "Saved in the project." : "A starter Timeline. Your first edit saves it into the project."}
+    </div>
+  );
+}
+
+/**
+ * Which Simulation the tabs edit and Run runs, and its scope. Read-only while a
+ * run is shown: the run belongs to the selected Simulation.
+ */
+function SimulationPicker() {
+  const simulations = useTemporalSimulationStore((s) => s.simulations);
+  const selectedId = useTemporalSimulationStore((s) => s.selectedId);
+  const name = useTemporalSimulationStore((s) => s.timeline.name);
+  const scope = useTemporalSimulationStore((s) => s.scope);
+  const canvas = useTemporalSimulationStore((s) => s.canvas);
+  const running = useTemporalSimulationStore((s) => s.running);
+  const canvasLabel = useCanvasStore((s) => (canvas === undefined ? undefined : s.canvases[canvas]?.label));
+  const { selectSimulation, addSimulation, duplicateSimulation, deleteSimulation } = useTemporalSimulationStore.getState();
+  const saved = simulations.some((x) => x.id === selectedId);
+
+  return (
+    <div data-run-locked className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+      <select
+        aria-label="Temporal Simulation"
+        value={selectedId}
+        disabled={running}
+        onChange={(e) => selectSimulation(e.target.value)}
+        className="max-w-[22rem] truncate rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-800 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+      >
+        {!saved && <option value={selectedId}>{name} (not saved)</option>}
+        {simulations.map((x) => <option key={x.id} value={x.id}>{x.id === selectedId ? name : x.timeline.name}</option>)}
+      </select>
+      <SmallButton disabled={running} title="A new Temporal Simulation, from the starter Timeline" onClick={addSimulation}><Plus size={11} /> New</SmallButton>
+      <SmallButton disabled={running || !saved} title="A copy of this Temporal Simulation" onClick={duplicateSimulation}><Copy size={11} /> Duplicate</SmallButton>
+      <SmallButton
+        tone="danger"
+        disabled={running || !saved}
+        title="Delete this Temporal Simulation from the project"
+        onClick={() => { if (window.confirm(`Delete the Temporal Simulation "${name}"? Its saved Scorecard entries stay.`)) deleteSimulation(selectedId); }}
+      >
+        <Trash2 size={11} /> Delete
+      </SmallButton>
+      <span className="flex-1" />
+      <span className="text-[11px] text-zinc-500 dark:text-zinc-400" title="Pick it on the Simulate button's scope side">
+        Scope: <span className="font-medium">{scope === "local" ? `local — ${canvasLabel ?? `missing Canvas "${canvas}"`}` : "global"}</span>
+      </span>
     </div>
   );
 }
@@ -112,6 +160,7 @@ export function TemporalSimulationWindow() {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <SimulationPicker />
         <SaveStatus />
         {locked && (
           <div className="border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
@@ -121,7 +170,7 @@ export function TemporalSimulationWindow() {
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {/* The store refuses definition writes while a run is shown (ADR-0019 §1); the disabled
               fieldset says so in the controls. Text stays live so it can be read and copied. */}
-          <fieldset disabled={locked && tab !== "text"} className="contents">
+          <fieldset data-run-locked disabled={locked && tab !== "text"} className="contents">
           {tab === "timeline" && <TimelineTab />}
           {tab === "run" && <RunTab />}
           {tab === "metrics" && <MetricsTab />}

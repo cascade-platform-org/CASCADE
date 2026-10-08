@@ -61,6 +61,9 @@ export function ActionBar() {
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
   // A Temporal Simulation run shows its own copy; the model is read-only until it ends.
   const simulationRunning = useTemporalSimulationStore((s) => s.running);
+  const simulationScope = useTemporalSimulationStore((s) => s.scope);
+  const setSimulationScope = useTemporalSimulationStore((s) => s.setScope);
+  const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
 
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -89,7 +92,8 @@ export function ActionBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Propagate — scope chosen before the run */}
+      {/* Propagate — scope chosen before the run; blocked while a Temporal Simulation run is shown */}
+      <span data-run-locked className="flex items-center">
       <ScopeSplitButton
         dataTour="propagate"
         icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
@@ -104,6 +108,7 @@ export function ActionBar() {
         onAction={propagate}
         disabled={!serverReachable || isPropagating || !canPropagate || simulationRunning}
       />
+      </span>
 
       {/* Analyse — same split control, so scope is picked before opening */}
       <ScopeSplitButton
@@ -203,16 +208,20 @@ export function ActionBar() {
         <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
       </span>
 
-      {/* Temporal Simulation window (ADR-0019) */}
-      <ActionButton
-        id={TEMPORAL_SIMULATION_ANCHOR_ID}
-        onClick={openTemporalSimulation}
-        title="Temporal Simulation: the project’s Timeline, profile and Metrics, run over many periods"
-        className={cn("border", ACTION_TONE.border, ACTION_TONE.text, ACTION_TONE.hover)}
-      >
-        <CalendarClock size={13} />
-        <span>Simulate</span>
-      </ActionButton>
+      {/* Temporal Simulation window (ADR-0019); the scope is the selected Simulation's, saved with it */}
+      <span id={TEMPORAL_SIMULATION_ANCHOR_ID}>
+        <ScopeSplitButton
+          label="Simulate"
+          icon={<CalendarClock size={13} />}
+          title="Temporal Simulation: the project’s Timelines, profiles and Metrics, run over many periods"
+          scope={simulationScope}
+          onScopeChange={(v) => {
+            if (v === "local" && !activeCanvasId) return;
+            setSimulationScope(v, v === "local" ? activeCanvasId ?? undefined : undefined);
+          }}
+          onAction={openTemporalSimulation}
+        />
+      </span>
 
       {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
       {revertSnapshot && elapsedHours > 0 && (

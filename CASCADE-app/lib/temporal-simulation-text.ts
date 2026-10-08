@@ -8,7 +8,7 @@
  */
 
 import type { ZodError } from "zod";
-import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
+import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, SimulationScopeSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type SimulationScope, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
 import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
@@ -36,6 +36,9 @@ export interface SimulationDraft {
   profile: ProfileRow[];
   metrics: MetricEntry[];
   standardMetrics: StandardMetric[];
+  scope: SimulationScope;
+  /** For a local scope: the Canvas id. */
+  canvas?: string;
 }
 
 /** The operation a row applies in one period. */
@@ -86,6 +89,8 @@ export function draftToDoc(d: SimulationDraft): TemporalSimulation {
     profile: rowsToProfile(d.profile, d.timeline),
     metrics: d.metrics.map((m) => m.metric),
     standard_metrics: d.standardMetrics,
+    scope: d.scope,
+    ...(d.scope === "local" && d.canvas !== undefined ? { canvas: d.canvas } : {}),
   };
 }
 
@@ -97,6 +102,8 @@ export function docToDraft(doc: TemporalSimulation, newId: () => string): Simula
     // A document some load paths hand over unparsed (a working copy saved before
     // the field existed) lacks it; absent means all three, as the schema says.
     standardMetrics: doc.standard_metrics ?? [...STANDARD_METRICS],
+    scope: doc.scope ?? "global",
+    ...(doc.canvas !== undefined ? { canvas: doc.canvas } : {}),
   };
 }
 
@@ -187,6 +194,7 @@ export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], 
     filterMisuse(m.target).forEach((x) => out.push(`metrics[${i}].target: ${x}.`));
     if (matchElements(m.target, model).length === 0) out.push(`metrics[${i}] ("${m.name}"): target matches no Element.`);
   });
+  if (doc.canvas !== undefined && !(doc.canvas in model.canvases)) out.push(`canvas: no Canvas "${doc.canvas}"; a local run needs one.`);
   return out;
 }
 
@@ -228,7 +236,9 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
       "phase": k (optional, change only), "aggregate": ${alternatives(AggregateSchema.options)},
       "percentile": 0–100 (optional), "value_filter": { "cmp": ${alternatives(ComparisonSchema.options)}, "value": number } (optional) }
   ],
-  "standard_metrics": [${alternatives(STANDARD_METRICS)}…]   // optional: the standard columns shown before "metrics"; all by default
+  "standard_metrics": [${alternatives(STANDARD_METRICS)}…],  // optional: the standard columns shown before "metrics"; all by default
+  "scope": ${alternatives(SimulationScopeSchema.options)},    // optional, default "global": every Propagation of the run uses it
+  "canvas": CanvasId                   // only with "local": the Canvas the run propagates
 }
 
 Filter (every given condition must hold; resolved again each time it is used):
@@ -321,6 +331,7 @@ and aggregate (sum, mean, min, max, count, share_where, percentile). It never ch
 export const EXAMPLE_DOC: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
   standard_metrics: [...STANDARD_METRICS],
+  scope: "global",
   timeline: {
     name: "Six months of a dry season, with quarterly maintenance",
     steps: [

@@ -1,6 +1,7 @@
 /**
- * temporal-simulation.ts — a project's Temporal Simulation document (ADR-0019):
- * Timeline, profile and Metrics, at `Project.temporal_simulation`.
+ * temporal-simulation.ts — a Temporal Simulation document (ADR-0019): Timeline,
+ * profile, Metrics and Propagation scope. A project keeps any number of them,
+ * with an id each, at `Project.temporal_simulations`.
  *
  * Mirrors `CASCADE-backend/schemas/temporal_simulation.py`. The same schema
  * validates what the window edits and what a person (or an LLM) pastes as text,
@@ -81,15 +82,52 @@ export const STANDARD_METRICS = StandardMetricSchema.options;
 
 export const TEMPORAL_SIMULATION_FORMAT = "cascade.temporal-simulation/v1";
 
-export const TemporalSimulationSchema = z
-  .object({
-    format: z.literal(TEMPORAL_SIMULATION_FORMAT),
-    timeline: TimelineSchema,
-    /** Period label → operations applied at the start of that period, in order. */
-    profile: z.record(z.string(), z.array(AttributeOperationSchema)).default({}),
-    metrics: z.array(MetricSchema).default([]),
-    /** The standard Metrics shown; all three when absent. */
-    standard_metrics: z.array(StandardMetricSchema).default([...STANDARD_METRICS]),
-  })
-  .strict();
+export const SimulationScopeSchema = z.enum(["global", "local"]);
+export type SimulationScope = z.infer<typeof SimulationScopeSchema>;
+
+const simulationFields = {
+  format: z.literal(TEMPORAL_SIMULATION_FORMAT),
+  timeline: TimelineSchema,
+  /** Period label → operations applied at the start of that period, in order. */
+  profile: z.record(z.string(), z.array(AttributeOperationSchema)).default({}),
+  metrics: z.array(MetricSchema).default([]),
+  /** The standard Metrics shown; all three when absent. */
+  standard_metrics: z.array(StandardMetricSchema).default([...STANDARD_METRICS]),
+  /** Every Propagation of a run uses it: global, every Canvas; local, the Canvas `canvas` only. */
+  scope: SimulationScopeSchema.default("global"),
+  /** For `local`: the Canvas id the run propagates. */
+  canvas: z.string().min(1).optional(),
+};
+
+/** A local scope names its Canvas; a global one names none. */
+function canvasWithLocalScope(doc: { scope: SimulationScope; canvas?: string }, ctx: z.RefinementCtx) {
+  if (doc.scope === "local" && doc.canvas === undefined) ctx.addIssue({ code: "custom", path: ["canvas"], message: "a local scope needs `canvas`, the Canvas id it runs on" });
+  if (doc.scope === "global" && doc.canvas !== undefined) ctx.addIssue({ code: "custom", path: ["canvas"], message: "`canvas` is only for a local scope" });
+}
+
+export const TemporalSimulationSchema = z.object(simulationFields).strict().superRefine(canvasWithLocalScope);
 export type TemporalSimulation = z.infer<typeof TemporalSimulationSchema>;
+
+/** One of a project's Temporal Simulations: the document, with the id the window selects it by. Its text leaves the id out. */
+export const StoredTemporalSimulationSchema = z
+  .object({ ...simulationFields, id: z.string().min(1) })
+  .strict()
+  .superRefine(canvasWithLocalScope);
+export type StoredTemporalSimulation = z.infer<typeof StoredTemporalSimulationSchema>;
+
+/** The id a project's first Temporal Simulation gets: a migrated one, an imported one. */
+export const FIRST_SIMULATION_ID = "simulation-1";
+
+/**
+ * A project saved before 2026-10-08 held one `temporal_simulation`; it becomes
+ * the list's only entry. Mirrors `_one_simulation_to_list` on the Pydantic Project.
+ */
+export function migrateProjectSimulations(project: unknown): unknown {
+  if (typeof project !== "object" || project === null || !("temporal_simulation" in project)) return project;
+  const { temporal_simulation: single, ...rest } = project as Record<string, unknown>;
+  const list = rest.temporal_simulations;
+  if (typeof single === "object" && single !== null && !(Array.isArray(list) && list.length > 0)) {
+    return { ...rest, temporal_simulations: [{ id: FIRST_SIMULATION_ID, ...single }] };
+  }
+  return rest;
+}

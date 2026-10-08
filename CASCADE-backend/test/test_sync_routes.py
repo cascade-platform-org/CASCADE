@@ -298,12 +298,12 @@ async def test_temporal_simulation_round_trips_through_a_version(migrated_db):
         "profile": {"d1": [{"element": "n1", "path": ["supply_capacity", "water"], "op": "mul", "value": 0.5}]},
     }
     bundle = _minimal_bundle_json("ts")
-    bundle["project"]["temporal_simulation"] = doc
+    bundle["project"]["temporal_simulations"] = [{**doc, "id": "s1"}]
     client, _ = await _client_as(migrated_db, ["analyst"])
     async with client:
         save_resp = await client.post("/api/projects", json={"name": "ts", "data": bundle})
         assert save_resp.status_code == 200
         get_resp = await client.get(f"/api/projects/{save_resp.json()['id']}")
-    loaded = get_resp.json()["data"]["project"]["temporal_simulation"]
+    loaded = get_resp.json()["data"]["project"]["temporal_simulations"][0]
     assert loaded["timeline"]["steps"][0]["phases"][0]["events"][0] == {"event": "quake", "every": 1}
     assert loaded["profile"] == doc["profile"]

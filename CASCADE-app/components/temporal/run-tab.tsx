@@ -20,6 +20,7 @@ import {
   explainSelectPeriod,
 } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
+import { CUE_CLASS, useEndRunCue } from "./end-run-cue";
 
 
 const NONE: ReadonlySet<number> = new Set();
@@ -30,6 +31,7 @@ export function RunTab() {
   const progress = useTemporalSimulationStore((s) => s.runProgress);
   const runError = useTemporalSimulationStore((s) => s.runError);
   const runWarnings = useTemporalSimulationStore((s) => s.runRecord?.warnings);
+  const { cued: endRunCued, ref: endRunRef } = useEndRunCue<HTMLSpanElement>();
   // The Run View: a finished run is shown, and its periods can be selected.
   const hasRun = useTemporalSimulationStore((s) => s.runRecord !== null);
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
@@ -77,9 +79,11 @@ export function RunTab() {
           {plan.periods.length} periods · {plan.engineCalls} Propagations ({plan.engineCalls} Engine Evaluations)
         </span>
         <span className="flex-1" />
-        <SmallButton disabled={!running} onClick={() => { endTemporalSimulationRun(); explain(EXPLAIN_END_RUN); }} title="Reset does the same">
-          <RotateCcw size={11} /> End run
-        </SmallButton>
+        <span ref={endRunRef} className={cn(endRunCued && CUE_CLASS)}>
+          <SmallButton disabled={!running} onClick={() => { endTemporalSimulationRun(); explain(EXPLAIN_END_RUN); }} title="Reset does the same">
+            <RotateCcw size={11} /> End run
+          </SmallButton>
+        </span>
       </div>
 
       {progress && (

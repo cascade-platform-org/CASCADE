@@ -2067,17 +2067,13 @@
           "title": "Scorecard",
           "type": "array"
         },
-        "temporal_simulation": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemporalSimulation"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The project's one Temporal Simulation (ADR-0019): Timeline, profile and Metrics. Input only; runs are not saved. The engine never reads it."
+        "temporal_simulations": {
+          "description": "The project's Temporal Simulations (ADR-0019): each a Timeline, profile, Metrics and scope. Input only; runs are not saved. The engine never reads them.",
+          "items": {
+            "$ref": "#/$defs/StoredTemporalSimulation"
+          },
+          "title": "Temporal Simulations",
+          "type": "array"
         }
       },
       "required": [
@@ -2702,9 +2698,9 @@
       "title": "StoredAmount",
       "type": "object"
     },
-    "TemporalSimulation": {
+    "StoredTemporalSimulation": {
       "additionalProperties": false,
-      "description": "The whole definition: Timeline, profile and Metrics.",
+      "description": "One of a project's Temporal Simulations: the definition, with the id the\nwindow selects it by. Its plain text leaves the id out.",
       "properties": {
         "format": {
           "const": "cascade.temporal-simulation/v1",
@@ -2744,13 +2740,43 @@
           },
           "title": "Standard Metrics",
           "type": "array"
+        },
+        "scope": {
+          "default": "global",
+          "description": "Every Propagation of a run uses this scope (CONTEXT.md): global, every Canvas; local, the Canvas `canvas` only. Fixed when the run starts.",
+          "enum": [
+            "global",
+            "local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "canvas": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `local`: the Canvas id the run propagates.",
+          "title": "Canvas"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
         }
       },
       "required": [
         "format",
-        "timeline"
+        "timeline",
+        "id"
       ],
-      "title": "TemporalSimulation",
+      "title": "StoredTemporalSimulation",
       "type": "object"
     },
     "TemporalSimulationScorecardEntry": {

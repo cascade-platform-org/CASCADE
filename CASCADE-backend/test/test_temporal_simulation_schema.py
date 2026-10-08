@@ -70,18 +70,33 @@ def test_rejects_malformed_documents(patch, message):
         TemporalSimulation.model_validate({**DOC, **patch})
 
 
-def test_project_keeps_the_document_through_a_dump():
+def test_project_keeps_its_simulations_through_a_dump():
     project = Project.model_validate(
-        {"version": "2.0", "meta": {"name": "p"}, "temporal_simulation": DOC}
+        {"version": "2.0", "meta": {"name": "p"}, "temporal_simulations": [{**DOC, "id": "a"}, {**DOC, "id": "b"}]}
     )
     again = Project.model_validate(project.model_dump(mode="json", exclude_none=True))
-    assert again.temporal_simulation == project.temporal_simulation
-    assert again.temporal_simulation is not None
-    assert again.temporal_simulation.metrics[0].value_filter is not None
+    assert again.temporal_simulations == project.temporal_simulations
+    assert [s.id for s in again.temporal_simulations] == ["a", "b"]
+    assert again.temporal_simulations[0].metrics[0].value_filter is not None
+
+
+def test_a_project_with_one_simulation_loads_it_as_the_list_entry():
+    project = Project.model_validate({"version": "2.0", "meta": {"name": "p"}, "temporal_simulation": DOC})
+    assert [s.id for s in project.temporal_simulations] == ["simulation-1"]
+    assert project.temporal_simulations[0].timeline == TemporalSimulation.model_validate(DOC).timeline
 
 
 def test_project_without_a_simulation_has_none():
-    assert Project.model_validate({"version": "2.0", "meta": {"name": "p"}}).temporal_simulation is None
+    assert Project.model_validate({"version": "2.0", "meta": {"name": "p"}}).temporal_simulations == []
+
+
+def test_scope_is_global_by_default_and_local_names_its_canvas():
+    assert TemporalSimulation.model_validate(DOC).scope == "global"
+    assert TemporalSimulation.model_validate({**DOC, "scope": "local", "canvas": "c1"}).canvas == "c1"
+    with pytest.raises(ValidationError, match="needs `canvas`"):
+        TemporalSimulation.model_validate({**DOC, "scope": "local"})
+    with pytest.raises(ValidationError, match="only for a local scope"):
+        TemporalSimulation.model_validate({**DOC, "canvas": "c1"})
 
 
 def test_standard_metrics_default_to_all_three_and_take_only_known_ones():

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from schemas.field_path import SafeKey
-from schemas.temporal_simulation import TemporalSimulation
+from schemas.temporal_simulation import FIRST_SIMULATION_ID, StoredTemporalSimulation
 
 if TYPE_CHECKING:
     from .results import PropagationResult
@@ -778,6 +778,18 @@ class Project(BaseModel):
     )
     @model_validator(mode="before")
     @classmethod
+    def _one_simulation_to_list(cls, data: Any) -> Any:
+        """A project saved before 2026-10-08 held one `temporal_simulation`; it
+        becomes the list's only entry."""
+        if isinstance(data, dict) and "temporal_simulation" in data:
+            single = data["temporal_simulation"]
+            data = {k: v for k, v in data.items() if k != "temporal_simulation"}
+            if isinstance(single, dict) and not data.get("temporal_simulations"):
+                data["temporal_simulations"] = [{"id": FIRST_SIMULATION_ID, **single}]
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
     def _drop_unpacked_simulation_entries(cls, data: Any) -> Any:
         """For about an hour on 2026-10-08 a saved period diffed against a shared
         `scorecard_bases` start; no run could save one, so such an entry and the
@@ -796,10 +808,10 @@ class Project(BaseModel):
             "from each entry's snapshot and never stored here."
         ),
     )
-    temporal_simulation: Optional[TemporalSimulation] = Field(
-        default=None,
+    temporal_simulations: list[StoredTemporalSimulation] = Field(
+        default_factory=list,
         description=(
-            "The project's one Temporal Simulation (ADR-0019): Timeline, profile and "
-            "Metrics. Input only; runs are not saved. The engine never reads it."
+            "The project's Temporal Simulations (ADR-0019): each a Timeline, profile, "
+            "Metrics and scope. Input only; runs are not saved. The engine never reads them."
         ),
     )

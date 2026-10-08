@@ -206,15 +206,18 @@ Propagation on that canvas run a live WNTR/EPANET solve against
 `source_inp_content` instead of the normal CASCADE engine — see
 `docs/adr/0013-epanet-mode-canvas.md` and `api-reference.md`.
 
-#### Temporal Simulation (`temporal_simulation`)
+#### Temporal Simulations (`temporal_simulations`)
 
-Optional, one per project (ADR-0019): the whole definition, in the same JSON the
-window's Text tab copies and pastes. Every object is strict, so a misspelt key is
-an error. It is input only: a run is not saved, and the Propagation request leaves
-it out.
+Optional, any number per project (ADR-0019): each the whole definition, in the
+same JSON the window's Text tab copies and pastes, plus the `id` the window
+selects it by (the Text tab leaves the `id` out). Every object is strict, so a
+misspelt key is an error. They are input only: a run is not saved, and the
+Propagation request leaves them out. A file with the older single
+`temporal_simulation` loads it as the list's only entry.
 
 ```json
-"temporal_simulation": {
+"temporal_simulations": [{
+  "id": "simulation-1",
   "format": "cascade.temporal-simulation/v1",
   "timeline": {
     "name": "One week",
@@ -226,8 +229,9 @@ it out.
   "profile": {
     "2023-03-07": [{ "element": "node-reservoir", "path": ["supply_capacity", "water"], "op": "mul", "value": 0.5 }]
   },
-  "metrics": []
-}
+  "metrics": [],
+  "scope": "global"
+}]
 ```
 
 | Field | Description |
@@ -236,6 +240,7 @@ it out.
 | `phases[]` | `advance_hours` (optional: hours that pass at the Phase's start, before its Events; backups count down), `events` (an Event id fires every period of its Step; `{event, every: N}` fires on the Step's periods N, 2N, …) and `propagate` (default `true`). |
 | `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021). |
 | `standard_metrics` | The standard Metrics the Run table shows before `metrics`: any of `operativity`, `coverage`, `stock_level`. All three when absent, and the Text tab writes it only when one is hidden. |
+| `scope`, `canvas` | The Propagation scope every Propagation of a run uses: `global` (default), or `local` with `canvas`, the Canvas id it propagates. |
 | `metrics[]` | Read-outs per period: `name`, `target` (an Element Filter), `path`, `read` (`state` \| `change`), optional `phase`, `aggregate`, optional `percentile` and `value_filter`. |
 
 A project saves only a definition that passes the schema; while an edit in the

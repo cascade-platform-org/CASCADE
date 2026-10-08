@@ -37,6 +37,7 @@ import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry"
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { migrateProjectSimulations } from "@/lib/schemas/temporal-simulation";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 
@@ -69,11 +70,12 @@ let lockToastAt = 0;
  * read-only (ADR-0019 §1), so every model writer below refuses. The run read the
  * model once and the Run View paints its own copy; an edit now would be invisible
  * and would make End run show a model the run never saw. Says so in a toast, at
- * most every few seconds. Canvas metadata (label, colour, map viewport) and the
+ * most every few seconds, and makes End run pulse. Canvas metadata (label, colour, map viewport) and the
  * active Canvas stay writable: they are not the model the run computed on.
  */
 export function modelLocked(): boolean {
   if (!useTemporalSimulationStore.getState().running) return false;
+  useTemporalSimulationStore.getState().cueEndRun();
   const now = Date.now();
   if (now - lockToastAt > 3000) {
     lockToastAt = now;
@@ -724,6 +726,7 @@ export const useCanvasStore = create<CanvasStore>()(
 
     toProject(): Project {
       const state = get();
+      const { simulations } = useTemporalSimulationStore.getState();
       return {
         version: "2.0",
         meta: {
@@ -738,7 +741,8 @@ export const useCanvasStore = create<CanvasStore>()(
         canvases: state.canvasOrder.map((id) => state.canvases[id]),
         update_history: useHistoryStore.getState().updateHistory,
         scorecard: useScorecardStore.getState().scorecard,
-        temporal_simulation: useTemporalSimulationStore.getState().saved,
+        // Left out while there is none, so a project that never used one keeps its file unchanged.
+        temporal_simulations: simulations.length > 0 ? simulations : undefined,
       };
     },
 
@@ -763,7 +767,8 @@ export const useCanvasStore = create<CanvasStore>()(
       });
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
       useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
-      useTemporalSimulationStore.getState().loadFromProject(project.temporal_simulation);
+      // A working copy saved before the list existed reaches here unparsed.
+      useTemporalSimulationStore.getState().loadFromProject((migrateProjectSimulations(project) as Project).temporal_simulations);
     },
 
     loadProject(project) {

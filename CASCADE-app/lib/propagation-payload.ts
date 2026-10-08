@@ -32,7 +32,7 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
 
 /** The Temporal Simulation is client-side input (ADR-0019); the engine never reads it. */
 function withoutTemporalSimulation(project: Project): Project {
-  const { temporal_simulation: _unused, ...rest } = project;
+  const { temporal_simulations: _unused, ...rest } = project;
   return rest;
 }
 
