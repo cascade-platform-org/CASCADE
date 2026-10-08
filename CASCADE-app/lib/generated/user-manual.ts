@@ -2647,6 +2647,128 @@ export const USER_MANUAL: ManualDoc = {
               "text": " (Cloud tab) keeps one spare copy that updates as you work. It never replaces one of the 10 cloud saves. Switching it off deletes it."
             }
           ]
+        },
+        {
+          "type": "sub",
+          "title": "7.1 Model text",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Text"
+                },
+                {
+                  "kind": "text",
+                  "text": " in the Action Bar changes anything the project and its configuration save, by a short text you write or an LLM writes: rename elements, scale every pump's capacity, add an Event, remove an edge. The text is a change set, never the whole project:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "code",
+                    "text": "patch"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " — add, replace or remove at a path under "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "/project"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " or "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "/config"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " ("
+                  },
+                  {
+                    "kind": "code",
+                    "text": "/config/events/-"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " appends an Event, "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "/project/nodes/J12/label"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " is one label). The undo history is read-only."
+                  }
+                ],
+                [
+                  {
+                    "kind": "code",
+                    "text": "elements"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " — Attribute Operations (§4) on one element or every element a filter selects."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Copy section"
+                },
+                {
+                  "kind": "text",
+                  "text": " copies any part as JSON (type its path); "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Copy with context for an LLM"
+                },
+                {
+                  "kind": "text",
+                  "text": " copies the format and this model's ids and names. Paste the reply and press "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Check & preview"
+                },
+                {
+                  "kind": "text",
+                  "text": ": every problem is listed, or every change is shown as before → after. Nothing changes until you press "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Apply"
+                },
+                {
+                  "kind": "text",
+                  "text": ". The project as it was is kept in Recent saves first, and "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Undo this edit"
+                },
+                {
+                  "kind": "text",
+                  "text": " puts it back. A removal must take its references with it (an edge's endpoints, a canvas's members); the check names any it forgot."
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -2889,7 +3011,7 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": "."
+                    "text": ". Events and the rest of the model change through the Model text (§7.1)."
                   }
                 ]
               ]

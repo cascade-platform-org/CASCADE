@@ -837,6 +837,12 @@ since that quota — not an app-defined number — is the real storage limit.
 - Upload a `.json` file; validate schema; hydrate stores.
 - Multi-canvas projects serialised under a `canvases` array.
 
+### 13.3a Model text — implemented (ADR-0022)
+
+- The Action Bar's **Text** opens a change-set editor over everything the project file and the Model Configuration save: JSON Patch (`add`, `replace`, `remove`) at a path under `/project` or `/config`, and Attribute Operations on Elements. `project.update_history` is read-only.
+- A change is checked on a copy (size and nesting limits, JSON only, no `__proto__`/`constructor`/`prototype` key, the strict change-set schema, the dry run, the Project and Configuration schemas, the reference checks of §13.3) and previewed change by change; it is written only on confirmation, after the current project is kept as a Local version, and **Undo this edit** restores it. Refused while a Temporal Simulation run is shown.
+- *Copy section* copies any part by path; *Copy with context for an LLM* copies the format and the model's ids and names.
+
 ### 13.4 Server Sync (opt-in) — implemented
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.

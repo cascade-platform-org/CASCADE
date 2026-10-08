@@ -90,7 +90,8 @@ export function TextTab() {
         className="min-h-[260px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
       />
       <p className="text-[11px] text-zinc-400">
-        Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the definition."}
+        Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the definition."}{" "}
+        Events and the rest of the model change through <span className="font-medium">Text</span> in the Action Bar.
       </p>
 
       {result && <Notices tone="error" items={result.errors} />}

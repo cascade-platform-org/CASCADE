@@ -71,11 +71,14 @@ export function getProjectHistory(): HistoryEntry[] {
   return loadHistory();
 }
 
-/** Called by the autosave hook on a longer interval to build history automatically. */
-export function pushAutoSnapshot(bundle: ProjectBundle): void {
+/**
+ * Called by the autosave hook on a longer interval to build history
+ * automatically, and before a Model text edit (named so in Versions).
+ */
+export function pushAutoSnapshot(bundle: ProjectBundle, name = bundle.project.meta.name): void {
   pushToHistory({
     saved_at: new Date().toISOString(),
-    name: bundle.project.meta.name,
+    name,
     bundle,
   });
 }

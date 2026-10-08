@@ -94,6 +94,10 @@ _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick
 A saved definition, run over many periods: a **Timeline** of **Steps**, each applying Events and Propagations and integrating **Stocks**. Generalises the Temporal Jump; a period has no duration, and simulated time passes only where a Phase's `advance_hours` says so. A project holds any number, each with its Metrics and its scope (global, or local on one Canvas), and one runs at a time. A run computes on its own copy of the model, starting from a **Reset**, is recorded as a start state plus Graph Diffs in its own run record, and is shown in the **Run View**; it never writes the model or `update_history`. Shortage is recomputed every Propagation; Event-imposed damage, and a backup that ran out, stand until a later Event restores them. Mechanics in ADR-0019.
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
+**Model text**:
+A change set, written by a person or an LLM, to everything the project and its Model Configuration save: JSON Patch operations at a path under `/project` or `/config` (`update_history` excepted, read-only) and Attribute Operations on Elements. Checked on a copy (syntax, the schemas, references), previewed change by change, and applied only on confirmation, with the prior project kept for Undo this edit. ADR-0022.
+_Avoid_: "bundle editor", "JSON editor" (it never holds the whole bundle)
+
 **Timeline**:
 The saved input of a Temporal Simulation: an ordered list of Steps whose Phases let hours pass (`advance_hours`) and hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
 _Avoid_: "schedule", "script", "run" (a run is one execution of a Timeline)

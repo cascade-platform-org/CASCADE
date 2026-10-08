@@ -385,6 +385,27 @@ cloud saves, and deleting a cloud save does not touch the computer.
 **Auto-save** (Cloud tab) keeps one spare copy that updates as you work. It never
 replaces one of the 10 cloud saves. Switching it off deletes it.
 
+### 7.1 Model text
+
+**Text** in the Action Bar changes anything the project and its configuration
+save, by a short text you write or an LLM writes: rename elements, scale every
+pump's capacity, add an Event, remove an edge. The text is a change set, never
+the whole project:
+
+- `patch` — add, replace or remove at a path under `/project` or `/config`
+  (`/config/events/-` appends an Event, `/project/nodes/J12/label` is one
+  label). The undo history is read-only.
+- `elements` — Attribute Operations (§4) on one element or every element a
+  filter selects.
+
+**Copy section** copies any part as JSON (type its path); **Copy with context
+for an LLM** copies the format and this model's ids and names. Paste the reply
+and press **Check & preview**: every problem is listed, or every change is shown
+as before → after. Nothing changes until you press **Apply**. The project as it
+was is kept in Recent saves first, and **Undo this edit** puts it back. A
+removal must take its references with it (an edge's endpoints, a canvas's
+members); the check names any it forgot.
+
 ## 8. Server and roles
 
 **Propagate** and the model-based analyses (Shapley, Vitality) need the server
@@ -420,7 +441,8 @@ on the active canvas, and saves it with the Temporal Simulation.
 - **Metrics.** Your own read-outs, computed per period (§9.4).
 - **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
   *Copy with context for an LLM* adds a primer, the format and this project's
-  elements; paste the reply back and *Apply*.
+  elements; paste the reply back and *Apply*. Events and the rest of the model
+  change through the Model text (§7.1).
 
 Every change over time goes in before a run, as a profile value or a Phase
 Event. Each edit is saved into the project once it is complete; until then, the
