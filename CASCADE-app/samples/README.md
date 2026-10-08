@@ -4,10 +4,8 @@ Source data for the example projects offered in the "new project" wizard.
 
 - **`public/`** — git-tracked, ships in the public repo. Source of truth for
   the manifest (`public/manifest.json`) and every sample the app serves.
-  `scripts/sync-samples.mjs` copies this directory into `public/samples/`
-  (the Next.js-served, gitignored build artifact) on every `dev`/`build` —
-  edit files here, never in `public/samples/` directly, or your edit will be
-  overwritten by the next sync.
+  The app serves it at `/samples/` through `CASCADE-app/public/samples`, a
+  symbolic link to this directory, so there is one copy.
 
   **The manifest is a shorter list than the directory.** The wizard offers
   exactly three networks — Palmanova Complete, Office with Heat, and the IJDRR
@@ -30,5 +28,4 @@ Source data for the example projects offered in the "new project" wizard.
 - **`generate_scenarios.py`** — tooling, applies to either directory.
 
 To publish a sample: move its JSON from `private/` to `public/`, add an entry
-to `public/manifest.json`, and run `npm run sync:samples` (or just `npm run
-dev`/`build`, which do it automatically).
+to `public/manifest.json`.

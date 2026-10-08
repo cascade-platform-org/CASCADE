@@ -4,11 +4,10 @@
   "license": "AGPL-3.0-or-later",
   "private": true,
   "scripts": {
-    "predev": "npm run sync:samples && npm run sync:maplibre-worker",
+    "predev": "npm run sync:maplibre-worker",
     "dev": "next dev --turbopack",
-    "prebuild": "npm run sync:samples && npm run sync:maplibre-worker",
+    "prebuild": "npm run sync:maplibre-worker",
     "build": "next build",
-    "sync:samples": "node scripts/sync-samples.mjs",
     "sync:maplibre-worker": "node scripts/copy-maplibre-worker.mjs",
     "start": "next start",
     "lint": "eslint .",

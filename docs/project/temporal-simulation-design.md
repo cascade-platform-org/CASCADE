@@ -945,7 +945,7 @@ union, its Scorecard card).
 **Slice 7.** A second endpoint beside `POST /api/import/inp` maps tanks to storage and
 writes the starting simulation from `[TIMES]`, `[PATTERNS]` and time-based `[CONTROLS]`,
 reporting level-based controls as skipped; the Import dialog offers both importers. The
-IJDRR sample gains its Timeline; Net1 joins `public/samples/manifest.json`.
+IJDRR sample gains its Timeline; Net1 joins `samples/public/manifest.json`.
 
 **Order.** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. The engine half of slice 4 needs nothing on the
 client and can start beside slice 1.
