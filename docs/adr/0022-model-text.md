@@ -1,7 +1,7 @@
-# ADR-0022 — The Model text: change what a project saves through a checked change set
+# ADR-0022 — The LLM Design: change what a project saves through a checked change set
 
 **Status:** accepted (2026-10-08). Built: `lib/model-text.ts` (parse, check, preview; pure),
-`lib/model-text-apply.ts` (apply, Undo this edit), the Action Bar's **Text** button and window
+`lib/model-text-apply.ts` (apply, Undo this edit), the Topbar's **LLM Design** button (beside Help) and window
 (`components/model-text/model-text-window.tsx`).
 
 ## Context
@@ -44,7 +44,7 @@ paste is also untrusted input.
   leaf, lists of records with ids matched by id), as before → after, with totals. **Nothing is
   written until the person confirms it.** Apply checks again against the model as it is then.
 - **Undo this edit.** The configuration has no undo stack, and the edit is one act across both
-  files, so before writing, the whole current bundle is kept as a version ("Before Model text
+  files, so before writing, the whole current bundle is kept as a version ("Before LLM Design
   edit", File → Local → Recent saves) and the window offers Undo this edit, which puts it
   back. The write goes through the loaders a project file uses; the live `update_history` is
   kept.
@@ -53,7 +53,7 @@ paste is also untrusted input.
   Pydantic model; what it produces is validated by the mirrored Project and Configuration
   schemas.
 - The Temporal Simulation's Text tab keeps its one document; Events and the rest of the model
-  are edited through the Model text, so there is one text route per thing.
+  are edited through LLM Design, so there is one text route per thing.
 
 **The window is a tree of sections** (`lib/model-text-sections.ts`), each opening on its current
 JSON: Project (info, Canvases, Nodes and Edges grouped by Canvas, Scorecard, Temporal

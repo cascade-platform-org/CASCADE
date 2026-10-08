@@ -19,7 +19,7 @@ export const TEMPORAL_ANCHOR_ID = "cascade-temporal-anchor";
 /** The Action Bar's "Simulate" button — home of the Temporal Simulation window. */
 export const TEMPORAL_SIMULATION_ANCHOR_ID = "cascade-temporal-simulation-anchor";
 
-/** The Action Bar's "Text" button — home of the Model text window. */
+/** The Topbar's "LLM Design" button — home of the LLM Design window. */
 export const MODEL_TEXT_ANCHOR_ID = "cascade-model-text-anchor";
 
 /** The Topbar's "Help" button — home of the User Manual window. */

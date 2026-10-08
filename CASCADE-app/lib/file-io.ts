@@ -73,7 +73,7 @@ export function getProjectHistory(): HistoryEntry[] {
 
 /**
  * Called by the autosave hook on a longer interval to build history
- * automatically, and before a Model text edit (named so in Versions).
+ * automatically, and before a LLM Design edit (named so in Versions).
  */
 export function pushAutoSnapshot(bundle: ProjectBundle, name = bundle.project.meta.name): void {
   pushToHistory({

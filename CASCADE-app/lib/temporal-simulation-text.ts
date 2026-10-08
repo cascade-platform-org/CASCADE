@@ -258,7 +258,7 @@ Semantics to respect:
 
 /**
  * What an LLM needs to know about any CASCADE model: Elements, Functionality,
- * Categories, Events. Shared with the Model text's LLM context.
+ * Categories, Events. Shared with the LLM Design's LLM context.
  */
 export const MODEL_PRIMER = `## What CASCADE models
 
@@ -300,7 +300,7 @@ otherwise one. An Event written { "event": id, "every": 3 } fires on the 3rd, 6t
 A Step's "label" is its first period; with a unit, each repeat advances it by one unit ("2024-10", repeat 3
 → 2024-10, 2024-11, 2024-12), and the profile and Events key on those period labels.`;
 
-/** What an Element's fields are and how operations and filters reach them. Shared with the Model text. */
+/** What an Element's fields are and how operations and filters reach them. Shared with the LLM Design. */
 export const ELEMENT_PATHS = `## What a "path" can reach (operations and Metrics)
 
 Node fields:
@@ -323,7 +323,7 @@ so on a Stock name the field: "halve a Stock's supply" is ["supply_capacity", "<
 
 Operations: set (write the value), add, mul, at_most (cap at the value), at_least (raise to the value).
 The last four need a number. An operation on a field the Element does not have is rejected (except set).
-An operation with a filter should fit every Element it matches: in the Model text one that does not refuses
+An operation with a filter should fit every Element it matches: in LLM Design, one that does not refuses
 the whole change, naming the Element; in a Temporal Simulation run that Element is skipped with a warning.
 When matches differ in shape (a plain supply here, a Stock there), use one operation per
 shape (by "element", or a filter with "exclude").
@@ -340,7 +340,7 @@ A Metric is a read-out computed per period from the recorded run: for the Elemen
 "path" — "state" at the end of the period, or "change" (after − before) over one Phase or the whole period —
 and aggregate (sum, mean, min, max, count, share_where, percentile). It never changes the run.`;
 
-/** How a Temporal Simulation document reads: for the Model text's context on a Simulation section. */
+/** How a Temporal Simulation document reads: for the LLM Design's context on a Simulation section. */
 export const SIMULATION_REFERENCE = [SIMULATION_PRIMER, METRICS_PRIMER, "## Format\n```", FORMAT_REFERENCE, "```"].join("\n\n");
 
 /** A complete, valid definition used as the worked example (tested to parse). */

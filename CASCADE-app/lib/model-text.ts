@@ -1,6 +1,6 @@
 /**
  * model-text.ts — change everything a project saves (the project file and the
- * Model Configuration) through a text: the Model text (ADR-0022). Pure: no
+ * Model Configuration) through a text: the LLM Design (ADR-0022). Pure: no
  * store access; `lib/model-text-apply.ts` is the store-facing side.
  *
  * The text is a CHANGE SET, never the whole bundle: a model can be megabytes,
@@ -114,8 +114,12 @@ export function parseJsonText(text: string): { ok: true; value: unknown } | { ok
 /** Stages 1–4: the text as a change set, or why not. */
 export function parseChangeText(text: string): ParsedChange {
   const json = parseJsonText(text);
-  if (!json.ok) return json;
-  const parsed = ChangeSetSchema.safeParse(json.value);
+  return json.ok ? parseChangeValue(json.value) : json;
+}
+
+/** Stage 4 alone, for a value already through stages 1–3. */
+export function parseChangeValue(value: unknown): ParsedChange {
+  const parsed = ChangeSetSchema.safeParse(value);
   return parsed.success ? { ok: true, change: parsed.data } : { ok: false, errors: issues(parsed.error) };
 }
 
@@ -170,6 +174,11 @@ function applyPatchOp(root: Record<string, unknown>, op: PatchOp): string | null
   if (op.op === "remove") delete parent[last];
   else parent[last] = value;
   return null;
+}
+
+/** Apply patch operations in place on `root` (a copy of `{ project, config }`), in order; the reasons any could not apply. */
+export function applyPatchOps(root: Record<string, unknown>, ops: readonly PatchOp[]): string[] {
+  return ops.flatMap((op) => applyPatchOp(root, op) ?? []);
 }
 
 /** The value at a pointer, for "Copy section" (reading may address anything); undefined when there is none. */
@@ -254,12 +263,14 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
 // Preview
 // ---------------------------------------------------------------------------
 
-interface PreviewLine {
+export interface PreviewLine {
   kind: "add" | "remove" | "change";
   /** What changed, in words a person reads: `Node "Pump 1" (p1) › capacity`. */
   where: string;
   before?: string;
   after?: string;
+  /** The thing it belongs to (`node:p1`, `event:flood`), for grouping lines under the change that made them. */
+  subject?: string;
 }
 
 export interface Preview {
@@ -275,21 +286,28 @@ function shortValue(v: unknown): string {
 }
 
 const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-const hasIds = (v: unknown[]): v is { id: string }[] => v.every((x) => isPlain(x) && typeof x.id === "string");
+/** A record's identity in a list: its `id`, or a Category's `name`. */
+const identity = (x: unknown): string | undefined =>
+  isPlain(x) ? (typeof x.id === "string" ? x.id : typeof x.name === "string" ? x.name : undefined) : undefined;
+const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
-/** Leaf-level changes between two JSON values; lists of records with ids are matched by id. */
-function jsonChanges(before: unknown, after: unknown, where: string, out: PreviewLine[]): void {
+/** The subject kind of a list's records, by the list's key. */
+const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas" };
+
+/** Leaf-level changes between two JSON values; lists of records with ids (or names) are matched by them. */
+function jsonChanges(before: unknown, after: unknown, where: string, out: PreviewLine[], subject?: string, key?: string): void {
   if (deepEqual(before, after)) return;
-  if (before === undefined) { out.push({ kind: "add", where, after: shortValue(after) }); return; }
-  if (after === undefined) { out.push({ kind: "remove", where, before: shortValue(before) }); return; }
+  if (before === undefined) { out.push({ kind: "add", where, after: shortValue(after), subject }); return; }
+  if (after === undefined) { out.push({ kind: "remove", where, before: shortValue(before), subject }); return; }
   if (isPlain(before) && isPlain(after)) {
-    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) jsonChanges(before[key], after[key], `${where} › ${key}`, out);
+    for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) jsonChanges(before[k], after[k], `${where} › ${k}`, out, subject, k);
     return;
   }
   if (Array.isArray(before) && Array.isArray(after) && hasIds(before) && hasIds(after)) {
-    const a = new Map(before.map((x) => [x.id, x]));
-    const b = new Map(after.map((x) => [x.id, x]));
-    for (const id of new Set([...a.keys(), ...b.keys()])) jsonChanges(a.get(id), b.get(id), `${where} "${id}"`, out);
+    const a = new Map(before.map((x) => [identity(x)!, x]));
+    const b = new Map(after.map((x) => [identity(x)!, x]));
+    const kind = key ? SUBJECT_OF[key] : undefined;
+    for (const id of new Set([...a.keys(), ...b.keys()])) jsonChanges(a.get(id), b.get(id), `${where} "${id}"`, out, kind ? `${kind}:${id}` : subject);
     return;
   }
   if (Array.isArray(before) && Array.isArray(after)) {
@@ -298,16 +316,16 @@ function jsonChanges(before: unknown, after: unknown, where: string, out: Previe
       // A list of values (a Canvas's node ids): what joined and what left reads better than a shifted list.
       const added = after.filter((v) => !before.includes(v));
       const gone = before.filter((v) => !after.includes(v));
-      if (added.length > 0) out.push({ kind: "add", where, after: shortValue(added) });
-      if (gone.length > 0) out.push({ kind: "remove", where, before: shortValue(gone) });
-      if (added.length === 0 && gone.length === 0) out.push({ kind: "change", where: `${where} (order)`, before: shortValue(before), after: shortValue(after) });
+      if (added.length > 0) out.push({ kind: "add", where, after: shortValue(added), subject });
+      if (gone.length > 0) out.push({ kind: "remove", where, before: shortValue(gone), subject });
+      if (added.length === 0 && gone.length === 0) out.push({ kind: "change", where: `${where} (order)`, before: shortValue(before), after: shortValue(after), subject });
       return;
     }
     // A list of records without ids (a Timeline's Steps): item by item.
-    for (let i = 0; i < Math.max(before.length, after.length); i++) jsonChanges(before[i], after[i], `${where}[${i}]`, out);
+    for (let i = 0; i < Math.max(before.length, after.length); i++) jsonChanges(before[i], after[i], `${where}[${i}]`, out, subject);
     return;
   }
-  out.push({ kind: "change", where, before: shortValue(before), after: shortValue(after) });
+  out.push({ kind: "change", where, before: shortValue(before), after: shortValue(after), subject });
 }
 
 const present = (v: unknown) => (v === DIFF_ABSENT ? undefined : v);
@@ -327,10 +345,11 @@ function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
     for (const r of list) {
       const record = (r.record ?? (registry as Record<string, { label?: string }>)[r.id]) as { label?: string } | undefined;
       const name = elementName(kind, r.id, record);
-      if (r.op === "add") lines.push({ kind: "add", where: name });
-      else if (r.op === "remove") lines.push({ kind: "remove", where: name });
+      const subject = `${kind.toLowerCase()}:${r.id}`;
+      if (r.op === "add") lines.push({ kind: "add", where: name, subject });
+      else if (r.op === "remove") lines.push({ kind: "remove", where: name, subject });
       // A Graph Diff marks an absent side with DIFF_ABSENT; the preview reads it as "added" or "removed".
-      else for (const f of r.fields) jsonChanges(present(f.before), present(f.after), `${name} › ${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(" › ")}`, lines);
+      else for (const f of r.fields) jsonChanges(present(f.before), present(f.after), `${name} › ${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(" › ")}`, lines, subject);
     }
   }
   if (diff.canvas_order) lines.push({ kind: "change", where: "Canvas order", before: shortValue(diff.canvas_order_before), after: shortValue(diff.canvas_order) });

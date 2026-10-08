@@ -9,6 +9,7 @@ import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
 import { HELP_ANCHOR_ID, SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
+import { ModelTextControl } from "@/components/model-text/model-text-window";
 import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 import type { Canvas } from "@/lib/schemas/network";
@@ -65,6 +66,9 @@ export function Topbar() {
         >
           <HelpCircle size={15} />
         </TopbarIconButton>
+
+        {/* LLM Design: everything the project saves, edited as JSON with an LLM (ADR-0022) */}
+        <ModelTextControl buttonClassName="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" />
 
         <TopbarIconButton
           label="Config"

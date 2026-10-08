@@ -91,7 +91,7 @@ export function TextTab() {
       />
       <p className="text-[11px] text-zinc-400">
         Paste bare JSON or a whole LLM reply — the first <code>```json</code> block is used. {dirty ? "Edited — not applied yet." : "Matches the definition."}{" "}
-        Events and the rest of the model change through <span className="font-medium">Text</span> in the Action Bar.
+        Events and the rest of the model change through <span className="font-medium">LLM Design</span> in the Topbar.
       </p>
 
       {result && <Notices tone="error" items={result.errors} />}

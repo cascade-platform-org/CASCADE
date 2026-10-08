@@ -1,10 +1,10 @@
 /**
- * model-text-apply.ts — the store-facing side of the Model text (ADR-0022).
+ * model-text-apply.ts — the store-facing side of the LLM Design (ADR-0022).
  *
  * `lib/model-text.ts` checks a change set against a copy and previews it; this
  * file reads the current bundle and, once the person confirms, writes the
  * checked result through the same loaders a project file uses. Before writing,
- * the whole current bundle is kept as a version ("Before Model text edit") and
+ * the whole current bundle is kept as a version ("Before LLM Design edit") and
  * handed back, so the window can offer Undo this edit and Versions keeps it.
  * Refused while a Temporal Simulation run is shown, like every model edit.
  */
@@ -35,7 +35,7 @@ function load(bundle: ProjectBundle): void {
 export function applyModelBundle(after: ProjectBundle): ProjectBundle | null {
   if (modelLocked()) return null;
   const before = currentBundle();
-  pushAutoSnapshot(before, `Before Model text edit — ${before.project.meta.name}`);
+  pushAutoSnapshot(before, `Before LLM Design edit — ${before.project.meta.name}`);
   // The history is the app's record and the text cannot change it; keep the live one.
   load({ ...after, project: { ...after.project, update_history: before.project.update_history } });
   return before;

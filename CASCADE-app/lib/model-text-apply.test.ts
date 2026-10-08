@@ -1,5 +1,5 @@
 /**
- * model-text-apply — writing a checked Model text, and Undo this edit
+ * model-text-apply — writing a checked LLM Design, and Undo this edit
  * (ADR-0022): apply then undo gives back exactly the project and the
  * configuration it started from, and a shown Temporal Simulation run refuses
  * both, like every model edit.
@@ -33,7 +33,7 @@ beforeEach(() => {
   canvas.addNodeToCanvas("a", "c1");
 });
 
-describe("applying a Model text", () => {
+describe("applying a LLM Design", () => {
   it("writes the model and the configuration, and Undo this edit restores both exactly", () => {
     const start = currentBundle();
     const before = applyModelBundle(checked({

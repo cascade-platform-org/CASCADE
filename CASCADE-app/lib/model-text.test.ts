@@ -1,5 +1,5 @@
 /**
- * model-text — the Model text's check (ADR-0022). Every stage is exercised by
+ * model-text — the LLM Design's check (ADR-0022). Every stage is exercised by
  * hand-picked cases (syntax, meaning, hostile input), and fast-check throws
  * random change sets at the whole pipeline: each one must either be refused
  * with a reason or produce a bundle that passes the schemas, and the bundle it
@@ -110,7 +110,7 @@ describe("checking a change against the model", () => {
     expect(r.preview.counts).toEqual({ add: 1, remove: 0, change: 2 });
     // A field the Element did not have reads as added, with its value.
     const importance = checkChange(b, change({ elements: [{ element: "c", path: ["importance"], op: "set", value: 2 }] }));
-    expect(importance.ok && importance.preview.lines).toEqual([{ kind: "add", where: 'Node "City" (c) › importance', after: "2" }]);
+    expect(importance.ok && importance.preview.lines).toEqual([{ kind: "add", where: 'Node "City" (c) › importance', after: "2", subject: "node:c" }]);
     expect(b.project.nodes.c.label).toBe("City");
   });
 
@@ -126,7 +126,7 @@ describe("checking a change against the model", () => {
     if (whole.ok) {
       expect(whole.preview.lines.map((l) => `${l.kind} ${l.where}`)).toContain("remove Edge e");
       // A list of ids reads as what left it, not as two whole lists.
-      expect(whole.preview.lines).toContainEqual({ kind: "remove", where: 'Canvas "Main" (c1) › graph › edge_ids', before: '["e"]' });
+      expect(whole.preview.lines).toContainEqual({ kind: "remove", where: 'Canvas "Main" (c1) › graph › edge_ids', before: '["e"]', subject: "canvas:c1" });
     }
   });
 

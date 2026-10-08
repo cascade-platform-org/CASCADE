@@ -1,5 +1,5 @@
 /**
- * model-text-sections.ts — the Model text as a tree of sections (ADR-0022).
+ * model-text-sections.ts — the LLM Design as a tree of sections (ADR-0022).
  * Pure.
  *
  * Everything a project saves, arranged the way a person thinks of it: Project
@@ -169,7 +169,7 @@ export function sectionPatch(bundle: ProjectBundle, section: Section, edited: un
  * Elements leave every Canvas, and an Element added in a Canvas's group is
  * placed on that Canvas.
  */
-function registryFollowUps(
+export function registryFollowUps(
   bundle: ProjectBundle,
   registry: "nodes" | "edges",
   removed: string[],

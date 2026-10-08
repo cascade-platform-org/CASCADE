@@ -1,5 +1,5 @@
 /**
- * model-text-sections — the Model text's tree (ADR-0022): every level opens
+ * model-text-sections — the LLM Design's tree (ADR-0022): every level opens
  * on its current JSON, an untouched section changes nothing, and an edited one
  * becomes patch operations that pass the same check as a hand-written change
  * set, taking along what a removal or an addition implies.

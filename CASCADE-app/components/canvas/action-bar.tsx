@@ -4,7 +4,7 @@
  * ActionBar — sits below the Topbar.
  *
  * Main:    [Global ▾ | ▶ Propagate | Simulate | Analyse]   one shared scope
- * Model:   [↺ Reset] [−Xh] [Undo] [Redo] [{} Text]
+ * Model:   [↺ Reset] [−Xh] [Undo] [Redo]
  * Divider
  * Changes: [⏱ Time ▾] [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
  */
@@ -34,7 +34,6 @@ import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
 import { resetFunctionality } from "@/lib/network-utils";
 import { ACTION_TONE, GroupButton, ScopePicker } from "./scope-picker";
-import { ModelTextControl } from "@/components/model-text/model-text-window";
 
 // Shared core for both revert call-sites (bar button + panel button).
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
@@ -164,9 +163,6 @@ export function ActionBar() {
       <ActionButton onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" className="text-zinc-600 dark:text-zinc-400">
         <Redo2 size={13} />
       </ActionButton>
-
-      {/* Model text: change anything the project saves, by a checked and previewed text (ADR-0022) */}
-      <ModelTextControl buttonClassName="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800" />
 
       {/* Divider */}
       <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />

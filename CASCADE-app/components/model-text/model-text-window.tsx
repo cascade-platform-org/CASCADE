@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ModelTextControl — the Action Bar's "Text" button and the Model text window
+ * ModelTextControl — the Topbar's "LLM Design" button (beside Help) and its window
  * (ADR-0022): everything the project and its configuration save, as a tree of
  * sections, each editable as JSON.
  *
@@ -196,7 +196,7 @@ function ModelTextPanel() {
     if (!before) return;
     dropText(section.key);
     setResult({ kind: "applied", preview: r.preview, before });
-    pushToast({ message: "Model text applied. A version was kept; Undo this edit puts it back.", variant: "success", durationMs: 4000 });
+    pushToast({ message: "LLM Design applied. A version was kept; Undo this edit puts it back.", variant: "success", durationMs: 4000 });
   }
 
   function undo() {
@@ -204,7 +204,7 @@ function ModelTextPanel() {
     if (!window.confirm("Put the project and its configuration back as they were before this edit? Changes made since are lost.")) return;
     if (restoreModelBundle(result.before)) {
       setResult(null);
-      pushToast({ message: "Model text edit undone.", variant: "info", durationMs: 3000 });
+      pushToast({ message: "LLM Design edit undone.", variant: "info", durationMs: 3000 });
     }
   }
 
@@ -239,6 +239,7 @@ function ModelTextPanel() {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+        <p className="rounded-md bg-blue-50 px-2 py-1.5 text-[11px] leading-4 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200">{USAGE}</p>
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">{section.label}</span>
           {!bulk && <code className="truncate text-[10px] text-zinc-400">{section.pointer}</code>}
@@ -308,6 +309,11 @@ function ModelTextPanel() {
   );
 }
 
+/** What the window is for, in the Topbar button's tooltip and atop the window. */
+const USAGE =
+  "Design the model with an LLM: pick a part, Copy with context for an LLM, paste it into your LLM with what you want changed, " +
+  "paste its reply back and Check & preview. Nothing changes until you Apply, and Undo this edit puts it back.";
+
 export function ModelTextControl({ buttonClassName }: { buttonClassName: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -316,16 +322,16 @@ export function ModelTextControl({ buttonClassName }: { buttonClassName: string 
         id={MODEL_TEXT_ANCHOR_ID}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Model text: everything the project and its configuration save, section by section, as JSON (checked and previewed before it applies)"
+        title={USAGE}
         className={buttonClassName}
       >
-        <Braces size={13} />
-        <span>Text</span>
+        <Braces size={15} />
+        <span className="hidden text-xs sm:inline">LLM Design</span>
       </button>
       <FloatingWindow
         open={open}
         onClose={() => setOpen(false)}
-        title="Model text"
+        title="LLM Design"
         icon={<Braces size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
         flyToOnClose={MODEL_TEXT_ANCHOR_ID}
         storageKey="cascade.model-text.window"

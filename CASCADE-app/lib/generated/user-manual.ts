@@ -2650,18 +2650,18 @@ export const USER_MANUAL: ManualDoc = {
         },
         {
           "type": "sub",
-          "title": "7.1 Model text",
+          "title": "7.1 LLM Design",
           "blocks": [
             {
               "type": "paragraph",
               "spans": [
                 {
                   "kind": "strong",
-                  "text": "Text"
+                  "text": "LLM Design"
                 },
                 {
                   "kind": "text",
-                  "text": " in the Action Bar shows everything the project and its configuration save as a tree, each part as JSON you can edit by hand or with an LLM:"
+                  "text": " in the Topbar, beside Help, shows everything the project and its configuration save as a tree, each part as JSON you can edit by hand or with an LLM:"
                 }
               ]
             },
@@ -3022,7 +3022,7 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": ". Events and the rest of the model change through the Model text (§7.1)."
+                    "text": ". Events and the rest of the model change through LLM Design (§7.1)."
                   }
                 ]
               ]

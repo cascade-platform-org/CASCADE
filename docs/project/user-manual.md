@@ -385,9 +385,9 @@ cloud saves, and deleting a cloud save does not touch the computer.
 **Auto-save** (Cloud tab) keeps one spare copy that updates as you work. It never
 replaces one of the 10 cloud saves. Switching it off deletes it.
 
-### 7.1 Model text
+### 7.1 LLM Design
 
-**Text** in the Action Bar shows everything the project and its configuration
+**LLM Design** in the Topbar, beside Help, shows everything the project and its configuration
 save as a tree, each part as JSON you can edit by hand or with an LLM:
 
 - **Project** — Project info, Canvases, Nodes and Edges (each grouped by the
@@ -445,7 +445,7 @@ on the active canvas, and saves it with the Temporal Simulation.
 - **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
   *Copy with context for an LLM* adds a primer, the format and this project's
   elements; paste the reply back and *Apply*. Events and the rest of the model
-  change through the Model text (§7.1).
+  change through LLM Design (§7.1).
 
 Every change over time goes in before a run, as a profile value or a Phase
 Event. Each edit is saved into the project once it is complete; until then, the
