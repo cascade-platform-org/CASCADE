@@ -15,6 +15,7 @@ import { matchElements, type FilterableModel } from "@/lib/element-filter";
 import { writeFieldValue } from "@/lib/graph-diff";
 import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { EdgeSchema, NodeSchema } from "@/lib/schemas/network";
+import { isSafeKey } from "@/lib/schemas/field-path";
 
 type Rec = Record<string, unknown>;
 
@@ -26,7 +27,8 @@ export function readPath(record: Rec, path: readonly string[]): { value: unknown
   for (let depth = 0; depth < path.length; depth++) {
     if (current === undefined) return { value: undefined };
     if (!isObject(current)) return { error: `${path.slice(0, depth).join(" › ")} holds a value, not an object` };
-    current = current[path[depth]];
+    // Own fields only: an inherited name (`constructor`, `toString`) is not a field.
+    current = Object.hasOwn(current, path[depth]) ? current[path[depth]] : undefined;
   }
   return { value: current };
 }
@@ -66,6 +68,7 @@ export function applyOperationTo(
   n: number,
 ): { element: Rec } | { error: string } {
   const where = op.path.join(" › ");
+  if (!op.path.every(isSafeKey)) return { error: `${where}: __proto__, constructor and prototype cannot be field names` };
   const read = readPath(element, op.path);
   if ("error" in read) return { error: `${where}: ${read.error}` };
   const result = computeOperation(op.op, read.value, op.value);

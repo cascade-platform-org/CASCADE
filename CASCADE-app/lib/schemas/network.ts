@@ -13,6 +13,7 @@
  * "Inter-canvas edge" is a UI render-time concept only — no special type exists.
  */
 import { z } from "zod";
+import { UNSAFE_KEY_MESSAGE, isSafeKey } from "./field-path";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
 import { TemporalSimulationSchema } from "./temporal-simulation";
 
@@ -339,8 +340,8 @@ export const DIFF_ABSENT = "__CASCADE_ABSENT__";
  */
 export const FieldChangeSchema = z.object({
   field: z.string(),
-  path: z.array(z.string()).optional(),
-  key: z.string().optional(),
+  path: z.array(z.string().refine(isSafeKey, UNSAFE_KEY_MESSAGE)).optional(),
+  key: z.string().refine(isSafeKey, UNSAFE_KEY_MESSAGE).optional(),
   before: z.unknown(),
   after: z.unknown(),
 });

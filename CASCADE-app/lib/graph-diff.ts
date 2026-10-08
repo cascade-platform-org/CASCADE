@@ -26,6 +26,7 @@
  */
 
 import { DIFF_ABSENT } from "@/lib/schemas/network";
+import { isSafeKey } from "@/lib/schemas/field-path";
 import type {
   Canvas,
   Edge,
@@ -228,6 +229,8 @@ export function writeFieldValue(
   path: readonly string[],
   value: unknown,
 ): void {
+  const unsafe = [field, ...path].find((key) => !isSafeKey(key));
+  if (unsafe !== undefined) throw new Error(`"${unsafe}" cannot be a field name`);
   if (path.length === 0) {
     if (value === DIFF_ABSENT) delete record[field];
     else record[field] = value;

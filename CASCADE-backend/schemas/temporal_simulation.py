@@ -18,6 +18,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schemas.config import AttributeOperation, ElementFilter
+from schemas.field_path import FieldPath
 
 CalendarUnit = Literal["hour", "day", "week", "month", "quarter", "year", "none"]
 
@@ -91,7 +92,7 @@ class Metric(BaseModel):
 
     name: str
     target: ElementFilter
-    path: list[str] = Field(..., min_length=1)
+    path: FieldPath
     read: Literal["state", "change"]
     phase: Optional[int] = Field(
         default=None, ge=1,

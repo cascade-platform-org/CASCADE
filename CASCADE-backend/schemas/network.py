@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from schemas.field_path import SafeKey
 from schemas.temporal_simulation import TemporalSimulation
 
 if TYPE_CHECKING:
@@ -444,8 +445,8 @@ class FieldChange(BaseModel):
     the last dot, and EPANET element ids contain dots (`J.12.A`).
     """
     field: str
-    path: Optional[list[str]] = None
-    key: Optional[str] = None
+    path: Optional[list[SafeKey]] = None
+    key: Optional[SafeKey] = None
     before: Any = None
     after: Any = None
 

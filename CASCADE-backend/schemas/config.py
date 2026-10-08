@@ -4,6 +4,8 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from schemas.field_path import FieldPath
+
 
 # hazard: damage and degradation by vulnerability; disservice: degradation by
 # vulnerability; restorative: only Attribute Operations, the way a repair or a
@@ -74,7 +76,7 @@ class AttributeOperation(BaseModel):
 
     element: Optional[str] = Field(default=None, min_length=1)
     where: Optional[ElementFilter] = None
-    path: list[str] = Field(..., min_length=1, description='Field path, e.g. ["supply_capacity", "water"].')
+    path: FieldPath = Field(..., description='Field path, e.g. ["supply_capacity", "water"].')
     op: AttributeOperationKind
     value: float | int | bool | str
 
@@ -84,8 +86,6 @@ class AttributeOperation(BaseModel):
             raise ValueError("give exactly one of `element` (an id) or `where` (a filter)")
         if self.op != "set" and (isinstance(self.value, bool) or not isinstance(self.value, (int, float))):
             raise ValueError("add, mul, at_most and at_least need a number `value`")
-        if any(not segment for segment in self.path):
-            raise ValueError("a path segment cannot be empty")
         return self
 
 

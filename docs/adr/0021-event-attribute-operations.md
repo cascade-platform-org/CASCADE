@@ -65,6 +65,10 @@ concepts, and keeping the unticked set (instead of the ticked one) keeps the fil
   range; a non-`set` operation on an absent field; a non-number `value` for an arithmetic
   operation; a path that runs into a number (`["supply_capacity", "hours", "level"]` on a
   bare-float supply).
+- **A path never holds `__proto__`, `constructor` or `prototype`** (`schemas/field_path.py`,
+  `lib/schemas/field-path.ts`): code follows a path with `record[key]`, and those keys reach
+  an object's prototype. The schemas refuse them in operations, Metrics and Graph Diffs, and
+  the writer refuses them again for input that skipped the schemas.
 - **A Stock is written field by field**, so an Attribute Operation is the only way an
   Event writes a Stock.
 - The written change is a **Graph Diff** entry addressed by its full path (ADR-0020 §4).

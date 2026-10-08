@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { FieldPathSchema } from "./field-path";
 
 /**
  * Selects Elements by what they are. Every given condition must hold; an
@@ -44,7 +45,7 @@ export const AttributeOperationSchema = z
   .object({
     element: z.string().min(1).optional(),
     where: ElementFilterSchema.optional(),
-    path: z.array(z.string().min(1)).min(1),
+    path: FieldPathSchema,
     op: OperationKindSchema,
     value: z.union([z.number(), z.boolean(), z.string()]),
   })

@@ -23,7 +23,7 @@ def test_accepts_one_element_or_one_filter():
         ({"element": "a", "path": ["x"], "op": "add", "value": "5"}, "need a number"),
         ({"element": "a", "path": ["x"], "op": "mul", "value": True}, "need a number"),
         ({"element": "a", "path": [], "op": "set", "value": 1}, "at least 1"),
-        ({"element": "a", "path": ["x", ""], "op": "set", "value": 1}, "cannot be empty"),
+        ({"element": "a", "path": ["x", ""], "op": "set", "value": 1}, "at least 1 character"),
         ({"element": "a", "path": ["x"], "op": "set", "value": 1, "extra": 1}, "Extra inputs"),
         ({"where": {"kind": "node", "typo": 1}, "path": ["x"], "op": "set", "value": 1}, "Extra inputs"),
     ],

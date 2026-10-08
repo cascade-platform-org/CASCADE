@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { FieldPathSchema } from "./field-path";
 import { AttributeOperationSchema, ElementFilterSchema } from "./attribute-operation";
 
 export const CalendarUnitSchema = z.enum(["hour", "day", "week", "month", "quarter", "year", "none"]);
@@ -61,7 +62,7 @@ export const MetricSchema = z
   .object({
     name: z.string(),
     target: ElementFilterSchema,
-    path: z.array(z.string().min(1)).min(1),
+    path: FieldPathSchema,
     read: z.enum(["state", "change"]),
     /** For `change`: the 1-based Phase whose diff is read; absent = the whole period. */
     phase: z.number().int().min(1).optional(),

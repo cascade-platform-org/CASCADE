@@ -278,6 +278,7 @@
         "path": {
           "description": "Field path, e.g. [\"supply_capacity\", \"water\"].",
           "items": {
+            "minLength": 1,
             "type": "string"
           },
           "minItems": 1,
@@ -1496,6 +1497,7 @@
         },
         "path": {
           "items": {
+            "minLength": 1,
             "type": "string"
           },
           "minItems": 1,

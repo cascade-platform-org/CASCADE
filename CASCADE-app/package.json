@@ -49,6 +49,7 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.10",
+    "fast-check": "^4.10.2",
     "graphology-types": "^0.24.8",
     "knip": "^6.24.0",
     "madge": "^8.0.0",
