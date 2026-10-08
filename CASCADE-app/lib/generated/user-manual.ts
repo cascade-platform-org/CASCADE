@@ -1504,7 +1504,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " The scope selector sits on the Propagate button."
+                  "text": " The scope selector sits in front of Propagate, Simulate and Analyse, and sets the scope of all three."
                 }
               ]
             }
@@ -2752,7 +2752,7 @@ export const USER_MANUAL: ManualDoc = {
             },
             {
               "kind": "text",
-              "text": ") one; its name is its Timeline's name. The scope side of the Simulate button sets the selected one's scope, "
+              "text": ") one; its name is its Timeline's name. A run uses the scope picked in front of Propagate, Simulate and Analyse (one scope for the three), "
             },
             {
               "kind": "em",
@@ -2768,7 +2768,7 @@ export const USER_MANUAL: ManualDoc = {
             },
             {
               "kind": "text",
-              "text": " on the active canvas, saved with it."
+              "text": " on the active canvas, and saves it with the Temporal Simulation."
             }
           ]
         },
@@ -3081,7 +3081,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " needs an account allowed to Propagate. It copies the model, resets the copy (§4) and runs every period in order, one Propagation, with the Temporal Simulation's own scope, for each propagating Phase; each counts as one Engine Evaluation. One run at a time: to run another Temporal Simulation, end this run first. A progress bar shows how far it is; "
+                  "text": " needs an account allowed to Propagate. It copies the model, resets the copy (§4) and runs every period in order, one Propagation, with the shared scope (§2.6), for each propagating Phase; each counts as one Engine Evaluation. One run at a time: to run another Temporal Simulation, end this run first. A progress bar shows how far it is; "
                 },
                 {
                   "kind": "strong",

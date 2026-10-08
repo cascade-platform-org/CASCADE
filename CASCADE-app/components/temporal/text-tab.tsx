@@ -13,6 +13,8 @@ import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { useUiStore } from "@/store/ui-store";
+import { useAnalysisStore } from "@/store/analysis-store";
 import {
   FORMAT_REFERENCE,
   docToDraft,
@@ -50,6 +52,11 @@ export function TextTab() {
     if (apply) {
       const draft = docToDraft(parsed.doc, nanoid);
       replaceDraft(draft);
+      // The scope is the one Propagate, Simulate and Analyse share.
+      if (draft.scope !== useUiStore.getState().propagationScope) {
+        useUiStore.getState().setPropagationScope(draft.scope);
+        useAnalysisStore.getState().setScope(draft.scope);
+      }
       // Show the text the definition now serialises to, so the tab reads "Matches the definition".
       setText(serializeDoc(draftToDoc(draft)));
       explain(explainApply(0, warnings.length));

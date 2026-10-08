@@ -61,10 +61,10 @@ function SimulationPicker() {
   const simulations = useTemporalSimulationStore((s) => s.simulations);
   const selectedId = useTemporalSimulationStore((s) => s.selectedId);
   const name = useTemporalSimulationStore((s) => s.timeline.name);
-  const scope = useTemporalSimulationStore((s) => s.scope);
-  const canvas = useTemporalSimulationStore((s) => s.canvas);
+  // The run uses the scope Propagate, Simulate and Analyse share, and saves it into the Simulation.
+  const scope = useUiStore((s) => s.propagationScope);
   const running = useTemporalSimulationStore((s) => s.running);
-  const canvasLabel = useCanvasStore((s) => (canvas === undefined ? undefined : s.canvases[canvas]?.label));
+  const canvasLabel = useCanvasStore((s) => (s.activeCanvasId ? s.canvases[s.activeCanvasId]?.label : undefined));
   const { selectSimulation, addSimulation, duplicateSimulation, deleteSimulation } = useTemporalSimulationStore.getState();
   const saved = simulations.some((x) => x.id === selectedId);
 
@@ -91,8 +91,8 @@ function SimulationPicker() {
         <Trash2 size={11} /> Delete
       </SmallButton>
       <span className="flex-1" />
-      <span className="text-[11px] text-zinc-500 dark:text-zinc-400" title="Pick it on the Simulate button's scope side">
-        Scope: <span className="font-medium">{scope === "local" ? `local — ${canvasLabel ?? `missing Canvas "${canvas}"`}` : "global"}</span>
+      <span className="text-[11px] text-zinc-500 dark:text-zinc-400" title="The scope picker in front of Propagate, Simulate and Analyse sets it">
+        Scope: <span className="font-medium">{scope === "local" ? `local — ${canvasLabel ?? "no Canvas"}` : "global"}</span>
       </span>
     </div>
   );

@@ -199,7 +199,8 @@ The Inspector states it in words, and the repair ranking is computed from it.
 
 *Local* propagates the active Canvas only and ignores edges leaving it;
 *Global* propagates every Canvas and follows them. **An inter-canvas cascade
-appears only under Global.** The scope selector sits on the Propagate button.
+appears only under Global.** The scope selector sits in front of Propagate,
+Simulate and Analyse, and sets the scope of all three.
 
 ## 3. Rules
 
@@ -399,9 +400,9 @@ from one period to the next (a tank, a budget, hours owed) carry over. A project
 holds as many as you like, saved with it; **Simulate** in the Action Bar opens
 them. The picker at the top of the window selects the one the tabs edit and
 **Run** runs, and adds (**New**), copies (**Duplicate**) or removes (**Delete**)
-one; its name is its Timeline's name. The scope side of the Simulate button sets
-the selected one's scope, *global* or *local* on the active canvas, saved with
-it.
+one; its name is its Timeline's name. A run uses the scope picked in front of
+Propagate, Simulate and Analyse (one scope for the three), *global* or *local*
+on the active canvas, and saves it with the Temporal Simulation.
 
 ### 9.1 The definition
 
@@ -462,8 +463,8 @@ included; the Inspector asks you to declare them.
 ### 9.3 Running
 
 **Run** needs an account allowed to Propagate. It copies the model, resets the
-copy (§4) and runs every period in order, one Propagation, with the Temporal
-Simulation's own scope, for each propagating Phase; each counts as one Engine
+copy (§4) and runs every period in order, one Propagation, with the shared
+scope (§2.6), for each propagating Phase; each counts as one Engine
 Evaluation. One run at a time: to run another Temporal Simulation, end this
 run first. A progress bar shows how far it is; **Cancel**, a refused request or
 an engine error keeps nothing and names the period it stopped in.

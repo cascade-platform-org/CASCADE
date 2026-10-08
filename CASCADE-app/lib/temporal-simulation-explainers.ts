@@ -333,7 +333,7 @@ export function explainRun(plan: TimelinePlan, eventLabel: (id: string) => strin
       "4. Keep the per-Phase diffs in the run record and open the Run View: the canvas shows the selected period, read-only, until End run. Progress shows period k of n; Cancel or a failure discards the run.",
       plan.errors.length > 0
         ? `Blocked: ${plan.errors.length} error(s) — a period without a valid label, or two periods with one label. Warnings do not block.`
-        : "Each Propagation uses this Temporal Simulation's scope (the Simulate button's scope side), fixed for the whole run.",
+        : "Each Propagation uses the scope picked in front of Propagate, Simulate and Analyse, fixed for the whole run and saved with this Temporal Simulation.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3", "ADR-0008"],
   };

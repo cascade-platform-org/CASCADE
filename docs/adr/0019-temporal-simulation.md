@@ -65,10 +65,13 @@ profile    { period label: [AttributeOperation, …] }   (ADR-0021)
   Runs compare through their Scorecard entries (§4). *Revised 2026-10-08:* before, a project
   held one, as `temporal_simulation`, and a variant to compare was a copy of the project; a
   project file in that form loads it as the list's only entry (`simulation-1`).
-- **Each Temporal Simulation carries its Propagation scope** (`scope`: `global`, or `local`
-  with the `canvas` it propagates), picked on the Simulate button's scope side and fixed when
-  the run starts (*revised 2026-10-08*: before, every Propagation of a run read the Propagate
-  button's scope at that moment, so a scope change mid-run changed the run).
+- **A run's scope is fixed when it starts**: the one scope Propagate, Simulate and Analyse
+  share (the Action Bar's scope picker in front of the three), on the active Canvas when
+  local. The run records it in its Temporal Simulation (`scope`: `global`, or `local` with the
+  `canvas` it propagated), so the text shows what the last run used; applying a text with
+  another `scope` sets the shared one. *Revised 2026-10-08*: before, every Propagation of a
+  run read the Propagate button's scope at that moment, so a scope change mid-run changed the
+  run.
 - The Timeline is authored as an **editable table** of Steps and Phases; a draggable track
   is not ruled out later. The profile is a **grid on the same period columns**: one row
   per operation (target, path, op), one cell per period. A written value stays in later

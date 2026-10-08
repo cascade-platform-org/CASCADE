@@ -3,11 +3,10 @@
 /**
  * ActionBar — sits below the Topbar.
  *
- * Left zone:  [▶ Propagate] [↺ Reset] [Undo] [Redo]
+ * Main:    [Global ▾ | ▶ Propagate | Simulate | Analyse]   one shared scope
+ * Model:   [↺ Reset] [−Xh] [Undo] [Redo]
  * Divider
- * Event zone: [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
- * Divider
- * Temporal:   [⏱ Time ▾] [Simulate]
+ * Changes: [⏱ Time ▾] [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -34,7 +33,7 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
 import { resetFunctionality } from "@/lib/network-utils";
-import { ACTION_TONE, ScopeSplitButton } from "./scope-split-button";
+import { ACTION_TONE, GroupButton, ScopePicker } from "./scope-picker";
 
 // Shared core for both revert call-sites (bar button + panel button).
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
@@ -43,7 +42,6 @@ import { ACTION_TONE, ScopeSplitButton } from "./scope-split-button";
 export function ActionBar() {
   const openAnalysisPage = useAnalysisStore((s) => s.openAnalysisPage);
   const openTemporalSimulation = useTemporalSimulationStore((s) => s.openWindow);
-  const analysisScope = useAnalysisStore((s) => s.scope);
   const setAnalysisScope = useAnalysisStore((s) => s.setScope);
   const heatmapActive = useAnalysisStore((s) => s.heatmapActive);
   const scope = useUiStore((s) => s.propagationScope);
@@ -61,9 +59,12 @@ export function ActionBar() {
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
   // A Temporal Simulation run shows its own copy; the model is read-only until it ends.
   const simulationRunning = useTemporalSimulationStore((s) => s.running);
-  const simulationScope = useTemporalSimulationStore((s) => s.scope);
-  const setSimulationScope = useTemporalSimulationStore((s) => s.setScope);
-  const activeCanvasId = useCanvasStore((s) => s.activeCanvasId);
+
+  /** The one scope of Propagate, Simulate and Analyse (a run fixes it into its Simulation when it starts). */
+  function setSharedScope(v: "local" | "global") {
+    setPropagationScope(v);
+    setAnalysisScope(v);
+  }
 
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -92,42 +93,42 @@ export function ActionBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Propagate — scope chosen before the run; blocked while a Temporal Simulation run is shown */}
-      <span data-run-locked className="flex items-center">
-      <ScopeSplitButton
-        dataTour="propagate"
-        icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
-        label={isPropagating ? "Running…" : "Propagate"}
-        title={
-          !serverReachable
-            ? "Server unreachable — your data is safe locally"
-            : `Run ${scope} propagation (Ctrl+Enter)`
-        }
-        scope={scope}
-        onScopeChange={setPropagationScope}
-        onAction={propagate}
-        disabled={!serverReachable || isPropagating || !canPropagate || simulationRunning}
-      />
-      </span>
-
-      {/* Analyse — same split control, so scope is picked before opening */}
-      <ScopeSplitButton
-        dataTour="analyse"
-        icon={
-          <span className="relative flex items-center">
-            <BarChart2 size={13} />
-            {/* A live heatmap is easy to forget once the window is closed. */}
-            {heatmapActive && (
-              <span className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
-            )}
-          </span>
-        }
-        label="Analyse"
-        title={`Open Analysis (${scope} scope)`}
-        scope={analysisScope}
-        onScopeChange={setAnalysisScope}
-        onAction={openAnalysisPage}
-      />
+      {/* Main actions: one scope, shared by Propagate, Simulate and Analyse */}
+      <div className={cn("flex items-center rounded-md border", ACTION_TONE.border)}>
+        <ScopePicker scope={scope} onScopeChange={setSharedScope} />
+        {/* Blocked while a Temporal Simulation run is shown */}
+        <span data-run-locked className="flex items-center">
+          <GroupButton
+            dataTour="propagate"
+            icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
+            label={isPropagating ? "Running…" : "Propagate"}
+            title={!serverReachable ? "Server unreachable — your data is safe locally" : `Run ${scope} propagation (Ctrl+Enter)`}
+            onClick={propagate}
+            disabled={!serverReachable || isPropagating || !canPropagate || simulationRunning}
+          />
+        </span>
+        {/* Temporal Simulation window (ADR-0019) */}
+        <GroupButton
+          id={TEMPORAL_SIMULATION_ANCHOR_ID}
+          icon={<CalendarClock size={13} />}
+          label="Simulate"
+          title={`Temporal Simulation: Timelines, profiles and Metrics, run over many periods (${scope} scope)`}
+          onClick={openTemporalSimulation}
+        />
+        <GroupButton
+          dataTour="analyse"
+          icon={
+            <span className="relative flex items-center">
+              <BarChart2 size={13} />
+              {/* A live heatmap is easy to forget once the window is closed. */}
+              {heatmapActive && <span className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />}
+            </span>
+          }
+          label="Analyse"
+          title={`Open Analysis (${scope} scope)`}
+          onClick={openAnalysisPage}
+        />
+      </div>
 
       {/* Reset */}
       <span data-tour="reset" className="flex items-center">
@@ -141,6 +142,18 @@ export function ActionBar() {
         </ActionButton>
       </span>
 
+      {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
+      {revertSnapshot && elapsedHours > 0 && (
+        <ActionButton
+          onClick={handleRevertFromBar}
+          title={`Revert all temporal jumps applied in this session (−${elapsedHours}h)`}
+          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400"
+        >
+          <RotateCcw size={12} />
+          <span>−{elapsedHours}h</span>
+        </ActionButton>
+      )}
+
       {/* Undo */}
       <ActionButton onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="text-zinc-600 dark:text-zinc-400">
         <Undo2 size={13} />
@@ -153,6 +166,11 @@ export function ActionBar() {
 
       {/* Divider */}
       <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+      {/* Temporal Jump: time passing, applied like an Event */}
+      <span data-tour="temporal" className="flex items-center">
+        <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
+      </span>
 
       {/* Event buttons */}
       <span data-tour="events" className="flex items-center gap-1">
@@ -200,40 +218,6 @@ export function ActionBar() {
         <Plus size={13} />
       </button>
 
-      {/* Divider */}
-      <div className="mx-1.5 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
-
-      {/* Temporal Jump controls */}
-      <span data-tour="temporal" className="flex items-center">
-        <TemporalJumpControls propagate={propagate} isPropagating={isPropagating} />
-      </span>
-
-      {/* Temporal Simulation window (ADR-0019); the scope is the selected Simulation's, saved with it */}
-      <span id={TEMPORAL_SIMULATION_ANCHOR_ID}>
-        <ScopeSplitButton
-          label="Simulate"
-          icon={<CalendarClock size={13} />}
-          title="Temporal Simulation: the project’s Timelines, profiles and Metrics, run over many periods"
-          scope={simulationScope}
-          onScopeChange={(v) => {
-            if (v === "local" && !activeCanvasId) return;
-            setSimulationScope(v, v === "local" ? activeCanvasId ?? undefined : undefined);
-          }}
-          onAction={openTemporalSimulation}
-        />
-      </span>
-
-      {/* Persistent revert — visible whenever temporal jumps are pending, even with panel closed */}
-      {revertSnapshot && elapsedHours > 0 && (
-        <ActionButton
-          onClick={handleRevertFromBar}
-          title={`Revert all temporal jumps applied in this session (−${elapsedHours}h)`}
-          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400"
-        >
-          <RotateCcw size={12} />
-          <span>−{elapsedHours}h</span>
-        </ActionButton>
-      )}
     </div>
   );
 }
@@ -363,7 +347,7 @@ function TemporalJumpControls({
         onClick={() => { if (!busy) setOpen((v) => !v); }}
         disabled={busy}
         title="Temporal Jump controls"
-        className={cn("gap-1 border", ACTION_TONE.border, ACTION_TONE.text, ACTION_TONE.hover, busy && "opacity-40")}
+        className={cn("gap-1 text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-900/20", busy && "opacity-40")}
       >
         <Clock size={13} className={cn(isAutoAdvancing && "animate-pulse")} />
         <span>{isAutoAdvancing ? "Advancing…" : "Time"}</span>
@@ -378,7 +362,7 @@ function TemporalJumpControls({
         open={open}
         onClose={() => setOpen(false)}
         title="Temporal Jump"
-        icon={<Clock size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Clock size={15} className="shrink-0 text-sky-600 dark:text-sky-400" />}
         flyToOnClose={TEMPORAL_ANCHOR_ID}
         storageKey="cascade.temporal.window"
         defaultSize={{ w: 320, h: 400 }}

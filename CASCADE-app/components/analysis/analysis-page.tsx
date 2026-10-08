@@ -6,6 +6,7 @@ import { FloatingWindow } from "@/components/ui/floating-window";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useCanvasStore } from "@/store/canvas-store";
+import { useUiStore } from "@/store/ui-store";
 import { SectionTopological } from "./section-topological";
 import { SectionReachability } from "./section-reachability";
 import { SectionStructural } from "./section-structural";
@@ -133,7 +134,8 @@ export function AnalysisPage() {
               {(["local", "global"] as const).map((s) => (
                 <button
                   key={s}
-                  onClick={() => setScope(s)}
+                  // The scope Propagate and Simulate share (Action Bar).
+                  onClick={() => { setScope(s); useUiStore.getState().setPropagationScope(s); }}
                   className={cn(
                     "flex-1 py-1.5 text-xs font-medium capitalize transition-colors",
                     scope === s

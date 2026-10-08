@@ -6,7 +6,8 @@
  * the model once, Resets a copy of it, and hands the copy to the step operator
  * with the ordinary Propagation call (`propagateSnapshot`: the Propagate
  * button's payload, one metered Engine Evaluation each, no store written), at
- * the Simulation's own scope, fixed when the run starts. The model is never written: canvas-store refuses model writes while
+ * the scope Propagate, Simulate and Analyse share, fixed when the run starts
+ * and saved into the Simulation then. The model is never written: canvas-store refuses model writes while
  * `running`, and the Run View paints the run record's periods instead.
  */
 
@@ -33,20 +34,21 @@ let controller: AbortController | null = null;
  * a stop is reported through the store's `runError`, naming the period.
  */
 export async function startTemporalSimulationRun(): Promise<void> {
+  if (useTemporalSimulationStore.getState().running) return;
+  // The shared scope, fixed for the run and recorded in the Simulation it runs.
+  const { activeCanvasId } = useCanvasStore.getState();
+  const shared = useUiStore.getState().propagationScope;
+  const want = shared === "local" && activeCanvasId ? { scope: "local" as const, canvas: activeCanvasId } : { scope: "global" as const, canvas: undefined };
+  const had = useTemporalSimulationStore.getState();
+  // Only a change is written, so a Run alone does not mark the project unsaved.
+  if (had.scope !== want.scope || had.canvas !== want.canvas) had.setScope(want.scope, want.canvas);
   const sim = useTemporalSimulationStore.getState();
-  if (sim.running) return;
   const checked = checkDoc(draftToDoc(sim));
   if (!checked.ok) return;
   const plan = planTimeline(checked.doc.timeline);
   if (plan.errors.length > 0 || plan.periods.length === 0) return;
 
-  const { scope, canvas = null } = checked.doc;
-  const { canvases, activeCanvasId } = useCanvasStore.getState();
-  if (scope === "local" && (canvas === null || !(canvas in canvases))) {
-    sim.failRun(`This Simulation runs locally on the Canvas "${canvas}", which the project no longer has. Pick a scope on the Simulate button.`);
-    return;
-  }
-  const fixed = { scope, canvasId: scope === "local" ? canvas : activeCanvasId };
+  const fixed = { scope: checked.doc.scope, canvasId: checked.doc.canvas ?? activeCanvasId };
 
   const config = useConfigStore.getState();
   const n = selectN(config);
