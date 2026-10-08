@@ -9,8 +9,8 @@
  * words, so scope is chosen the same way in both places — before the action
  * runs, where the choice actually applies.
  *
- * `tone` is the only thing that varies between the two: Propagate is green
- * (it runs the engine), Analyse is blue (the app's accent for read-only work).
+ * Both wear `ACTION_TONE`, the accent every main action of the Action Bar
+ * shares (Propagate, Analyse, Time, Simulate), so they read as one group.
  */
 
 import React, { useState } from "react";
@@ -19,23 +19,13 @@ import { cn } from "@/lib/utils";
 
 type Scope = "local" | "global";
 
-type Tone = "green" | "blue";
-
-const TONE: Record<Tone, { border: string; divider: string; text: string; hover: string; check: string }> = {
-  green: {
-    border: "border-green-300 dark:border-green-800",
-    divider: "bg-green-200 dark:bg-green-800",
-    text: "text-green-700 dark:text-green-400",
-    hover: "hover:bg-green-50 dark:hover:bg-green-900/20",
-    check: "text-green-500",
-  },
-  blue: {
-    border: "border-blue-300 dark:border-blue-800",
-    divider: "bg-blue-200 dark:bg-blue-800",
-    text: "text-blue-700 dark:text-blue-400",
-    hover: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
-    check: "text-blue-500",
-  },
+/** The look of the Action Bar's main actions: Propagate, Analyse, Time and Simulate. */
+export const ACTION_TONE = {
+  border: "border-blue-300 dark:border-blue-800",
+  divider: "bg-blue-200 dark:bg-blue-800",
+  text: "text-blue-700 dark:text-blue-400",
+  hover: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
+  check: "text-blue-500",
 };
 
 const SCOPE_HINT: Record<Scope, string> = {
@@ -46,7 +36,6 @@ const SCOPE_HINT: Record<Scope, string> = {
 interface ScopeSplitButtonProps {
   label: React.ReactNode;
   icon: React.ReactNode;
-  tone: Tone;
   scope: Scope;
   onScopeChange: (v: Scope) => void;
   onAction: () => void;
@@ -59,7 +48,6 @@ interface ScopeSplitButtonProps {
 export function ScopeSplitButton({
   label,
   icon,
-  tone,
   scope,
   onScopeChange,
   onAction,
@@ -68,7 +56,7 @@ export function ScopeSplitButton({
   dataTour,
 }: ScopeSplitButtonProps) {
   const [scopeOpen, setScopeOpen] = useState(false);
-  const t = TONE[tone];
+  const t = ACTION_TONE;
 
   return (
     <div data-tour={dataTour} className={cn("flex items-center rounded-md border", t.border)}>

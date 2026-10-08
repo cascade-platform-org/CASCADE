@@ -34,7 +34,7 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate } from "@/hooks/usePropagate";
 import { useAuthStore } from "@/store/auth-store";
 import { resetFunctionality } from "@/lib/network-utils";
-import { ScopeSplitButton } from "./scope-split-button";
+import { ACTION_TONE, ScopeSplitButton } from "./scope-split-button";
 
 // Shared core for both revert call-sites (bar button + panel button).
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
@@ -92,7 +92,6 @@ export function ActionBar() {
       {/* Propagate — scope chosen before the run */}
       <ScopeSplitButton
         dataTour="propagate"
-        tone="green"
         icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
         label={isPropagating ? "Running…" : "Propagate"}
         title={
@@ -109,7 +108,6 @@ export function ActionBar() {
       {/* Analyse — same split control, so scope is picked before opening */}
       <ScopeSplitButton
         dataTour="analyse"
-        tone="blue"
         icon={
           <span className="relative flex items-center">
             <BarChart2 size={13} />
@@ -210,7 +208,7 @@ export function ActionBar() {
         id={TEMPORAL_SIMULATION_ANCHOR_ID}
         onClick={openTemporalSimulation}
         title="Temporal Simulation: the project’s Timeline, profile and Metrics, run over many periods"
-        className="text-zinc-600 dark:text-zinc-400"
+        className={cn("border", ACTION_TONE.border, ACTION_TONE.text, ACTION_TONE.hover)}
       >
         <CalendarClock size={13} />
         <span>Simulate</span>
@@ -356,7 +354,7 @@ function TemporalJumpControls({
         onClick={() => { if (!busy) setOpen((v) => !v); }}
         disabled={busy}
         title="Temporal Jump controls"
-        className={cn("gap-1 text-violet-600 dark:text-violet-400", busy && "opacity-40")}
+        className={cn("gap-1 border", ACTION_TONE.border, ACTION_TONE.text, ACTION_TONE.hover, busy && "opacity-40")}
       >
         <Clock size={13} className={cn(isAutoAdvancing && "animate-pulse")} />
         <span>{isAutoAdvancing ? "Advancing…" : "Time"}</span>
@@ -371,7 +369,7 @@ function TemporalJumpControls({
         open={open}
         onClose={() => setOpen(false)}
         title="Temporal Jump"
-        icon={<Clock size={15} className="shrink-0 text-violet-600 dark:text-violet-400" />}
+        icon={<Clock size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
         flyToOnClose={TEMPORAL_ANCHOR_ID}
         storageKey="cascade.temporal.window"
         defaultSize={{ w: 320, h: 400 }}
@@ -387,7 +385,7 @@ function TemporalJumpControls({
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
                       Timeline
                       {elapsedHours > 0 && (
-                        <span className="ml-2 normal-case font-normal text-violet-500">
+                        <span className="ml-2 normal-case font-normal text-blue-500">
                           +{elapsedHours}h
                         </span>
                       )}
@@ -426,12 +424,12 @@ function TemporalJumpControls({
                   onChange={(e) => setManualHours(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && manualValid) handleManualJump(); }}
                   placeholder="hours"
-                  className="w-20 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-20 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                 />
                 <button
                   onClick={handleManualJump}
                   disabled={!manualValid}
-                  className="flex items-center gap-1 rounded-md bg-violet-600 px-2 py-1 text-xs font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Play size={10} />
                   Jump
@@ -460,7 +458,7 @@ function TemporalJumpControls({
                     "flex flex-1 items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-medium",
                     isAutoAdvancing
                       ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                      : "border-violet-200 text-violet-600 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-400 dark:hover:bg-violet-900/20",
+                      : "border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20",
                   )}
                   title={isAutoAdvancing ? "Stop auto-advance" : "Run to completion"}
                 >
@@ -479,7 +477,7 @@ function TemporalJumpControls({
                   type="checkbox"
                   checked={autoPropagate}
                   onChange={(e) => setAutoPropagate(e.target.checked)}
-                  className="h-3 w-3 rounded accent-violet-600"
+                  className="h-3 w-3 rounded accent-blue-600"
                 />
                 <span className="text-xs text-zinc-600 dark:text-zinc-400">Auto-propagate</span>
               </label>
@@ -534,7 +532,7 @@ function TimelineSlider({
       <div className="relative h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700">
         {/* Elapsed fill */}
         <div
-          className="absolute left-0 top-0 h-full rounded-full bg-violet-500 transition-all duration-300"
+          className="absolute left-0 top-0 h-full rounded-full bg-blue-500 transition-all duration-300"
           style={{ width: `${pct(elapsed)}%` }}
         />
 
@@ -549,7 +547,7 @@ function TimelineSlider({
 
         {/* Thumb */}
         <div
-          className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-violet-600 bg-white shadow-sm transition-all duration-300 dark:bg-zinc-900"
+          className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-600 bg-white shadow-sm transition-all duration-300 dark:bg-zinc-900"
           style={{ left: `${pct(elapsed)}%` }}
         />
       </div>
@@ -565,7 +563,7 @@ function TimelineSlider({
             "absolute top-2.5 -translate-x-1/2 text-[9px] leading-none transition-colors",
             readOnly
               ? "cursor-default text-zinc-400 dark:text-zinc-500"
-              : "cursor-pointer text-zinc-400 hover:text-violet-500 dark:text-zinc-500 dark:hover:text-violet-400",
+              : "cursor-pointer text-zinc-400 hover:text-blue-500 dark:text-zinc-500 dark:hover:text-blue-400",
             // Always show a tick line; only show the number label when there's room.
             !showLabel[i] && "opacity-0 pointer-events-none",
           )}
