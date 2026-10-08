@@ -257,11 +257,10 @@ Semantics to respect:
 - Events used only here should be "Temporal Simulation only" in Config → Events.`;
 
 /**
- * What an LLM needs to write a definition from zero: the concepts, what a
- * `path` can reach, and how a run executes. Kept beside FORMAT_REFERENCE so the
- * two are edited together.
+ * What an LLM needs to know about any CASCADE model: Elements, Functionality,
+ * Categories, Events. Shared with the Model text's LLM context.
  */
-const PRIMER = `## What CASCADE models
+export const MODEL_PRIMER = `## What CASCADE models
 
 CASCADE models networks of Elements (nodes and edges) that depend on each other: water, power, ICT, people.
 Each Element has a Functionality on an integer scale 1..N (1 = critical, N = fully operational).
@@ -273,13 +272,16 @@ Categories are the resources that flow or are required:
   (category_dependency_profiles.<category>.demand); a consumer short of supply degrades.
 - Requisite: a logical dependency; the Element needs its suppliers to be working, no quantity involved.
 
-An Event perturbs the model: a hazard (physical damage), a disservice (no damage), or a temporal jump
-(advances time by its hours: every positive functionality_time — a backup's remaining hours — drops by that
-amount, and a backup reaching 0 fails its Element). Which Elements an Event hits is set on the Elements
-(vulnerability_levels), not in this definition. Events are created in Config → Events; this definition only
-refers to them by id. Events used only in simulations are marked "Temporal Simulation only".
+An Event perturbs the model: a hazard (physical damage), a disservice (degradation without damage), or a
+restorative Event (a repair: only its attribute operations, no damage). Which Elements a hazard or disservice
+hits is set on the Elements (vulnerability_levels: { "<event id>": levels lost }), not on the Event. Events
+used only in simulations are marked "Temporal Simulation only".`;
 
-## What a Temporal Simulation is
+/**
+ * What a Temporal Simulation is and how a run executes. Kept beside
+ * FORMAT_REFERENCE so the two are edited together.
+ */
+const SIMULATION_PRIMER = `## What a Temporal Simulation is
 
 A saved definition, run over many periods (hours, days, months…). A period has no duration of its own: time passes only
 where a Phase's "advance_hours" says so. Each period runs, in order:
@@ -295,8 +297,11 @@ at "propagate": false.
 Use two Phases when an Event must be read on its own (e.g. a settlement after the period's work),
 otherwise one. An Event written { "event": id, "every": 3 } fires on the 3rd, 6th, 9th… period of its Step
 (a quarterly policy in a monthly Step); a bare id fires every period.
+A Step's "label" is its first period; with a unit, each repeat advances it by one unit ("2024-10", repeat 3
+→ 2024-10, 2024-11, 2024-12), and the profile and Events key on those period labels.`;
 
-## What a "path" can reach (profile operations and Metrics)
+/** What an Element's fields are and how operations and filters reach them. Shared with the Model text. */
+export const ELEMENT_PATHS = `## What a "path" can reach (operations and Metrics)
 
 Node fields:
 - ["supply_capacity", "<category>"]                              how much the node supplies per period
@@ -310,22 +315,33 @@ Node fields:
 - ["importance"], ["cost_of_disservice_per_day"], ["properties", "<key>"]
 Edge fields: ["capacity"], ["functionality"], ["functionality_time"], ["direct_damage"], ["properties", "<key>"].
 A supply or edge capacity may be a Stock (a value that accumulates across periods: a reservoir level, an
-hours balance); its fields are reached the same way, e.g. ["supply_capacity", "<category>", "rate"].
+hours balance): an object instead of a number. Its fields are reached the same way, e.g.
+["supply_capacity", "<category>", "rate"]: "rate" what it supplies per period, "level" what it holds now,
+"min"/"max" the bounds of the level, "max_draw" the most the level adds to supply in a period, "max_fill"
+(a tank) the most it takes in, "inflow", "retention", "efficiency". An arithmetic operation needs a number,
+so on a Stock name the field: "halve a Stock's supply" is ["supply_capacity", "<category>", "rate"] × 0.5.
 
 Operations: set (write the value), add, mul, at_most (cap at the value), at_least (raise to the value).
 The last four need a number. An operation on a field the Element does not have is rejected (except set).
+An operation with a filter should fit every Element it matches: in the Model text one that does not refuses
+the whole change, naming the Element; in a Temporal Simulation run that Element is skipped with a warning.
+When matches differ in shape (a plain supply here, a Stock there), use one operation per
+shape (by "element", or a filter with "exclude").
 
 ## Choosing Elements
 
 "element": one id. "where": a filter — kind (node|edge), canvas, category, node_type, label_contains —
 every given condition must hold; "exclude" leaves out listed ids. A filter is resolved each time the
-operation runs, so prefer it over many single-Element operations.
+operation runs, so prefer it over many single-Element operations.`;
 
-## Metrics
+const METRICS_PRIMER = `## Metrics
 
 A Metric is a read-out computed per period from the recorded run: for the Elements its target selects, read
 "path" — "state" at the end of the period, or "change" (after − before) over one Phase or the whole period —
 and aggregate (sum, mean, min, max, count, share_where, percentile). It never changes the run.`;
+
+/** How a Temporal Simulation document reads: for the Model text's context on a Simulation section. */
+export const SIMULATION_REFERENCE = [SIMULATION_PRIMER, METRICS_PRIMER, "## Format\n```", FORMAT_REFERENCE, "```"].join("\n\n");
 
 /** A complete, valid definition used as the worked example (tested to parse). */
 export const EXAMPLE_DOC: TemporalSimulation = {
@@ -386,7 +402,13 @@ export function llmContext(
     "before anything is applied. If an Event you need does not exist, say so: the user creates it in",
     "Config → Events (as \"Temporal Simulation only\") and gives you its id.",
     "",
-    PRIMER,
+    MODEL_PRIMER,
+    "",
+    SIMULATION_PRIMER,
+    "",
+    ELEMENT_PATHS,
+    "",
+    METRICS_PRIMER,
     "",
     "## Format",
     "```",

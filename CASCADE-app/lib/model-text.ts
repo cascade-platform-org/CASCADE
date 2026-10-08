@@ -31,12 +31,13 @@ import { z } from "zod";
 import { AttributeOperationSchema } from "@/lib/schemas/attribute-operation";
 import { isSafeKey } from "@/lib/schemas/field-path";
 import { ModelConfigurationSchema } from "@/lib/schemas/config";
-import { ProjectSchema, type Edge, type Node, type Project } from "@/lib/schemas/network";
+import { DIFF_ABSENT, ProjectSchema, type Edge, type Node, type Project } from "@/lib/schemas/network";
+import { NODE_TYPES } from "@/lib/schemas/primitives";
 import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
 import { canvasesById } from "@/lib/element-filter";
 import { deepEqual, diffGraph } from "@/lib/graph-diff";
 import { validateBundle } from "@/lib/project-validation";
-import { extractJson } from "@/lib/temporal-simulation-text";
+import { ELEMENT_PATHS, MODEL_PRIMER, SIMULATION_REFERENCE, extractJson } from "@/lib/temporal-simulation-text";
 import type { ProjectBundle } from "@/lib/file-io";
 
 export const MODEL_TEXT_FORMAT = "cascade.model-change/v1";
@@ -54,7 +55,7 @@ const PatchOpSchema = z
   })
   .strict()
   .refine((o) => o.op === "remove" || o.value !== undefined, { message: "add and replace need a `value`", path: ["value"] });
-type PatchOp = z.infer<typeof PatchOpSchema>;
+export type PatchOp = z.infer<typeof PatchOpSchema>;
 
 const ChangeSetSchema = z
   .object({
@@ -89,18 +90,32 @@ function scanJson(value: unknown): string | null {
 
 export type ParsedChange = { ok: true; change: ChangeSet } | { ok: false; errors: string[] };
 
-/** Stages 1–4: the text as a change set, or why not. Accepts bare JSON or a whole LLM reply. */
-export function parseChangeText(text: string): ParsedChange {
+/**
+ * Stages 1–3: the text as a JSON value, or why not. Accepts bare JSON or a
+ * whole LLM reply (its first ```json block).
+ */
+export function parseJsonText(text: string): { ok: true; value: unknown } | { ok: false; errors: string[] } {
   if (text.length > MAX_TEXT_CHARS) return { ok: false, errors: [`The text is ${text.length.toLocaleString()} characters; the limit is ${MAX_TEXT_CHARS.toLocaleString()}. Split the change.`] };
-  let raw: unknown;
+  let value: unknown;
   try {
-    raw = JSON.parse(extractJson(text));
-  } catch (e) {
-    return { ok: false, errors: [`Not valid JSON: ${(e as Error).message}`] };
+    // Bare JSON as it is (a section may be a list, which the reply extractor would cut to its braces).
+    value = JSON.parse(text);
+  } catch {
+    try {
+      value = JSON.parse(extractJson(text));
+    } catch (e) {
+      return { ok: false, errors: [`Not valid JSON: ${(e as Error).message}`] };
+    }
   }
-  const shape = scanJson(raw);
-  if (shape) return { ok: false, errors: [shape] };
-  const parsed = ChangeSetSchema.safeParse(raw);
+  const shape = scanJson(value);
+  return shape ? { ok: false, errors: [shape] } : { ok: true, value };
+}
+
+/** Stages 1–4: the text as a change set, or why not. */
+export function parseChangeText(text: string): ParsedChange {
+  const json = parseJsonText(text);
+  if (!json.ok) return json;
+  const parsed = ChangeSetSchema.safeParse(json.value);
   return parsed.success ? { ok: true, change: parsed.data } : { ok: false, errors: issues(parsed.error) };
 }
 
@@ -277,8 +292,25 @@ function jsonChanges(before: unknown, after: unknown, where: string, out: Previe
     for (const id of new Set([...a.keys(), ...b.keys()])) jsonChanges(a.get(id), b.get(id), `${where} "${id}"`, out);
     return;
   }
+  if (Array.isArray(before) && Array.isArray(after)) {
+    const scalar = (v: unknown) => typeof v !== "object" || v === null;
+    if (before.every(scalar) && after.every(scalar)) {
+      // A list of values (a Canvas's node ids): what joined and what left reads better than a shifted list.
+      const added = after.filter((v) => !before.includes(v));
+      const gone = before.filter((v) => !after.includes(v));
+      if (added.length > 0) out.push({ kind: "add", where, after: shortValue(added) });
+      if (gone.length > 0) out.push({ kind: "remove", where, before: shortValue(gone) });
+      if (added.length === 0 && gone.length === 0) out.push({ kind: "change", where: `${where} (order)`, before: shortValue(before), after: shortValue(after) });
+      return;
+    }
+    // A list of records without ids (a Timeline's Steps): item by item.
+    for (let i = 0; i < Math.max(before.length, after.length); i++) jsonChanges(before[i], after[i], `${where}[${i}]`, out);
+    return;
+  }
   out.push({ kind: "change", where, before: shortValue(before), after: shortValue(after) });
 }
+
+const present = (v: unknown) => (v === DIFF_ABSENT ? undefined : v);
 
 const elementName = (kind: string, id: string, record: { label?: string } | undefined) =>
   `${kind} ${record?.label ? `"${record.label}" (${id})` : id}`;
@@ -297,7 +329,8 @@ function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
       const name = elementName(kind, r.id, record);
       if (r.op === "add") lines.push({ kind: "add", where: name });
       else if (r.op === "remove") lines.push({ kind: "remove", where: name });
-      else for (const f of r.fields) lines.push({ kind: "change", where: `${name} › ${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(" › ")}`, before: shortValue(f.before), after: shortValue(f.after) });
+      // A Graph Diff marks an absent side with DIFF_ABSENT; the preview reads it as "added" or "removed".
+      else for (const f of r.fields) jsonChanges(present(f.before), present(f.after), `${name} › ${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(" › ")}`, lines);
     }
   }
   if (diff.canvas_order) lines.push({ kind: "change", where: "Canvas order", before: shortValue(diff.canvas_order_before), after: shortValue(diff.canvas_order) });
@@ -331,7 +364,7 @@ export const MODEL_TEXT_REFERENCE = `Format "${MODEL_TEXT_FORMAT}" — JSON, str
   ]
 }
 
-Paths start at /project or /config: everything the project file and the Model Configuration hold
+"patch" and "elements" are each optional. Paths start at /project or /config: everything the project file and the Model Configuration hold
 (nodes, edges, canvases, meta, scorecard, temporal_simulations; events, categories,
 functionality_scale, …). /project/update_history is read-only. "~1" writes a "/" inside a key,
 "~0" a "~". add creates or replaces a key, or inserts into a list; replace needs something there;
@@ -346,23 +379,101 @@ Element's schema refuses is an error.
 
 Nothing changes until the preview is confirmed; a version of the whole project is kept first.`;
 
-/** A compact picture of the project for an LLM: ids and names, never the whole bundle. */
-export function modelTextContext(bundle: ProjectBundle, limit = 300): string {
+/** What an Event's fields mean (`EventDefinitionSchema`), for an LLM that adds or edits one. */
+const EVENT_FIELDS = `## Event fields (config.events[])
+- "id": any unique string (a new one: short and readable, e.g. "evt-flood"); keep existing ids, other parts refer to them
+- "label": the name shown; "type": "hazard" | "disservice" | "restorative"
+- "frequency_per_10y": expected occurrences in 10 years (0.1 = once a century); not meaningful for restorative
+- optional: "icon" (a Lucide icon name), "temporal_simulation_only" (true: used only in Temporal Simulations),
+  "expected_recovery_time" (hours, disservice), "default_repair_time" (hours, hazard),
+  "attribute_operations" (operations applied when it fires; a restorative Event does only these)
+- which Elements a hazard or disservice hits is on the Elements: "vulnerability_levels": { "<event id>": levels lost }`;
+
+const ID_RULES = `## Ids and values
+- Keep every existing id. A new Element or Event needs a unique id: any string not used yet.
+- A node needs "id" and "functionality"; give it a "label" and a "node_type" (${NODE_TYPES.map((t) => `"${t}"`).join(", ")}).
+  An edge needs "id", "source", "target" (node ids) and "functionality". A node feeds others only through edges.
+- Functionality is an integer 1..N (N = fully operational, the scale is below). Quantities (supply, demand,
+  capacity) are numbers ≥ 0 in the Category's unit. "importance" is a positive weight (1 = default).
+- "responsibility_share" and "functionality_time" are written by the engine and by Events: leave them as they are.
+- "position" is where the node sits on its Canvas (x to the right, y downward); place a new node near the
+  ones it relates to.
+- A field the section does not show is optional: leave it out unless asked. To delete an entry, leave its key
+  (or its item) out.`;
+
+/** A value's shape: numbers as "n", objects by their keys; two Elements of one shape need the same paths. */
+const shapeOf = (v: unknown): unknown =>
+  typeof v === "object" && v !== null && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shapeOf(x)])) : typeof v;
+
+/** At most this many examples: enough to show every kind, few enough to stay compact. */
+const MAX_EXAMPLES = 12;
+
+/**
+ * One Element per Node Type and supply shape, trimmed of layout: the shapes a
+ * bulk operation addresses. A Type whose supplies differ in shape (a plain
+ * number here, a Stock there) shows one of each, since each needs its own path.
+ */
+function exampleElements(project: Project): string {
+  const trim = ({ position: _p, geo: _g, responsibility_share: _r, ...rest }: Node) => rest;
+  const byType = new Map<string, Node>();
+  for (const nd of Object.values(project.nodes)) {
+    const key = `${nd.node_type ?? ""}\n${JSON.stringify(shapeOf(nd.supply_capacity))}`;
+    if (!byType.has(key) && byType.size < MAX_EXAMPLES) byType.set(key, nd);
+  }
+  const edge = Object.values(project.edges)[0];
+  return [
+    "## One Element of each kind, as stored (read a field's shape here before operating on it)",
+    "```json",
+    JSON.stringify({ nodes: [...byType.values()].map(trim), ...(edge ? { edge } : {}) }, null, 1),
+    "```",
+  ].join("\n");
+}
+
+/**
+ * What an LLM needs to edit the model: the primer, the field reference, and a
+ * compact picture of the project (ids and names, never the whole bundle). With
+ * `section`, the reply asked for is that section's JSON, edited, with what the
+ * app does around it; without, a change set (Bulk operations).
+ */
+export function modelTextContext(
+  bundle: ProjectBundle,
+  section?: { label: string; json: string; pointer: string; registry?: "nodes" | "edges"; onCanvas?: boolean },
+  limit = 300,
+): string {
   const { project, config } = bundle;
   const nodes = Object.values(project.nodes);
   const edges = Object.values(project.edges);
   const lines = (title: string, items: string[]) =>
     `## ${title} (${items.length})\n${items.slice(0, limit).join("\n")}${items.length > limit ? `\n… ${items.length - limit} more` : ""}`;
+  const sectionNotes = section && [
+    section.registry === "nodes" && "- Deleting a node here also deletes its edges and removes it from every Canvas: do not edit those yourself.",
+    section.registry && section.onCanvas && "- An Element you add here is placed on this Canvas.",
+    section.registry && "- An edge needs \"source\" and \"target\" node ids; edges are edited in the Edges section.",
+  ].filter(Boolean).join("\n");
   return [
-    "You are editing a CASCADE infrastructure-resilience model. Reply with ONE ```json block holding a change set in the format below; change only what was asked.",
-    MODEL_TEXT_REFERENCE,
+    ...(section
+      ? [
+        `You are editing a CASCADE infrastructure-resilience model. Below is its "${section.label}" section (${section.pointer}) as JSON. Reply with ONE \`\`\`json block holding the WHOLE section, edited, and nothing else in the block; keep everything you were not asked to change exactly as it is. The app checks the result against the model's schema, shows the person every change, and applies nothing until they confirm.`,
+        ...(sectionNotes ? [`## What the app does with this section\n${sectionNotes}`] : []),
+        `## The section: ${section.label}\n\`\`\`json\n${section.json}\n\`\`\``,
+      ]
+      : [
+        "You are editing a CASCADE infrastructure-resilience model. Reply with ONE ```json block holding a change set in the format below; change only what was asked. The app checks it, shows the person every change, and applies nothing until they confirm.",
+        MODEL_TEXT_REFERENCE,
+      ]),
+    MODEL_PRIMER,
+    ELEMENT_PATHS,
+    ...(section?.pointer.startsWith("/project/temporal_simulations") ? [SIMULATION_REFERENCE] : []),
+    ...(section?.pointer.startsWith("/config/events") || !section ? [EVENT_FIELDS] : []),
+    ID_RULES,
+    ...(section ? [] : [exampleElements(project)]),
+    "# The rest of the model, for reference",
     lines("Canvases", project.canvases.map((c) => `- ${c.id} — ${c.label}`)),
     lines("Nodes", nodes.map((nd) => `- ${nd.id} — ${nd.label ?? ""} — ${nd.node_type ?? ""}${nd.node_categories?.length ? ` — ${nd.node_categories.join(", ")}` : ""}`)),
     lines("Edges", edges.map((e) => `- ${e.id} — ${e.source} → ${e.target}`)),
     lines("Events", config.events.map((e) => `- ${e.id} — ${e.label} — ${e.type}`)),
     lines("Categories", config.categories.map((c) => `- ${c.name}`)),
-    `## Functionality scale\n1..${config.functionality_scale.length}`,
+    `## Functionality scale\n1..${config.functionality_scale.length} (${config.functionality_scale.length} = fully operational)`,
     `## Temporal Simulations\n${(project.temporal_simulations ?? []).map((s) => `- ${s.id} — ${s.timeline.name}`).join("\n") || "(none)"}`,
-    "Ask for any part's full JSON if you need it (the app's Copy section).",
   ].join("\n\n");
 }

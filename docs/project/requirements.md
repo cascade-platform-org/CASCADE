@@ -839,7 +839,7 @@ since that quota — not an app-defined number — is the real storage limit.
 
 ### 13.3a Model text — implemented (ADR-0022)
 
-- The Action Bar's **Text** opens a change-set editor over everything the project file and the Model Configuration save: JSON Patch (`add`, `replace`, `remove`) at a path under `/project` or `/config`, and Attribute Operations on Elements. `project.update_history` is read-only.
+- The Action Bar's **Text** shows everything the project file and the Model Configuration save as a tree of sections (Project: info, Canvases, Nodes and Edges by Canvas, Scorecard, Temporal Simulations; Configuration: Events, Categories, Functionality scale, the rest), each editable as JSON at any level, plus Bulk operations: a change set of JSON Patch (`add`, `replace`, `remove`) at a path under `/project` or `/config` and Attribute Operations on Elements. `project.update_history` is read-only. Deleting a node in Nodes takes its edges and Canvas places along; a node added under a Canvas is placed on it.
 - A change is checked on a copy (size and nesting limits, JSON only, no `__proto__`/`constructor`/`prototype` key, the strict change-set schema, the dry run, the Project and Configuration schemas, the reference checks of §13.3) and previewed change by change; it is written only on confirmation, after the current project is kept as a Local version, and **Undo this edit** restores it. Refused while a Temporal Simulation run is shown.
 - *Copy section* copies any part by path; *Copy with context for an LLM* copies the format and the model's ids and names.
 

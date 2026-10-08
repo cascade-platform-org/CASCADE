@@ -387,24 +387,27 @@ replaces one of the 10 cloud saves. Switching it off deletes it.
 
 ### 7.1 Model text
 
-**Text** in the Action Bar changes anything the project and its configuration
-save, by a short text you write or an LLM writes: rename elements, scale every
-pump's capacity, add an Event, remove an edge. The text is a change set, never
-the whole project:
+**Text** in the Action Bar shows everything the project and its configuration
+save as a tree, each part as JSON you can edit by hand or with an LLM:
 
-- `patch` — add, replace or remove at a path under `/project` or `/config`
-  (`/config/events/-` appends an Event, `/project/nodes/J12/label` is one
-  label). The undo history is read-only.
-- `elements` — Attribute Operations (§4) on one element or every element a
-  filter selects.
+- **Project** — Project info, Canvases, Nodes and Edges (each grouped by the
+  canvas they are on), Scorecard, Temporal Simulations.
+- **Configuration** — Events, Categories, the Functionality scale, the rest.
+- **Bulk operations** — a change set for edits that span the model: `patch`
+  (add, replace or remove at a path under `/project` or `/config`) and
+  `elements` (Attribute Operations, §4, on one element or every element a
+  filter selects).
 
-**Copy section** copies any part as JSON (type its path); **Copy with context
-for an LLM** copies the format and this model's ids and names. Paste the reply
-and press **Check & preview**: every problem is listed, or every change is shown
-as before → after. Nothing changes until you press **Apply**. The project as it
-was is kept in Recent saves first, and **Undo this edit** puts it back. A
-removal must take its references with it (an edge's endpoints, a canvas's
-members); the check names any it forgot.
+Any level opens: a group shows everything under it, so one edit there changes
+many items; a single item shows just that one. Deleting a node in Nodes also
+deletes its edges and takes it off every canvas; a node added under a canvas is
+placed on it. The undo history is not shown and cannot be changed.
+
+**Copy with context for an LLM** copies the open part with this model's ids and
+names. Paste the reply and press **Check & preview**: every problem is listed,
+or every change is shown as before → after. Nothing changes until you press
+**Apply**. The project as it was is kept in Recent saves first, and **Undo this
+edit** puts it back.
 
 ## 8. Server and roles
 

@@ -2661,7 +2661,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " in the Action Bar changes anything the project and its configuration save, by a short text you write or an LLM writes: rename elements, scale every pump's capacity, add an Event, remove an edge. The text is a change set, never the whole project:"
+                  "text": " in the Action Bar shows everything the project and its configuration save as a tree, each part as JSON you can edit by hand or with an LLM:"
                 }
               ]
             },
@@ -2671,12 +2671,40 @@ export const USER_MANUAL: ManualDoc = {
               "items": [
                 [
                   {
+                    "kind": "strong",
+                    "text": "Project"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " — Project info, Canvases, Nodes and Edges (each grouped by the canvas they are on), Scorecard, Temporal Simulations."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Configuration"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " — Events, Categories, the Functionality scale, the rest."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Bulk operations"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " — a change set for edits that span the model: "
+                  },
+                  {
                     "kind": "code",
                     "text": "patch"
                   },
                   {
                     "kind": "text",
-                    "text": " — add, replace or remove at a path under "
+                    "text": " (add, replace or remove at a path under "
                   },
                   {
                     "kind": "code",
@@ -2692,33 +2720,15 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": " ("
+                    "text": ") and "
                   },
-                  {
-                    "kind": "code",
-                    "text": "/config/events/-"
-                  },
-                  {
-                    "kind": "text",
-                    "text": " appends an Event, "
-                  },
-                  {
-                    "kind": "code",
-                    "text": "/project/nodes/J12/label"
-                  },
-                  {
-                    "kind": "text",
-                    "text": " is one label). The undo history is read-only."
-                  }
-                ],
-                [
                   {
                     "kind": "code",
                     "text": "elements"
                   },
                   {
                     "kind": "text",
-                    "text": " — Attribute Operations (§4) on one element or every element a filter selects."
+                    "text": " (Attribute Operations, §4, on one element or every element a filter selects)."
                   }
                 ]
               ]
@@ -2727,20 +2737,21 @@ export const USER_MANUAL: ManualDoc = {
               "type": "paragraph",
               "spans": [
                 {
-                  "kind": "strong",
-                  "text": "Copy section"
-                },
-                {
                   "kind": "text",
-                  "text": " copies any part as JSON (type its path); "
-                },
+                  "text": "Any level opens: a group shows everything under it, so one edit there changes many items; a single item shows just that one. Deleting a node in Nodes also deletes its edges and takes it off every canvas; a node added under a canvas is placed on it. The undo history is not shown and cannot be changed."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
                 {
                   "kind": "strong",
                   "text": "Copy with context for an LLM"
                 },
                 {
                   "kind": "text",
-                  "text": " copies the format and this model's ids and names. Paste the reply and press "
+                  "text": " copies the open part with this model's ids and names. Paste the reply and press "
                 },
                 {
                   "kind": "strong",
@@ -2764,7 +2775,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " puts it back. A removal must take its references with it (an edge's endpoints, a canvas's members); the check names any it forgot."
+                  "text": " puts it back."
                 }
               ]
             }

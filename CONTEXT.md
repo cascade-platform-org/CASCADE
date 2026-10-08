@@ -95,7 +95,7 @@ A saved definition, run over many periods: a **Timeline** of **Steps**, each app
 _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for a sequence); Temporal Propagation Sequence (retired)
 
 **Model text**:
-A change set, written by a person or an LLM, to everything the project and its Model Configuration save: JSON Patch operations at a path under `/project` or `/config` (`update_history` excepted, read-only) and Attribute Operations on Elements. Checked on a copy (syntax, the schemas, references), previewed change by change, and applied only on confirmation, with the prior project kept for Undo this edit. ADR-0022.
+Everything the project and its Model Configuration save, as a tree of JSON sections a person or an LLM edits (any level: a group in bulk, or one item), plus a change set for edits that span the model (JSON Patch at a path under `/project` or `/config`, and Attribute Operations on Elements). `update_history` is read-only. Checked on a copy (syntax, the schemas, references), previewed change by change, and applied only on confirmation, with the prior project kept for Undo this edit. ADR-0022.
 _Avoid_: "bundle editor", "JSON editor" (it never holds the whole bundle)
 
 **Timeline**:

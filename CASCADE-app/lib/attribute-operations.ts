@@ -42,6 +42,10 @@ function computeOperation(
   if (op === "set") return { value };
   if (typeof value !== "number") return { error: `${op} needs a number value` };
   if (current === undefined) return { error: `${op} on an absent value (only set can create one)` };
+  if (isObject(current)) {
+    const fields = Object.keys(current);
+    return { error: `${op} on an object (${fields.slice(0, 5).join(", ")}${fields.length > 5 ? ", …" : ""}): name one of its fields in the path${"rate" in current ? ', e.g. "rate" for a Stock\'s supply per period' : ""}` };
+  }
   if (typeof current !== "number") return { error: `${op} on a value that is not a number` };
   switch (op) {
     case "add": return { value: current + value };

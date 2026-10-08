@@ -55,6 +55,16 @@ paste is also untrusted input.
 - The Temporal Simulation's Text tab keeps its one document; Events and the rest of the model
   are edited through the Model text, so there is one text route per thing.
 
+**The window is a tree of sections** (`lib/model-text-sections.ts`), each opening on its current
+JSON: Project (info, Canvases, Nodes and Edges grouped by Canvas, Scorecard, Temporal
+Simulations), Configuration (Events, Categories, Functionality scale, the rest), and Bulk
+operations, the change set above. Any level is editable: a group is a bulk edit of everything
+under it, a leaf one item. An edited section becomes patch operations (a registry key by key, the
+rest replaced whole) and goes through the same check and preview. In the Nodes and Edges
+sections a deletion takes its references along (a node's edges, its place on every Canvas) and an
+Element added under a Canvas is placed on it, all listed in the preview; the project section
+shows everything but `update_history` and refuses a removed key.
+
 ## Consequences
 
 - Field paths refuse `__proto__`, `constructor` and `prototype` in every schema that holds one
@@ -62,5 +72,12 @@ paste is also untrusted input.
 - "Copy with context for an LLM" sends the format and the model's ids and names (capped at 300
   per list), never the whole bundle; "Copy section" copies any part by pointer for the LLM to
   edit.
+- The LLM context was tested with agents that saw only the copied context (six tasks: Events,
+  one node, a removal, a bulk change on Net1, a Timeline and a Metric, a node added to a
+  Canvas). What they had to guess shaped it: the primer and field references the Simulation
+  text uses, Event fields and id rules, what the app does around a section (a removal's edges
+  and Canvas places, an addition's Canvas), and for Bulk operations one stored Element per Node
+  Type and supply shape, so a Stock is addressed by its field. After four rounds every task's
+  reply passed the check on the first try.
 - Property tests (fast-check) throw random change sets at the check: each is refused with
   reasons or yields a bundle both schemas accept, and the starting bundle never changes.

@@ -108,6 +108,9 @@ describe("checking a change against the model", () => {
     expect(where).toContain('change Node "Source" (s) › supply_capacity › water');
     expect(where).toContain('add config › events "flood"');
     expect(r.preview.counts).toEqual({ add: 1, remove: 0, change: 2 });
+    // A field the Element did not have reads as added, with its value.
+    const importance = checkChange(b, change({ elements: [{ element: "c", path: ["importance"], op: "set", value: 2 }] }));
+    expect(importance.ok && importance.preview.lines).toEqual([{ kind: "add", where: 'Node "City" (c) › importance', after: "2" }]);
     expect(b.project.nodes.c.label).toBe("City");
   });
 
@@ -120,7 +123,11 @@ describe("checking a change against the model", () => {
       { op: "remove", path: "/project/canvases/0/graph/edge_ids/0" },
     ] }));
     expect(whole.ok).toBe(true);
-    if (whole.ok) expect(whole.preview.lines.map((l) => `${l.kind} ${l.where}`)).toContain("remove Edge e");
+    if (whole.ok) {
+      expect(whole.preview.lines.map((l) => `${l.kind} ${l.where}`)).toContain("remove Edge e");
+      // A list of ids reads as what left it, not as two whole lists.
+      expect(whole.preview.lines).toContainEqual({ kind: "remove", where: 'Canvas "Main" (c1) › graph › edge_ids', before: '["e"]' });
+    }
   });
 
   it("refuses a path that is not there, a schema break, a key that disagrees with its id, a duplicate Event id", () => {
@@ -149,6 +156,25 @@ describe("checking a change against the model", () => {
 });
 
 describe("the LLM context", () => {
+  it("for a section: asks for the whole section back, says what the app does around it, and gives the fields it needs", () => {
+    const b = bundle();
+    const nodes = modelTextContext(b, { label: "Nodes", json: "{}", pointer: "/project/nodes", registry: "nodes", onCanvas: true });
+    expect(nodes).toMatch(/WHOLE section/);
+    expect(nodes).toMatch(/also deletes its edges/);
+    expect(nodes).toMatch(/placed on this Canvas/);
+    expect(nodes).toMatch(/What a "path" can reach/);
+    expect(nodes).not.toMatch(/## Event fields/);
+    expect(modelTextContext(b, { label: "Events", json: "[]", pointer: "/config/events" })).toMatch(/frequency_per_10y": expected occurrences in 10 years/);
+    expect(modelTextContext(b, { label: "S", json: "{}", pointer: "/project/temporal_simulations/0" })).toMatch(/"aggregate"/);
+  });
+
+  it("for bulk operations: the change-set format and one stored Element of each kind", () => {
+    const context = modelTextContext(bundle());
+    expect(context).toContain(MODEL_TEXT_FORMAT);
+    expect(context).toMatch(/One Element of each kind[\s\S]*"node_type": "Service"/);
+    expect(context).not.toMatch(/temporal jump/i);
+  });
+
   it("names the Elements and Events, and stays compact on a large model", () => {
     const b = bundle();
     for (let i = 0; i < 500; i++) b.project.nodes[`n${i}`] = { id: `n${i}`, label: `N${i}`, functionality: N };
