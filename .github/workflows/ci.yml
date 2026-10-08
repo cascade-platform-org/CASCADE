@@ -60,7 +60,7 @@ jobs:
       # lack of side-channel resistance, reachable only for ES* JWT algorithms,
       # and this service signs RS256. Rationale in full in scripts/audit.sh.
       - name: Known CVEs (pip-audit)
-        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln CVE-2026-85394  # why: scripts/audit.sh
 
       - name: Dead code (vulture)
         run: vulture . --config pyproject.toml

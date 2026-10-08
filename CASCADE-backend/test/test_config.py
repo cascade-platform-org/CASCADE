@@ -78,3 +78,17 @@ def test_development_without_auth_is_local_only_mode(monkeypatch: pytest.MonkeyP
     assert settings.auth_enabled is False
     assert settings.is_dev is True
     assert_production_safe(settings)  # dev mode never raises
+
+
+@pytest.mark.parametrize("algorithm", ["HS256", "HS512", "none"])
+def test_jwt_algorithm_refuses_symmetric(monkeypatch: pytest.MonkeyPatch, algorithm: str) -> None:
+    """HS* verified against the IdP's public keys lets a key holder forge tokens
+    (CVE-2026-85394, unfixed in python-jose); only RS* is accepted."""
+    monkeypatch.setenv("JWT_ALGORITHM", algorithm)
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_jwt_algorithm_accepts_rs(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_ALGORITHM", "RS384")
+    assert Settings().jwt_algorithm == "RS384"
