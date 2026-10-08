@@ -82,3 +82,13 @@ def test_project_keeps_the_document_through_a_dump():
 
 def test_project_without_a_simulation_has_none():
     assert Project.model_validate({"version": "2.0", "meta": {"name": "p"}}).temporal_simulation is None
+
+
+def test_standard_metrics_default_to_all_three_and_take_only_known_ones():
+    from schemas.temporal_simulation import TemporalSimulation
+
+    base = {"format": "cascade.temporal-simulation/v1", "timeline": {"name": "t", "steps": []}}
+    assert TemporalSimulation.model_validate(base).standard_metrics == ["operativity", "coverage", "stock_level"]
+    assert TemporalSimulation.model_validate({**base, "standard_metrics": []}).standard_metrics == []
+    with pytest.raises(ValidationError):
+        TemporalSimulation.model_validate({**base, "standard_metrics": ["throughput"]})

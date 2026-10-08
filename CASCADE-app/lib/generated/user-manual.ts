@@ -3098,7 +3098,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " has a row per period: the Operativity Score, the coverage of each flow Category (delivered ÷ demand), each Category's total stock level, then your Metrics. A Metric selects elements with a filter (§4), reads a field (its value at the period's end, or its change over the period or one Phase) and aggregates it: sum, mean, min, max, count, a percentile, or the share of values passing a comparison. "
+                  "text": " has a row per period: the Operativity Score, the coverage of each flow Category (delivered ÷ demand), each Category's total stock level, then your Metrics. Untick a standard one at the top of the Metrics tab to hide it. A Metric selects elements with a filter (§4), reads a field (its value at the period's end, or its change over the period or one Phase) and aggregates it: sum, mean, min, max, count, a percentile, or the share of values passing a comparison. "
                 },
                 {
                   "kind": "strong",

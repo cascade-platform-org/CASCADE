@@ -185,6 +185,9 @@ custom ones:
 - **stock level** per Category: the signed sum of its Stocks' levels at the period's end
   (water stored, hours owed).
 
+Each is shown by default and can be hidden (`standard_metrics`, saved with the definition;
+revised 2026-10-08); a hidden one leaves the table, the CSV and periods saved afterwards.
+
 **Series leave as CSV.** The Run table (periods × Metrics) exports as CSV; post-hoc
 summaries (averages, normalisation against the run's maximum) are left to the spreadsheet.
 

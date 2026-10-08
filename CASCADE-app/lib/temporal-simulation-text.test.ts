@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { EXAMPLE_DOC, checkDoc, docToDraft, docWarnings, draftToDoc, extractJson, llmContext, parseDocText, serializeDoc } from "./temporal-simulation-text";
-import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import type { FilterableModel } from "./element-filter";
 import type { Node } from "./schemas/network";
 
 const doc: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
+  standard_metrics: [...STANDARD_METRICS],
   timeline: {
     name: "t",
     steps: [{ label: "2023-01", unit: "month", repeat: 2, phases: [{ events: [{ event: "settle", every: 1 }, { event: "audit", every: 2 }], propagate: true }] }],
@@ -55,7 +56,19 @@ describe("profile rows", () => {
 
   it("writes periods in Timeline order", () => {
     const rows = docToDraft({ ...doc, profile: { "2023-02": [pool("set", 1)], "2023-01": [pool("set", 2)] } }, ids()).profile;
-    expect(Object.keys(draftToDoc({ timeline: doc.timeline, profile: rows, metrics: [] }).profile)).toEqual(["2023-01", "2023-02"]);
+    expect(Object.keys(draftToDoc({ timeline: doc.timeline, profile: rows, metrics: [], standardMetrics: [...STANDARD_METRICS] }).profile)).toEqual(["2023-01", "2023-02"]);
+  });
+});
+
+describe("standard_metrics", () => {
+  it("is written only when one is hidden, and absent reads as all three", () => {
+    expect(serializeDoc(doc)).not.toContain("standard_metrics");
+    const hidden = serializeDoc({ ...doc, standard_metrics: ["coverage"] });
+    expect(hidden).toContain(`"standard_metrics"`);
+    const r = parseDocText(hidden);
+    expect(r.ok && r.doc.standard_metrics).toEqual(["coverage"]);
+    const all = parseDocText(serializeDoc(doc));
+    expect(all.ok && all.doc.standard_metrics).toEqual(["operativity", "coverage", "stock_level"]);
   });
 });
 

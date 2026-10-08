@@ -18,7 +18,7 @@ const { useCanvasStore } = await import("@/store/canvas-store");
 const { useConfigStore, selectN } = await import("@/store/config-store");
 const { useTemporalSimulationStore } = await import("@/store/temporal-simulation-store");
 const { cancelTemporalSimulationRun, endTemporalSimulationRun, startTemporalSimulationRun } = await import("./temporal-simulation-run");
-const { TEMPORAL_SIMULATION_FORMAT } = await import("@/lib/schemas/temporal-simulation");
+const { STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT } = await import("@/lib/schemas/temporal-simulation");
 
 const sim = () => useTemporalSimulationStore.getState();
 const model = () => JSON.stringify(useCanvasStore.getState().toProject().nodes);
@@ -35,6 +35,7 @@ beforeEach(() => {
   canvas.addNodeToCanvas("a", "c1");
   sim().loadFromProject({
     format: TEMPORAL_SIMULATION_FORMAT,
+    standard_metrics: [...STANDARD_METRICS],
     timeline: { name: "t", steps: [{ label: "2023-01-01", unit: "day", repeat: 3, phases: [{ events: [{ event: "quake", every: 2 }], propagate: true }] }] },
     profile: {},
     metrics: [],

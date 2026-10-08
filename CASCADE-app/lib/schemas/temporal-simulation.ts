@@ -71,6 +71,11 @@ export const MetricSchema = z
   .strict();
 export type Metric = z.infer<typeof MetricSchema>;
 
+/** The standard Metrics a run's table can show before the project's own (ADR-0019 §4). */
+export const StandardMetricSchema = z.enum(["operativity", "coverage", "stock_level"]);
+export type StandardMetric = z.infer<typeof StandardMetricSchema>;
+export const STANDARD_METRICS = StandardMetricSchema.options;
+
 export const TEMPORAL_SIMULATION_FORMAT = "cascade.temporal-simulation/v1";
 
 export const TemporalSimulationSchema = z
@@ -80,6 +85,8 @@ export const TemporalSimulationSchema = z
     /** Period label → operations applied at the start of that period, in order. */
     profile: z.record(z.string(), z.array(AttributeOperationSchema)).default({}),
     metrics: z.array(MetricSchema).default([]),
+    /** The standard Metrics shown; all three when absent. */
+    standard_metrics: z.array(StandardMetricSchema).default([...STANDARD_METRICS]),
   })
   .strict();
 export type TemporalSimulation = z.infer<typeof TemporalSimulationSchema>;

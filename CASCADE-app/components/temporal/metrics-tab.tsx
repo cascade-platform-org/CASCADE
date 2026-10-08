@@ -5,8 +5,9 @@ import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { matchElements } from "@/lib/element-filter";
-import { explainMetric } from "@/lib/temporal-simulation-explainers";
-import { AggregateSchema, ComparisonSchema, type Metric } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_METRIC_TEXT, explainMetric, explainStandardMetric } from "@/lib/temporal-simulation-explainers";
+import { AggregateSchema, ComparisonSchema, STANDARD_METRICS, type Metric } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_COLUMNS } from "@/lib/temporal-metrics";
 import type { MetricEntry } from "@/lib/temporal-simulation-text";
 import { NumberInput } from "@/components/ui/number-input";
 import { FilterEditor } from "./filter-editor";
@@ -16,6 +17,8 @@ export function MetricsTab() {
   const metrics = useTemporalSimulationStore((s) => s.metrics);
   const update = useTemporalSimulationStore((s) => s.updateMetrics);
   const explain = useTemporalSimulationStore((s) => s.explain);
+  const standard = useTemporalSimulationStore((s) => s.standardMetrics);
+  const showStandard = useTemporalSimulationStore((s) => s.showStandardMetric);
 
   const describe = (m: Metric) => explain(explainMetric(m, matchElements(m.target, useCanvasStore.getState()).length));
 
@@ -27,6 +30,24 @@ export function MetricsTab() {
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+        <p className="mb-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200">Standard Metrics</p>
+        {STANDARD_METRICS.map((m) => (
+          <label key={m} className="flex items-start gap-2 py-0.5 text-xs" title={STANDARD_METRIC_TEXT[m]}>
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={standard.includes(m)}
+              onChange={(e) => { showStandard(m, e.target.checked); explain(explainStandardMetric(m, e.target.checked)); }}
+            />
+            <span>
+              <span className="font-medium text-zinc-700 dark:text-zinc-200">{STANDARD_COLUMNS[m]}</span>
+              <span className="ml-1.5 text-zinc-500">{STANDARD_METRIC_TEXT[m]}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+
       {metrics.map(({ id, metric: m }, i) => (
         <div key={id} className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" onFocus={() => describe(m)}>
           <div className="grid grid-cols-[2fr_2fr_auto] items-end gap-2">
@@ -102,7 +123,7 @@ export function MetricsTab() {
       >
         <Plus size={11} /> Add Metric
       </SmallButton>
-      <p className="text-[11px] text-zinc-400">Each Metric becomes a column of the Run table.</p>
+      <p className="text-[11px] text-zinc-400">Each Metric becomes a column of the Run table, after the standard ones shown.</p>
     </div>
   );
 }

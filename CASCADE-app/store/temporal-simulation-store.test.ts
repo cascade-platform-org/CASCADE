@@ -14,10 +14,11 @@ import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { ProjectSchema } from "@/lib/schemas/network";
-import { TEMPORAL_SIMULATION_FORMAT, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 
 const doc: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
+  standard_metrics: [...STANDARD_METRICS],
   timeline: { name: "Week", steps: [{ label: "2023-03-06", unit: "day", repeat: 7, phases: [{ events: [{ event: "quake", every: 2 }], propagate: true }] }] },
   profile: { "2023-03-07": [{ element: "pool", path: ["supply_capacity", "water"], op: "mul", value: 0.5 }] },
   metrics: [],
@@ -46,6 +47,14 @@ describe("saving into the project", () => {
     store().updateTimeline((t) => { t.steps[0].label = "2023-03-13"; });
     expect(store().saved?.timeline.steps[0].label).toBe("2023-03-13");
     expect(store().unsaved).toEqual([]);
+  });
+
+  it("shows and hides a standard Metric, in the standard order, and saves it", () => {
+    store().loadFromProject(doc);
+    store().showStandardMetric("operativity", false);
+    expect(store().saved?.standard_metrics).toEqual(["coverage", "stock_level"]);
+    store().showStandardMetric("operativity", true);
+    expect(store().saved?.standard_metrics).toEqual([...STANDARD_METRICS]);
   });
 
   it("refuses definition edits while a run is shown", () => {

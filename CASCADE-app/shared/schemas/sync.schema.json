@@ -2689,6 +2689,19 @@
           },
           "title": "Metrics",
           "type": "array"
+        },
+        "standard_metrics": {
+          "description": "The standard Metrics the run's table shows before the project's own (ADR-0019 \u00a74): the Operativity Score, coverage per Category, stock level per Category. All three when absent.",
+          "items": {
+            "enum": [
+              "operativity",
+              "coverage",
+              "stock_level"
+            ],
+            "type": "string"
+          },
+          "title": "Standard Metrics",
+          "type": "array"
         }
       },
       "required": [

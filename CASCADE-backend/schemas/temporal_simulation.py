@@ -94,6 +94,10 @@ class Metric(BaseModel):
     value_filter: Optional[ValueFilter] = None
 
 
+StandardMetric = Literal["operativity", "coverage", "stock_level"]
+STANDARD_METRICS: tuple[StandardMetric, ...] = ("operativity", "coverage", "stock_level")
+
+
 class TemporalSimulation(BaseModel):
     """The whole definition: Timeline, profile and Metrics."""
     model_config = ConfigDict(extra="forbid")
@@ -105,3 +109,11 @@ class TemporalSimulation(BaseModel):
         description="Period label → operations applied at the start of that period, in order.",
     )
     metrics: list[Metric] = Field(default_factory=list)
+    standard_metrics: list[StandardMetric] = Field(
+        default_factory=lambda: list(STANDARD_METRICS),
+        description=(
+            "The standard Metrics the run's table shows before the project's own "
+            "(ADR-0019 §4): the Operativity Score, coverage per Category, stock "
+            "level per Category. All three when absent."
+        ),
+    )

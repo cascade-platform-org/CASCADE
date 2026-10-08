@@ -9,7 +9,7 @@
 
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
 import { filterConditions, type FilterableModel } from "@/lib/element-filter";
-import type { CalendarUnit, Metric } from "@/lib/schemas/temporal-simulation";
+import type { CalendarUnit, Metric, StandardMetric } from "@/lib/schemas/temporal-simulation";
 import type { AttributeOperation, ElementFilter } from "@/lib/schemas/attribute-operation";
 
 export interface Explanation {
@@ -422,6 +422,26 @@ export const EXPLAIN_EXPORT_CSV: Explanation = {
 // ---------------------------------------------------------------------------
 // Metrics
 // ---------------------------------------------------------------------------
+
+/** What each standard Metric reports, per period; the Metrics tab shows it beside its tick. */
+export const STANDARD_METRIC_TEXT: Record<StandardMetric, string> = {
+  operativity: "The Operativity Score at the period's end, as the Scorecard computes it.",
+  coverage: "Per Category: what its consumers received ÷ what they demanded, at the period's last Propagation.",
+  stock_level: "Per Category: the sum of its Stocks' levels at the period's end, after they update.",
+};
+
+export function explainStandardMetric(metric: StandardMetric, shown: boolean): Explanation {
+  return {
+    title: shown ? "Standard Metric shown" : "Standard Metric hidden",
+    lines: [
+      STANDARD_METRIC_TEXT[metric],
+      shown
+        ? "It is a column of the Run table, the CSV export and every period saved to the Scorecard."
+        : "It leaves the Run table, the CSV export and periods saved from now on; the run computes the same either way. The choice is saved with the project.",
+    ],
+    refs: ["ADR-0019 §4"],
+  };
+}
 
 export function explainMetric(m: Metric, matches: number): Explanation {
   const path = m.path.join(" › ") || "(path)";

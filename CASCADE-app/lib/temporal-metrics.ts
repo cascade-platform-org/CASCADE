@@ -20,7 +20,7 @@ import { demandOf } from "@/lib/stock-integration";
 import { stocksIn } from "@/lib/stock-math";
 import type { RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
-import type { Metric } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_METRICS, type Metric, type StandardMetric } from "@/lib/schemas/temporal-simulation";
 
 interface RunColumn {
   key: string;
@@ -34,7 +34,7 @@ export interface RunTable {
 }
 
 /** The standard Metrics' names (ADR-0019 §4); after a run, coverage and stock level get a column per Category. */
-export const STANDARD_COLUMNS = { operativity: "Operativity %", coverage: "Coverage", stock: "Stock level" } as const;
+export const STANDARD_COLUMNS: Record<StandardMetric, string> = { operativity: "Operativity %", coverage: "Coverage", stock_level: "Stock level" };
 
 /** A table value as the Run table and a saved period show it; null is no value. */
 export const formatMetric = (v: number | null): string =>
@@ -116,14 +116,19 @@ function stockLevels(s: GraphSnapshot): Map<string, number> {
   return levels;
 }
 
-/** The run's table. `n` is the top Functionality level; `metrics` are the project's own, in order. */
-export function runTable(record: RunRecord, metrics: readonly Metric[], n: number): RunTable {
-  const coverageCats = [...new Set(record.periods.flatMap((p) => Object.values(p.served).flatMap((r) => Object.keys(r))))].sort();
-  const stockCats = [...stockLevels(record.start).keys()].sort();
+/**
+ * The run's table. `n` is the top Functionality level; `metrics` are the
+ * project's own, in order; `standard` the standard Metrics shown.
+ */
+export function runTable(record: RunRecord, metrics: readonly Metric[], n: number, standard: readonly StandardMetric[] = STANDARD_METRICS): RunTable {
+  const shown = (m: StandardMetric) => standard.includes(m);
+  const coverageCats = shown("coverage") ? [...new Set(record.periods.flatMap((p) => Object.values(p.served).flatMap((r) => Object.keys(r))))].sort() : [];
+  const stockCats = shown("stock_level") ? [...stockLevels(record.start).keys()].sort() : [];
+  const operativity = shown("operativity");
   const columns: RunColumn[] = [
-    { key: "operativity", label: STANDARD_COLUMNS.operativity },
+    ...(operativity ? [{ key: "operativity", label: STANDARD_COLUMNS.operativity }] : []),
     ...coverageCats.map((c) => ({ key: `coverage:${c}`, label: `${STANDARD_COLUMNS.coverage} · ${c}` })),
-    ...stockCats.map((c) => ({ key: `stock:${c}`, label: `${STANDARD_COLUMNS.stock} · ${c}` })),
+    ...stockCats.map((c) => ({ key: `stock:${c}`, label: `${STANDARD_COLUMNS.stock_level} · ${c}` })),
     ...metrics.map((m, i) => ({ key: `metric:${i}`, label: m.name || `Metric ${i + 1}` })),
   ];
 
@@ -143,12 +148,12 @@ export function runTable(record: RunRecord, metrics: readonly Metric[], n: numbe
       }
       return demand > 0 ? delivered / demand : null;
     };
-    const levels = stockLevels(end);
+    const levels = stockCats.length > 0 ? stockLevels(end) : new Map<string, number>();
     const stockLevel = (category: string) => levels.get(category) ?? 0;
     rows.push({
       label: period.label,
       values: [
-        computeOperativityScore(end, n),
+        ...(operativity ? [computeOperativityScore(end, n)] : []),
         ...coverageCats.map(coverage),
         ...stockCats.map(stockLevel),
         ...metrics.map((m) => evaluateMetric(m, states)),

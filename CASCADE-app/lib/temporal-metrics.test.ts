@@ -59,6 +59,10 @@ describe("runTable", () => {
       { label: "P1#2", values: [100, 0.8, 0, 0] },
     ]);
     expect(runTableCsv(table).split("\n")[0]).toBe("period,Operativity %,Coverage · water,Stock level · water,pool level");
+    // A hidden standard Metric leaves the columns and every row.
+    const trimmed = runTable(record, [], N, ["coverage"]);
+    expect(trimmed.columns.map((c) => c.label)).toEqual(["Coverage · water"]);
+    expect(trimmed.rows[0].values).toEqual([0.8]);
   });
 });
 

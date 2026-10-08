@@ -20,8 +20,6 @@ import {
 } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 
-/** Before a run: the standard Metrics' names, a column each before the custom ones. */
-const STANDARD_METRICS = Object.values(STANDARD_COLUMNS);
 
 export function RunTab() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
@@ -37,11 +35,14 @@ export function RunTab() {
   const display = useTemporalSimulationStore((s) => s.display);
   const reading = useTemporalSimulationStore((s) => s.levelReading);
   const metrics = useTemporalSimulationStore((s) => s.metrics);
+  const standard = useTemporalSimulationStore((s) => s.standardMetrics);
+  // Before a run: the shown standard Metrics' names, a column each before the custom ones.
+  const standardNames = standard.map((m) => STANDARD_COLUMNS[m]);
   const levelScale = useConfigStore((s) => s.config.level_scale);
   const record = useTemporalSimulationStore((s) => s.runRecord);
   const n = useConfigStore(selectN);
   // The run's table: computed at read time from the run record (ADR-0019 §4).
-  const table = useMemo(() => (record ? runTable(record, metrics.map((m) => m.metric), n) : null), [record, metrics, n]);
+  const table = useMemo(() => (record ? runTable(record, metrics.map((m) => m.metric), n, standard) : null), [record, metrics, n, standard]);
   const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
 
@@ -134,7 +135,7 @@ export function RunTab() {
               <th className="py-1 pr-2 font-semibold">Phases</th>
               {table
                 ? table.columns.map((c) => <th key={c.key} className="py-1 pr-2 font-semibold">{c.label}</th>)
-                : [...STANDARD_METRICS, ...metrics.map((m) => m.metric.name || "metric")].map((m, i) => <th key={i} className="py-1 pr-2 font-semibold">{m}</th>)}
+                : [...standardNames, ...metrics.map((m) => m.metric.name || "metric")].map((m, i) => <th key={i} className="py-1 pr-2 font-semibold">{m}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -167,7 +168,7 @@ export function RunTab() {
                 </td>
                 {table
                   ? table.rows[p.number - 1]?.values.map((v, i) => <td key={i} className="py-1 pr-2 tabular-nums text-zinc-700 dark:text-zinc-200">{formatMetric(v)}</td>)
-                  : [...STANDARD_METRICS, ...metrics].map((_, i) => <td key={i} className="py-1 pr-2 text-zinc-300" title="Computed from the run record after a run">—</td>)}
+                  : [...standardNames, ...metrics].map((_, i) => <td key={i} className="py-1 pr-2 text-zinc-300" title="Computed from the run record after a run">—</td>)}
               </tr>
             ))}
           </tbody>

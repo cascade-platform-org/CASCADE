@@ -20,7 +20,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
-import type { CalendarUnit, Timeline, Phase, Step, TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { STANDARD_METRICS, type CalendarUnit, type Timeline, type Phase, type Step, type StandardMetric, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -34,6 +34,8 @@ interface TemporalSimulationState {
   timeline: Timeline;
   profile: ProfileRow[];
   metrics: MetricEntry[];
+  /** The standard Metrics the Run table shows, before the project's own. */
+  standardMetrics: StandardMetric[];
   /** `Project.temporal_simulation`: the last draft that passed the schema; undefined until the first edit. */
   saved: TemporalSimulation | undefined;
   /** Why the draft is not saved into the project (schema errors); empty when it is. */
@@ -69,6 +71,8 @@ interface TemporalSimulationState {
   /** Write cells of one row; undefined empties a cell. */
   writeCells: (id: string, cells: [label: string, value: ProfileRow["values"][string] | undefined][]) => void;
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
+  /** Show or hide one standard Metric. */
+  showStandardMetric: (metric: StandardMetric, shown: boolean) => void;
   /** Replace the whole draft — the Text tab's Apply. */
   replaceDraft: (d: SimulationDraft) => void;
   beginRun: (total: number) => void;
@@ -105,7 +109,7 @@ const STARTER_TIMELINE: Timeline = {
   ],
 };
 
-const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [] });
+const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [], standardMetrics: [...STANDARD_METRICS] });
 
 type State = Draft<TemporalSimulationState>;
 
@@ -175,7 +179,11 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       if (row) for (const [label, value] of cells) { if (value === undefined) delete row.values[label]; else row.values[label] = value; }
     })),
     updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
-    replaceDraft: (d) => set(editing((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; })),
+    showStandardMetric: (metric, shown) => set(editing((s) => {
+      // Kept in the standard order, so the table's columns never move.
+      s.standardMetrics = STANDARD_METRICS.filter((m) => (m === metric ? shown : s.standardMetrics.includes(m)));
+    })),
+    replaceDraft: (d) => set(editing((s) => { s.timeline = d.timeline; s.profile = d.profile; s.metrics = d.metrics; s.standardMetrics = d.standardMetrics; })),
     beginRun: (total) => set((s) => {
       leaveRun(s);
       s.running = true;

@@ -8,7 +8,7 @@
  */
 
 import type { ZodError } from "zod";
-import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
+import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
 import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
@@ -35,6 +35,7 @@ export interface SimulationDraft {
   timeline: Timeline;
   profile: ProfileRow[];
   metrics: MetricEntry[];
+  standardMetrics: StandardMetric[];
 }
 
 /** The operation a row applies in one period. */
@@ -84,6 +85,7 @@ export function draftToDoc(d: SimulationDraft): TemporalSimulation {
     timeline: d.timeline,
     profile: rowsToProfile(d.profile, d.timeline),
     metrics: d.metrics.map((m) => m.metric),
+    standard_metrics: d.standardMetrics,
   };
 }
 
@@ -92,13 +94,19 @@ export function docToDraft(doc: TemporalSimulation, newId: () => string): Simula
     timeline: doc.timeline,
     profile: profileToRows(doc.profile, newId),
     metrics: doc.metrics.map((metric) => ({ id: newId(), metric })),
+    standardMetrics: doc.standard_metrics,
   };
 }
 
-/** JSON text; a Phase Event that fires every period is written as its bare id. */
+/**
+ * JSON text; a Phase Event that fires every period is written as its bare id,
+ * and `standard_metrics` only when one is hidden.
+ */
 export function serializeDoc(doc: TemporalSimulation): string {
+  const { standard_metrics, ...rest } = doc;
   const compact = {
-    ...doc,
+    ...rest,
+    ...(STANDARD_METRICS.every((m) => standard_metrics.includes(m)) ? {} : { standard_metrics }),
     timeline: {
       ...doc.timeline,
       steps: doc.timeline.steps.map((s) => ({
@@ -216,7 +224,8 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
       "read": "state"|"change",        // end-of-period value, or after − before
       "phase": k (optional, change only), "aggregate": ${alternatives(AggregateSchema.options)},
       "percentile": 0–100 (optional), "value_filter": { "cmp": ${alternatives(ComparisonSchema.options)}, "value": number } (optional) }
-  ]
+  ],
+  "standard_metrics": [${alternatives(STANDARD_METRICS)}…]   // optional: the standard columns shown before "metrics"; all by default
 }
 
 Filter (every given condition must hold; resolved again each time it is used):
@@ -308,6 +317,7 @@ and aggregate (sum, mean, min, max, count, share_where, percentile). It never ch
 /** A complete, valid definition used as the worked example (tested to parse). */
 export const EXAMPLE_DOC: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
+  standard_metrics: [...STANDARD_METRICS],
   timeline: {
     name: "Six months of a dry season, with quarterly maintenance",
     steps: [

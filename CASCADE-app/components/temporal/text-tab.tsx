@@ -26,11 +26,13 @@ import { EXPLAIN_COPY, EXPLAIN_COPY_LLM, explainApply } from "@/lib/temporal-sim
 import { Notices, SmallButton } from "./fields";
 
 export function TextTab() {
-  const { timeline, profile, metrics } = useTemporalSimulationStore(useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics })));
+  const { timeline, profile, metrics, standardMetrics } = useTemporalSimulationStore(
+    useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics, standardMetrics: s.standardMetrics })),
+  );
   const { explain, replaceDraft } = useTemporalSimulationStore.getState();
   const running = useTemporalSimulationStore((s) => s.running);
   // Config and the model are read when a button is used; this tab does not re-render on their changes.
-  const doc = useMemo(() => draftToDoc({ timeline, profile, metrics }), [timeline, profile, metrics]);
+  const doc = useMemo(() => draftToDoc({ timeline, profile, metrics, standardMetrics }), [timeline, profile, metrics, standardMetrics]);
   const currentText = useMemo(() => serializeDoc(doc), [doc]);
   const [text, setText] = useState(currentText);
   const [result, setResult] = useState<{ errors: string[]; warnings: string[]; applied: boolean } | null>(null);
