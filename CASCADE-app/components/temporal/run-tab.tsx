@@ -160,7 +160,7 @@ export function RunTab() {
                           ph.propagate ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800",
                         )}
                       >
-                        P{ph.index + 1}{ph.propagate ? " ▶" : ""}{ph.events.length ? ` ·${ph.events.length}` : ""}{ph.integratesAfter ? " ∫" : ""}
+                        P{ph.index + 1}{ph.propagate ? " ▶" : ""}{ph.events.length ? ` ·${ph.events.length}` : ""}
                       </span>
                     ))}
                   </span>
@@ -172,7 +172,7 @@ export function RunTab() {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events · ∫ Stocks integrate after this Phase. After a run, click a period to show its end state on the canvas; the Metric columns are computed from the run record.</p>
+        <p className="mt-2 text-[11px] text-zinc-400">▶ propagates · ·n Events. After a run, click a period to show its end state on the canvas; the Metric columns are computed from the run record.</p>
       </div>
     </div>
   );

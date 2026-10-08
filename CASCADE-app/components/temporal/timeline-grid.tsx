@@ -5,7 +5,7 @@
  * same period columns.
  *
  * Top: Steps, then per period each Phase's Events above a bar that is filled
- * when the Phase propagates, ∫ where Stocks integrate, and the label. Below:
+ * when the Phase propagates, and the label. Below:
  * one row per profile operation, one cell per period. A write stays until
  * something changes it (ADR-0019 §2), so an empty cell of a `set` row shows the
  * carried value in grey. Built from `planTimeline`, like the Run tab, so the
@@ -238,12 +238,11 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
             ))}
           </div>
 
-          {/* Events, Phases, ∫ and label per period */}
+          {/* Events, Phases and label per period */}
           <div className="grid" style={columns}>
             <span className={cn(labelCell, "flex flex-col text-right text-[10px] text-zinc-400")}>
               <span className="flex h-[30px] items-end justify-end">Events</span>
-              <span className="mt-0.5 h-2" />
-              <span className="h-3 text-[9px] leading-3">Propagate · ∫</span>
+              <span className="mt-0.5 h-2 text-[8px] leading-2">Propagate</span>
               <span className="h-3 text-[9px] leading-3">Period</span>
             </span>
             {plan.periods.map((p) => (
@@ -271,13 +270,6 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
                       key={ph.index}
                       className={cn("flex-1 rounded-sm", ph.propagate ? "bg-green-500" : "border border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-900")}
                     />
-                  ))}
-                </span>
-                <span className="flex h-3 gap-px">
-                  {p.phases.map((ph) => (
-                    <span key={ph.index} className="flex-1 text-center text-[9px] font-semibold leading-3 text-blue-700 dark:text-blue-300">
-                      {ph.integratesAfter ? "∫" : ""}
-                    </span>
                   ))}
                 </span>
                 <span className="h-3 truncate text-center text-[9px] leading-3 text-zinc-500">{p.label}</span>
@@ -355,7 +347,6 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
         <span className="flex items-center gap-1"><EventMarker type="temporal_jump" />time jump</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-green-500" />Phase + Propagation</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm border border-zinc-300 dark:border-zinc-600" />Phase, Events only</span>
-        <span className="flex items-center gap-1"><span className="font-semibold text-blue-700 dark:text-blue-300">∫</span>Stocks integrate</span>
         <span className="flex items-center gap-1"><span className="text-zinc-300 dark:text-zinc-600">160</span>value carried from earlier</span>
       </div>
     </div>

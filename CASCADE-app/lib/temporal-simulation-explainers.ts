@@ -159,19 +159,17 @@ export const EXPLAIN_REMOVE_PHASE: Explanation = {
   refs: ["ADR-0019 §1"],
 };
 
-export function explainPropagate(on: boolean, isLastPropagating: boolean): Explanation {
+export function explainPropagate(on: boolean): Explanation {
   return {
     title: on ? "Phase propagates" : "Phase only applies Events",
     lines: on
       ? [
           "Before this Phase's Propagation: Functionality and Responsibility Share return to what Events imposed in this run (shortage is recomputed), and every Stock becomes its supply number.",
-          isLastPropagating
-            ? "This is the period's last propagating Phase: right after it, every Stock is integrated once from what this Phase delivered."
-            : "A later Phase propagates too, so Stocks are integrated after that one.",
+          "Stocks update once per period, from what the period's last Propagation delivered.",
         ]
       : [
           "This Phase applies its Events and records their diff without calling the engine.",
-          "Placed after the last propagating Phase, it sees the period's integrated (closing) Stock levels — the place for a settlement.",
+          "Placed after the last propagating Phase, it sees the period's closing Stock levels — the place for a settlement.",
         ],
     refs: ["ADR-0019 §2", "ADR-0019 §2a"],
   };
@@ -367,7 +365,7 @@ export const EXPLAIN_STRIP: Explanation = {
   title: "Timeline at a glance",
   lines: [
     "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, clock = a time jump (the only way time passes).",
-    "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events. ∫ marks where Stocks integrate: after the period's last propagating Phase.",
+    "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events.",
     "An Event set to every N periods shows only in the periods it fires in. Click a period for exactly what runs in it.",
     "Below, each profile row is one operation with a cell per period. A written value stays in later periods until something changes it, so an empty cell of a set row shows the carried value in grey.",
   ],

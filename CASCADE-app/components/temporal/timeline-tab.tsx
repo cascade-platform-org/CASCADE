@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { CalendarPlus, Plus, Trash2, X } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
-import { cn } from "@/lib/utils";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useConfigStore } from "@/store/config-store";
 import { newPhase, newStep, useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { EXAMPLE_LABEL, advanceLabel, lastPropagatingIndex } from "@/lib/timeline-plan";
+import { EXAMPLE_LABEL, advanceLabel } from "@/lib/timeline-plan";
 import { isScenarioEvent, temporalJumpHours } from "@/lib/event-application";
 import { CalendarUnitSchema } from "@/lib/schemas/temporal-simulation";
 import {
@@ -102,7 +101,6 @@ export function TimelineTab() {
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Steps</h3>
 
       {timeline.steps.map((step, si) => {
-        const lastPropagating = lastPropagatingIndex(step.phases);
         const labelValid = advanceLabel(step.label, step.unit, 0) !== null;
         return (
           <div key={si} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
@@ -174,19 +172,11 @@ export function TimelineTab() {
                       onChange={(e) => {
                         const on = e.target.checked;
                         update((t) => { t.steps[si].phases[pi].propagate = on; });
-                        const flags = step.phases.map((p, i) => ({ propagate: i === pi ? on : p.propagate }));
-                        explain(explainPropagate(on, lastPropagatingIndex(flags) === pi));
+                        explain(explainPropagate(on));
                       }}
                     />
                     then Propagate
                   </label>
-                  <span
-                    title={pi === lastPropagating ? "Stocks integrate after this Phase" : undefined}
-                    className={cn("w-3 shrink-0 cursor-help text-xs font-semibold text-blue-700 dark:text-blue-300", pi !== lastPropagating && "invisible")}
-                    onClick={() => explain(explainPropagate(true, true))}
-                  >
-                    ∫
-                  </span>
                   <button
                     type="button"
                     title="Remove Phase"

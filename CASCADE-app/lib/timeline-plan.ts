@@ -130,7 +130,7 @@ export const EXAMPLE_LABEL: Record<CalendarUnit, string> = {
 export const firesEvery = (position: number, every: number): boolean => (position + 1) % every === 0;
 
 /** Index of the last propagating Phase — Stocks integrate after it (ADR-0019 §2); -1 if none. */
-export const lastPropagatingIndex = (phases: { propagate: boolean }[]): number =>
+const lastPropagatingIndex = (phases: { propagate: boolean }[]): number =>
   phases.map((p) => p.propagate).lastIndexOf(true);
 
 /** Unroll Steps × repeat, resolve each Event's `every`, and count engine calls. */
