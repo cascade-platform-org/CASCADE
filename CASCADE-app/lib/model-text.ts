@@ -153,9 +153,10 @@ function applyPatchOp(root: Record<string, unknown>, op: PatchOp): string | null
   let parent: unknown = root;
   for (const [i, key] of segments.slice(0, -1).entries()) {
     const next: unknown = Array.isArray(parent) ? parent[Number(key)] : isContainer(parent) && Object.hasOwn(parent, key) ? parent[key] : undefined;
-    if (!isContainer(next) || (Array.isArray(parent) && !/^\d+$/.test(key))) {
-      return `${op.op} ${op.path}: /${segments.slice(0, i + 1).join("/")} does not exist`;
+    if (Array.isArray(parent) && !/^\d+$/.test(key)) {
+      return `${op.op} ${op.path}: /${segments.slice(0, i).join("/")} is a list; address an item by its position (0, 1, …), not "${key}"`;
     }
+    if (!isContainer(next)) return `${op.op} ${op.path}: /${segments.slice(0, i + 1).join("/")} does not exist`;
     parent = next;
   }
   const last = segments[segments.length - 1];
@@ -365,9 +366,8 @@ function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
 // Text helpers
 // ---------------------------------------------------------------------------
 
-export const STARTER_TEXT = JSON.stringify({ format: MODEL_TEXT_FORMAT, patch: [], elements: [] }, null, 2);
 
-export const MODEL_TEXT_REFERENCE = `Format "${MODEL_TEXT_FORMAT}" — JSON, strict (unknown keys are errors).
+const MODEL_TEXT_REFERENCE = `Format "${MODEL_TEXT_FORMAT}" — JSON, strict (unknown keys are errors).
 
 {
   "format": "${MODEL_TEXT_FORMAT}",
@@ -457,8 +457,10 @@ function exampleElements(project: Project): string {
 export function modelTextContext(
   bundle: ProjectBundle,
   section?: { label: string; json: string; pointer: string; registry?: "nodes" | "edges"; onCanvas?: boolean },
-  limit = 300,
+  /** For Bulk operations in plain changes (`lib/model-text-v2.ts`): its format, and what it adds (the field census). */
+  bulk?: { reference: string; extra: string },
 ): string {
+  const limit = 300;
   const { project, config } = bundle;
   const nodes = Object.values(project.nodes);
   const edges = Object.values(project.edges);
@@ -478,14 +480,14 @@ export function modelTextContext(
       ]
       : [
         "You are editing a CASCADE infrastructure-resilience model. Reply with ONE ```json block holding a change set in the format below; change only what was asked. The app checks it, shows the person every change, and applies nothing until they confirm.",
-        MODEL_TEXT_REFERENCE,
+        bulk?.reference ?? MODEL_TEXT_REFERENCE,
       ]),
     MODEL_PRIMER,
     ELEMENT_PATHS,
     ...(section?.pointer.startsWith("/project/temporal_simulations") ? [SIMULATION_REFERENCE] : []),
     ...(section?.pointer.startsWith("/config/events") || !section ? [EVENT_FIELDS] : []),
     ID_RULES,
-    ...(section ? [] : [exampleElements(project)]),
+    ...(section ? [] : [...(bulk ? [bulk.extra] : []), exampleElements(project)]),
     "# The rest of the model, for reference",
     lines("Canvases", project.canvases.map((c) => `- ${c.id} — ${c.label}`)),
     lines("Nodes", nodes.map((nd) => `- ${nd.id} — ${nd.label ?? ""} — ${nd.node_type ?? ""}${nd.node_categories?.length ? ` — ${nd.node_categories.join(", ")}` : ""}`)),

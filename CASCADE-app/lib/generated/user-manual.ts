@@ -2696,39 +2696,15 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": " — a change set for edits that span the model: "
+                    "text": " — changes by rule, for many elements at once: \"scale every Source's supply by 0.5\", \"set importance 2 on every Service\", \"delete every node whose label contains "
                   },
                   {
-                    "kind": "code",
-                    "text": "patch"
-                  },
-                  {
-                    "kind": "text",
-                    "text": " (add, replace or remove at a path under "
-                  },
-                  {
-                    "kind": "code",
-                    "text": "/project"
+                    "kind": "em",
+                    "text": "spare"
                   },
                   {
                     "kind": "text",
-                    "text": " or "
-                  },
-                  {
-                    "kind": "code",
-                    "text": "/config"
-                  },
-                  {
-                    "kind": "text",
-                    "text": ") and "
-                  },
-                  {
-                    "kind": "code",
-                    "text": "elements"
-                  },
-                  {
-                    "kind": "text",
-                    "text": " (Attribute Operations, §4, on one element or every element a filter selects)."
+                    "text": "\", plus adding, updating or deleting Events, Categories, canvases and simulations by id. The box opens on an example that uses your model. The preview lists each change with what it matched, changed and skipped."
                   }
                 ]
               ]
@@ -2759,7 +2735,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": ": every problem is listed, or every change is shown as before → after. Nothing changes until you press "
+                  "text": ": every change is shown as before → after, or every problem is listed, and "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Copy the problems for the LLM"
+                },
+                {
+                  "kind": "text",
+                  "text": " hands them back to it to fix. Nothing changes until you press "
                 },
                 {
                   "kind": "strong",

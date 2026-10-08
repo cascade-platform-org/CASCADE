@@ -31,15 +31,21 @@ import { useConfigStore } from "@/store/config-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useUiStore } from "@/store/ui-store";
-import { MODEL_TEXT_FORMAT, MODEL_TEXT_REFERENCE, STARTER_TEXT, checkChange, modelTextContext, parseChangeText, parseJsonText, type CheckedChange, type Preview } from "@/lib/model-text";
+import { MODEL_TEXT_FORMAT, checkChange, modelTextContext, parseJsonText, type Preview } from "@/lib/model-text";
+import { PLAIN_REFERENCE, bulkContext, checkBulkText, repairContext, starterPlain, type BulkResult, type PreviewGroup } from "@/lib/model-text-v2";
 import { BULK_KEY, findSection, sectionPatch, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
 import { applyModelBundle, currentBundle, restoreModelBundle } from "@/lib/model-text-apply";
 import type { ProjectBundle } from "@/lib/file-io";
 
+/** A checked change's preview, grouped by change for Bulk operations, with the LLM's notes. */
+type Shown = { preview: Preview; groups?: PreviewGroup[]; notes?: string };
+
 type Result =
   | { kind: "errors"; errors: string[] }
-  | { kind: "preview"; preview: Preview; warnings: string[] }
-  | { kind: "applied"; preview: Preview; before: ProjectBundle };
+  | ({ kind: "preview"; warnings: string[] } & Shown)
+  | ({ kind: "applied"; before: ProjectBundle } & Shown);
+
+const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
 
 /** Lines shown before "… N more": a preview of thousands of rows helps nobody read it. */
 const PREVIEW_LINES = 400;
@@ -55,13 +61,9 @@ const TONE = {
 } as const;
 const MARK = { add: "+", remove: "−", change: "~" } as const;
 
-function PreviewList({ preview }: { preview: Preview }) {
-  const { counts, lines } = preview;
+function Lines({ lines }: { lines: Preview["lines"] }) {
   return (
-    <div className="max-h-56 overflow-y-auto rounded-md border border-zinc-200 p-2 font-mono text-[11px] leading-4 dark:border-zinc-700">
-      <p className="mb-1 font-sans font-medium text-zinc-700 dark:text-zinc-200">
-        {counts.add} added · {counts.change} changed · {counts.remove} removed
-      </p>
+    <>
       {lines.slice(0, PREVIEW_LINES).map((l, i) => (
         <p key={i} className={cn("break-all", TONE[l.kind])}>
           {MARK[l.kind]} {l.where}
@@ -70,6 +72,35 @@ function PreviewList({ preview }: { preview: Preview }) {
         </p>
       ))}
       {lines.length > PREVIEW_LINES && <p className="text-zinc-400">… {lines.length - PREVIEW_LINES} more</p>}
+    </>
+  );
+}
+
+/** Every change as before → after; for Bulk operations, under the change that made it, with what it skipped. */
+function PreviewList({ preview, groups, notes }: Shown) {
+  const { counts } = preview;
+  return (
+    <div className="max-h-64 overflow-y-auto rounded-md border border-zinc-200 p-2 font-mono text-[11px] leading-4 dark:border-zinc-700">
+      {notes && <p className="mb-1 font-sans italic text-zinc-600 dark:text-zinc-300">“{notes}”</p>}
+      <p className="mb-1 font-sans font-medium text-zinc-700 dark:text-zinc-200">
+        {counts.add} added · {counts.change} changed · {counts.remove} removed
+      </p>
+      {groups
+        ? groups.map((g, i) => (
+          <div key={i} className="mb-1.5">
+            <p className="font-sans font-medium text-zinc-800 dark:text-zinc-100">
+              {g.subjects.length || g.lines.length ? (CIRCLED[i] ?? `${i + 1}.`) : "·"} {g.title}
+              {g.why && <span className="font-normal text-zinc-500"> — {g.why}</span>}
+            </p>
+            {g.skipped.length > 0 && (
+              <p className="font-sans text-amber-800 dark:text-amber-300">
+                Skipped: {g.skipped.slice(0, 8).map((x) => `${x.id} (${x.reason})`).join("; ")}{g.skipped.length > 8 ? ` … ${g.skipped.length - 8} more` : ""}
+              </p>
+            )}
+            <div className="pl-3"><Lines lines={g.lines} /></div>
+          </div>
+        ))
+        : <Lines lines={preview.lines} />}
     </div>
   );
 }
@@ -143,7 +174,7 @@ function ModelTextPanel() {
 
   const section = findSection(tree, selectedKey) ?? tree[1];
   const bulk = section.key === BULK_KEY;
-  const currentText = useMemo(() => (bulk ? STARTER_TEXT : JSON.stringify(sectionValue(bundle, section), null, 2) ?? ""), [bulk, bundle, section]);
+  const currentText = useMemo(() => (bulk ? starterPlain(bundle) : JSON.stringify(sectionValue(bundle, section), null, 2) ?? ""), [bulk, bundle, section]);
   // An edited section keeps its text until it is applied or reverted; an untouched one follows the model.
   const text = texts[section.key] ?? currentText;
   const dirty = text !== currentText;
@@ -167,35 +198,32 @@ function ModelTextPanel() {
     }
   }
 
-  /** The edited text checked against the live model: the section's patch, or the bulk change set. */
-  function checked(): CheckedChange {
+  /** The edited text checked against the live model: the section's patch, or Bulk operations. */
+  function checked(): BulkResult {
     const live = currentBundle();
-    if (bulk) {
-      const parsed = parseChangeText(text);
-      return parsed.ok ? checkChange(live, parsed.change) : parsed;
-    }
+    if (bulk) return checkBulkText(live, text);
     const json = parseJsonText(text);
-    if (!json.ok) return json;
+    if (!json.ok) return { checked: json };
     const s = findSection(sectionTree(live), section.key);
-    if (!s) return { ok: false, errors: [`${section.label} is no longer in the model.`] };
+    if (!s) return { checked: { ok: false, errors: [`${section.label} is no longer in the model.`] } };
     const patch = sectionPatch(live, s, json.value);
-    if ("error" in patch) return { ok: false, errors: [patch.error] };
-    return checkChange(live, { format: MODEL_TEXT_FORMAT, patch: patch.patch, elements: [] });
+    if ("error" in patch) return { checked: { ok: false, errors: [patch.error] } };
+    return { checked: checkChange(live, { format: MODEL_TEXT_FORMAT, patch: patch.patch, elements: [] }) };
   }
 
   function check() {
-    const r = checked();
-    setResult(r.ok ? { kind: "preview", preview: r.preview, warnings: r.warnings } : { kind: "errors", errors: r.errors });
+    const { checked: r, groups, notes } = checked();
+    setResult(r.ok ? { kind: "preview", preview: r.preview, warnings: r.warnings, groups, notes } : { kind: "errors", errors: r.errors });
   }
 
   function apply() {
     // Checked again on the model as it is now: it may have changed since the preview.
-    const r = checked();
+    const { checked: r, groups, notes } = checked();
     if (!r.ok) { setResult({ kind: "errors", errors: r.errors }); return; }
     const before = applyModelBundle(r.after);
     if (!before) return;
     dropText(section.key);
-    setResult({ kind: "applied", preview: r.preview, before });
+    setResult({ kind: "applied", preview: r.preview, groups, notes, before });
     pushToast({ message: "LLM Design applied. A version was kept; Undo this edit puts it back.", variant: "success", durationMs: 4000 });
   }
 
@@ -209,7 +237,9 @@ function ModelTextPanel() {
   }
 
   const changes = result?.kind === "preview" ? result.preview.lines.length : 0;
-  const llmContext = () => modelTextContext(currentBundle(), bulk ? undefined : { label: section.label, json: text, pointer: section.pointer, registry: section.registry, onCanvas: section.canvasIndex !== undefined });
+  const llmContext = () => (bulk
+    ? bulkContext(currentBundle())
+    : modelTextContext(currentBundle(), { label: section.label, json: text, pointer: section.pointer, registry: section.registry, onCanvas: section.canvasIndex !== undefined }));
 
   return (
     <div className="flex h-full min-h-0 flex-1">
@@ -265,7 +295,7 @@ function ModelTextPanel() {
         />
         <p className="text-[11px] text-zinc-400">
           {bulk
-            ? <>A change set: <code>patch</code> (add, replace, remove at a path under /project or /config) and <code>elements</code> (Attribute Operations on Elements by id or filter).</>
+            ? <>Changes by rule, for many Elements at once: <code>{"{ \"scale\": \"supply\", \"by\": 0.5, \"where\": { \"node_type\": \"Source\" } }"}</code>, and things added, updated or deleted by id. The example below uses this model.</>
             : section.registry
               ? "Edit, add or delete entries. Deleting a node also deletes its edges and takes it off every Canvas; a node added under a Canvas is placed on it."
               : "Edit the JSON as it is, or paste an LLM's version of it."}
@@ -275,13 +305,19 @@ function ModelTextPanel() {
 
         {result?.kind === "errors" && (
           <div role="alert" className="max-h-40 overflow-y-auto rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
-            <p className="mb-1 font-medium">Not applied — {result.errors.length} problem{result.errors.length > 1 ? "s" : ""}:</p>
+            <div className="mb-1 flex items-center gap-2">
+              <p className="font-medium">Not applied — {result.errors.length} problem{result.errors.length > 1 ? "s" : ""}:</p>
+              <span className="flex-1" />
+              <SmallButton onClick={() => void copy(repairContext(currentBundle(), text, result.errors, bulk ? undefined : section.label), "the problems for the LLM")} title="The problems, your text and the stored JSON of the Elements they name, for the LLM to fix">
+                <Bot size={11} /> Copy the problems for the LLM
+              </SmallButton>
+            </div>
             {result.errors.slice(0, 50).map((e, i) => <p key={i} className="break-all">• {e}</p>)}
           </div>
         )}
         {result?.kind === "preview" && (
           <>
-            {changes === 0 ? <p className="text-[11px] text-zinc-500">Valid, and it changes nothing.</p> : <PreviewList preview={result.preview} />}
+            {changes === 0 ? <p className="text-[11px] text-zinc-500">Valid, and it changes nothing.</p> : <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} />}
             {result.warnings.map((w, i) => <p key={i} className="flex gap-1 text-[11px] text-amber-800 dark:text-amber-300"><AlertTriangle size={11} className="mt-0.5 shrink-0" />{w}</p>)}
           </>
         )}
@@ -292,7 +328,7 @@ function ModelTextPanel() {
               <span className="flex-1" />
               <SmallButton onClick={undo}><RotateCcw size={11} /> Undo this edit</SmallButton>
             </div>
-            <PreviewList preview={result.preview} />
+            <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} />
           </div>
         )}
 
@@ -301,7 +337,7 @@ function ModelTextPanel() {
             <button type="button" className="self-start text-[11px] text-blue-700 hover:underline dark:text-blue-400" onClick={() => setShowRef((v) => !v)}>
               {showRef ? "Hide" : "Show"} format reference
             </button>
-            {showRef && <pre className="max-h-64 overflow-auto rounded-md bg-zinc-50 p-2 text-[10px] leading-4 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{MODEL_TEXT_REFERENCE}</pre>}
+            {showRef && <pre className="max-h-64 overflow-auto rounded-md bg-zinc-50 p-2 text-[10px] leading-4 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{PLAIN_REFERENCE}</pre>}
           </>
         )}
       </div>

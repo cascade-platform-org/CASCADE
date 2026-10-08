@@ -393,10 +393,12 @@ save as a tree, each part as JSON you can edit by hand or with an LLM:
 - **Project** — Project info, Canvases, Nodes and Edges (each grouped by the
   canvas they are on), Scorecard, Temporal Simulations.
 - **Configuration** — Events, Categories, the Functionality scale, the rest.
-- **Bulk operations** — a change set for edits that span the model: `patch`
-  (add, replace or remove at a path under `/project` or `/config`) and
-  `elements` (Attribute Operations, §4, on one element or every element a
-  filter selects).
+- **Bulk operations** — changes by rule, for many elements at once: "scale
+  every Source's supply by 0.5", "set importance 2 on every Service", "delete
+  every node whose label contains *spare*", plus adding, updating or deleting
+  Events, Categories, canvases and simulations by id. The box opens on an
+  example that uses your model. The preview lists each change with what it
+  matched, changed and skipped.
 
 Any level opens: a group shows everything under it, so one edit there changes
 many items; a single item shows just that one. Deleting a node in Nodes also
@@ -404,8 +406,9 @@ deletes its edges and takes it off every canvas; a node added under a canvas is
 placed on it. The undo history is not shown and cannot be changed.
 
 **Copy with context for an LLM** copies the open part with this model's ids and
-names. Paste the reply and press **Check & preview**: every problem is listed,
-or every change is shown as before → after. Nothing changes until you press
+names. Paste the reply and press **Check & preview**: every change is shown as
+before → after, or every problem is listed, and **Copy the problems for the
+LLM** hands them back to it to fix. Nothing changes until you press
 **Apply**. The project as it was is kept in Recent saves first, and **Undo this
 edit** puts it back.
 

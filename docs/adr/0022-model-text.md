@@ -1,4 +1,4 @@
-# ADR-0022 — The LLM Design: change what a project saves through a checked change set
+# ADR-0022 — LLM Design: change what a project saves through a checked change set
 
 **Status:** accepted (2026-10-08). Built: `lib/model-text.ts` (parse, check, preview; pure),
 `lib/model-text-apply.ts` (apply, Undo this edit), the Topbar's **LLM Design** button (beside Help) and window
@@ -64,6 +64,35 @@ rest replaced whole) and goes through the same check and preview. In the Nodes a
 sections a deletion takes its references along (a node's edges, its place on every Canvas) and an
 Element added under a Canvas is placed on it, all listed in the preview; the project section
 shows everything but `update_history` and refuses a removed key.
+
+**Bulk operations are plain changes** (*revised 2026-10-08*, `lib/model-text-v2.ts`, format
+`cascade.model-change/v2`). Agents writing the first format kept tripping on the storage layout:
+a supply that is a number on one Element and a Stock on another, list positions, a filter
+whose matches differ. A plain change says what to do to which thing, and the app works out where it
+is stored:
+
+- a verb on a field name (`set`, `scale`, `increase`, `cap`, `floor` on `supply`, `demand`,
+  `importance`, `vulnerability`, …; or a raw path), with `id` or a `where` filter; a supply or
+  capacity that is a Stock is changed through its `rate`, per Element;
+- `add`, `update` (JSON Merge Patch, RFC 7386: `null` removes a field) and `delete` of a node,
+  edge, Event, Category, Canvas or Temporal Simulation by id; `connect` / `disconnect` for edges;
+  a deletion takes what refers to it (a node's edges and Canvas places, an Event's
+  vulnerability levels);
+- a change that does not fit a match refuses the set, naming the Element; `skip_unfit` leaves such
+  Elements out, and the preview lists them as skipped.
+
+Plain changes compile, in order on a copy, into the patch the check already reads: one gate.
+The preview groups its lines under the change that made them, with the LLM's `notes` and each
+change's `why`; the box opens on a worked example on the model's own ids. The LLM context adds
+a **field census** (per Node Type: each field's shapes and ranges; the values a filter can use),
+and a refused check offers **Copy the problems for the LLM**: the errors, the text and the
+stored JSON of every Element they name. The first format stays accepted.
+`lib/llm-eval.test.ts` (run on demand) states each evaluation task's expected outcome and
+compares the two formats with fresh agents. On six bulk tasks (halve mixed-shape supplies, raise
+demand, delete by type, add an Event with vulnerabilities, add and connect a generator, rewire
+and rename), the first format did what was asked on 3 first try, plain changes on 6; every
+refusal came from list positions (a Canvas addressed by id). Given the repair text, a fresh
+agent fixed all 3.
 
 ## Consequences
 

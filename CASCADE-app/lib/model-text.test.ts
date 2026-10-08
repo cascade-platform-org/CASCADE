@@ -138,6 +138,7 @@ describe("checking a change against the model", () => {
     const quake = { id: "q", label: "Q", type: "hazard", frequency_per_10y: 0 };
     expect(errorsOf(checkChange(b, change({ patch: [{ op: "add", path: "/config/events/-", value: quake }, { op: "add", path: "/config/events/-", value: quake }] })))).toMatch(/"q" is used twice/);
     expect(errorsOf(checkChange(b, change({ patch: [{ op: "remove", path: "/config/events/99" }] })))).toMatch(/no index 99/);
+    expect(errorsOf(checkChange(b, change({ patch: [{ op: "replace", path: "/project/canvases/c1/label", value: "x" }] })))).toMatch(/\/project\/canvases is a list; address an item by its position/);
   });
 
   it("refuses an operation that matches nothing or leaves the scale, and clamps nothing", () => {
