@@ -407,8 +407,8 @@ export function explainDisplay(mode: "functionality" | "level", reading: "level"
 export const EXPLAIN_SAVE_SCORECARD: Explanation = {
   title: "Save to Scorecard",
   lines: [
-    "Saves the selected period as a Temporal Simulation entry: the Timeline's name, the period's label and end-state snapshot, its Metric values and the Level Mode values with their references, plus a picture.",
-    "The values are computed now and kept, because the run itself is not saved; Operativity is derived from the snapshot like any entry's.",
+    "Saves every ticked period (all, unless you untick some in the table) as a Temporal Simulation entry each: the period's end state, its Metric values with each Metric's minimum and mean across the run, and its Stocks' levels and changes; the period on the canvas also gets a picture.",
+    "The run's start state is kept once and each entry stores only what changed since it, so many periods stay small. The values are computed now and kept, because the run itself is not saved; Operativity is derived from the end state like any entry's.",
   ],
   refs: ["ADR-0019 §4", "ADR-0006"],
 };

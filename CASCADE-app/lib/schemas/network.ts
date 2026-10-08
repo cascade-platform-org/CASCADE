@@ -479,7 +479,11 @@ export const StockValueSchema = z.object({
 /**
  * One period of a Temporal Simulation run, saved (ADR-0019 §4). The run is not
  * saved, so the entry holds what it shows: the end state, the Metric values at
- * that period (computed at save) and each Stock's Level Mode value.
+ * that period and across the run (computed at save) and each Stock's Level Mode
+ * value. The end state is a Graph Diff from the run's start, kept once in
+ * `Project.scorecard_bases` (`base_id`); an entry saved before 2026-10-08 holds
+ * the whole `snapshot`. Exactly one of the two (Pydantic checks it;
+ * `lib/period-entry.ts` reads either).
  */
 export const TemporalSimulationScorecardEntrySchema = z.object({
   type: z.literal("temporal_simulation"),
@@ -488,9 +492,15 @@ export const TemporalSimulationScorecardEntrySchema = z.object({
   created_at: z.string(),
   timeline_name: z.string(),
   period_label: z.string(),
-  snapshot: GraphSnapshotSchema,
+  snapshot: GraphSnapshotSchema.optional(),
+  base_id: z.string().optional(),
+  diff: GraphDiffSchema.optional(),
   /** Column name → value at the period (standard and custom Metrics); null = no value. */
   metrics: z.record(z.string(), z.number().nullable()).default({}),
+  /** Column name → the smallest value across the run's periods. */
+  metric_min: z.record(z.string(), z.number().nullable()).default({}),
+  /** Column name → the mean across the run's periods that have a value. */
+  metric_mean: z.record(z.string(), z.number().nullable()).default({}),
   level_reading: z.enum(["level", "change"]).default("level"),
   stock_values: z.array(StockValueSchema).default([]),
   /** Base64-encoded PNG of the Run View at save. */
@@ -567,6 +577,11 @@ export const ProjectSchema = z.object({
     },
     z.array(ScorecardEntrySchema).default([]),
   ),
+  /**
+   * Start states of Temporal Simulation runs, each shared by the periods saved
+   * from it to the Scorecard (an entry's `base_id`); removed once unused.
+   */
+  scorecard_bases: z.record(z.string(), GraphSnapshotSchema).optional(),
   /**
    * The project's one Temporal Simulation (ADR-0019): Timeline, profile and
    * Metrics. Input only; runs are not saved. The engine never reads it.

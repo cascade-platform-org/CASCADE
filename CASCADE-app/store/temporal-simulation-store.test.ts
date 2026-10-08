@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useScorecardStore } from "@/store/scorecard-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { ProjectSchema } from "@/lib/schemas/network";
@@ -80,6 +81,28 @@ describe("the project file", () => {
     expect(store().saved).toEqual(doc);
     expect(store().profile).toHaveLength(1);
     expect(store().profile[0].values).toEqual({ "2023-03-07": 0.5 });
+  });
+
+  it("keeps a saved run's start once, until its last period entry is deleted, through the project file", () => {
+    const base = { nodes: { a: { id: "a", functionality: 3 } }, edges: {}, canvases: [] };
+    const entry = (id: string) => ({
+      type: "temporal_simulation" as const, id, label: id, created_at: "2023-01-01T00:00:00Z", timeline_name: "t", period_label: id,
+      base_id: "b", diff: { nodes: [], edges: [], canvases: [] }, metrics: {}, metric_min: {}, metric_mean: {}, level_reading: "change" as const, stock_values: [],
+    });
+    const scorecard = () => useScorecardStore.getState();
+    scorecard().addSimulationPeriods("b", base, [entry("p1"), entry("p2")]);
+    scorecard().addSimulationPeriods("b", { ...base, nodes: {} }, []);
+    expect(scorecard().bases.b).toEqual(base);
+
+    const file = ProjectSchema.parse(JSON.parse(JSON.stringify(useCanvasStore.getState().toProject())));
+    useCanvasStore.getState().reset();
+    useCanvasStore.getState().fromProject(file);
+    expect(scorecard().bases.b).toEqual(base);
+
+    scorecard().removeScorecardEntry("p1");
+    expect(scorecard().bases.b).toBeDefined();
+    scorecard().removeScorecardEntry("p2");
+    expect(scorecard().bases).toEqual({});
   });
 
   it("leaves a project without a simulation without the key", () => {

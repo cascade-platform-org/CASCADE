@@ -202,6 +202,13 @@ Operativity as for any entry), the custom and coverage Metric values at that per
 Stock with the reference used, and a PNG. `PropagationScorecardEntry` does not migrate to
 diffs.
 
+*Revised 2026-10-08:* Save takes the ticked periods (all by default), one entry each. Each
+entry also holds every Metric's minimum and mean across the run, and stores its end state
+as a **Graph Diff** from the run's start, kept once per run in `Project.scorecard_bases`
+(`base_id`) and dropped when its last entry is deleted; an entry saved earlier keeps its
+whole `snapshot`. It stores each Stock's change over the period (the level is read off the
+end state), so its card shows the network by Functionality, Stock level or Stock change.
+
 ### 5. Reset ends the Run View
 
 Reset, or End run, leaves the Run View and its Level Mode. The model never changed, so

@@ -172,6 +172,11 @@ Inter-canvas edges are **not** a special type — they are stored as regular edg
 }
 ```
 
+`scorecard_bases` (optional) maps an id to a whole Scenario: the start of a
+Temporal Simulation run whose saved periods are `temporal_simulation` Scorecard
+entries holding `base_id` and a `diff` from it (plus `metrics`, `metric_min`,
+`metric_mean`, `stock_values`). A base no entry refers to is dropped.
+
 Note: `node-hospital` appears in both canvases — it is stored once in the registry and referenced by both. `edge-power-to-hospital` connects `node-substation-a` (in `canvas-power`) to `node-hospital` (also in `canvas-power`). If rendered from `canvas-water`, it would appear as an inter-canvas edge because `node-substation-a` is not in `canvas-water`'s `node_ids`.
 
 #### Canvas geo fields

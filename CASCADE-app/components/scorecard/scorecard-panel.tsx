@@ -46,7 +46,9 @@ import { SnapshotFlowView } from "./snapshot-flow-view";
 import { buildColorMap } from "@/lib/analysis-legend";
 import { scoresToResult } from "@/lib/topological-analysis";
 import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry, TemporalSimulationScorecardEntry } from "@/lib/schemas/network";
-import { colorsFor } from "@/lib/level-mode";
+import { colorsFor, stockValues } from "@/lib/level-mode";
+import { entryEndState } from "@/lib/period-entry";
+import { Segmented } from "@/components/temporal/fields";
 
 export function ScorecardPanel() {
   const close = useUiStore((s) => s.closeScorecardPanel);
@@ -835,23 +837,29 @@ function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after
 
 /**
  * One saved period of a Temporal Simulation run. The run is not saved, so the
- * card shows what the entry holds: the end state (Operativity derived from it,
- * as for any entry), the Metric values computed at save, and the network
- * repainted in Level Mode from the stored Stock values and the current Level
- * Scale.
+ * card shows what the entry holds: the end state (rebuilt from the run's start
+ * and the entry's diff; Operativity derived from it, as for any entry), the
+ * Metric values at the period with their minimum and mean across the run, and
+ * the network coloured by Functionality, Stock level or Stock change.
  */
 function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulationScorecardEntry; n: number; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const config = useConfigStore((s) => s.config);
-  const levelScale = config.level_scale;
-  const operativity = useMemo(() => computeOperativityScore(entry.snapshot, n), [entry.snapshot, n]);
-  const levelColors = useMemo(
-    () =>
-      entry.stock_values.length > 0
-        ? colorsFor(entry.stock_values, [...Object.keys(entry.snapshot.nodes), ...Object.keys(entry.snapshot.edges)], levelScale)
-        : undefined,
-    [entry.stock_values, entry.snapshot, levelScale],
-  );
+  const bases = useScorecardStore((s) => s.bases);
+  const snapshot = useMemo(() => entryEndState(entry, bases), [entry, bases]);
+  const operativity = useMemo(() => (snapshot ? computeOperativityScore(snapshot, n) : null), [snapshot, n]);
+  const values = useMemo(() => {
+    if (!snapshot) return { level: [], change: null };
+    // An entry saved before 2026-10-08 holds one reading; a newer one the change, its level read off the end state.
+    const level = entry.level_reading === "level" && entry.stock_values.length > 0 ? entry.stock_values : stockValues(snapshot, snapshot, "level");
+    return { level, change: entry.level_reading === "change" ? entry.stock_values : null };
+  }, [entry, snapshot]);
+  const [colouring, setColouring] = useState<"functionality" | "level" | "change">(values.level.length > 0 ? "level" : "functionality");
+  const colors = useMemo(() => {
+    const shown = colouring === "level" ? values.level : colouring === "change" ? values.change : null;
+    if (!snapshot || !shown) return undefined;
+    return colorsFor(shown, [...Object.keys(snapshot.nodes), ...Object.keys(snapshot.edges)], config.level_scale);
+  }, [colouring, values, snapshot, config.level_scale]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40">
@@ -869,29 +877,52 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <ScorePill label="Operativity" value={operativity} config={config} />
+          {operativity !== null && <ScorePill label="Operativity" value={operativity} config={config} />}
           <CardActions expanded={expanded} onToggle={() => setExpanded((v) => !v)} titles={["Collapse", "Show the network and the period's Metrics"]} onDelete={onDelete} />
         </div>
       </div>
 
       {expanded && (
         <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-700">
-          <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="border-b border-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
-              End of {entry.period_label}
-              {levelColors && ` — Level Mode (${entry.level_reading === "level" ? "level" : "change over the period"})`}
-            </div>
-            <SnapshotFlowView snapshot={entry.snapshot} colors={levelColors} heightClass="h-52" />
-          </div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Metrics at this period</p>
-          <div className="space-y-1">
-            {Object.entries(entry.metrics).map(([name, value]) => (
-              <div key={name} className="flex items-center justify-between text-xs">
-                <span className="truncate text-zinc-600 dark:text-zinc-400">{name}</span>
-                <span className="ml-2 font-mono text-zinc-800 dark:text-zinc-200">{formatMetric(value)}</span>
+          {snapshot ? (
+            <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="flex items-center gap-2 border-b border-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+                <span className="flex-1">End of {entry.period_label}</span>
+                <Segmented
+                  value={colouring}
+                  options={[
+                    { id: "functionality", label: "Functionality" },
+                    ...(values.level.length > 0 ? [{ id: "level" as const, label: "Stock level" }] : []),
+                    ...(values.change && values.change.length > 0 ? [{ id: "change" as const, label: "Stock change" }] : []),
+                  ]}
+                  onChange={setColouring}
+                />
               </div>
-            ))}
-          </div>
+              <SnapshotFlowView snapshot={snapshot} colors={colors} heightClass="h-52" />
+            </div>
+          ) : (
+            <p className="mb-3 text-xs text-amber-700 dark:text-amber-300">The run&apos;s start state this period was saved against is missing, so its network cannot be shown.</p>
+          )}
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-[10px] uppercase tracking-widest text-zinc-400">
+                <th className="py-1 font-semibold">Metric</th>
+                <th className="py-1 text-right font-semibold">At {entry.period_label}</th>
+                <th className="py-1 text-right font-semibold">Min</th>
+                <th className="py-1 text-right font-semibold">Mean</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(entry.metrics).map(([name, value]) => (
+                <tr key={name}>
+                  <td className="truncate py-0.5 text-zinc-600 dark:text-zinc-400">{name}</td>
+                  <td className="py-0.5 text-right font-mono text-zinc-800 dark:text-zinc-200">{formatMetric(value)}</td>
+                  <td className="py-0.5 text-right font-mono text-zinc-500">{formatMetric(entry.metric_min[name] ?? null)}</td>
+                  <td className="py-0.5 text-right font-mono text-zinc-500">{formatMetric(entry.metric_mean[name] ?? null)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

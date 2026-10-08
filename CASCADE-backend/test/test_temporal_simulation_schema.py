@@ -109,3 +109,21 @@ def test_a_phase_lets_hours_pass_and_a_temporal_jump_event_is_dropped_on_load():
         events=[{"id": "tj", "label": "+24 h", "type": "temporal_jump", "duration_hours": 24}, {"id": "q", "label": "Quake", "type": "hazard"}],
     )
     assert [e.id for e in config.events] == ["q"]
+
+
+def test_a_saved_period_holds_a_diff_against_a_shared_base_or_a_whole_snapshot():
+    from schemas.network import TemporalSimulationScorecardEntry
+
+    head = {"type": "temporal_simulation", "id": "e", "label": "l", "created_at": "2023-01-01T00:00:00Z", "timeline_name": "t", "period_label": "p"}
+    snapshot = {"nodes": {}, "edges": {}, "canvases": []}
+    diff = {"nodes": [], "edges": [], "canvases": []}
+    project = Project.model_validate({
+        "version": "2.0", "meta": {"name": "p"}, "nodes": {}, "edges": {}, "canvases": [],
+        "scorecard": [{**head, "base_id": "b", "diff": diff, "metric_min": {"x": 1}, "metric_mean": {"x": 2}}],
+        "scorecard_bases": {"b": snapshot},
+    })
+    assert project.scorecard_bases["b"].nodes == {}
+    assert TemporalSimulationScorecardEntry.model_validate({**head, "snapshot": snapshot}).snapshot is not None
+    for wrong in ({}, {"snapshot": snapshot, "base_id": "b", "diff": diff}, {"base_id": "b"}):
+        with pytest.raises(ValidationError, match="snapshot"):
+            TemporalSimulationScorecardEntry.model_validate({**head, **wrong})

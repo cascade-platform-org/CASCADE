@@ -664,8 +664,12 @@ class TemporalSimulationScorecardEntry(BaseModel):
     One period of a Temporal Simulation run, saved (ADR-0019 §4). The run itself
     is not saved, so the entry holds what it shows: the period's end state (the
     Scorecard derives Operativity from it as for any entry), the Metric values at
-    that period, computed at save, and each Stock's Level Mode value with the
-    reference used.
+    that period and across the run, computed at save, and each Stock's Level Mode
+    value with the reference used.
+
+    The end state is a Graph Diff from the run's start, stored once in
+    `Project.scorecard_bases` and shared by every period saved from that run
+    (2026-10-08). An entry saved earlier holds the whole `snapshot` instead.
     """
     type: Literal["temporal_simulation"]
     id: str
@@ -673,14 +677,31 @@ class TemporalSimulationScorecardEntry(BaseModel):
     created_at: str  # ISO 8601 UTC
     timeline_name: str
     period_label: str
-    snapshot: GraphSnapshot
+    snapshot: Optional[GraphSnapshot] = Field(default=None, description="The whole end state (entries saved before 2026-10-08).")
+    base_id: Optional[str] = Field(default=None, description="Key in Project.scorecard_bases: the run's start state.")
+    diff: Optional[GraphDiff] = Field(default=None, description="From the base to the period's end state.")
     metrics: dict[str, Optional[float]] = Field(
         default_factory=dict,
         description="Column name → value at the period (standard and custom Metrics); None = no value.",
     )
-    level_reading: Literal["level", "change"] = "level"
+    metric_min: dict[str, Optional[float]] = Field(
+        default_factory=dict, description="Column name → the smallest value across the run's periods.",
+    )
+    metric_mean: dict[str, Optional[float]] = Field(
+        default_factory=dict, description="Column name → the mean across the run's periods that have a value.",
+    )
+    level_reading: Literal["level", "change"] = Field(
+        default="level",
+        description="The reading `stock_values` hold; a level reading is also derived from the end state.",
+    )
     stock_values: list[StockValue] = Field(default_factory=list)
     image_png: Optional[str] = None  # Base64-encoded PNG of the Run View at save
+
+    @model_validator(mode="after")
+    def _one_end_state(self) -> "TemporalSimulationScorecardEntry":
+        if (self.snapshot is None) == (self.base_id is None or self.diff is None):
+            raise ValueError("give either `snapshot`, or `base_id` and `diff`")
+        return self
 
 
 # Discriminated union — `type` field selects the variant.
@@ -744,6 +765,14 @@ class Project(BaseModel):
             "User-curated atlas of named Scenarios and their Propagation results. "
             "Persisted in the project file. Derived metrics are computed client-side "
             "from each entry's snapshot and never stored here."
+        ),
+    )
+    scorecard_bases: dict[str, GraphSnapshot] = Field(
+        default_factory=dict,
+        description=(
+            "Start states of Temporal Simulation runs, each shared by the periods saved "
+            "from it as Scorecard entries holding a Graph Diff (`base_id`). The client "
+            "removes a base once no entry refers to it."
         ),
     )
     temporal_simulation: Optional[TemporalSimulation] = Field(

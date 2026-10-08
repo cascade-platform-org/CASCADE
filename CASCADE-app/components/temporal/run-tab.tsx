@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Play, RotateCcw, Save, Download, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
@@ -8,7 +8,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
-import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, savePeriodToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, savePeriodsToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
+import type { RunRecord } from "@/lib/step-operator";
 import { STANDARD_COLUMNS, formatMetric, runTable } from "@/lib/temporal-metrics";
 import {
   EXPLAIN_END_RUN,
@@ -20,6 +21,8 @@ import {
 } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 
+
+const NONE: ReadonlySet<number> = new Set();
 
 export function RunTab() {
   const unsaved = useTemporalSimulationStore((s) => s.unsaved);
@@ -45,8 +48,14 @@ export function RunTab() {
   const table = useMemo(() => (record ? runTable(record, metrics.map((m) => m.metric), n, standard) : null), [record, metrics, n, standard]);
   const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
+  // Periods unticked for Save to Scorecard; every period starts ticked, for each new run.
+  const [unticked, setUnticked] = useState<{ record: RunRecord | null; numbers: ReadonlySet<number> }>({ record: null, numbers: new Set() });
+  const skipped = unticked.record === record ? unticked.numbers : NONE;
+  const tick = (numbers: number[], on: boolean) =>
+    setUnticked({ record, numbers: new Set(on ? [...skipped].filter((x) => !numbers.includes(x)) : [...skipped, ...numbers]) });
 
   const plan = usePlan();
+  const toSave = hasRun ? plan.periods.map((p) => p.number).filter((x) => !skipped.has(x)) : [];
   // The plan's errors, then the schema errors that keep the draft out of the project: either blocks a run.
   const errors = useMemo(() => [...plan.errors, ...unsaved], [plan, unsaved]);
 
@@ -116,12 +125,14 @@ export function RunTab() {
           <SmallButton
             onClick={() => {
               explain(EXPLAIN_SAVE_SCORECARD);
-              if (table) void savePeriodToScorecard(table).then((label) => {
-                if (label) useUiStore.getState().pushToast({ message: `Saved to the Scorecard: ${label}`, variant: "success", durationMs: 3000 });
+              if (table) void savePeriodsToScorecard(table, toSave).then((count) => {
+                if (count > 0) useUiStore.getState().pushToast({ message: `Saved ${count} period${count === 1 ? "" : "s"} to the Scorecard.`, variant: "success", durationMs: 3000 });
               });
             }}
+            disabled={toSave.length === 0}
+            title="Saves the ticked periods, one Scorecard entry each"
           >
-            <Save size={11} /> Save period to Scorecard
+            <Save size={11} /> Save {toSave.length} period{toSave.length === 1 ? "" : "s"} to Scorecard
           </SmallButton>
         </div>
       )}
@@ -130,6 +141,16 @@ export function RunTab() {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-zinc-200 text-left text-[10px] uppercase tracking-wider text-zinc-400 dark:border-zinc-700">
+              {hasRun && (
+                <th className="py-1 pr-1">
+                  <input
+                    type="checkbox"
+                    title="Tick or untick every period for Save to Scorecard"
+                    checked={skipped.size === 0}
+                    onChange={(e) => tick(plan.periods.map((p) => p.number), e.target.checked)}
+                  />
+                </th>
+              )}
               <th className="py-1 pr-2 font-semibold">#</th>
               <th className="py-1 pr-2 font-semibold">Period</th>
               <th className="py-1 pr-2 font-semibold">Phases</th>
@@ -148,6 +169,11 @@ export function RunTab() {
                   selected === p.number && hasRun && "bg-blue-50 dark:bg-blue-900/20",
                 )}
               >
+                {hasRun && (
+                  <td className="py-1 pr-1" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" title="Save this period to the Scorecard" checked={!skipped.has(p.number)} onChange={(e) => tick([p.number], e.target.checked)} />
+                  </td>
+                )}
                 <td className="py-1 pr-2 text-zinc-400">{p.number}</td>
                 <td className="py-1 pr-2 font-medium text-zinc-700 dark:text-zinc-200">{p.label}</td>
                 <td className="py-1 pr-2">

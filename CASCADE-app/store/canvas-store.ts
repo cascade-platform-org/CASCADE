@@ -738,6 +738,7 @@ export const useCanvasStore = create<CanvasStore>()(
         canvases: state.canvasOrder.map((id) => state.canvases[id]),
         update_history: useHistoryStore.getState().updateHistory,
         scorecard: useScorecardStore.getState().scorecard,
+        scorecard_bases: useScorecardStore.getState().bases,
         temporal_simulation: useTemporalSimulationStore.getState().saved,
       };
     },
@@ -762,7 +763,7 @@ export const useCanvasStore = create<CanvasStore>()(
         };
       });
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
-      useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
+      useScorecardStore.getState().loadScorecard(project.scorecard ?? [], project.scorecard_bases ?? {});
       useTemporalSimulationStore.getState().loadFromProject(project.temporal_simulation);
     },
 

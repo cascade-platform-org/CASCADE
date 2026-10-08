@@ -2165,7 +2165,7 @@
       "type": "object"
     },
     "TemporalSimulationScorecardEntry": {
-      "description": "One period of a Temporal Simulation run, saved (ADR-0019 \u00a74). The run itself\nis not saved, so the entry holds what it shows: the period's end state (the\nScorecard derives Operativity from it as for any entry), the Metric values at\nthat period, computed at save, and each Stock's Level Mode value with the\nreference used.",
+      "description": "One period of a Temporal Simulation run, saved (ADR-0019 \u00a74). The run itself\nis not saved, so the entry holds what it shows: the period's end state (the\nScorecard derives Operativity from it as for any entry), the Metric values at\nthat period and across the run, computed at save, and each Stock's Level Mode\nvalue with the reference used.\n\nThe end state is a Graph Diff from the run's start, stored once in\n`Project.scorecard_bases` and shared by every period saved from that run\n(2026-10-08). An entry saved earlier holds the whole `snapshot` instead.",
       "properties": {
         "type": {
           "const": "temporal_simulation",
@@ -2193,7 +2193,41 @@
           "type": "string"
         },
         "snapshot": {
-          "$ref": "#/$defs/GraphSnapshot"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The whole end state (entries saved before 2026-10-08)."
+        },
+        "base_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Key in Project.scorecard_bases: the run's start state.",
+          "title": "Base Id"
+        },
+        "diff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GraphDiff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "From the base to the period's end state."
         },
         "metrics": {
           "additionalProperties": {
@@ -2210,8 +2244,39 @@
           "title": "Metrics",
           "type": "object"
         },
+        "metric_min": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Column name \u2192 the smallest value across the run's periods.",
+          "title": "Metric Min",
+          "type": "object"
+        },
+        "metric_mean": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Column name \u2192 the mean across the run's periods that have a value.",
+          "title": "Metric Mean",
+          "type": "object"
+        },
         "level_reading": {
           "default": "level",
+          "description": "The reading `stock_values` hold; a level reading is also derived from the end state.",
           "enum": [
             "level",
             "change"
@@ -2245,8 +2310,7 @@
         "label",
         "created_at",
         "timeline_name",
-        "period_label",
-        "snapshot"
+        "period_label"
       ],
       "title": "TemporalSimulationScorecardEntry",
       "type": "object"
@@ -2381,6 +2445,14 @@
           },
           "title": "Scorecard",
           "type": "array"
+        },
+        "scorecard_bases": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GraphSnapshot"
+          },
+          "description": "Start states of Temporal Simulation runs, each shared by the periods saved from it as Scorecard entries holding a Graph Diff (`base_id`). The client removes a base once no entry refers to it.",
+          "title": "Scorecard Bases",
+          "type": "object"
         },
         "temporal_simulation": {
           "anyOf": [
