@@ -9,10 +9,10 @@ import type { Project } from "@/lib/schemas/network";
  * canvasStore.mergeImportedProject() remaps any node/edge id that collides
  * with the current project's own ids (two independently-authored networks
  * can easily reuse short generic ids like "J1" or "R1"). A generated scenario
- * Event's `attribute_mutations` keys are "<elementId>.<field>" strings — if
- * the elementId part named a node that got remapped, the mutation would
+ * Event's Attribute Operations name Elements (`element`, a filter's
+ * `exclude`) — if one named a node that got remapped, the operation would
  * silently target nothing (or the wrong element) once merged in. This
- * rewrites those keys through the id maps returned by mergeImportedProject,
+ * rewrites them through the id maps returned by mergeImportedProject,
  * BEFORE the config is merged in via configStore.mergeConfig().
  *
  * Node ids and edge ids are independent namespaces (an EPANET junction and
@@ -60,25 +60,7 @@ export function remapConfigEventIds(
     ...config,
     events: config.events.map((event) => {
       const operations = event.attribute_operations;
-      if (operations && operations.length > 0) event = { ...event, attribute_operations: operations.map(remapOperation) };
-      const mutations = event.attribute_mutations;
-      if (!mutations || Object.keys(mutations).length === 0) return event;
-
-      const remapped: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(mutations)) {
-        // Split on the LAST "." — field names (functionality_time,
-        // category_dependency_profiles, ...) are fixed identifiers that never
-        // contain a dot, but an imported element id can (a raw .inp label is a
-        // free-form string, e.g. "T.1"); splitting on the first dot would
-        // truncate such an id and silently mismatch every lookup downstream.
-        const dotIdx = key.lastIndexOf(".");
-        if (dotIdx === -1) {
-          remapped[key] = value;
-          continue;
-        }
-        remapped[`${remapId(key.slice(0, dotIdx))}.${key.slice(dotIdx + 1)}`] = value;
-      }
-      return { ...event, attribute_mutations: remapped };
+      return operations && operations.length > 0 ? { ...event, attribute_operations: operations.map(remapOperation) } : event;
     }),
   };
 }

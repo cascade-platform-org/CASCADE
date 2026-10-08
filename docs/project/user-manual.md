@@ -293,8 +293,11 @@ firing and normal propagation takes over.
 ## 4. Running a scenario
 
 1. **Define the Event** in Config → Events, as a **Hazard** (physical damage,
-   needs repair) or a **Disservice** (no damage, clears with its cause). Set
-   `Vulnerability levels` on the exposed elements. **Attribute operations** let
+   needs repair), a **Disservice** (no damage, clears with its cause) or a
+   **Restorative** Event (green: a repair or a recovery). Set `Vulnerability
+   levels` on the elements a Hazard or Disservice reaches; a Restorative Event
+   has none and acts only through its operations, and an element it brings back
+   to full Functionality loses its cause. **Attribute operations** let
    an Event change a value relative to what it is — halve a supply, add 5 to a
    demand, cap a capacity — on one element or on every element a filter
    selects (kind, canvas, node type, category, part of the label, then tick

@@ -33,7 +33,6 @@ const NEW_EVENT: Omit<EventDefinition, "id"> = {
   type: "disservice",
   frequency_per_10y: 0,
   temporal_simulation_only: true,
-  attribute_mutations: {},
 };
 
 /** Event picker: Temporal-Simulation-only Events first, then scenario Events. */

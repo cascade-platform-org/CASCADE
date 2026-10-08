@@ -12,7 +12,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2, CalendarClock } from "lucide-react";
+import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Wrench, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2, CalendarClock } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -611,7 +611,7 @@ function applyEventFromActionBar(
     message: affected > 0
       ? `${event.label} applied — ${affected} element${affected > 1 ? "s" : ""} affected`
       : `${event.label} applied — no elements matched this event`,
-    variant: affected > 0 ? (event.type === "hazard" ? "error" : "warning") : "info",
+    variant: affected > 0 ? (event.type === "hazard" ? "error" : event.type === "restorative" ? "success" : "warning") : "info",
     durationMs: 3500,
   });
   // Attribute Operations are refused per Element rather than clamped (ADR-0021); say which.
@@ -646,7 +646,9 @@ function EventButton({
         "gap-1",
         event.type === "hazard"
           ? "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-          : "text-orange-500 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20",
+          : event.type === "restorative"
+            ? "text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+            : "text-orange-500 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20",
       )}
     >
       <EventIcon type={event.type} icon={event.icon} size={13} />
@@ -655,12 +657,13 @@ function EventButton({
   );
 }
 
-function EventIcon({ type, icon, size }: { type: "hazard" | "disservice" | "temporal_jump"; icon?: string; size: number }) {
+function EventIcon({ type, icon, size }: { type: EventDefinition["type"]; icon?: string; size: number }) {
   if (icon) {
     const Resolved = resolveIcon(icon) as React.FC<{ size?: number; strokeWidth?: number }> | null;
     if (Resolved) return <Resolved size={size} strokeWidth={2} />;
   }
   if (type === "temporal_jump") return <Clock size={size} />;
+  if (type === "restorative") return <Wrench size={size} />;
   return type === "hazard" ? <Zap size={size} /> : <Waves size={size} />;
 }
 

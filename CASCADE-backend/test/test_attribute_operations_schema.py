@@ -45,3 +45,33 @@ def test_event_carries_operations_in_order_and_defaults_to_none():
     )
     assert [op.op for op in event.attribute_operations or []] == ["add", "at_most"]
     assert EventDefinition(id="f", label="F", type="hazard").attribute_operations is None
+
+
+def test_attribute_mutations_load_as_set_operations_ahead_of_the_events_own():
+    """Retired 2026-10-08 (ADR-0021): a file's mutations become `set` operations,
+    one per scalar leaf, before the operations the Event already had."""
+    from schemas.config import EventDefinition
+
+    event = EventDefinition.model_validate({
+        "id": "e", "label": "e", "type": "disservice",
+        "attribute_mutations": {
+            "a.b.functionality_time": 6,
+            "J2.category_dependency_profiles": {"water": {"demand": 40, "priority": 3}},
+        },
+        "attribute_operations": [{"element": "x", "path": ["functionality"], "op": "set", "value": 1}],
+    })
+    assert [op.model_dump(exclude_none=True) for op in event.attribute_operations or []] == [
+        {"element": "a.b", "path": ["functionality_time"], "op": "set", "value": 6},
+        {"element": "J2", "path": ["category_dependency_profiles", "water", "demand"], "op": "set", "value": 40},
+        {"element": "J2", "path": ["category_dependency_profiles", "water", "priority"], "op": "set", "value": 3},
+        {"element": "x", "path": ["functionality"], "op": "set", "value": 1},
+    ]
+    assert "attribute_mutations" not in event.model_dump()
+    with pytest.raises(ValidationError, match="no Attribute Operation form"):
+        EventDefinition.model_validate({"id": "e", "label": "e", "type": "disservice", "attribute_mutations": {"a.node_categories": ["water"]}})
+
+
+def test_a_restorative_event_is_an_event_type():
+    from schemas.config import EventDefinition
+
+    assert EventDefinition(id="r", label="Repair", type="restorative").type == "restorative"

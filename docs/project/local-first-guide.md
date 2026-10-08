@@ -254,7 +254,7 @@ window does not, the window says why and the file keeps the last valid one.
 | `vulnerability_levels` | `{ [event_id]: 0–(N−1) }` | Sensitivity to each defined Event. Higher = more vulnerable; 0 = immune (same as absent). |
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
-| `properties` | `object` | Free-form attributes; Event `attribute_mutations` may write here. |
+| `properties` | `object` | Free-form attributes; an Event's Attribute Operations may write here. |
 
 #### Per-category dependency profile fields
 
@@ -342,16 +342,14 @@ The config file defines the functionality scale, categories, Events (Hazards and
       "direct_damage_effects": {
         "node-reservoir": { "expected_repair_time": 720 },
         "edge-pipe-1":    { "expected_repair_time": 480 }
-      },
-      "attribute_mutations": {}
+      }
     },
     {
       "id": "power-blackout",
       "label": "Regional power blackout",
       "type": "disservice",
       "frequency_per_10y": 1.0,
-      "direct_damage_effects": {},
-      "attribute_mutations": {}
+      "direct_damage_effects": {}
     }
   ],
   "graph_types": [

@@ -101349,8 +101349,7 @@
         "label": "Gps Disservice",
         "type": "disservice",
         "icon": "LocationEdit",
-        "frequency_per_10y": 0,
-        "attribute_mutations": {}
+        "frequency_per_10y": 0
       },
       {
         "id": "digital_attack",

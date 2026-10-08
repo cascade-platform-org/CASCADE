@@ -12934,8 +12934,7 @@
         "type": "hazard",
         "icon": "ZapOff",
         "frequency_per_10y": 2,
-        "default_repair_time": 6,
-        "attribute_mutations": {}
+        "default_repair_time": 6
       },
       {
         "id": "evt-gas-shortage",
@@ -12943,8 +12942,7 @@
         "type": "disservice",
         "icon": "Flame",
         "frequency_per_10y": 1,
-        "expected_recovery_time": 24,
-        "attribute_mutations": {}
+        "expected_recovery_time": 24
       },
       {
         "id": "evt-windows-bluescreen",
@@ -12952,8 +12950,7 @@
         "type": "hazard",
         "icon": "MonitorX",
         "frequency_per_10y": 5,
-        "expected_recovery_time": 1,
-        "attribute_mutations": {}
+        "expected_recovery_time": 1
       }
     ],
     "graph_types": [

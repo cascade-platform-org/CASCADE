@@ -94,7 +94,7 @@ interface ConfigActions {
    * when no entry of that name already exists (existing wins on a name
    * collision — surfaced in the returned summary so the caller can warn).
    * Events are added by id; if an event with that id already exists, its
-   * `attribute_mutations` are unioned into the existing one instead of adding
+   * `attribute_operations` are appended to the existing one's instead of adding
    * a duplicate — this is what makes a shared scenario event (e.g. a
    * "Blackout" or "Running on Reserve" event spanning every merged network)
    * correctly cover every merged network's own elements. `functionality_scale`
@@ -169,7 +169,7 @@ interface MergeConfigSummary {
   addedGraphTypes: string[];
   skippedGraphTypes: string[];
   addedEvents: string[];
-  /** Existing event ids whose attribute_mutations absorbed the incoming ones. */
+  /** Existing event ids whose attribute_operations absorbed the incoming ones. */
   mergedEvents: string[];
 }
 
@@ -282,10 +282,7 @@ export const useConfigStore = create<ConfigStore>()(
         for (const event of incoming.events) {
           const existing = state.config.events.find((e) => e.id === event.id);
           if (existing) {
-            existing.attribute_mutations = {
-              ...existing.attribute_mutations,
-              ...event.attribute_mutations,
-            };
+            existing.attribute_operations = [...(existing.attribute_operations ?? []), ...(event.attribute_operations ?? [])];
             summary.mergedEvents.push(event.id);
           } else {
             state.config.events.push(event);

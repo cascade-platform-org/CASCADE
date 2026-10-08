@@ -161,9 +161,8 @@ ship with no ordering (pure max-min fair share — the best-precision config).
   `vulnerability_levels` on every pump + `default_repair_time = 6 h`. One
   shared event — real blackouts aren't per-pump.
 - **Demand surge** (`evt-demand-surge-top10`, Disservice): doubles demand for
-  the top 10% of consumers via `attribute_mutations`. The mutation carries
-  the COMPLETE profile object — the applier supports only flat
-  `"<elementId>.<field>"` keys, no deep paths.
+  the top 10% of consumers: one `set` Attribute Operation per consumer on
+  `category_dependency_profiles.water.demand` (ADR-0021).
 
 ### Skeletonization
 
@@ -177,9 +176,10 @@ land in `properties.merged_elements`.
 
 Two frontend modes: **Replace project**, and **Add as extra canvas** —
 `mergeImportedProject` remaps colliding node/edge/canvas ids (separate
-namespaces), `remapConfigEventIds` rewrites mutation keys through the id map
-first, and `mergeConfig` adds categories/graph_types by name (existing wins)
-while events sharing an id get their `attribute_mutations` **unioned** — so
+namespaces), `remapConfigEventIds` rewrites the Elements Attribute Operations
+name through the id map first, and `mergeConfig` adds categories/graph_types by
+name (existing wins) while events sharing an id get their `attribute_operations`
+**appended** — so
 the three shared scenario Events grow to cover every merged network. The
 target's `functionality_scale` is never touched.
 

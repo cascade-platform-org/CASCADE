@@ -120,7 +120,7 @@ fields above rather than by what a Rule might invent.
 modeller's own metadata) and machine-written (an ADR-0015 rule consequent). A
 name-based rule cannot separate them; provenance can. A property key enters the
 Baseline **only** if it arrived through an `ElementUpdate` or an Event's
-`attribute_mutations`. Typed by hand, it is model and survives Reset.
+Attribute Operations. Typed by hand, it is model and survives Reset.
 
 #### Where the map comes from
 

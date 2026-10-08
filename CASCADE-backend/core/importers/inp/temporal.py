@@ -18,7 +18,8 @@ exactly as it is (its benchmarks reproduce) and this one only adds:
                   changes (base demand × multiplier, the file's own timeseries).
   [CONTROLS]    → a time-based control (AT TIME, AT CLOCKTIME) becomes a
                   Temporal-Simulation-only Event in its hour, opening (top
-                  Functionality) or closing (Functionality 1) its link.
+                  Functionality, a Restorative Event) or closing
+                  (Functionality 1, a Disservice) its link.
                   Level-based controls and [RULES] are conditionals, which
                   v1.1 lacks; each is reported as skipped (a full tank already
                   stops taking water).
@@ -180,7 +181,9 @@ def _control_events(
         event_id = f"control-{name}".replace(" ", "-")
         bundle.config.events.append(EventDefinition(
             id=event_id, label=f"Control {name}: {'; '.join(str(a) for a in actions)}",
-            type="disservice", temporal_simulation_only=True, attribute_operations=operations,
+            # Opening every link it names repairs; closing one degrades.
+            type="restorative" if all(op.value == n for op in operations) else "disservice",
+            temporal_simulation_only=True, attribute_operations=operations,
         ))
         for hour in moments:
             if 0 <= hour < hours:

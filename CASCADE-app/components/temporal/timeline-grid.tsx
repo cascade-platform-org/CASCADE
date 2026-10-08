@@ -41,7 +41,7 @@ function EventMarker({ type }: { type: EventDefinition["type"] | undefined }) {
     <span
       className={cn(
         "h-[7px] w-[7px] shrink-0 rounded-full",
-        type === "hazard" ? "bg-red-500" : type === "disservice" ? "bg-amber-500" : "bg-zinc-400",
+        type === "hazard" ? "bg-red-500" : type === "disservice" ? "bg-amber-500" : type === "restorative" ? "bg-green-500" : "bg-zinc-400",
       )}
     />
   );
@@ -344,6 +344,7 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-zinc-500">
         <span className="flex items-center gap-1"><EventMarker type="hazard" />hazard</span>
         <span className="flex items-center gap-1"><EventMarker type="disservice" />disservice</span>
+        <span className="flex items-center gap-1"><EventMarker type="restorative" />restorative</span>
         <span className="flex items-center gap-1"><EventMarker type="temporal_jump" />time jump</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-green-500" />Phase + Propagation</span>
         <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm border border-zinc-300 dark:border-zinc-600" />Phase, Events only</span>

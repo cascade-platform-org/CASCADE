@@ -80,18 +80,18 @@ describe("reversal restores the exact pre-Event shape", () => {
   });
 
   it("reverses a field two phases both wrote to its pre-Event value", () => {
-    // vulnerability_levels imposes 1, then attribute_mutations overwrites it
-    // with 2 — mutations run last and win. The reversal must hold the original
+    // vulnerability_levels imposes 1, then an Attribute Operation overwrites it
+    // with 2 — operations run last and win. The reversal must hold the original
     // 3, not the 1 the earlier phase proposed.
     //
     // Note this does NOT pin the first-capture-wins guard in `capture`: because
     // every phase reads the original Element, both captures record 3 either way.
     // See that guard's comment for why it is kept regardless.
     const before = snap([node("n1", { functionality: 3, vulnerability_levels: { quake: 2 } })]);
-    const event = hazard({ attribute_mutations: { "n1.functionality": 2 } });
+    const event = hazard({ attribute_operations: [{ element: "n1", path: ["functionality"], op: "set", value: 2 }] });
 
     const { snapshot: after, reversal } = applyEventToSnapshot(before, event, N);
-    expect(after.nodes.n1.functionality).toBe(2); // mutations run last and win
+    expect(after.nodes.n1.functionality).toBe(2); // operations run last and win
     expect(reversal["n1.functionality"]).toBe(3);
 
     expect(reverseMutations(after, reversal).nodes.n1.functionality).toBe(3);
@@ -184,25 +184,30 @@ describe("repair time precedence", () => {
   });
 });
 
-describe("attribute_mutations key parsing", () => {
-  it("splits on the last dot, so a dotted Element id survives", () => {
-    // EPANET imports carry raw labels like "J.12.A" as ids. Splitting on the
-    // first dot would address Element "J" and field "12.A".
-    const before = snap([node("J.12.A", { properties: {} })]);
-    const event = hazard({ attribute_mutations: { "J.12.A.functionality": 2 } });
+describe("a Restorative Event", () => {
+  const repair = (ops: EventDefinition["attribute_operations"]): EventDefinition =>
+    ({ id: "fix", label: "Fix", type: "restorative", frequency_per_10y: 0, attribute_operations: ops });
 
-    const { snapshot: after, reversal } = applyEventToSnapshot(before, event, N);
-    expect(after.nodes["J.12.A"].functionality).toBe(2);
-    expect(reversal["J.12.A.functionality"]).toBe(N);
+  it("ignores vulnerability levels: it only applies its operations", () => {
+    const before = snap([node("n1", { vulnerability_levels: { fix: 2 } })]);
+    expect(applyEventToSnapshot(before, repair([]), N).snapshot).toBe(before);
   });
 
-  it("ignores a key with no field and one naming an unknown Element", () => {
-    const before = snap([node("n1")]);
-    const event = hazard({ attribute_mutations: { nofield: 1, "ghost.functionality": 1 } });
-
-    const { snapshot: after, reversal } = applyEventToSnapshot(before, event, N);
-    expect(after).toBe(before);
-    expect(reversal).toEqual({});
+  it("clears the cause of an Element it brings to the top level, and keeps it on a partial repair", () => {
+    const share = { quake: 1 };
+    const before = snap([node("full", { functionality: 1, responsibility_share: share }), node("part", { functionality: 1, responsibility_share: share })]);
+    const { snapshot: after, reversal } = applyEventToSnapshot(
+      before,
+      repair([
+        { element: "full", path: ["functionality"], op: "set", value: N },
+        { element: "part", path: ["functionality"], op: "set", value: 2 },
+      ]),
+      N,
+    );
+    expect(after.nodes.full.functionality).toBe(N);
+    expect("responsibility_share" in after.nodes.full).toBe(false);
+    expect(after.nodes.part).toMatchObject({ functionality: 2, responsibility_share: share });
+    expect(reverseMutations(after, reversal).nodes.full.responsibility_share).toEqual(share);
   });
 });
 
@@ -292,7 +297,7 @@ describe("attribute_operations (ADR-0021)", () => {
     expect(snapshot.nodes.pool).toBe(s.nodes.pool);
   });
 
-  it("composes operations on one path in order, after attribute_mutations", () => {
+  it("composes operations on one path in order", () => {
     const { snapshot } = applyEventToSnapshot(
       snap([pool(10)]),
       policy(
@@ -301,11 +306,10 @@ describe("attribute_operations (ADR-0021)", () => {
           { element: "pool", path: ["supply_capacity", "water"], op: "at_most", value: 50 },
           { element: "pool", path: ["supply_capacity", "water"], op: "mul", value: 2 },
         ],
-        { attribute_mutations: { "pool.supply_capacity": { water: 100, power: 5 } } },
       ),
       N,
     );
-    expect(snapshot.nodes.pool.supply_capacity?.water).toBe(100); // (100 + 2) capped at 50, ×2
+    expect(snapshot.nodes.pool.supply_capacity?.water).toBe(24); // (10 + 2) capped at 50, ×2
   });
 
   it("refuses, never clamps: absent value, a path into a number, a schema violation, above N", () => {

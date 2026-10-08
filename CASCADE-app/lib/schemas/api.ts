@@ -92,7 +92,7 @@ export const ImportInpResponseSchema = z.object({
 
 /**
  * Sent to POST /api/propagate.
- * Hazard effects (functionality drops, direct_damage, attribute_mutations)
+ * Event effects (functionality drops, direct_damage, Attribute Operations)
  * are applied client-side before this call. The engine receives the resulting
  * graph state and propagates cascading failures.
  */

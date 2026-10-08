@@ -232,14 +232,13 @@ A hazard/disservice definition can specify mutations to **arbitrary other attrib
 |---|---|---|
 | `id` | string | Unique identifier |
 | `label` | string | Human-readable name |
-| `type` | enum | `hazard` \| `disservice` \| `temporal_jump` (a Temporal Jump only as a Temporal-Simulation-only Event; hand-fired jumps come from the Time control) |
+| `type` | enum | `hazard` \| `disservice` \| `restorative` \| `temporal_jump`. A `restorative` Event (green) has no vulnerability levels and only applies its `attribute_operations`: a repair or a recovery (ADR-0021). (a Temporal Jump only as a Temporal-Simulation-only Event; hand-fired jumps come from the Time control) |
 | `frequency_per_10y` | numeric ≥ 0 | Expected occurrences in a 10-year period |
 | `direct_damage_effects` | map\<id, {expected_repair_time}\> | Per-element `expected_repair_time` overrides; hazards only. Does **not** control which elements a *hazard* flags as `direct_damage` — for a hazard that is determined by `vulnerability_levels[event.id] > 0`. (A specific rule may independently set `direct_damage` on any element — ADR-0015.) |
 | `default_repair_time` | integer (hours)? | Fallback `expected_repair_time` for affected Elements with no `direct_damage_effects` entry; hazards only. |
 | `expected_recovery_time` | integer (hours) | Hours until the disservice self-resolves; disservices only. |
-| `attribute_mutations` | map\<string, unknown\> | Optional field overwrites applied to Elements on trigger. Keys are `"<elementId>.<fieldName>"`. |
 | `temporal_simulation_only` | boolean (default false) | The Event is used only inside a Temporal Simulation (§9.6): hidden from the Action Bar and the Scorecard's uncovered-Event list. Implemented. |
-| `attribute_operations` | list\<{element \| where, path, op, value}\>? | Implemented (ADR-0021). Operations on the value a field holds when the Event fires — `op` is `set`, `add`, `mul`, `at_most` or `at_least`; `path` is a list, so it can reach `supply_capacity.<category>.level`. Run after `attribute_mutations`. |
+| `attribute_operations` | list\<{element \| where, path, op, value}\>? | Implemented (ADR-0021). Operations on the value a field holds when the Event fires — `op` is `set`, `add`, `mul`, `at_most` or `at_least`; `path` is a list, so it can reach `supply_capacity.<category>.level`. Applied last. An older file's `attribute_mutations` load as `set` operations ahead of these. |
 
 There is no explicit `affected` set on the event definition. The affected set is **implicit**: any Element with `vulnerability_levels[event.id] > 0` is affected. The imposed Functionality level is `N − vulnerability_level` (clamped to 1), applied only if it worsens the current level.
 
@@ -905,7 +904,7 @@ network — no code/UI needed to reach for a common water-utility scenario:
   categories/graph_types/events into the current config
   (`configStore.mergeConfig`) rather than replacing it — an existing
   category/graph_type of the same name is kept as-is; an existing event of
-  the same id has the incoming `attribute_mutations` unioned in, so importing
+  the same id has the incoming `attribute_operations` appended, so importing
   several networks grows one shared Blackout/Tank-Reserve/Demand-Surge
   scenario covering all of them rather than duplicating events. `n_levels` is
   forced to the current project's own `functionality_scale.length` in this

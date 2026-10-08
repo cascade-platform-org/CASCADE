@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { RAMP_STEPS } from "@/lib/brand";
 import { NodeSchema } from "./network";
-import { AttributeOperationSchema } from "./attribute-operation";
+import { AttributeOperationSchema, migrateEventMutations } from "./attribute-operation";
 
 // ---------------------------------------------------------------------------
 // Functionality scale
@@ -54,7 +54,12 @@ export const DirectDamageEffectSchema = z.object({
 export const EventDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  type: z.enum(["hazard", "disservice", "temporal_jump"]),
+  /**
+   * hazard: damage and degradation by vulnerability; disservice: degradation by
+   * vulnerability; restorative: only Attribute Operations (a repair, a
+   * recovery), no vulnerability levels; temporal_jump: time passes.
+   */
+  type: z.enum(["hazard", "disservice", "restorative", "temporal_jump"]),
   /** Lucide icon name shown on the Action Bar button. Falls back to type icon if absent. */
   icon: z.string().optional(),
   /** Expected number of occurrences in a 10-year period. Not meaningful for temporal_jump. */
@@ -87,17 +92,10 @@ export const EventDefinitionSchema = z.object({
    */
   temporal_simulation_only: z.boolean().optional(),
   /**
-   * Unrestricted field overwrites applied to Elements when this Event is triggered.
-   * Keys are dot-notation strings: "<elementId>.<fieldName>".
-   * May overwrite any Element field including first-class ones (functionality, direct_damage).
-   * direct_damage_effects is kept as a typed complement — do not express physical damage
-   * solely via attribute_mutations.
-   */
-  attribute_mutations: z.record(z.string(), z.unknown()).optional(),
-  /**
    * Ordered operations on the value a field holds when the Event fires, applied
-   * after `attribute_mutations` (ADR-0021). Operations on one Element and path
-   * compose in order. Applied client-side (`lib/event-application.ts`).
+   * last (ADR-0021). Operations on one Element and path compose in order. A
+   * Restorative Event does nothing else. Applied client-side
+   * (`lib/event-application.ts`).
    */
   attribute_operations: z.array(AttributeOperationSchema).optional(),
 });
@@ -198,8 +196,11 @@ export const ModelConfigurationSchema = z.object({
    */
   flow_ratio_thresholds: z.array(z.number()).optional(),
   categories: z.array(CategoryDefinitionSchema),
-  /** Hazard and Disservice definitions. Both types are Events. */
-  events: z.array(EventDefinitionSchema).default([]),
+  /** Every Event definition. One saved before 2026-10-08 has its `attribute_mutations` migrated. */
+  events: z.preprocess(
+    (events) => (Array.isArray(events) ? events.map(migrateEventMutations) : events),
+    z.array(EventDefinitionSchema).default([]),
+  ),
   /**
    * Per-graph-type heuristic pipeline overrides.
    * Absent entries use the engine's built-in defaults for that graph type.

@@ -192,7 +192,7 @@ export function explainPhaseEvent(label: string, added: boolean, jumpHours?: num
     title: added ? "Event added to a Phase" : "Event removed from a Phase",
     lines: [
       added
-        ? `"${label}" fires in this Phase every period of the Step: vulnerabilities, then attribute_mutations, then Attribute Operations.`
+        ? `"${label}" fires in this Phase every period of the Step: vulnerabilities, then Attribute Operations.`
         : `"${label}" no longer fires here.`,
       "Every change over time is a Phase Event or a profile value. Functionality an Event imposes stands in later periods until another Event changes it (repair is an Event too).",
     ],
@@ -364,7 +364,7 @@ export function explainSelectPeriod(p: PlannedPeriod, eventLabel: (id: string) =
 export const EXPLAIN_STRIP: Explanation = {
   title: "Timeline at a glance",
   lines: [
-    "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, clock = a time jump (the only way time passes).",
+    "One column per period, grouped by Step. Above each Phase's bar are its Events: red hazard, amber disservice, green restorative, clock = a time jump (the only way time passes).",
     "A filled green bar is a Phase that runs a Propagation (one Engine Evaluation); an empty bar only applies Events.",
     "An Event set to every N periods shows only in the periods it fires in. Click a period for exactly what runs in it.",
     "Below, each profile row is one operation with a cell per period. A written value stays in later periods until something changes it, so an empty cell of a set row shows the carried value in grey.",

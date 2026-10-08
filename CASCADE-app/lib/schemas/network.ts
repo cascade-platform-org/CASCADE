@@ -153,7 +153,7 @@ export const NodeSchema = z.object({
   responsibility_share: z.record(z.string(), z.number().gt(0).lte(1)).optional(),
   /** Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine. */
   rules: z.array(z.string()).optional(),
-  /** Free-form attributes; Event attribute_mutations may write here. */
+  /** Free-form attributes; an Event's Attribute Operations may write here. */
   properties: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -405,7 +405,7 @@ export const AnyUpdateEntrySchema = z.object({
   propagation_meta: PropagationMetaSchema.optional(),
   /**
    * Populated only on event_applied entries.
-   * Keys: "<elementId>.<fieldName>" (dot-notation, same as attribute_mutations).
+   * Keys: "<elementId>.<fieldName>" (dot-notation, split on the last dot).
    * Values: pre-event field values captured before the event was applied.
    * Used by clearEvent() to revert only the mutated fields, preserving changes
    * made to other fields after the event was applied.

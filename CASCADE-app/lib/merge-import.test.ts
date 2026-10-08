@@ -11,7 +11,7 @@ const source = {
 const config = (events: ModelConfiguration["events"]) => ({ events }) as unknown as ModelConfiguration;
 
 describe("remapConfigEventIds", () => {
-  it("remaps mutation keys, an operation's element and a filter's exclude, each in its own namespace", () => {
+  it("remaps an operation's element and a filter's exclude, each in its own namespace", () => {
     const out = remapConfigEventIds(
       config([
         {
@@ -19,7 +19,6 @@ describe("remapConfigEventIds", () => {
           label: "e",
           type: "disservice",
           frequency_per_10y: 0,
-          attribute_mutations: { "J.1.functionality": 1 },
           attribute_operations: [
             { element: "J.1", path: ["supply_capacity", "water"], op: "mul", value: 0.5 },
             { where: { kind: "edge", exclude: ["R1"] }, path: ["capacity"], op: "mul", value: 2 },
@@ -32,7 +31,6 @@ describe("remapConfigEventIds", () => {
       { R1: "R1-e" },
     );
     const ev = out.events[0];
-    expect(Object.keys(ev.attribute_mutations ?? {})).toEqual(["J.1-2.functionality"]);
     expect(ev.attribute_operations?.[0].element).toBe("J.1-2");
     expect(ev.attribute_operations?.[1].where?.exclude).toEqual(["R1-e"]);
     expect(ev.attribute_operations?.[2].where?.exclude).toEqual(["R1-n"]);

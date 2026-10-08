@@ -35,7 +35,7 @@ A field-level, invertible description of what changed between two Scenarios — 
 _Avoid_: "patch", "delta", "changeset"; and Mutation Reversal (one Event's inverse) or Scenario Baseline (one scenario's) — a Graph Diff is one Update's, and carries both directions
 
 **Event**:
-Any applied perturbation affecting Elements — parent concept of Hazard and Disservice. The affected set is implicit: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_mutations` (unrestricted field overwrites, `"<elementId>.<field>"` keys). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard's uncovered-Event list. The typed repair signal and the free-form mutations are complementary, not redundant.
+Any applied change to Elements — parent concept of Hazard, Disservice, Restorative Event and Temporal Jump. A Hazard or Disservice affects an implicit set: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_operations` (**Attribute Operations**, applied last). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard's uncovered-Event list. The typed repair signal and the operations are complementary.
 _Avoid_: Incident, perturbation (in domain conversation)
 
 **Hazard**:
@@ -45,6 +45,10 @@ _Avoid_: Accident, failure (when physical damage is meant)
 **Disservice**:
 An Event degrading Functionality without physical damage; resolves when its upstream cause resolves.
 _Avoid_: Outage, disruption (when the no-damage meaning is intended)
+
+**Restorative Event**:
+An Event that only applies its **Attribute Operations**, with no vulnerability levels: how a repair, a restored supply or a recovery policy is written (`type: "restorative"`, shown in green). It is never an Element's cause: an Element it brings to the top Functionality level loses its Responsibility Share, and one it raises part of the way keeps the cause it had. ADR-0021.
+_Avoid_: "repair event" (a repair is one use), "positive Disservice"
 
 **Mutation Reversal**:
 The inverse of one Event application: every field it overwrote, keyed `"<elementId>.<field>"`, holding that field's value from before. A field that did not exist beforehand is recorded as the `ABSENT` sentinel and is **deleted** on reversal, never written back as `null` — an optional field set to `null` fails the Zod/Pydantic schemas and desyncs the Scorecard dedup hash from the true prior state. **No longer written**: a **Graph Diff** records the same thing in the same shape for every kind of Update, and the **Scenario Baseline** reads it. It is still read off `mutation_reversal` on entries older builds wrote, where it lets **Clear Event** revert the Event's own fields precisely instead of rewinding the whole graph. Produced and consumed only by the Event-application module (`lib/event-application.ts`).
@@ -119,8 +123,8 @@ The canvas recoloured by the Level Scale while a run is shown (the **Run View**)
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
 **Attribute Operation**:
-An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. Runs after `attribute_mutations`; a result outside the field's range, or arithmetic on an absent value, is refused for that Element and reported, never clamped. ADR-0021. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
-_Avoid_: "mutation" (that is the literal-overwrite `attribute_mutations`), "formula", "expression"
+An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. Runs last in Event application; a result outside the field's range, or arithmetic on an absent value, is refused for that Element and reported, never clamped. ADR-0021. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
+_Avoid_: "mutation" (`attribute_mutations`, the literal overwrite it absorbed on 2026-10-08), "formula", "expression"
 
 **Element Filter**:
 A selection of Elements by what they are — kind (node or edge), Canvas, Node Type, Category, a label substring — every given condition holding, minus the matches unticked by hand (`exclude`). Resolved when used, against the model at that moment, in Element-id order. The target of an **Attribute Operation** (`where`) and of a Temporal Simulation Metric. ADR-0021.

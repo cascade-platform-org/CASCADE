@@ -112,7 +112,7 @@ The committed Functionality is the binding (worst) category candidate, possibly 
 
 ### When no upstream is responsible
 
-If a node's Functionality was set directly by an Event (via `attribute_mutations` or `vulnerability_levels`), the responsibility dictionary contains the EventId as the single key with value `1.0`.
+If a node's Functionality was set directly by an Event (via an Attribute Operation or `vulnerability_levels`; a Restorative Event is never a cause, ADR-0021), the responsibility dictionary contains the EventId as the single key with value `1.0`.
 
 If set by a Specific Rule, the responsibility dictionary contains all Elements referenced in the rule's condition, split evenly.
 

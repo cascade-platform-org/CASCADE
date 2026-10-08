@@ -562,11 +562,10 @@ class AnyUpdateEntry(BaseModel):
         default=None,
         description=(
             "Populated only on event_applied entries. "
-            "Keys are '<elementId>.<fieldName>' (same dot-notation as "
-            "EventDefinition.attribute_mutations). Values are pre-event field values "
+            "Keys are '<elementId>.<fieldName>'. Values are pre-event field values "
             "captured immediately before the event was applied. "
-            "Covers all three effect channels: vulnerability_levels drops "
-            "(→ functionality), direct_damage_effects, and attribute_mutations. "
+            "Covers every effect channel: vulnerability_levels drops "
+            "(→ functionality), direct_damage_effects and attribute_operations. "
             "Used by clear-event to revert only the mutated fields, preserving "
             "changes made to other fields after the event was applied."
         ),

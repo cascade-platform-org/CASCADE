@@ -68,6 +68,7 @@ from core.importers.inp.sim import (
     pump_fed_tanks,
 )
 from schemas.config import (
+    AttributeOperation,
     CategoryDefinition,
     ConfigMeta,
     EventDefinition,
@@ -890,7 +891,7 @@ def build_bundle(
     # Every tank's reserve countdown lives in ONE shared event, like the
     # blackout Hazard below — a real "the whole system loses its upstream
     # feed" scenario hits every tank's reserve together, not one at a time.
-    tank_reserve_mutations: dict[str, Any] = {}
+    tank_reserve_operations: list[AttributeOperation] = []
 
     def _base_props(nid: str) -> dict[str, Any]:
         props: dict[str, Any] = {"inp_id": nid}
@@ -919,7 +920,9 @@ def build_bundle(
             profile["water"] = CategoryDependencyProfile(
                 dependency_level=n, backup=True, backup_duration=hours
             )
-            tank_reserve_mutations[f"{tid}.functionality_time"] = hours
+            tank_reserve_operations.append(
+                AttributeOperation(element=tid, path=["functionality_time"], op="set", value=hours)
+            )
         nodes[tid] = Node(
             id=tid, label=tid, functionality=n, node_type="Source",
             node_categories=["water"],
@@ -931,13 +934,13 @@ def build_bundle(
                         "elevation_m": round(tank.elevation, 2)},
         )
 
-    if tank_reserve_mutations:
+    if tank_reserve_operations:
         events.append(EventDefinition(
             id=TANK_RESERVE_EVENT_ID,
             label="All Tanks — Running on Reserve",
             type="disservice",
             icon="BatteryWarning",
-            attribute_mutations=tank_reserve_mutations,
+            attribute_operations=tank_reserve_operations,
         ))
 
     for jid in junction_names:
@@ -997,8 +1000,7 @@ def build_bundle(
             # No per-.inp data distinguishes pump repair times, so one blanket
             # estimate applies to every pump this hazard hits (idiomatic Hazard
             # mechanism: vulnerability_levels on each pump node + this event's
-            # default_repair_time — NOT attribute_mutations, which the schema
-            # itself says not to use alone for physical damage).
+            # default_repair_time, which puts each pump on the repair list).
             default_repair_time=BLACKOUT_REPAIR_HOURS,
         ))
 
@@ -1009,21 +1011,18 @@ def build_bundle(
     )
     if demand_ranked:
         top_n = max(1, round(len(demand_ranked) * 0.10))
-        surge_mutations: dict[str, Any] = {}
-        for jid in demand_ranked[:top_n]:
-            surged_profile: dict[str, Any] = {
-                "dependency_level": n,
-                "demand": _flow_units(demands[jid] * 2.0),
-            }
-            if jid in priorities:
-                surged_profile["priority"] = priorities[jid]
-            surge_mutations[f"{jid}.category_dependency_profiles"] = {"water": surged_profile}
         events.append(EventDefinition(
             id="evt-demand-surge-top10",
             label="Demand Surge — Top 10% Consumers",
             type="disservice",
             icon="TrendingUp",
-            attribute_mutations=surge_mutations,
+            attribute_operations=[
+                AttributeOperation(
+                    element=jid, path=["category_dependency_profiles", "water", "demand"],
+                    op="set", value=_flow_units(demands[jid] * 2.0),
+                )
+                for jid in demand_ranked[:top_n]
+            ],
         ))
 
     # --- edges ------------------------------------------------------------

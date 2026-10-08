@@ -15,7 +15,8 @@
  */
 
 import React, { useState } from "react";
-import { BookMarked, X, Zap, Waves, Clock, Check, Circle, Minus } from "lucide-react";
+import { BookMarked, X, Zap, Waves, Wrench, Clock, Check, Circle, Minus } from "lucide-react";
+import type { EventDefinition } from "@/lib/schemas/config";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { useHistoryStore } from "@/store/history-store";
 import { useConfigStore } from "@/store/config-store";
@@ -23,7 +24,7 @@ import { useUiStore } from "@/store/ui-store";
 import { deriveSituation } from "@/lib/situation";
 import { cn } from "@/lib/utils";
 
-type EventType = "hazard" | "disservice" | "temporal_jump" | undefined;
+type EventType = EventDefinition["type"] | undefined;
 
 /** Icon associated with the Event: its configured icon if any, else a type default. */
 function SituationIcon({ icon, type, size }: { icon?: string; type: EventType; size: number }) {
@@ -33,12 +34,14 @@ function SituationIcon({ icon, type, size }: { icon?: string; type: EventType; s
   }
   if (type === "hazard") return <Zap size={size} />;
   if (type === "disservice") return <Waves size={size} />;
+  if (type === "restorative") return <Wrench size={size} />;
   return <Clock size={size} />;
 }
 
 function iconTint(type: EventType): string {
   if (type === "hazard") return "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400";
   if (type === "disservice") return "bg-orange-50 text-orange-500 dark:bg-orange-900/20 dark:text-orange-400";
+  if (type === "restorative") return "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400";
   return "bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400";
 }
 

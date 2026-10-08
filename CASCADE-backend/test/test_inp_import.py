@@ -509,8 +509,7 @@ def test_tank_reserve_disservice_event(bundle_and_warnings):
     (functionality_time = backup_duration per tank) — a repeatable way to set
     up "the whole system lost its upstream feed" without reconstructing a
     whole upstream-failure chain, and without needing any engine change
-    (attribute_mutations already supports overwriting any field,
-    schemas/config.py)."""
+    (an Attribute Operation `set` on functionality_time, ADR-0021)."""
     from core.importers.inp import TANK_RESERVE_EVENT_ID
 
     bundle, _ = bundle_and_warnings
@@ -520,12 +519,14 @@ def test_tank_reserve_disservice_event(bundle_and_warnings):
     assert TANK_RESERVE_EVENT_ID in events
     event = events[TANK_RESERVE_EVENT_ID]
     assert event.type == "disservice"  # no physical damage — the tanks are intact
-    assert event.attribute_mutations == {"T1.functionality_time": profile.backup_duration}
+    assert [op.model_dump(exclude_none=True) for op in event.attribute_operations or []] == [
+        {"element": "T1", "path": ["functionality_time"], "op": "set", "value": profile.backup_duration}
+    ]
 
 
 def test_no_reserve_event_without_a_backup_profile():
     """A tank whose downstream has zero demand gets no backup profile (see
-    build_bundle) — with no tank contributing a mutation, no reserve event is
+    build_bundle) — with no tank contributing an operation, no reserve event is
     created at all (nothing to start a countdown from)."""
     from core.importers.inp import TANK_RESERVE_EVENT_ID
 
@@ -543,9 +544,7 @@ def test_blackout_hazard_targets_every_pump(bundle_and_warnings):
     full vulnerability on EVERY pump node in the imported network, so
     applying it fails them all at once (a real blackout, not a per-pump
     nuisance button). Uses the idiomatic vulnerability_levels +
-    default_repair_time mechanism, not attribute_mutations — the schema
-    itself says physical damage should not be expressed solely via
-    attribute_mutations."""
+    default_repair_time mechanism, which puts each pump on the repair list."""
     from core.importers.inp import BLACKOUT_EVENT_ID, DEFAULT_N_LEVELS
 
     bundle, _ = bundle_and_warnings
@@ -554,7 +553,7 @@ def test_blackout_hazard_targets_every_pump(bundle_and_warnings):
     event = events[BLACKOUT_EVENT_ID]
     assert event.type == "hazard"
     assert event.default_repair_time is not None and event.default_repair_time > 0
-    assert event.attribute_mutations == {}  # damage carried by vulnerability_levels instead
+    assert not event.attribute_operations  # damage carried by vulnerability_levels instead
 
     pump = bundle.project.nodes["pump_P1"]
     level = pump.vulnerability_levels[BLACKOUT_EVENT_ID]
@@ -597,12 +596,12 @@ def test_demand_surge_doubles_top_10_percent(bundle_and_warnings):
     assert event.type == "disservice"
 
     # SYNTHETIC_INP has 2 demand-bearing junctions (J2, J3); top 10% rounds
-    # up to 1 — only the highest-demand one (J2) should be mutated.
-    assert set(k.split(".")[0] for k in event.attribute_mutations) == {"J2"}
+    # up to 1 — only the highest-demand one (J2) should be written.
+    [op] = event.attribute_operations or []
+    assert (op.element, op.path, op.op) == ("J2", ["category_dependency_profiles", "water", "demand"], "set")
 
     original = bundle.project.nodes["J2"].category_dependency_profiles["water"].demand
-    surged = event.attribute_mutations["J2.category_dependency_profiles"]["water"]["demand"]
-    assert surged == pytest.approx(2 * original)
+    assert op.value == pytest.approx(2 * original)
 
 
 def test_pump_capacity_from_curve(bundle_and_warnings):

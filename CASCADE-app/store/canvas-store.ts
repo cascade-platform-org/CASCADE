@@ -162,7 +162,7 @@ export interface CanvasActions {
   /**
    * Apply an EventDefinition to the graph:
    *   1. Captures pre-event values of all fields the event will touch.
-   *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_mutations.
+   *   2. Applies vulnerability_level drops, direct_damage_effects, attribute_operations.
    *   3. Pushes an event_applied history entry carrying a Graph Diff of what it changed.
    */
   /** Applies the Event; returns the Attribute Operations it refused, with reasons. */
@@ -227,7 +227,7 @@ export interface CanvasActions {
    *
    * Returns the node and edge id maps SEPARATELY (old → new) and the final
    * canvas id, so the caller can rewrite the CONFIG's event
-   * `attribute_mutations` keys (which embed element ids) to match before
+   * Attribute Operations (which name element ids) to match before
    * merging it in via configStore.mergeConfig — otherwise a remapped
    * element's scenario event would silently target the wrong (or no)
    * element. Kept as two maps rather than one merged Record: node ids and

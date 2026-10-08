@@ -13,7 +13,6 @@ import { AttributeOperationsEditor } from "./attribute-operations-editor";
 import {
   DirectDamageEditor,
   VulnerabilityLevelsEditor,
-  AttributeMutationsEditor,
 } from "./event-editors";
 
 export function TabEvents() {
@@ -76,6 +75,7 @@ export function TabEvents() {
                 >
                   <option value="hazard">Hazard</option>
                   <option value="disservice">Disservice</option>
+                  <option value="restorative">Restorative</option>
                   {/* A hand-fired jump comes from the Time control; a Timeline's jump is an Event. */}
                   {ev.temporal_simulation_only && <option value="temporal_jump">Temporal Jump</option>}
                 </select>
@@ -162,16 +162,6 @@ export function TabEvents() {
             )}
 
             <CollapsibleSection
-              label="Attribute mutations"
-              badge={Object.keys(ev.attribute_mutations ?? {}).length || undefined}
-            >
-              <AttributeMutationsEditor
-                mutations={ev.attribute_mutations ?? {}}
-                onChange={(next) => updateEvent(ev.id, { attribute_mutations: next })}
-              />
-            </CollapsibleSection>
-
-            <CollapsibleSection
               label="Attribute operations"
               badge={ev.attribute_operations?.length || undefined}
             >
@@ -190,7 +180,6 @@ export function TabEvents() {
             label: "New Event",
             type: "hazard",
             frequency_per_10y: 0,
-            attribute_mutations: {},
           })
         }
         className="mt-3 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"

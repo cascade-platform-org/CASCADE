@@ -5,7 +5,10 @@ from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-EventKind = Literal["hazard", "disservice", "temporal_jump"]
+# hazard: damage and degradation by vulnerability; disservice: degradation by
+# vulnerability; restorative: only Attribute Operations, the way a repair or a
+# recovery is written (no vulnerability levels); temporal_jump: time passes.
+EventKind = Literal["hazard", "disservice", "restorative", "temporal_jump"]
 
 
 class FunctionalityScaleLevel(BaseModel):
@@ -85,6 +88,33 @@ class AttributeOperation(BaseModel):
         return self
 
 
+def mutations_to_operations(mutations: dict[str, Any]) -> list[dict[str, Any]]:
+    """Retired `attribute_mutations` (`{"<elementId>.<field>": value}`) as `set`
+    Attribute Operations, one per scalar leaf (ADR-0021, revised 2026-10-08).
+
+    The key splits on its LAST dot, since an element id may contain dots. An
+    object value becomes one operation per nested value, so a profile rewrite
+    keeps the profile's other keys. A list or null has no operation form.
+    """
+    operations: list[dict[str, Any]] = []
+
+    def walk(element: str, path: list[str], value: Any) -> None:
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                walk(element, [*path, str(key)], inner)
+        elif isinstance(value, (bool, int, float, str)):
+            operations.append({"element": element, "path": path, "op": "set", "value": value})
+        else:
+            raise ValueError(f"attribute_mutations[{element}.{path[0]}]: a {type(value).__name__} value has no Attribute Operation form")
+
+    for key, value in mutations.items():
+        element, _, field = key.rpartition(".")
+        if not element or not field:
+            raise ValueError(f"attribute_mutations key {key!r} is not '<elementId>.<field>'")
+        walk(element, [field], value)
+    return operations
+
+
 class EventDefinition(BaseModel):
     id: str
     label: str
@@ -121,24 +151,26 @@ class EventDefinition(BaseModel):
             "Client-side only; the engine never reads it."
         ),
     )
-    attribute_mutations: dict[str, Any] = Field(
-        default_factory=dict,
-        description=(
-            'Keys are dot-notation strings "<elementId>.<fieldName>". '
-            "Values are any JSON-serialisable type. May overwrite any Element field, "
-            "including first-class fields like `functionality` and `direct_damage`. "
-            "`direct_damage_effects` is kept as a typed, engine-recognised complement — "
-            "do not express physical damage solely via attribute_mutations."
-        ),
-    )
     attribute_operations: Optional[list[AttributeOperation]] = Field(
         default=None,
         description=(
             "Ordered operations on the value a field holds when the Event fires, applied "
-            "after attribute_mutations (ADR-0021). Operations on one Element and path "
-            "compose in order. Client-side only; the engine never reads them."
+            "last (ADR-0021). Operations on one Element and path compose in order. A "
+            "Restorative Event does nothing else. Client-side only; the engine never reads them."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_attribute_mutations(cls, data: Any) -> Any:
+        """A file written before 2026-10-08 carries `attribute_mutations`; they ran
+        before the operations, so they become `set` operations ahead of them."""
+        if isinstance(data, dict) and "attribute_mutations" in data:
+            data = dict(data)
+            migrated = mutations_to_operations(data.pop("attribute_mutations") or {})
+            if migrated:
+                data["attribute_operations"] = [*migrated, *(data.get("attribute_operations") or [])]
+        return data
 
 
 # ---------------------------------------------------------------------------

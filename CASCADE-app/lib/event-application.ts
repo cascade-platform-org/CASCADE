@@ -3,7 +3,7 @@
  *
  * This is the single home for what an Event *does* to a multi-canvas: the
  * imposed Functionality from `vulnerability_levels`, the Hazard `direct_damage`
- * fan-out, free-form `attribute_mutations`, and Temporal Jump expiry. It is a
+ * fan-out, `attribute_operations`, and Temporal Jump expiry. It is a
  * pure transform over a GraphSnapshot, so the live canvas and every what-if
  * path (Save-to-Scorecard, Scorecard gap-fill, the "Run" button on an uncovered
  * Event) get the same answer from the same code.
@@ -23,8 +23,8 @@
  * wholesale clone would silently report every Element as affected.
  *
  * Monotonicity is NOT enforced here beyond what each phase specifies.
- * `vulnerability_levels` only ever worsens (§5.5), but `attribute_mutations` is
- * an unrestricted overwrite by design (CONTEXT.md → Event), and a Temporal Jump
+ * `vulnerability_levels` only ever worsens (§5.5), but an Attribute Operation
+ * may write any value by design (a Restorative Event raises), and a Temporal Jump
  * expiry writes Functionality 1 outright. The engine's monotone commit is a
  * separate guarantee that lives in the engine (ADR-0003).
  */
@@ -173,8 +173,8 @@ export function temporalJumpEvent(hours: number): EventDefinition {
   };
 }
 
-/** A Temporal Jump degrades nothing by vulnerability, so it gets no vulnerability slider. */
-export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type !== "temporal_jump";
+/** Hazards and Disservices degrade by vulnerability; a Restorative Event or a Temporal Jump has no vulnerability slider. */
+export const isVulnerabilityEvent = (e: EventDefinition): boolean => e.type === "hazard" || e.type === "disservice";
 
 /** Events a user fires by hand. Temporal-Simulation-only Events live in Timelines (ADR-0019). */
 export const isScenarioEvent = (e: EventDefinition): boolean => !e.temporal_simulation_only;
@@ -188,21 +188,22 @@ export const temporalJumpHours = (e: EventDefinition): number | undefined =>
  *
  * `n` is the top of the Functionality scale (N). Phases run in a fixed order and
  * every phase reads the ORIGINAL Element state, never a previous phase's output,
- * so a later phase overwriting an earlier one is a deliberate last-writer-wins
- * (`attribute_mutations` is the escape hatch that can overwrite anything):
+ * so a later phase overwriting an earlier one is a deliberate last-writer-wins:
  *
  *   0. Temporal Jump — advance `functionality_time`, expire to Functionality 1
  *   1. `vulnerability_levels` — impose `N − level`, only where it worsens
+ *      (Hazards and Disservices; a Restorative Event has no vulnerability)
  *   2. `direct_damage` — Hazards only, on every Element the Event affects
- *   3. `attribute_mutations` — unrestricted field overwrites
- *   4. `attribute_operations` — `op(current, value)` at a path (ADR-0021). The one
+ *   3. `attribute_operations` — `op(current, value)` at a path (ADR-0021). The one
  *      deliberate exception to "read the original": an operation is relative, so
  *      it reads what the passes before it wrote, and operations on one Element
  *      and path compose in list order. A filter resolves against that state too.
  *
  * The Event becomes the Responsibility Share of every Element whose Functionality
  * it changed (`{ [event.id]: 1.0 }`), so the UI reports the Event as the cause
- * rather than a stale Propagation from a previous run.
+ * rather than a stale Propagation from a previous run. A Restorative Event is
+ * never a cause: an Element it brings to the top level loses its share, and one
+ * it raises part of the way keeps the cause it had.
  */
 export function applyEventToSnapshot(
   snapshot: GraphSnapshot,
@@ -264,7 +265,7 @@ export function applyEventToSnapshot(
   // ── 1. vulnerability_levels ───────────────────────────────────────────────
   // A missing or zero entry means immune. The imposed level applies only if it
   // WORSENS the current Functionality (requirements §5.5).
-  for (const { id, el } of writer.all()) {
+  for (const { id, el } of isVulnerabilityEvent(event) ? writer.all() : []) {
     const level = el.vulnerability_levels?.[event.id] ?? 0;
     if (level === 0) continue;
     const imposed = Math.max(1, n - level);
@@ -293,29 +294,10 @@ export function applyEventToSnapshot(
     }
   }
 
-  // ── 3. attribute_mutations ────────────────────────────────────────────────
-  // Unrestricted overwrites, so this runs last and wins. A mutation that writes
-  // Functionality re-attributes the cause to the Event, matching phase 1.
-  for (const [key, newVal] of Object.entries(event.attribute_mutations ?? {})) {
-    const parsed = splitFieldKey(key);
-    if (!parsed) continue;
-    const { elementId, field } = parsed;
-    const el = writer.original(elementId);
-    if (!el) continue;
-    const existing = (el as Record<string, unknown>)[field];
-    capture(elementId, field, existing === undefined ? ABSENT : existing);
-    if (field === "functionality") {
-      capture(elementId, "responsibility_share", el.responsibility_share ?? ABSENT);
-      writer.write(elementId, { [field]: newVal, responsibility_share: eventCause });
-    } else {
-      writer.write(elementId, { [field]: newVal });
-    }
-  }
-
-  // ── 4. attribute_operations (ADR-0021) ────────────────────────────────────
+  // ── 3. attribute_operations (ADR-0021) ────────────────────────────────────
   // Last, so they win; a refused operation leaves that Element as it was and is
   // reported, never clamped. Writing Functionality re-attributes the cause to the
-  // Event, as phases 1 and 3 do.
+  // Event, as phase 1 does; a Restorative Event clears it at the top level instead.
   const warnings: string[] = [];
   const operations = event.attribute_operations ?? [];
   if (operations.length > 0) {
@@ -333,7 +315,11 @@ export function applyEventToSnapshot(
         const field = op.path[0];
         const before = (writer.original(id) as Record<string, unknown> | undefined)?.[field];
         capture(id, field, before === undefined ? ABSENT : before);
-        if (field === "functionality") {
+        if (field === "functionality" && event.type === "restorative") {
+          capture(id, "responsibility_share", writer.original(id)?.responsibility_share ?? ABSENT);
+          writer.write(id, { [field]: out.element[field] });
+          if ((out.element[field] as number) >= n) writer.unset(id, "responsibility_share");
+        } else if (field === "functionality") {
           capture(id, "responsibility_share", writer.original(id)?.responsibility_share ?? ABSENT);
           writer.write(id, { [field]: out.element[field], responsibility_share: eventCause });
         } else {

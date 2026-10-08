@@ -91,7 +91,7 @@ The stores are the single source of truth. Components subscribe to slices they n
 
 `lib/event-application.ts` is the single home for what an Event *does* to a
 Scenario: the imposed Functionality from `vulnerability_levels`, the Hazard
-`direct_damage` fan-out, `attribute_mutations`, and Temporal Jump expiry. It is a
+`direct_damage` fan-out, `attribute_operations`, and Temporal Jump expiry. It is a
 pure transform — `(GraphSnapshot, EventDefinition, N) → { snapshot, reversal }` —
 so the live canvas and every what-if path (Save-to-Scorecard, Scorecard gap-fill,
 the Run button on an uncovered Event) get the same answer from the same code.
@@ -345,7 +345,7 @@ Entry types:
 | `update_type` | Trigger |
 |---|---|
 | `graph_update` | Add/remove/edit nodes or edges |
-| `event_applied` | Applying an Event (Hazard or Disservice). Recorded even when the Event changed nothing — the Situation is derived by finding these |
+| `event_applied` | Applying an Event. Recorded even when the Event changed nothing — the Situation is derived by finding these |
 | `event_cleared` | Clearing a previously applied Event (Ctrl+R): reverts that Event's writes **and** every Propagation write, leaving the remaining Events un-propagated. Recorded so Ctrl+Z can bring the Event and its cascade back |
 | `propagation` | Receiving a PropagationResult from the server |
 | `manual_functionality_update` | User manually editing Functionality or Functionality Time |
@@ -565,7 +565,7 @@ The database stores identity and access data (users, roles + entitlements, audit
 All Canvases are operationally interdependent — inter-canvas edges exist in the global registry regardless of scope. Scope controls what the client **sends**, not how the engine filters.
 
 1. User builds/edits networks and config locally in the browser.
-2. User applies an Event (Hazard or Disservice) client-side: functionality drops, `direct_damage`, `attribute_mutations` are applied to the registry; an `event_applied` entry is pushed to `update_history`.
+2. User applies an Event client-side: functionality drops, `direct_damage`, Attribute Operations are applied to the registry; an `event_applied` entry is pushed to `update_history`.
 3. User clicks **Propagate**.
 4. The frontend builds a trimmed `PropagationRequest` payload:
    - **Local scope**: includes only the active Canvas's `node_ids` and the edges whose both endpoints are within that Canvas. Inter-canvas edges are physically absent from the payload.

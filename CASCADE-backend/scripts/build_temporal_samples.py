@@ -45,7 +45,7 @@ def build_net1() -> None:
     config["events"].append({
         "id": "evt-pump-restored",
         "label": "Pumps restored",
-        "type": "disservice",
+        "type": "restorative",
         "icon": "Wrench",
         "frequency_per_10y": 0,
         "temporal_simulation_only": True,
@@ -89,7 +89,7 @@ def build_ijdrr() -> None:
     config["events"] = [e for e in config["events"] if e["id"] != "evt-repair-source"] + [{
         "id": "evt-repair-source",
         "label": "Repair the Electric Source",
-        "type": "disservice",
+        "type": "restorative",
         "icon": "Wrench",
         "frequency_per_10y": 0,
         "temporal_simulation_only": True,

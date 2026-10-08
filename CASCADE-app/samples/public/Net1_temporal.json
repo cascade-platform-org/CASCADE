@@ -1812,8 +1812,7 @@
         "icon": "ZapOff",
         "frequency_per_10y": 0.0,
         "default_repair_time": 6,
-        "temporal_simulation_only": false,
-        "attribute_mutations": {}
+        "temporal_simulation_only": false
       },
       {
         "id": "evt-demand-surge-top10",
@@ -1822,19 +1821,33 @@
         "icon": "TrendingUp",
         "frequency_per_10y": 0.0,
         "temporal_simulation_only": false,
-        "attribute_mutations": {
-          "22.category_dependency_profiles": {
-            "water": {
-              "dependency_level": 3,
-              "demand": 40377.725696
-            }
+        "attribute_operations": [
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "dependency_level"
+            ],
+            "op": "set",
+            "value": 3
+          },
+          {
+            "element": "22",
+            "path": [
+              "category_dependency_profiles",
+              "water",
+              "demand"
+            ],
+            "op": "set",
+            "value": 40377.725696
           }
-        }
+        ]
       },
       {
         "id": "evt-pump-restored",
         "label": "Pumps restored",
-        "type": "disservice",
+        "type": "restorative",
         "icon": "Wrench",
         "frequency_per_10y": 0,
         "temporal_simulation_only": true,

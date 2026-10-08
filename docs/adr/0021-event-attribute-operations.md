@@ -1,6 +1,6 @@
 # ADR-0021 — Events carry Attribute Operations on the current value
 
-**Status:** accepted (2026-10-06). Built for hand-fired Events: `lib/attribute-operations.ts`, the last pass of `lib/event-application.ts`, the Config → Events editor; Config's Save refuses an invalid operation, since the configuration travels with every Propagation request. Inside a Temporal Simulation run, writes land in the run record only. Reasoning:
+**Status:** accepted (2026-10-06); revised 2026-10-08: operations absorb `attribute_mutations`, and the Restorative Event (see *Revision*). Built for hand-fired Events: `lib/attribute-operations.ts`, the last pass of `lib/event-application.ts`, the Config → Events editor; Config's Save refuses an invalid operation, since the configuration travels with every Propagation request. Inside a Temporal Simulation run, writes land in the run record only. Reasoning:
 `docs/project/temporal-simulation-design.md` §2.3.
 
 ## Context
@@ -56,8 +56,8 @@ concepts, and keeping the unticked set (instead of the ticked one) keeps the fil
 - **Operations on the same `(element, path)` compose in list order**, each reading the
   previous result. This is a deliberate exception to `applyEventToSnapshot`'s rule that every
   application pass reads the original Element: an operation is relative by definition.
-- **Order inside Event application:** operations run after `attribute_mutations`, as a new
-  last pass, so they win. (`lib/event-application.ts` calls these passes "phases" in its
+- **Order inside Event application:** operations run as the last pass (after
+  `attribute_mutations` until the 2026-10-08 revision), so they win. (`lib/event-application.ts` calls these passes "phases" in its
   comments; this ADR says *pass* because **Phase** is a Timeline term, ADR-0019.) An
   operation that targets `functionality` re-attributes the cause to the Event, as a mutation
   does, and updates the step operator's imposed layer (ADR-0019 §2a).
@@ -65,9 +65,8 @@ concepts, and keeping the unticked set (instead of the ticked one) keeps the fil
   range; a non-`set` operation on an absent field; a non-number `value` for an arithmetic
   operation; a path that runs into a number (`["supply_capacity", "hours", "level"]` on a
   bare-float supply).
-- **A Stock is written field by field.** An `attribute_mutations` entry that would replace a
-  whole `supply_capacity` or `capacity` holding a Stock is rejected with a warning, so an
-  Attribute Operation is the only way an Event writes a Stock.
+- **A Stock is written field by field**, so an Attribute Operation is the only way an
+  Event writes a Stock.
 - The written change is a **Graph Diff** entry addressed by its full path (ADR-0020 §4).
   Fired by hand, it is tagged `event:<id>` for the Scenario Baseline; inside a run it lands
   in the run record only, never in the model or its history (ADR-0019 §3). No Mutation
@@ -78,8 +77,8 @@ concepts, and keeping the unticked set (instead of the ticked one) keeps the fil
   (ADR-0019 §2a). An earlier draft gave Events a `restore_functionality` flag; it was dropped
   because forcing the Scenario Fields operational also wiped damage, repair times and backup
   countdowns.
-- `attribute_mutations` stays as the literal-overwrite form, equivalent to `set` at a
-  one-element path. Nothing existing changes.
+- `attribute_mutations` stayed as the literal-overwrite form until the 2026-10-08
+  revision retired it (below).
 
 Examples, in the stock's stored sign (ADR-0020): liquidate half — `mul 0.5` on `level`;
 settle the excess above X — `at_least −X` on `level`; settle everything owed — `at_least 0`
@@ -113,3 +112,23 @@ again next period, which is exactly what a recurring policy needs.
 - What an operation changed is read with a `read: change` Metric over its Phase
   (ADR-0019 §4); no separate result is stored.
 - **Open (design doc §7):** conditionals, which operations do not express.
+
+## Revision (2026-10-08)
+
+**Operations absorb `attribute_mutations`.** A mutation is `set` at a one-field path, so the
+field is removed. A file written earlier loads unchanged in meaning: each
+`"<elementId>.<field>": value` becomes a `set` operation (the key split on its last dot),
+an object value becomes one `set` per nested value, and these run ahead of the Event's own
+operations, the order mutations had (`mutations_to_operations` in `schemas/config.py`, the
+Zod `events` preprocess). Every value in the 32 tracked files that used mutations was a
+scalar or an object of scalars, so nothing was lost; a list or null has no operation form
+and is refused. An object value now merges into the field instead of replacing it, which
+keeps a dependency profile's other keys. Event application loses its mutation pass.
+
+**Restorative Event** (`type: "restorative"`, green): an Event with no vulnerability levels
+that only applies its operations. It is how a repair, a restored supply or a recovery policy
+is written, inside a Timeline or by hand. It is never an Element's cause: an Element it
+brings to the top Functionality level loses its Responsibility Share (nothing explains a
+working Element), and one it raises part of the way keeps the cause it had. Before, a
+repair was a Disservice whose operations raised Functionality, which recorded the repair as
+the cause of what remained degraded.

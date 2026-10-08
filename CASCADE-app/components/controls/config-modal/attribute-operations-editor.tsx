@@ -3,8 +3,8 @@
 /**
  * AttributeOperationsEditor — an Event's `attribute_operations` (ADR-0021):
  * ordered `op(current, value)` writes at a field path, each on one Element or
- * on every Element a filter selects. They run after `attribute_mutations`, in
- * this order, so the order is editable.
+ * on every Element a filter selects. They run last, in this order, so the
+ * order is editable.
  *
  * Each row states its problem inline. Config's Save refuses while any row is
  * invalid (`operationProblems`): the Model Configuration travels with every

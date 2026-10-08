@@ -897,7 +897,7 @@ removing it touches every control.
 
 **Slice 1.** Pydantic `ElementFilter` and `AttributeOperation` in `schemas/config.py`,
 `EventDefinition.attribute_operations`; export and Zod. `lib/event-application.ts` applies
-operations after `attribute_mutations`, in id order, rejecting an out-of-range result with a
+operations last, in id order, rejecting an out-of-range result with a
 warning. The differ and the Baseline key gain the path form. Config → Events gets an
 operations editor reusing the FilterEditor and the profile row editor.
 

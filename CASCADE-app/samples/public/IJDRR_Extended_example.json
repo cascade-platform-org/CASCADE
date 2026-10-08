@@ -1549,8 +1549,7 @@
         "id": "oQtVYPRrdEgfa_3HQvQUQ",
         "label": "Earthquake",
         "type": "hazard",
-        "frequency_per_10y": 1,
-        "attribute_mutations": {}
+        "frequency_per_10y": 1
       }
     ],
     "graph_types": [

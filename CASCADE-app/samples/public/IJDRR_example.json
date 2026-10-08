@@ -1927,13 +1927,12 @@
         "id": "oQtVYPRrdEgfa_3HQvQUQ",
         "label": "Earthquake",
         "type": "hazard",
-        "frequency_per_10y": 1,
-        "attribute_mutations": {}
+        "frequency_per_10y": 1
       },
       {
         "id": "evt-repair-source",
         "label": "Repair the Electric Source",
-        "type": "disservice",
+        "type": "restorative",
         "icon": "Wrench",
         "frequency_per_10y": 0,
         "temporal_simulation_only": true,

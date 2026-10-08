@@ -2112,7 +2112,7 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " (physical damage, needs repair) or a "
+                "text": " (physical damage, needs repair), a "
               },
               {
                 "kind": "strong",
@@ -2120,7 +2120,15 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " (no damage, clears with its cause). Set "
+                "text": " (no damage, clears with its cause) or a "
+              },
+              {
+                "kind": "strong",
+                "text": "Restorative"
+              },
+              {
+                "kind": "text",
+                "text": " Event (green: a repair or a recovery). Set "
               },
               {
                 "kind": "code",
@@ -2128,7 +2136,7 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " on the exposed elements. "
+                "text": " on the elements a Hazard or Disservice reaches; a Restorative Event has none and acts only through its operations, and an element it brings back to full Functionality loses its cause. "
               },
               {
                 "kind": "strong",

@@ -259,6 +259,7 @@
           "enum": [
             "hazard",
             "disservice",
+            "restorative",
             "temporal_jump"
           ],
           "title": "Type",
@@ -346,12 +347,6 @@
           "title": "Temporal Simulation Only",
           "type": "boolean"
         },
-        "attribute_mutations": {
-          "additionalProperties": true,
-          "description": "Keys are dot-notation strings \"<elementId>.<fieldName>\". Values are any JSON-serialisable type. May overwrite any Element field, including first-class fields like `functionality` and `direct_damage`. `direct_damage_effects` is kept as a typed, engine-recognised complement \u2014 do not express physical damage solely via attribute_mutations.",
-          "title": "Attribute Mutations",
-          "type": "object"
-        },
         "attribute_operations": {
           "anyOf": [
             {
@@ -365,7 +360,7 @@
             }
           ],
           "default": null,
-          "description": "Ordered operations on the value a field holds when the Event fires, applied after attribute_mutations (ADR-0021). Operations on one Element and path compose in order. Client-side only; the engine never reads them.",
+          "description": "Ordered operations on the value a field holds when the Event fires, applied last (ADR-0021). Operations on one Element and path compose in order. A Restorative Event does nothing else. Client-side only; the engine never reads them.",
           "title": "Attribute Operations"
         }
       },
