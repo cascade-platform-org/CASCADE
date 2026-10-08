@@ -61,6 +61,11 @@ describe("profile rows", () => {
 });
 
 describe("standard_metrics", () => {
+  it("reads as all three in a document saved before the field existed", () => {
+    const { standard_metrics: _absent, ...older } = doc;
+    expect(docToDraft(older as TemporalSimulation, () => "id").standardMetrics).toEqual(["operativity", "coverage", "stock_level"]);
+  });
+
   it("is written only when one is hidden, and absent reads as all three", () => {
     expect(serializeDoc(doc)).not.toContain("standard_metrics");
     const hidden = serializeDoc({ ...doc, standard_metrics: ["coverage"] });

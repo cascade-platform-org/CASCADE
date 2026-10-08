@@ -94,7 +94,9 @@ export function docToDraft(doc: TemporalSimulation, newId: () => string): Simula
     timeline: doc.timeline,
     profile: profileToRows(doc.profile, newId),
     metrics: doc.metrics.map((metric) => ({ id: newId(), metric })),
-    standardMetrics: doc.standard_metrics,
+    // A document some load paths hand over unparsed (a working copy saved before
+    // the field existed) lacks it; absent means all three, as the schema says.
+    standardMetrics: doc.standard_metrics ?? [...STANDARD_METRICS],
   };
 }
 
