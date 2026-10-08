@@ -214,6 +214,10 @@ export interface ChangeGroup {
   /** What it touched (`node:p1`, `event:flood`): the preview lines it owns. */
   subjects: string[];
   skipped: { id: string; reason: string }[];
+  /** The change's position in the reply; absent on the follow-on group. */
+  index?: number;
+  /** Left out by the person (partial apply): compiled as if absent. */
+  left_out?: boolean;
 }
 
 export type Compiled = { ok: true; patch: PatchOp[]; groups: ChangeGroup[]; notes?: string } | { ok: false; errors: string[] };
@@ -253,11 +257,31 @@ const describe = (verb: Verb, field: FieldName | string[], c: ValueChange) => {
   return `${verb} ${name}${c.category ? ` (${c.category})` : ""} ${amount}`;
 };
 
+/** A change in a few words, before it is compiled: what a left-out change is listed as. */
+function headline(change: Change): string {
+  switch (change.type) {
+    case "value": {
+      const verb = VERBS.find((v) => change.c[v] !== undefined)!;
+      return describe(verb, change.c[verb]!, change.c);
+    }
+    case "add": return `add ${change.c.add} ${JSON.stringify(change.c.value[change.c.add === "category" ? "name" : "id"] ?? "")}`;
+    case "update": return `update ${change.c.update} "${change.c.id}"`;
+    case "delete": return `delete ${change.c.delete} ${change.c.id !== undefined ? `"${change.c.id}"` : "by filter"}`;
+    case "connect": return `connect ${change.c.connect.from} → ${change.c.connect.to}`;
+    case "disconnect": return `disconnect ${change.c.disconnect.from} → ${change.c.disconnect.to}`;
+  }
+}
+
+/** Columns of the grid a node added without a position is placed on, and its spacing. */
+const GRID = { columns: 6, dx: 200, dy: 140, gap: 160 };
+
 /**
  * Plain changes as the patch they amount to, applied in order on a copy so
  * each change sees the ones before it. Errors name the change and the Element.
+ * Changes whose index is in `leaveOut` are skipped where they stand (partial
+ * apply), so error indices stay the reply's.
  */
-export function compilePlain(bundle: ProjectBundle, set: PlainSet): Compiled {
+export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: ReadonlySet<number>): Compiled {
   const draft = structuredClone({ project: bundle.project, config: bundle.config }) as ProjectBundle;
   const root = draft as unknown as Rec;
   const n = draft.config.functionality_scale.length;
@@ -270,6 +294,21 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet): Compiled {
     const failed = applyPatchOps(root, ops);
     errors.push(...failed.map((e) => `${at}: ${e}`));
     patch.push(...ops);
+  };
+  // Nodes added without a position go on a grid below their Canvas's nodes.
+  const grid = new Map<number, { x: number; y: number; k: number }>();
+  const nextPosition = (ci: number) => {
+    let g = grid.get(ci);
+    if (!g) {
+      const placed = draft.project.canvases[ci].graph.node_ids.flatMap((id) => draft.project.nodes[id]?.position ?? []);
+      g = placed.length
+        ? { x: Math.min(...placed.map((p) => p.x)), y: Math.max(...placed.map((p) => p.y)) + GRID.gap, k: 0 }
+        : { x: 0, y: 0, k: 0 };
+      grid.set(ci, g);
+    }
+    const position = { x: g.x + (g.k % GRID.columns) * GRID.dx, y: g.y + Math.floor(g.k / GRID.columns) * GRID.dy };
+    g.k++;
+    return position;
   };
   const canvasIndex = (ref: string | undefined): number | string => {
     const list = draft.project.canvases;
@@ -295,7 +334,11 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet): Compiled {
   set.changes.forEach((change, i) => {
     const at = `changes[${i}]`;
     const before = errors.length;
-    const group: ChangeGroup = { title: "", why: change.c.why, subjects: [], skipped: [] };
+    const group: ChangeGroup = { title: "", why: change.c.why, subjects: [], skipped: [], index: i };
+    if (leaveOut?.has(i)) {
+      groups.push({ ...group, title: headline(change), left_out: true });
+      return;
+    }
 
     if (change.type === "value") {
       const c = change.c;
@@ -304,8 +347,11 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet): Compiled {
       const op = OP_OF[verb];
       const value = (verb === "scale" || verb === "increase" ? c.by : c.to)!;
       const model = { nodes: draft.project.nodes, edges: draft.project.edges, canvases: canvasesById(draft.project.canvases) };
-      const targets = operationTargets(c.id !== undefined ? { element: c.id, path: ["x"], op: "set", value: 0 } : { where: c.where, path: ["x"], op: "set", value: 0 }, model);
-      if (targets.length === 0) errors.push(`${at}: ${c.id !== undefined ? `no Element "${c.id}"` : "the filter matches no Element"}`);
+      // A vulnerability to an Event that does not exist would never apply: a typo, or an Event not added yet.
+      const unknownEvent = field === "vulnerability" && !draft.config.events.some((e) => e.id === c.event);
+      const targets = unknownEvent ? [] : operationTargets(c.id !== undefined ? { element: c.id, path: ["x"], op: "set", value: 0 } : { where: c.where, path: ["x"], op: "set", value: 0 }, model);
+      if (unknownEvent) errors.push(`${at}: no Event "${c.event}" (add it in an earlier change, or use one of: ${draft.config.events.map((e) => e.id).join(", ") || "none yet"})`);
+      else if (targets.length === 0) errors.push(`${at}: ${c.id !== undefined ? `no Element "${c.id}"` : "the filter matches no Element"}`);
       let changed = 0;
       for (const id of targets) {
         const kind = id in draft.project.nodes ? "node" : "edge";
@@ -340,12 +386,15 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet): Compiled {
         const registry = kind === "node" ? draft.project.nodes : draft.project.edges;
         if (id in registry) errors.push(`${at}: ${kind} "${id}" already exists; use "update"`);
         else {
-          const record = { functionality: n, ...value };
+          const record: Rec = { functionality: n, ...value };
           let where: number[] = [];
           if (kind === "node") {
             const ci = canvasIndex(change.c.canvas);
             if (typeof ci === "string") errors.push(`${at}: ${ci}`);
-            else where = [ci];
+            else {
+              where = [ci];
+              if (record.position === undefined) record.position = nextPosition(ci);
+            }
           } else {
             const { source, target } = record as { source?: string; target?: string };
             const both = draft.project.canvases.flatMap((c, k) => (c.graph.node_ids.includes(source ?? "") && c.graph.node_ids.includes(target ?? "") ? [k] : []));
@@ -514,7 +563,8 @@ Change a value on Elements — a verb naming a field, then "to" or "by", then "i
 
 Add, update, delete things by id (never by position):
   { "add": "node"|"edge"|"event"|"category"|"canvas"|"simulation", "value": { …the whole thing… } }
-      a node also takes "canvas": "<id or label>" (needed when there are several); functionality defaults to N
+      a node also takes "canvas": "<id or label>" (needed when there are several); functionality defaults to N;
+      without "position" it is placed on a grid below its Canvas's nodes
   { "update": KIND, "id": "<id>", "value": { …only the fields to change… } }   null removes a field
   { "delete": KIND, "id": "<id>" }   or for nodes/edges { "delete": "node", "where": { … } }
       deleting a node takes its edges and its Canvas places along, an edge its Canvas places, an Event its
@@ -544,6 +594,7 @@ function summarize(values: unknown[]): string {
  */
 export function fieldCensus(bundle: ProjectBundle): string {
   const { project, config } = bundle;
+  if (Object.keys(project.nodes).length === 0) return "## Field census\nThe model has no Elements yet: everything you add is new.";
   const byType = new Map<string, Rec[]>();
   for (const nd of Object.values(project.nodes)) {
     const t = nd.node_type ?? "(no type)";
@@ -627,7 +678,8 @@ export function repairContext(bundle: ProjectBundle, text: string, errors: reado
 // ---------------------------------------------------------------------------
 
 /** What the LLM is given for Bulk operations: plain changes, the field census, the model. */
-export const bulkContext = (bundle: ProjectBundle): string => modelTextContext(bundle, undefined, { reference: PLAIN_REFERENCE, extra: fieldCensus(bundle) });
+export const bulkContext = (bundle: ProjectBundle, focus?: string): string =>
+  modelTextContext(bundle, undefined, { reference: PLAIN_REFERENCE, extra: [fieldCensus(bundle), ...(focus ? [focus] : [])].join("\n\n") });
 
 export type BulkResult = { checked: CheckedChange; groups?: PreviewGroup[]; notes?: string };
 
@@ -635,7 +687,7 @@ export type BulkResult = { checked: CheckedChange; groups?: PreviewGroup[]; note
  * The Bulk operations text checked against `bundle`: plain changes (v2),
  * grouped by change, or a change set written in the original form (v1).
  */
-export function checkBulkText(bundle: ProjectBundle, text: string): BulkResult {
+export function checkBulkText(bundle: ProjectBundle, text: string, leaveOut?: ReadonlySet<number>): BulkResult {
   const json = parseJsonText(text);
   if (!json.ok) return { checked: json };
   const format = typeof json.value === "object" && json.value !== null ? (json.value as Rec).format : undefined;
@@ -645,7 +697,7 @@ export function checkBulkText(bundle: ProjectBundle, text: string): BulkResult {
   }
   const parsed = parsePlainValue(json.value);
   if (!parsed.ok) return { checked: parsed };
-  const compiled = compilePlain(bundle, parsed.set);
+  const compiled = compilePlain(bundle, parsed.set, leaveOut);
   if (!compiled.ok) return { checked: compiled };
   const checked = checkChange(bundle, asChangeSet(compiled.patch));
   return { checked, groups: checked.ok ? groupPreview(checked.preview, compiled.groups) : undefined, notes: compiled.notes };

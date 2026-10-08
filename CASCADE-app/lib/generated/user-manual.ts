@@ -2743,7 +2743,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " hands them back to it to fix. Nothing changes until you press "
+                  "text": " hands them back to it to fix. In Bulk operations each change has a tick: untick the ones you don't want. Nothing changes until you press "
                 },
                 {
                   "kind": "strong",
@@ -2760,6 +2760,148 @@ export const USER_MANUAL: ManualDoc = {
                 {
                   "kind": "text",
                   "text": " puts it back."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Recipes"
+                },
+                {
+                  "kind": "text",
+                  "text": " do a whole job for you, even if you don't know CASCADE yet. Pick one, type or paste what it asks for, "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Copy for the LLM"
+                },
+                {
+                  "kind": "text",
+                  "text": ", and paste its reply into Bulk operations:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Model from a description"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": describe your organisation in your own words. The LLM asks what it needs, then builds the model."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Import an organisation's data"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": paste an asset list, a table or a document."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Red-team Events"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": an LLM with no stake in your organisation proposes hazards across sectors (weather, outages, cyber, supply chain, staff, combinations) and what each one strikes."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Explain the current state"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": what is degraded and why, in plain words. Its answer stays in your LLM."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "The first time you copy for an LLM, the app reminds you that your model's names leave your computer when you paste them. Use a chat that keeps no history, or an LLM running on your machine. Tick "
+                },
+                {
+                  "kind": "em",
+                  "text": "Don't tell me again"
+                },
+                {
+                  "kind": "text",
+                  "text": " to stop the reminder."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "What LLM Design adds is marked "
+                },
+                {
+                  "kind": "strong",
+                  "text": "unconfirmed"
+                },
+                {
+                  "kind": "text",
+                  "text": ", with the LLM's reason, in the Inspector and in the Events tab, where an LLM's frequency shows as an estimate. "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Confirm"
+                },
+                {
+                  "kind": "text",
+                  "text": " it once you have checked it; the Inspector confirms a whole selection at once."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "You can also start from where you are: right-click the Canvas ("
+                },
+                {
+                  "kind": "strong",
+                  "text": "Ask an LLM about the selected"
+                },
+                {
+                  "kind": "text",
+                  "text": "), the robot button in the Inspector's header, "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Red-team Events with an LLM"
+                },
+                {
+                  "kind": "text",
+                  "text": " in the Events tab, or "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Explain with an LLM"
+                },
+                {
+                  "kind": "text",
+                  "text": " in the Analysis window. Pasting an LLM's reply onto the Canvas opens it in Bulk operations, already checked."
                 }
               ]
             }

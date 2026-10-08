@@ -792,6 +792,17 @@
           ],
           "default": null,
           "title": "Properties"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1079,6 +1090,17 @@
           "default": null,
           "description": "Ordered operations on the value a field holds when the Event fires, applied last (ADR-0021). Operations on one Element and path compose in order. A Restorative Event does nothing else. Client-side only; the engine never reads them.",
           "title": "Attribute Operations"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1908,6 +1930,17 @@
           ],
           "default": null,
           "title": "Properties"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2356,6 +2389,41 @@
         "before_propagation"
       ],
       "title": "PropagationScorecardEntry",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "properties": {
+        "origin": {
+          "const": "llm_design",
+          "title": "Origin",
+          "type": "string"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why it was added: the change's `why`.",
+          "title": "Rationale"
+        },
+        "confirmed": {
+          "default": false,
+          "description": "True once a person has confirmed it.",
+          "title": "Confirmed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "origin"
+      ],
+      "title": "Provenance",
       "type": "object"
     },
     "RecordDiff": {

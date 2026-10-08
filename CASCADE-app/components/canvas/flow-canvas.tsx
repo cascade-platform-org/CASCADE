@@ -12,6 +12,7 @@
  * Performance: onlyRenderVisibleElements=true; selection in network-store.
  */
 
+import { isChangeSetText } from "@/lib/model-text";
 import {
   ReactFlow,
   Background,
@@ -472,6 +473,20 @@ function FlowCanvas() {
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
+    // Ctrl+V pastes copied nodes one tick later, so a pasted LLM Design reply
+    // (the paste event, dispatched before that tick) can claim the keystroke.
+    let nodePaste: ReturnType<typeof setTimeout> | undefined;
+
+    function onPaste(e: ClipboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const text = e.clipboardData?.getData("text/plain") ?? "";
+      if (!isChangeSetText(text)) return;
+      e.preventDefault();
+      clearTimeout(nodePaste);
+      useUiStore.getState().openLlmDesign({ bulk: true, text });
+    }
+
     function onKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
@@ -497,13 +512,16 @@ function FlowCanvas() {
         const nodes = [...selectedNodeIds].flatMap((id) => allNodes[id] ? [allNodes[id]] : []);
         const edges = [...selectedEdgeIds].flatMap((id) => allEdges[id] ? [allEdges[id]] : []);
         copyToClipboard(nodes, edges, activeCanvas.id);
+        // Also as JSON, for an LLM; it replaces an older reply that a paste here would otherwise open.
+        void navigator.clipboard?.writeText(JSON.stringify({ nodes, edges }, null, 1)).catch(() => {});
         return;
       }
 
       // Ctrl+V — paste
       if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
         if (!clipboard || !activeCanvas) return;
-        runWithHistory(() => {
+        clearTimeout(nodePaste);
+        nodePaste = setTimeout(() => runWithHistory(() => {
           const idMap: Record<string, string> = {};
 
           clipboard.nodes.forEach((node) => {
@@ -532,7 +550,7 @@ function FlowCanvas() {
         }, `Paste ${clipboard.nodes.length} node${clipboard.nodes.length > 1 ? "s" : ""}`, {
           updateType: "graph_update",
           canvasId: activeCanvas.id,
-        });
+        }), 0);
         return;
       }
 
@@ -588,7 +606,12 @@ function FlowCanvas() {
     }
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("paste", onPaste);
+    return () => {
+      clearTimeout(nodePaste);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("paste", onPaste);
+    };
   }, [
     deleteSelected, activeCanvas, selectAll, setInspectorOpen,
     selectedNodeIds, selectedEdgeIds, allNodes, allEdges,

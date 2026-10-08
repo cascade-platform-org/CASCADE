@@ -5,23 +5,27 @@
  * (ADR-0022): everything the project and its configuration save, as a tree of
  * sections, each editable as JSON.
  *
- * Left, the tree (`lib/model-text-sections.ts`): Project (info, Canvases,
- * Nodes and Edges by Canvas, Scorecard, Temporal Simulations), Configuration
- * (Events, Categories, Functionality scale, the rest), and Bulk operations, a
- * hand-written change set. Any level opens on its current JSON: a group is a
- * bulk edit of everything under it, a leaf one item. Right, the JSON.
+ * Left, the Recipes (`lib/llm-recipes.ts`: one job each, copied for an LLM
+ * with the model's context) and the tree (`lib/model-text-sections.ts`):
+ * Project (info, Canvases, Nodes and Edges by Canvas, Scorecard, Temporal
+ * Simulations), Configuration (Events, Categories, Functionality scale, the
+ * rest), and Bulk operations, plain changes. Any level opens on its current
+ * JSON: a group is a bulk edit of everything under it, a leaf one item.
+ * Other surfaces open it on a section, a Recipe, a selection or a pasted reply
+ * through the UI store's `openLlmDesign`.
  *
  * Nothing changes until the person has read the preview and confirmed it:
  * Check turns the edited section into patch operations and runs every stage
  * of `lib/model-text.ts` on a copy; the preview lists each change as before →
- * after; Apply re-checks against the live model and writes it
+ * after, and for Bulk operations each change can be left out; Apply re-checks
+ * against the live model and writes it, what it added marked unconfirmed
  * (`lib/model-text-apply.ts`), keeping a version first so Undo this edit can
  * put the model back. The text is only data: parsed as JSON and shown as text,
  * never run and never rendered as HTML.
  */
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bot, Braces, Check, ChevronRight, ClipboardCopy, RotateCcw, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, Braces, Check, ChevronRight, ClipboardCopy, RotateCcw, Sparkles, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { SmallButton } from "@/components/temporal/fields";
@@ -30,10 +34,14 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { useUiStore } from "@/store/ui-store";
-import { MODEL_TEXT_FORMAT, checkChange, modelTextContext, parseJsonText, type Preview } from "@/lib/model-text";
-import { PLAIN_REFERENCE, bulkContext, checkBulkText, repairContext, starterPlain, type BulkResult, type PreviewGroup } from "@/lib/model-text-v2";
-import { BULK_KEY, findSection, sectionPatch, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
+import { useAnalysisStore } from "@/store/analysis-store";
+import { useUiStore, type LlmDesignRequest } from "@/store/ui-store";
+import { modelTextContext, type Preview } from "@/lib/model-text";
+import { PLAIN_REFERENCE, bulkContext, repairContext, starterPlain, type BulkResult, type PreviewGroup } from "@/lib/model-text-v2";
+import { BULK_KEY, findSection, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
+import { checkDesignText } from "@/lib/llm-design-check";
+import { RECIPES, findRecipe, focusContext, recipeContext, type Focus, type RecipeId } from "@/lib/llm-recipes";
+import { copyText as copyPlain, useLlmCopy } from "./llm-copy";
 import { applyModelBundle, currentBundle, restoreModelBundle } from "@/lib/model-text-apply";
 import type { ProjectBundle } from "@/lib/file-io";
 
@@ -76,8 +84,11 @@ function Lines({ lines }: { lines: Preview["lines"] }) {
   );
 }
 
-/** Every change as before → after; for Bulk operations, under the change that made it, with what it skipped. */
-function PreviewList({ preview, groups, notes }: Shown) {
+/**
+ * Every change as before → after; for Bulk operations, under the change that
+ * made it, with what it skipped, and a tick to leave the change out.
+ */
+function PreviewList({ preview, groups, notes, leaveOut, onToggle }: Shown & { leaveOut?: ReadonlySet<number>; onToggle?: (index: number) => void }) {
   const { counts } = preview;
   return (
     <div className="max-h-64 overflow-y-auto rounded-md border border-zinc-200 p-2 font-mono text-[11px] leading-4 dark:border-zinc-700">
@@ -88,9 +99,19 @@ function PreviewList({ preview, groups, notes }: Shown) {
       {groups
         ? groups.map((g, i) => (
           <div key={i} className="mb-1.5">
-            <p className="font-sans font-medium text-zinc-800 dark:text-zinc-100">
+            <p className={cn("font-sans font-medium", g.left_out ? "text-zinc-400 line-through" : "text-zinc-800 dark:text-zinc-100")}>
+              {onToggle && g.index !== undefined && (
+                <input
+                  type="checkbox"
+                  aria-label={`Include: ${g.title}`}
+                  checked={!leaveOut?.has(g.index)}
+                  onChange={() => onToggle(g.index!)}
+                  className="mr-1 align-middle"
+                />
+              )}
               {g.subjects.length || g.lines.length ? (CIRCLED[i] ?? `${i + 1}.`) : "·"} {g.title}
               {g.why && <span className="font-normal text-zinc-500"> — {g.why}</span>}
+              {g.left_out && <span className="ml-1 font-normal no-underline"> (left out)</span>}
             </p>
             {g.skipped.length > 0 && (
               <p className="font-sans text-amber-800 dark:text-amber-300">
@@ -160,19 +181,114 @@ function TreeRow({ section, depth, selected, open, onSelect, onToggle }: {
 
 const flatten = (tree: readonly Section[]): Section[] => tree.flatMap((s) => [s, ...flatten(s.children ?? [])]);
 
+/** The keys of the groups above `key`, so a section opened from elsewhere is in view. */
+function ancestors(tree: readonly Section[], key: string, path: string[] = []): string[] | null {
+  for (const s of tree) {
+    if (s.key === key) return path;
+    const below = ancestors(s.children ?? [], key, [...path, s.key]);
+    if (below) return below;
+  }
+  return null;
+}
+
+const RECIPE_PREFIX = "recipe:";
+
+/** What a request opens: the selected key, and the pasted text for Bulk operations. */
+function landing(tree: readonly Section[], request: LlmDesignRequest): { key: string; text?: string } {
+  if (request.recipe) return { key: `${RECIPE_PREFIX}${request.recipe}` };
+  if (request.pointer) {
+    const hit = flatten(tree).find((s) => s.pointer === request.pointer && s.mode === "value") ?? flatten(tree).find((s) => s.pointer === request.pointer);
+    if (hit) return { key: hit.key };
+  }
+  return { key: BULK_KEY, text: request.text };
+}
+
+/** A Recipe: what it is for, the person's text, and the copy for an LLM. */
+function RecipePanel({ id, input, onInput, focus, onClearFocus, onCopy, onReply }: {
+  id: RecipeId;
+  input: string;
+  onInput: (text: string) => void;
+  focus: Focus | null;
+  onClearFocus: () => void;
+  onCopy: () => void;
+  onReply: () => void;
+}) {
+  const recipe = findRecipe(id);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{recipe.label}</p>
+      <p className="text-xs text-zinc-600 dark:text-zinc-300">{recipe.blurb}</p>
+      {focus && <FocusChip focus={focus} onClear={onClearFocus} />}
+      <label className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300" htmlFor="recipe-input">{recipe.input.label}</label>
+      <textarea
+        id="recipe-input"
+        value={input}
+        placeholder={recipe.input.placeholder}
+        onChange={(e) => onInput(e.target.value)}
+        className="min-h-[120px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 text-xs text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+      />
+      <ol className="list-decimal space-y-0.5 pl-5 text-[11px] text-zinc-600 dark:text-zinc-300">
+        <li>Copy for the LLM: the instructions, your text and the model.</li>
+        <li>Paste it into your LLM{recipe.reply === "changes" ? " and answer its questions." : "."}</li>
+        <li>{recipe.reply === "changes" ? "Paste its reply into Bulk operations, check it and choose what to apply." : "Read its answer there: nothing comes back here."}</li>
+      </ol>
+      <div className="flex gap-2">
+        <SmallButton tone="accent" onClick={onCopy}><Bot size={11} /> Copy for the LLM</SmallButton>
+        {recipe.reply === "changes" && <SmallButton onClick={onReply}><ArrowRight size={11} /> Paste the reply in Bulk operations</SmallButton>}
+      </div>
+    </div>
+  );
+}
+
+function FocusChip({ focus, onClear }: { focus: Focus; onClear: () => void }) {
+  const n = focus.nodeIds.length + focus.edgeIds.length;
+  return (
+    <p className="flex items-center gap-1 self-start rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+      About the {n} selected Element{n === 1 ? "" : "s"}: the copy includes them as stored.
+      <button type="button" aria-label="Forget the selection" onClick={onClear}><X size={11} /></button>
+    </p>
+  );
+}
+
 function ModelTextPanel() {
   const bundle = useBundle();
   const tree = useMemo(() => sectionTree(bundle), [bundle]);
-  const [selectedKey, setSelectedKey] = useState("/config/events");
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(["/project", "/config"]));
+  const request = useUiStore((s) => s.llmDesignRequest);
+  const [start] = useState(() => (request ? landing(tree, request) : { key: Object.keys(bundle.project.nodes).length ? BULK_KEY : `${RECIPE_PREFIX}describe` }));
+  const [selectedKey, setSelectedKey] = useState(start.key);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(["/project", "/config", ...(ancestors(tree, start.key) ?? [])]));
   const [filter, setFilter] = useState("");
-  const [texts, setTexts] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<Result | null>(null);
+  const [texts, setTexts] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (start.text !== undefined) initial[BULK_KEY] = start.text;
+    return initial;
+  });
+  const [focus, setFocus] = useState<Focus | null>(request?.focus ?? null);
+  const [recipeInputs, setRecipeInputs] = useState<Partial<Record<RecipeId, string>>>({});
+  const [leaveOut, setLeaveOut] = useState<ReadonlySet<number>>(new Set());
+  const [result, setResult] = useState<Result | null>(() => (start.text !== undefined ? toResult(checkDesignText(currentBundle(), { bulk: true }, start.text)) : null));
+  const [seen, setSeen] = useState(request?.nonce ?? 0);
   const [showRef, setShowRef] = useState(false);
   const running = useTemporalSimulationStore((s) => s.running);
   const pushToast = useUiStore((s) => s.pushToast);
+  const { copyForLlm, notice } = useLlmCopy();
 
-  const section = findSection(tree, selectedKey) ?? tree[1];
+  // A request while open (a selection, a pasted reply): adjust during render, React's pattern for state that follows a prop.
+  if (request && request.nonce !== seen) {
+    setSeen(request.nonce);
+    const to = landing(tree, request);
+    setSelectedKey(to.key);
+    setOpen((o) => new Set([...o, ...(ancestors(tree, to.key) ?? [])]));
+    setFocus(request.focus ?? null);
+    setLeaveOut(new Set());
+    if (to.text !== undefined) {
+      setTexts((m) => ({ ...m, [BULK_KEY]: to.text! }));
+      setResult(toResult(checkDesignText(currentBundle(), { bulk: true }, to.text)));
+    } else setResult(null);
+  }
+
+  const recipeId = selectedKey.startsWith(RECIPE_PREFIX) ? (selectedKey.slice(RECIPE_PREFIX.length) as RecipeId) : null;
+  const section = findSection(tree, selectedKey) ?? findSection(tree, BULK_KEY)!;
   const bulk = section.key === BULK_KEY;
   const currentText = useMemo(() => (bulk ? starterPlain(bundle) : JSON.stringify(sectionValue(bundle, section), null, 2) ?? ""), [bulk, bundle, section]);
   // An edited section keeps its text until it is applied or reverted; an untouched one follows the model.
@@ -183,37 +299,28 @@ function ModelTextPanel() {
     const q = filter.trim().toLowerCase();
     return q ? flatten(tree).filter((s) => s.label.toLowerCase().includes(q)).slice(0, TREE_ROWS) : null;
   }, [filter, tree]);
+  const focusText = () => (focus ? focusContext(currentBundle(), focus) : undefined);
 
-  function select(s: Section) {
-    setSelectedKey(s.key);
+  function select(key: string) {
+    setSelectedKey(key);
+    setLeaveOut(new Set());
     if (result?.kind !== "applied") setResult(null);
   }
 
-  async function copy(content: string, what: string) {
-    try {
-      await navigator.clipboard.writeText(content);
-      pushToast({ message: `Copied ${what}.`, variant: "success", durationMs: 2000 });
-    } catch {
-      pushToast({ message: "The clipboard is blocked; select the text instead.", variant: "warning", durationMs: 3000 });
-    }
-  }
-
-  /** The edited text checked against the live model: the section's patch, or Bulk operations. */
-  function checked(): BulkResult {
-    const live = currentBundle();
-    if (bulk) return checkBulkText(live, text);
-    const json = parseJsonText(text);
-    if (!json.ok) return { checked: json };
-    const s = findSection(sectionTree(live), section.key);
-    if (!s) return { checked: { ok: false, errors: [`${section.label} is no longer in the model.`] } };
-    const patch = sectionPatch(live, s, json.value);
-    if ("error" in patch) return { checked: { ok: false, errors: [patch.error] } };
-    return { checked: checkChange(live, { format: MODEL_TEXT_FORMAT, patch: patch.patch, elements: [] }) };
-  }
+  /** The edited text checked against the live model, with the changes left out of Bulk operations. */
+  const checked = (out: ReadonlySet<number> = leaveOut): BulkResult =>
+    checkDesignText(currentBundle(), bulk ? { bulk: true, leaveOut: out } : { bulk: false, sectionKey: section.key, label: section.label }, text);
 
   function check() {
-    const { checked: r, groups, notes } = checked();
-    setResult(r.ok ? { kind: "preview", preview: r.preview, warnings: r.warnings, groups, notes } : { kind: "errors", errors: r.errors });
+    setResult(toResult(checked()));
+  }
+
+  function toggle(index: number) {
+    const next = new Set(leaveOut);
+    if (next.has(index)) next.delete(index);
+    else next.add(index);
+    setLeaveOut(next);
+    setResult(toResult(checked(next)));
   }
 
   function apply() {
@@ -223,6 +330,7 @@ function ModelTextPanel() {
     const before = applyModelBundle(r.after);
     if (!before) return;
     dropText(section.key);
+    setLeaveOut(new Set());
     setResult({ kind: "applied", preview: r.preview, groups, notes, before });
     pushToast({ message: "LLM Design applied. A version was kept; Undo this edit puts it back.", variant: "success", durationMs: 4000 });
   }
@@ -237,13 +345,32 @@ function ModelTextPanel() {
   }
 
   const changes = result?.kind === "preview" ? result.preview.lines.length : 0;
+  const added = result?.kind === "preview" ? result.preview.counts.add : 0;
   const llmContext = () => (bulk
-    ? bulkContext(currentBundle())
+    ? bulkContext(currentBundle(), focusText())
     : modelTextContext(currentBundle(), { label: section.label, json: text, pointer: section.pointer, registry: section.registry, onCanvas: section.canvasIndex !== undefined }));
 
   return (
     <div className="flex h-full min-h-0 flex-1">
+      {notice}
       <nav className="flex w-60 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
+        <p className="mx-3 mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400"><Sparkles size={11} /> Recipes</p>
+        <div className="px-1">
+          {RECIPES.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              title={r.blurb}
+              onClick={() => select(`${RECIPE_PREFIX}${r.id}`)}
+              className={cn(
+                "block w-full truncate rounded px-2 py-0.5 text-left text-xs",
+                recipeId === r.id ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800",
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
         <input
           aria-label="Filter sections"
           placeholder="Filter: a node, an Event…"
@@ -253,15 +380,15 @@ function ModelTextPanel() {
         />
         <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-2">
           {matches
-            ? matches.map((s) => <TreeRow key={s.key} section={{ ...s, children: undefined }} depth={0} selected={section.key} open={open} onSelect={select} onToggle={() => {}} />)
+            ? matches.map((s) => <TreeRow key={s.key} section={{ ...s, children: undefined }} depth={0} selected={recipeId ? "" : section.key} open={open} onSelect={(x) => select(x.key)} onToggle={() => {}} />)
             : tree.map((s) => (
               <TreeRow
                 key={s.key}
                 section={s}
                 depth={0}
-                selected={section.key}
+                selected={recipeId ? "" : section.key}
                 open={open}
-                onSelect={select}
+                onSelect={(x) => select(x.key)}
                 onToggle={(key) => setOpen((o) => { const next = new Set(o); if (next.has(key)) next.delete(key); else next.add(key); return next; })}
               />
             ))}
@@ -270,74 +397,99 @@ function ModelTextPanel() {
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
         <p className="rounded-md bg-blue-50 px-2 py-1.5 text-[11px] leading-4 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200">{USAGE}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">{section.label}</span>
-          {!bulk && <code className="truncate text-[10px] text-zinc-400">{section.pointer}</code>}
-          <span className="flex-1" />
-          <SmallButton onClick={() => void copy(text, section.label)}><ClipboardCopy size={11} /> Copy</SmallButton>
-          <SmallButton onClick={() => void copy(llmContext(), "the section with context for an LLM")} title="This section, the format and the model's ids and names, to paste into an LLM with your request">
-            <Bot size={11} /> Copy with context for an LLM
-          </SmallButton>
-          <SmallButton disabled={!dirty} onClick={() => { dropText(section.key); setResult(null); }}><RotateCcw size={11} /> Revert</SmallButton>
-          <SmallButton onClick={check}><Check size={11} /> Check &amp; preview</SmallButton>
-          <span data-run-locked>
-            <SmallButton tone="accent" disabled={result?.kind !== "preview" || changes === 0 || running} onClick={apply} title="Write the previewed changes; a version of the whole project is kept first">
-              <Upload size={11} /> Apply {changes > 0 ? `${changes} change${changes > 1 ? "s" : ""}` : ""}
-            </SmallButton>
-          </span>
-        </div>
-
-        <textarea
-          spellCheck={false}
-          value={text}
-          onChange={(e) => { setTexts((m) => ({ ...m, [section.key]: e.target.value })); if (result?.kind !== "applied") setResult(null); }}
-          className="min-h-[160px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-        />
-        <p className="text-[11px] text-zinc-400">
-          {bulk
-            ? <>Changes by rule, for many Elements at once: <code>{"{ \"scale\": \"supply\", \"by\": 0.5, \"where\": { \"node_type\": \"Source\" } }"}</code>, and things added, updated or deleted by id. The example below uses this model.</>
-            : section.registry
-              ? "Edit, add or delete entries. Deleting a node also deletes its edges and takes it off every Canvas; a node added under a Canvas is placed on it."
-              : "Edit the JSON as it is, or paste an LLM's version of it."}
-          {" "}{dirty ? "Edited — check it to see the changes." : "Shows the model as it is."} Nothing changes until you confirm the preview.
-          {text.length > LARGE_CHARS && " This section is large: a smaller one (a Canvas's Nodes, one node) is quicker to edit."}
-        </p>
-
-        {result?.kind === "errors" && (
-          <div role="alert" className="max-h-40 overflow-y-auto rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
-            <div className="mb-1 flex items-center gap-2">
-              <p className="font-medium">Not applied — {result.errors.length} problem{result.errors.length > 1 ? "s" : ""}:</p>
+        {recipeId ? (
+          <RecipePanel
+            id={recipeId}
+            input={recipeInputs[recipeId] ?? ""}
+            onInput={(t) => setRecipeInputs((m) => ({ ...m, [recipeId]: t }))}
+            focus={focus}
+            onClearFocus={() => setFocus(null)}
+            onCopy={() => copyForLlm(
+              () => recipeContext(recipeId, currentBundle(), { input: recipeInputs[recipeId], focus: focusText(), analysis: useAnalysisStore.getState().result }),
+              `"${findRecipe(recipeId).label}" for the LLM`,
+            )}
+            onReply={() => { setTexts((m) => ({ ...m, [BULK_KEY]: "" })); select(BULK_KEY); }}
+          />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">{section.label}</span>
+              {!bulk && <code className="truncate text-[10px] text-zinc-400">{section.pointer}</code>}
               <span className="flex-1" />
-              <SmallButton onClick={() => void copy(repairContext(currentBundle(), text, result.errors, bulk ? undefined : section.label), "the problems for the LLM")} title="The problems, your text and the stored JSON of the Elements they name, for the LLM to fix">
-                <Bot size={11} /> Copy the problems for the LLM
+              <SmallButton onClick={() => void copyPlain(text, section.label)}><ClipboardCopy size={11} /> Copy</SmallButton>
+              <SmallButton onClick={() => copyForLlm(llmContext, "the section with context for an LLM")} title="This section, the format and the model's ids and names, to paste into an LLM with your request">
+                <Bot size={11} /> Copy with context for an LLM
               </SmallButton>
+              <SmallButton disabled={!dirty} onClick={() => { dropText(section.key); setLeaveOut(new Set()); setResult(null); }}><RotateCcw size={11} /> Revert</SmallButton>
+              <SmallButton onClick={check}><Check size={11} /> Check &amp; preview</SmallButton>
+              <span data-run-locked>
+                <SmallButton tone="accent" disabled={result?.kind !== "preview" || changes === 0 || running} onClick={apply} title="Write the previewed changes; a version of the whole project is kept first">
+                  <Upload size={11} /> Apply {changes > 0 ? `${changes} change${changes > 1 ? "s" : ""}` : ""}
+                </SmallButton>
+              </span>
             </div>
-            {result.errors.slice(0, 50).map((e, i) => <p key={i} className="break-all">• {e}</p>)}
-          </div>
-        )}
-        {result?.kind === "preview" && (
-          <>
-            {changes === 0 ? <p className="text-[11px] text-zinc-500">Valid, and it changes nothing.</p> : <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} />}
-            {result.warnings.map((w, i) => <p key={i} className="flex gap-1 text-[11px] text-amber-800 dark:text-amber-300"><AlertTriangle size={11} className="mt-0.5 shrink-0" />{w}</p>)}
-          </>
-        )}
-        {result?.kind === "applied" && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-[11px] text-green-700 dark:text-green-400">
-              <Check size={12} /> Applied {result.preview.lines.length} change{result.preview.lines.length > 1 ? "s" : ""}. The version before it is kept in File → Local → Recent saves.
-              <span className="flex-1" />
-              <SmallButton onClick={undo}><RotateCcw size={11} /> Undo this edit</SmallButton>
-            </div>
-            <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} />
-          </div>
-        )}
+            {bulk && focus && <FocusChip focus={focus} onClear={() => setFocus(null)} />}
 
-        {bulk && (
-          <>
-            <button type="button" className="self-start text-[11px] text-blue-700 hover:underline dark:text-blue-400" onClick={() => setShowRef((v) => !v)}>
-              {showRef ? "Hide" : "Show"} format reference
-            </button>
-            {showRef && <pre className="max-h-64 overflow-auto rounded-md bg-zinc-50 p-2 text-[10px] leading-4 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{PLAIN_REFERENCE}</pre>}
+            <textarea
+              spellCheck={false}
+              value={text}
+              placeholder={bulk ? "Paste the LLM's reply here, then Check & preview." : undefined}
+              onChange={(e) => { setTexts((m) => ({ ...m, [section.key]: e.target.value })); setLeaveOut(new Set()); if (result?.kind !== "applied") setResult(null); }}
+              className="min-h-[160px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+            />
+            <p className="text-[11px] text-zinc-400">
+              {bulk
+                ? <>Changes by rule, for many Elements at once: <code>{"{ \"scale\": \"supply\", \"by\": 0.5, \"where\": { \"node_type\": \"Source\" } }"}</code>, and things added, updated or deleted by id. The example below uses this model.</>
+                : section.registry
+                  ? "Edit, add or delete entries. Deleting a node also deletes its edges and takes it off every Canvas; a node added under a Canvas is placed on it."
+                  : "Edit the JSON as it is, or paste an LLM's version of it."}
+              {" "}{dirty ? "Edited — check it to see the changes." : "Shows the model as it is."} Nothing changes until you confirm the preview.
+              {text.length > LARGE_CHARS && " This section is large: a smaller one (a Canvas's Nodes, one node) is quicker to edit."}
+            </p>
+
+            {result?.kind === "errors" && (
+              <div role="alert" className="max-h-40 overflow-y-auto rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">
+                <div className="mb-1 flex items-center gap-2">
+                  <p className="font-medium">Not applied — {result.errors.length} problem{result.errors.length > 1 ? "s" : ""}:</p>
+                  <span className="flex-1" />
+                  <SmallButton onClick={() => copyForLlm(() => repairContext(currentBundle(), text, result.errors, bulk ? undefined : section.label), "the problems for the LLM")} title="The problems, your text and the stored JSON of the Elements they name, for the LLM to fix">
+                    <Bot size={11} /> Copy the problems for the LLM
+                  </SmallButton>
+                </div>
+                {result.errors.slice(0, 50).map((e, i) => <p key={i} className="break-all">• {e}</p>)}
+              </div>
+            )}
+            {result?.kind === "preview" && (
+              <>
+                {changes === 0
+                  ? <p className="text-[11px] text-zinc-500">Valid, and it changes nothing{leaveOut.size ? " with the changes left out" : ""}.</p>
+                  : null}
+                {(changes > 0 || leaveOut.size > 0) && (
+                  <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} leaveOut={leaveOut} onToggle={result.groups && result.groups.filter((g) => g.index !== undefined).length > 1 ? toggle : undefined} />
+                )}
+                {added > 0 && <p className="text-[11px] text-zinc-500">What this adds is marked unconfirmed, with its why, until you confirm it in the Inspector or the Events tab.</p>}
+                {result.warnings.map((w, i) => <p key={i} className="flex gap-1 text-[11px] text-amber-800 dark:text-amber-300"><AlertTriangle size={11} className="mt-0.5 shrink-0" />{w}</p>)}
+              </>
+            )}
+            {result?.kind === "applied" && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-[11px] text-green-700 dark:text-green-400">
+                  <Check size={12} /> Applied {result.preview.lines.length} change{result.preview.lines.length > 1 ? "s" : ""}. The version before it is kept in File → Local → Recent saves.
+                  <span className="flex-1" />
+                  <SmallButton onClick={undo}><RotateCcw size={11} /> Undo this edit</SmallButton>
+                </div>
+                <PreviewList preview={result.preview} groups={result.groups} notes={result.notes} />
+              </div>
+            )}
+
+            {bulk && (
+              <>
+                <button type="button" className="self-start text-[11px] text-blue-700 hover:underline dark:text-blue-400" onClick={() => setShowRef((v) => !v)}>
+                  {showRef ? "Hide" : "Show"} format reference
+                </button>
+                {showRef && <pre className="max-h-64 overflow-auto rounded-md bg-zinc-50 p-2 text-[10px] leading-4 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{PLAIN_REFERENCE}</pre>}
+              </>
+            )}
           </>
         )}
       </div>
@@ -345,19 +497,27 @@ function ModelTextPanel() {
   );
 }
 
+/** A check's outcome as the window shows it. */
+function toResult({ checked: r, groups, notes }: BulkResult): Result {
+  return r.ok ? { kind: "preview", preview: r.preview, warnings: r.warnings, groups, notes } : { kind: "errors", errors: r.errors };
+}
+
 /** What the window is for, in the Topbar button's tooltip and atop the window. */
 const USAGE =
-  "Design the model with an LLM: pick a part, Copy with context for an LLM, paste it into your LLM with what you want changed, " +
-  "paste its reply back and Check & preview. Nothing changes until you Apply, and Undo this edit puts it back.";
+  "Design the model with an LLM. Start from a Recipe (describe your organisation, paste its data, red-team its Events), " +
+  "or pick a part and Copy with context for an LLM; paste the LLM's reply back and Check & preview. " +
+  "Nothing changes until you Apply, and Undo this edit puts it back.";
 
 export function ModelTextControl({ buttonClassName }: { buttonClassName: string }) {
-  const [open, setOpen] = useState(false);
+  const open = useUiStore((s) => s.llmDesignOpen);
+  const toggle = useUiStore((s) => s.toggleLlmDesign);
+  const close = useUiStore((s) => s.closeLlmDesign);
   return (
     <>
       <button
         id={MODEL_TEXT_ANCHOR_ID}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         title={USAGE}
         className={buttonClassName}
       >
@@ -366,7 +526,7 @@ export function ModelTextControl({ buttonClassName }: { buttonClassName: string 
       </button>
       <FloatingWindow
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         title="LLM Design"
         icon={<Braces size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />}
         flyToOnClose={MODEL_TEXT_ANCHOR_ID}

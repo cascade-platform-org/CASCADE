@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from schemas.field_path import SafeKey
+from schemas.provenance import Provenance
 from schemas.temporal_simulation import FIRST_SIMULATION_ID, StoredTemporalSimulation
 
 if TYPE_CHECKING:
@@ -185,6 +186,7 @@ class Node(BaseModel):
     # Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine.
     rules: Optional[list[str]] = None
     properties: Optional[dict[str, Any]] = None
+    provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022); the engine never reads it
 
     @model_validator(mode="before")
     @classmethod
@@ -268,6 +270,7 @@ class Edge(BaseModel):
         ),
     )
     properties: Optional[dict[str, Any]] = None
+    provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022); the engine never reads it
 
 
 # ---------------------------------------------------------------------------

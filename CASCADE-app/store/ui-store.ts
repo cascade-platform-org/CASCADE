@@ -9,6 +9,7 @@ import { immer } from "zustand/middleware/immer";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useNetworkStore } from "@/store/network-store";
+import type { Focus, RecipeId } from "@/lib/llm-recipes";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,6 +30,21 @@ export type ConfigModalTab =
 export interface ConfigModalNewEvent {
   template: Omit<EventDefinition, "id">;
   onSaved: (id: string) => void;
+}
+
+/**
+ * What LLM Design opens on when another surface opens it (ADR-0022): a
+ * section by pointer, Bulk operations (with a pasted text, checked at once),
+ * or a Recipe; `focus` is the selection a request is about.
+ */
+export interface LlmDesignRequest {
+  /** Changes on every request, so the window acts on a repeat of the same one. */
+  nonce: number;
+  pointer?: string;
+  bulk?: boolean;
+  recipe?: RecipeId;
+  focus?: Focus;
+  text?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +85,11 @@ export interface UiState {
 
   // --- File I/O panel ---
   fileIoPanelOpen: boolean;
+
+  // --- LLM Design ---
+  llmDesignOpen: boolean;
+  /** The latest request to open it somewhere; cleared by its Topbar button. */
+  llmDesignRequest: LlmDesignRequest | null;
 
   /**
    * Set by the File panel's "New Project" button; cleared by `app/page.tsx`
@@ -233,6 +254,11 @@ export interface UiActions {
   closeConfigModal: () => void;
   setConfigModalTab: (tab: ConfigModalTab) => void;
 
+  // --- LLM Design ---
+  openLlmDesign: (request?: Omit<LlmDesignRequest, "nonce">) => void;
+  toggleLlmDesign: () => void;
+  closeLlmDesign: () => void;
+
   // --- File I/O panel ---
   toggleFileIoPanel: () => void;
   closeFileIoPanel: () => void;
@@ -343,6 +369,8 @@ const initialState: UiState = {
   configModalNewEvent: null,
   configModalFocusEventId: null,
   fileIoPanelOpen: false,
+  llmDesignOpen: false,
+  llmDesignRequest: null,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
@@ -447,6 +475,29 @@ export const useUiStore = create<UiStore>()(
 
     setConfigModalTab(tab) {
       set((state) => { state.configModalTab = tab; });
+    },
+
+    // -------------------------------------------------------------------------
+    // LLM Design
+    // -------------------------------------------------------------------------
+
+    openLlmDesign(request) {
+      set((state) => {
+        state.llmDesignOpen = true;
+        if (request) {
+          const focus = request.focus && { nodeIds: [...request.focus.nodeIds], edgeIds: [...request.focus.edgeIds] };
+          state.llmDesignRequest = { ...request, focus, nonce: (state.llmDesignRequest?.nonce ?? 0) + 1 };
+        }
+      });
+    },
+
+    toggleLlmDesign() {
+      // Opened from its own button: on what it showed last, not an older request.
+      set((state) => { state.llmDesignOpen = !state.llmDesignOpen; state.llmDesignRequest = null; });
+    },
+
+    closeLlmDesign() {
+      set((state) => { state.llmDesignOpen = false; });
     },
 
     // -------------------------------------------------------------------------

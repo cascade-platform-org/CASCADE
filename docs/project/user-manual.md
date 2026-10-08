@@ -408,9 +408,37 @@ placed on it. The undo history is not shown and cannot be changed.
 **Copy with context for an LLM** copies the open part with this model's ids and
 names. Paste the reply and press **Check & preview**: every change is shown as
 before → after, or every problem is listed, and **Copy the problems for the
-LLM** hands them back to it to fix. Nothing changes until you press
-**Apply**. The project as it was is kept in Recent saves first, and **Undo this
-edit** puts it back.
+LLM** hands them back to it to fix. In Bulk operations each change has a tick:
+untick the ones you don't want. Nothing changes until you press **Apply**. The
+project as it was is kept in Recent saves first, and **Undo this edit** puts it
+back.
+
+**Recipes** do a whole job for you, even if you don't know CASCADE yet. Pick one, type
+or paste what it asks for, **Copy for the LLM**, and paste its reply into Bulk operations:
+
+- **Model from a description**: describe your organisation in your own words. The
+  LLM asks what it needs, then builds the model.
+- **Import an organisation's data**: paste an asset list, a table or a document.
+- **Red-team Events**: an LLM with no stake in your organisation proposes hazards
+  across sectors (weather, outages, cyber, supply chain, staff, combinations) and
+  what each one strikes.
+- **Explain the current state**: what is degraded and why, in plain words. Its
+  answer stays in your LLM.
+
+The first time you copy for an LLM, the app reminds you that your model's names
+leave your computer when you paste them. Use a chat that keeps no history, or an
+LLM running on your machine. Tick *Don't tell me again* to stop the reminder.
+
+What LLM Design adds is marked **unconfirmed**, with the LLM's reason, in the
+Inspector and in the Events tab, where an LLM's frequency shows as an estimate.
+**Confirm** it once you have checked it; the Inspector confirms a whole selection
+at once.
+
+You can also start from where you are: right-click the Canvas (**Ask an LLM about
+the selected**), the robot button in the Inspector's header, **Red-team Events
+with an LLM** in the Events tab, or **Explain with an LLM** in the Analysis
+window. Pasting an LLM's reply onto the Canvas opens it in Bulk operations, already
+checked.
 
 ## 8. Server and roles
 

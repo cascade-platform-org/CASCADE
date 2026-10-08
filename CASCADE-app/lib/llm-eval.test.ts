@@ -18,6 +18,10 @@
  * A reply passing the check is not enough: "halve the supply" that halves the
  * wrong field passes. So every task states the outcome it expects, and that
  * nothing else changed.
+ *
+ * Recipe tasks (requirements §13.3b) are scored the same way: gen writes
+ * <task>.recipe.context.md, what the Recipe copies with the person's text; the
+ * reply goes in <task>.recipe.reply.md and is checked as Bulk operations.
  */
 
 import { describe, it } from "vitest";
@@ -25,6 +29,9 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { deepEqual } from "./graph-diff";
 import { checkChange, modelTextContext, parseChangeText, type CheckedChange } from "./model-text";
 import { bulkContext, checkBulkText, repairContext } from "./model-text-v2";
+import { recipeContext, type RecipeId } from "./llm-recipes";
+import { checkDesignText } from "./llm-design-check";
+import { DEFAULT_CONFIG } from "@/store/config-store";
 import type { ProjectBundle } from "./file-io";
 
 const MODE = process.env.LLM_EVAL;
@@ -152,6 +159,102 @@ const TASKS: Task[] = [
   },
 ];
 
+/** A new project: one empty Canvas, the default configuration. */
+const emptyBundle = (): ProjectBundle => ({
+  project: {
+    version: "2.0",
+    meta: { name: "new" },
+    nodes: {},
+    edges: {},
+    canvases: [{ id: "main", label: "Main", graph: { graph_type: "generic", node_ids: [], edge_ids: [] } }],
+    update_history: [],
+    scorecard: [],
+  },
+  config: structuredClone(DEFAULT_CONFIG),
+});
+
+interface RecipeTask {
+  id: string;
+  recipe: RecipeId;
+  bundle: () => ProjectBundle;
+  input: string;
+  expect: (before: ProjectBundle, after: ProjectBundle, groups: { why?: string }[]) => string[];
+}
+
+const added = <T,>(before: Record<string, T>, after: Record<string, T>) => Object.keys(after).filter((id) => !(id in before)).map((id) => after[id]);
+const labelled = (b: ProjectBundle, needle: RegExp) => Object.values(b.project.nodes).find((n) => needle.test(n.label ?? ""));
+const feeds = (b: ProjectBundle, from: RegExp, to: RegExp) => {
+  const [f, t] = [labelled(b, from), labelled(b, to)];
+  return !!f && !!t && Object.values(b.project.edges).some((e) => e.source === f.id && e.target === t.id);
+};
+
+const RECIPE_TASKS: RecipeTask[] = [
+  {
+    id: "r1-describe",
+    recipe: "describe",
+    bundle: emptyBundle,
+    input:
+      "We are a small hill town. Our water comes from one spring, pumped by an electric pump station up to a reservoir that feeds the town. " +
+      "Power comes from a single substation fed by the regional grid. The town has a health clinic that needs power and water, and a school that needs water. " +
+      "The clinic has a diesel generator that lasts 12 hours. Two technicians run the pump station; without them it stops within a day. (No more questions: go ahead.)",
+    expect: (b, a, groups) => {
+      const nodes = added(b.project.nodes, a.project.nodes);
+      return [
+        ...fail(nodes.length >= 6 && nodes.length <= 14, `${nodes.length} nodes added`),
+        ...fail(a.config.categories.length >= 2, `${a.config.categories.length} Categories`),
+        ...fail(feeds(a, /substation/i, /pump station/i), "no edge Substation → pump station"),
+        ...fail(feeds(a, /reservoir/i, /clinic/i) || feeds(a, /reservoir/i, /town|distribution/i), "the reservoir feeds neither the clinic nor the town"),
+        ...fail(Object.values(a.project.nodes).some((n) => /clinic/i.test(n.label ?? "") && Object.values(n.category_dependency_profiles ?? {}).some((p) => p.backup && p.backup_duration === 12)), "the clinic's 12-hour backup is missing"),
+        ...fail(nodes.every((n) => a.project.canvases.some((c) => c.graph.node_ids.includes(n.id))), "a node is on no Canvas"),
+        ...fail(groups.filter((g) => !g.why).length === 0, `${groups.filter((g) => !g.why).length} changes without a why`),
+      ];
+    },
+  },
+  {
+    id: "r2-import",
+    recipe: "import",
+    bundle: emptyBundle,
+    input: [
+      "asset,kind,depends on,output",
+      "Grid feeder,power supplier,,50 kW",
+      "Server room,IT,Grid feeder; Cooling unit,",
+      "Cooling unit,facility,Grid feeder,",
+      "Call centre,customer service,Server room; Grid feeder,",
+      "Payroll office,back office,Server room,",
+    ].join("\n"),
+    expect: (b, a, groups) => {
+      const nodes = added(b.project.nodes, a.project.nodes);
+      return [
+        ...fail(nodes.length === 5, `${nodes.length} nodes added, expected one per row (5)`),
+        ...fail(feeds(a, /grid/i, /server/i) && feeds(a, /cooling/i, /server/i) && feeds(a, /server/i, /call/i) && feeds(a, /grid/i, /call/i) && feeds(a, /server/i, /payroll/i) && feeds(a, /grid/i, /cooling/i), "a 'depends on' edge is missing or reversed"),
+        ...fail(Object.keys(a.project.edges).length - Object.keys(b.project.edges).length === 6, `${Object.keys(a.project.edges).length} edges, expected 6`),
+        ...fail(Object.values(labelled(a, /grid/i)?.supply_capacity ?? {}).some((v) => v === 50), "the feeder's 50 kW supply is missing"),
+        // The data gives no other quantity: none invented.
+        ...fail(nodes.filter((n) => !/grid/i.test(n.label ?? "")).every((n) => !n.supply_capacity), "a supply was invented"),
+        ...fail(groups.filter((g) => !g.why).length === 0, `${groups.filter((g) => !g.why).length} changes without a why`),
+      ];
+    },
+  },
+  {
+    id: "r3-red-team",
+    recipe: "red-team",
+    bundle: () => load("IJDRR_example.json"),
+    input: "",
+    expect: (b, a) => {
+      const events = a.config.events.filter((e) => !b.config.events.some((x) => x.id === e.id));
+      const hits = (id: string) => Object.values(a.project.nodes).filter((n) => n.vulnerability_levels?.[id] !== undefined).length + Object.values(a.project.edges).filter((e) => e.vulnerability_levels?.[id] !== undefined).length;
+      return [
+        ...fail(events.length >= 8 && events.length <= 12, `${events.length} Events added`),
+        ...fail(events.every((e) => e.frequency_per_10y > 0), "an Event has no frequency"),
+        ...fail(events.every((e) => hits(e.id) > 0), `Events striking nothing: ${events.filter((e) => hits(e.id) === 0).map((e) => e.label).join(", ")}`),
+        ...fail(!events.some((e) => /earthquake/i.test(e.label)), "repeats the existing Earthquake"),
+        ...fail(events.some((e) => e.type === "disservice") && events.some((e) => e.type === "hazard"), "only one Event type"),
+        ...fail(events.every((e) => e.provenance?.rationale), "an Event without its why"),
+      ];
+    },
+  },
+];
+
 function checkReply(variant: Variant, bundle: ProjectBundle, text: string): CheckedChange {
   if (variant === "v2") return checkBulkText(bundle, text).checked;
   const parsed = parseChangeText(text);
@@ -166,6 +269,7 @@ describe.skipIf(!MODE)("llm eval", () => {
       const context = v === "v2" ? bulkContext(b) : modelTextContext(b);
       writeFileSync(`${DIR}/${t.id}.${v}.context.md`, `${context}\n\n## Request\n${t.request}\n`);
     }
+    for (const t of RECIPE_TASKS) writeFileSync(`${DIR}/${t.id}.recipe.context.md`, recipeContext(t.recipe, t.bundle(), { input: t.input }));
   });
 
   it("checks the replies", () => {
@@ -201,6 +305,22 @@ describe.skipIf(!MODE)("llm eval", () => {
       rows.push(`| ${t.id} | ${cells.join(" | ")} |`);
     }
     rows.push(`| right | ${score.v1}/${TASKS.length} | ${score.v1 + repaired.v1}/${TASKS.length} | ${score.v2}/${TASKS.length} | ${score.v2 + repaired.v2}/${TASKS.length} |`);
+    rows.push("", "| recipe task | first try |", "| --- | --- |");
+    for (const t of RECIPE_TASKS) {
+      const path = `${DIR}/${t.id}.recipe.reply.md`;
+      if (!existsSync(path)) { rows.push(`| ${t.id} | no reply |`); continue; }
+      const b = t.bundle();
+      const r = checkDesignText(b, { bulk: true }, readFileSync(path, "utf8"));
+      if (!r.checked.ok) {
+        details.push(`### ${t.id}: refused\n${r.checked.errors.slice(0, 8).map((e) => `- ${e}`).join("\n")}`);
+        writeFileSync(`${DIR}/${t.id}.recipe.repair.context.md`, repairContext(b, readFileSync(path, "utf8"), r.checked.errors));
+        rows.push(`| ${t.id} | refused |`);
+        continue;
+      }
+      const failures = t.expect(b, r.checked.after, r.groups ?? []);
+      if (failures.length) details.push(`### ${t.id}: wrong outcome\n${failures.map((e) => `- ${e}`).join("\n")}`);
+      rows.push(`| ${t.id} | ${failures.length ? "wrong" : "**right**"} |`);
+    }
     writeFileSync(`${DIR}/report.md`, [...rows, "", ...details].join("\n"));
   });
 });

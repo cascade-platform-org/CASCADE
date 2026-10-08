@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Bot, CheckCheck, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { isVulnerabilityEvent } from "@/lib/event-application";
+import { confirmed } from "@/lib/provenance";
 import { useShallow } from "zustand/react/shallow";
 import { TextInput, NumberInput, ColBtn, CollapsibleSection } from "./primitives";
 import { IconPickerButton } from "./icon-picker";
@@ -21,6 +22,13 @@ export function TabEvents() {
   const removeEvent = useConfigStore((s) => s.removeEvent);
   const updateEvent = useConfigStore((s) => s.updateEvent);
   const focusEventId = useUiStore((s) => s.configModalFocusEventId);
+  const isDirty = useConfigStore((s) => s.isDirty);
+
+  // Red-team in LLM Design; the modal closes, so its unsaved edits would be lost.
+  function redTeam() {
+    useUiStore.getState().closeConfigModal();
+    useUiStore.getState().openLlmDesign({ recipe: "red-team" });
+  }
 
   // "Create new Event" from the Temporal Simulation window lands here: bring
   // the new Event into view.
@@ -34,6 +42,15 @@ export function TabEvents() {
         The first 5 Scenario events appear in the Action Bar, the rest in &ldquo;More ▼&rdquo;.
         Events marked <em>Temporal Simulation only</em> are hidden there and used in Timelines.
       </p>
+      <button
+        type="button"
+        onClick={redTeam}
+        disabled={isDirty}
+        title={isDirty ? "Save or discard your edits first: this closes the Configuration" : "An LLM with no stake in the organisation proposes Events across sectors (LLM Design)"}
+        className="mb-3 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-zinc-400 dark:text-blue-400"
+      >
+        <Bot size={12} /> Red-team Events with an LLM
+      </button>
 
       {events.length === 0 && (
         <p className="mb-3 text-xs text-zinc-400 italic">No events defined yet.</p>
@@ -54,6 +71,23 @@ export function TabEvents() {
                 </ColBtn>
               </div>
             </div>
+
+            {ev.provenance && (
+              <div className={ev.provenance.confirmed
+                ? "mb-2 text-[11px] text-zinc-500"
+                : "mb-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-900 dark:bg-amber-900/20 dark:text-amber-200"}
+              >
+                <p className="flex items-center gap-1 font-medium">
+                  <Sparkles size={11} /> Added through LLM Design{ev.provenance.confirmed ? "" : ", unconfirmed: its frequency is an estimate"}
+                  {!ev.provenance.confirmed && (
+                    <button type="button" onClick={() => updateEvent(ev.id, { provenance: confirmed(ev.provenance!) })} className="ml-auto flex items-center gap-0.5 rounded bg-white/70 px-1.5 py-0.5 hover:bg-white dark:bg-zinc-800">
+                      <CheckCheck size={11} /> Confirm
+                    </button>
+                  )}
+                </p>
+                {ev.provenance.rationale && <p className="mt-0.5 italic">{ev.provenance.rationale}</p>}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -92,7 +126,7 @@ export function TabEvents() {
               {/* Frequency belongs to an Event that strikes; a Restorative Event has none. */}
               {isVulnerabilityEvent(ev) && (
                 <div>
-                  <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y</label>
+                  <label className="mb-0.5 block text-xs text-zinc-400">Frequency / 10y{ev.provenance && !ev.provenance.confirmed ? " (estimate)" : ""}</label>
                   <NumberInput
                     value={ev.frequency_per_10y}
                     min={0}

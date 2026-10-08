@@ -9,7 +9,7 @@
 
 import { useCallback } from "react";
 import { useReactFlow, getNodesBounds } from "@xyflow/react";
-import { Waypoints, FileCode, ImageDown, BoxSelect, Spline } from "lucide-react";
+import { Waypoints, FileCode, ImageDown, BoxSelect, Spline, Bot } from "lucide-react";
 
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
@@ -88,6 +88,17 @@ export function CanvasContextMenu({
       pushToast({ message: `Laid out ${patches.length} edge${patches.length !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
     }
   }, [edgeIds, allEdges, getNode, updateEdge, pushToast, onClose]);
+
+  // LLM Design about the selection, or about the whole model when nothing is selected (ADR-0022).
+  const selectedCount = useNetworkStore((s) => s.selectedNodeIds.size + s.selectedEdgeIds.size);
+  const askLlm = useCallback(() => {
+    onClose();
+    const { selectedNodeIds, selectedEdgeIds } = useNetworkStore.getState();
+    useUiStore.getState().openLlmDesign({
+      bulk: true,
+      focus: selectedCount > 0 ? { nodeIds: [...selectedNodeIds], edgeIds: [...selectedEdgeIds] } : undefined,
+    });
+  }, [onClose, selectedCount]);
 
   const selectAllNodes = useCallback(() => {
     onClose();
@@ -212,6 +223,10 @@ export function CanvasContextMenu({
         <MenuItem onClick={selectAllEdges}>
           <Spline size={14} className="shrink-0 text-zinc-500" />
           Select all edges
+        </MenuItem>
+        <MenuItem onClick={askLlm}>
+          <Bot size={14} className="shrink-0 text-zinc-500" />
+          {selectedCount > 0 ? `Ask an LLM about the ${selectedCount} selected` : "Design with an LLM"}
         </MenuItem>
         <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
         <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Export</p>

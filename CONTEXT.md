@@ -98,6 +98,14 @@ _Avoid_: "Simulation" bare (say Propagation for one run, Temporal Simulation for
 Everything the project and its Model Configuration save, as a tree of JSON sections a person or an LLM edits (any level: a group in bulk, or one item), plus Bulk operations for edits by rule (plain changes: a verb on a field name, by id or filter; things added, updated or deleted by id). `update_history` is read-only. Checked on a copy (syntax, the schemas, references), previewed change by change, and applied only on confirmation, with the prior project kept for Undo this edit. ADR-0022.
 _Avoid_: "bundle editor", "JSON editor" (it never holds the whole bundle)
 
+**Recipe**:
+One job LLM Design copies for an LLM: its instructions, the model's context, and what the person typed. Model from a description, Import an organisation's data, Red-team Events, Explain the current state. ADR-0022.
+_Avoid_: "prompt template", "preset"
+
+**Provenance**:
+The mark on a node, edge or Event that LLM Design added: `origin`, the `rationale` (the change's `why`) and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
+_Avoid_: "AI-generated" (the person may have written the change)
+
 **Timeline**:
 The saved input of a Temporal Simulation: an ordered list of Steps whose Phases let hours pass (`advance_hours`) and hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
 _Avoid_: "schedule", "script", "run" (a run is one execution of a Timeline)

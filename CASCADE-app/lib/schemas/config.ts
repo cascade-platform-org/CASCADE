@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { RAMP_STEPS } from "@/lib/brand";
 import { NodeSchema } from "./network";
+import { ProvenanceSchema } from "./provenance";
 import { AttributeOperationSchema, migrateEventMutations } from "./attribute-operation";
 
 // ---------------------------------------------------------------------------
@@ -94,6 +95,8 @@ export const EventDefinitionSchema = z.object({
    * (`lib/event-application.ts`).
    */
   attribute_operations: z.array(AttributeOperationSchema).optional(),
+  /** Set by LLM Design (ADR-0022). */
+  provenance: ProvenanceSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@
  * their own store subscriptions, keeping this module a trivially thin router.
  */
 
-import { Trash2 } from "lucide-react";
+import { Bot, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
@@ -26,6 +26,9 @@ import { NodeInspector } from "./node-inspector";
 import { EdgeInspector } from "./edge-inspector";
 import { MultiSelectPanel } from "./multi-select-panel";
 import { CanvasMeta, AllCanvasesMeta } from "./canvas-meta";
+import { ProvenanceBanner } from "./provenance-banner";
+
+const pointerKey = (id: string) => id.replace(/~/g, "~0").replace(/\//g, "~1");
 
 export function Inspector() {
   const inspectorOpen = useUiStore((s) => s.inspectorOpen);
@@ -78,6 +81,15 @@ export function Inspector() {
 
   const canDelete = !!(singleNode || singleEdge) && !runShown;
 
+  /** LLM Design on what the Inspector shows: one Element's section, the selection, or the whole model. */
+  function askLlm() {
+    const open = useUiStore.getState().openLlmDesign;
+    if (singleNode) open({ pointer: `/project/nodes/${pointerKey(singleNode.id)}` });
+    else if (singleEdge) open({ pointer: `/project/edges/${pointerKey(singleEdge.id)}` });
+    else if (isMulti) open({ bulk: true, focus: { nodeIds: nodeIdArr, edgeIds: edgeIdArr } });
+    else open({ bulk: true });
+  }
+
   return (
     <div
       data-tour="inspector"
@@ -92,6 +104,14 @@ export function Inspector() {
             <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
               {headerLabel}
             </span>
+            <span className="flex-1" />
+            <button
+              onClick={askLlm}
+              title={totalSelected > 0 ? "Edit this with an LLM (LLM Design)" : "Design the model with an LLM (LLM Design)"}
+              className="rounded p-1 text-zinc-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-zinc-500 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+            >
+              <Bot size={13} />
+            </button>
             {canDelete && (
               <button
                 onClick={handleDeleteSelected}
@@ -109,6 +129,7 @@ export function Inspector() {
             </p>
           )}
           <fieldset data-run-locked disabled={runShown} className="contents">
+          {totalSelected > 0 && <ProvenanceBanner nodeIds={nodeIdArr} edgeIds={edgeIdArr} />}
                     {singleNode ? (
             <NodeInspector key={singleNode.id} node={singleNode} />
           ) : singleEdge ? (

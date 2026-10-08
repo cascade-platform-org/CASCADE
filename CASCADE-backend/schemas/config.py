@@ -5,6 +5,7 @@ from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from schemas.field_path import FieldPath
+from schemas.provenance import Provenance
 
 
 # hazard: damage and degradation by vulnerability; disservice: degradation by
@@ -153,6 +154,7 @@ class EventDefinition(BaseModel):
             "Restorative Event does nothing else. Client-side only; the engine never reads them."
         ),
     )
+    provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022)
 
     @model_validator(mode="before")
     @classmethod

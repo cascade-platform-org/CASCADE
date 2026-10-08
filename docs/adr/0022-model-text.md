@@ -94,6 +94,37 @@ and rename), the first format did what was asked on 3 first try, plain changes o
 refusal came from list positions (a Canvas addressed by id). Given the repair text, a fresh
 agent fixed all 3.
 
+**For people who do not know the platform** (*revised 2026-10-08*, requirements §13.3b). The aim
+moved from "an LLM can edit the model" to "a person describes, an LLM models, the person
+reviews". What that needed:
+
+- **Recipes** (`lib/llm-recipes.ts`, pure): the job's instructions in front of the model's
+  context: model from a description, import an organisation's data, red-team Events, explain the
+  current state. The person's text goes in the copy, and an LLM is told to ask before guessing.
+  Red-teaming uses an LLM because it has no stake in the organisation and knows hazards across
+  sectors; it needs the names, since the context of an organisation (a coastal hospital, a data
+  centre) is in them, so the copy keeps them.
+- **Privacy is the person's choice of LLM**, said once before the first copy: a chat that keeps no
+  history, or a local LLM. Hiding names would remove what red-teaming reasons from.
+- **Partial apply**: a reply proposing fifteen Events is accepted in part. Changes left out are
+  skipped where they stand when the set is compiled, so the indices in errors stay the reply's,
+  and a change that depended on one left out is refused like any other.
+- **Provenance** (`schemas/provenance.py`): what LLM Design adds is marked
+  `origin: "llm_design"` with the change's `why`, unconfirmed until a person confirms it.
+  An LLM's frequency is a guess that looks like a measurement; the mark keeps the difference
+  visible. It is stamped on the checked result, after the preview, so it applies to sections and
+  Bulk operations alike.
+- **Entry points** where the person already is (Canvas menu, Inspector, Events tab, Analysis,
+  pasting a reply on the Canvas) open LLM Design through one request in the UI store.
+- Evaluated like Bulk operations (`lib/llm-eval.test.ts`, recipe tasks): fresh agents given only a
+  Recipe's copy modelled a hill town from a paragraph, imported a five-row asset table (one node per
+  row, every dependency edge the right way, no invented quantity) and red-teamed the IJDRR sample
+  (10 Events of both types, each striking an Element, none repeating the existing one); all three
+  did what was asked on the first try. What they asked about went into the guide: carrying a
+  Category needs no dependency on it, `demand` and `backup_duration` are for flows, an edge takes a
+  vulnerability too. The run also found that a vulnerability to an Event that does not exist
+  passed the check (a file load only warns); a plain change naming one is now refused.
+
 ## Consequences
 
 - Field paths refuse `__proto__`, `constructor` and `prototype` in every schema that holds one

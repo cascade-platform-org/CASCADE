@@ -14,6 +14,7 @@
  */
 import { z } from "zod";
 import { UNSAFE_KEY_MESSAGE, isSafeKey } from "./field-path";
+import { ProvenanceSchema } from "./provenance";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
 import { StoredTemporalSimulationSchema, migrateProjectSimulations } from "./temporal-simulation";
 
@@ -156,6 +157,8 @@ export const NodeSchema = z.object({
   rules: z.array(z.string()).optional(),
   /** Free-form attributes; an Event's Attribute Operations may write here. */
   properties: z.record(z.string(), z.unknown()).optional(),
+  /** Set by LLM Design (ADR-0022); the engine never reads it. */
+  provenance: ProvenanceSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -201,6 +204,8 @@ export const EdgeSchema = z.object({
    */
   targetHandle: z.string().optional(),
   properties: z.record(z.string(), z.unknown()).optional(),
+  /** Set by LLM Design (ADR-0022); the engine never reads it. */
+  provenance: ProvenanceSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------

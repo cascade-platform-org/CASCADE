@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { BarChart2, BarChart3, Workflow, Network, Zap } from "lucide-react";
+import { BarChart2, BarChart3, Bot, Workflow, Network, Zap } from "lucide-react";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useScorecardStore } from "@/store/scorecard-store";
@@ -12,6 +12,9 @@ import { SectionReachability } from "./section-reachability";
 import { SectionStructural } from "./section-structural";
 import { SectionModelBased } from "./section-model-based";
 import { buildAnalysisEntry } from "@/lib/analysis-entry";
+import { recipeContext } from "@/lib/llm-recipes";
+import { currentBundle } from "@/lib/model-text-apply";
+import { useLlmCopy } from "@/components/model-text/llm-copy";
 import { cn } from "@/lib/utils";
 import type { AnalysisSection } from "@/store/analysis-store";
 
@@ -101,9 +104,11 @@ export function AnalysisPage() {
   const result = useAnalysisStore((s) => s.result);
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const { copyForLlm, notice } = useLlmCopy();
 
   return (
     <>
+      {notice}
       <FloatingWindow
         open={isOpen}
         onClose={closeAnalysisPage}
@@ -113,6 +118,14 @@ export function AnalysisPage() {
         defaultSize={{ w: 880, h: 620 }}
         minSize={{ w: 560, h: 320 }}
         headerActions={
+          <>
+          <button
+            onClick={() => copyForLlm(() => recipeContext("explain", currentBundle(), { analysis: useAnalysisStore.getState().result }), "the current state for an LLM to explain")}
+            title="Copy the applied Events, what is degraded and why, and this Analysis, for an LLM to explain in plain words"
+            className="flex items-center gap-1 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <Bot size={12} /> Explain with an LLM
+          </button>
           <button
             onClick={() => setSaveDialogOpen(true)}
             disabled={!result}
@@ -121,6 +134,7 @@ export function AnalysisPage() {
           >
             Save to Scorecard
           </button>
+          </>
         }
       >
         {/* Left sidebar */}

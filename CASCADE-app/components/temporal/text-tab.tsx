@@ -6,6 +6,7 @@
  * edit through; errors block, project-reference problems only warn.
  */
 
+import { useLlmCopy } from "@/components/model-text/llm-copy";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AlertTriangle, Check, ClipboardCopy, Bot, RotateCcw, Upload } from "lucide-react";
@@ -64,15 +65,18 @@ export function TextTab() {
     setResult({ errors: [], warnings, applied: apply });
   }
 
+  const { copyForLlm, notice } = useLlmCopy();
+
   async function copy(content: string) {
     try { await navigator.clipboard.writeText(content); } catch { /* clipboard blocked: the text stays selectable */ }
   }
 
   return (
     <div className="flex h-full flex-col gap-2">
+      {notice}
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton onClick={() => { void copy(text); explain(EXPLAIN_COPY); }}><ClipboardCopy size={11} /> Copy</SmallButton>
-        <SmallButton onClick={() => { void copy(llmContext(doc, useConfigStore.getState().config, useCanvasStore.getState())); explain(EXPLAIN_COPY_LLM); }}>
+        <SmallButton onClick={() => { copyForLlm(() => llmContext(doc, useConfigStore.getState().config, useCanvasStore.getState()), "the Simulation with context for an LLM"); explain(EXPLAIN_COPY_LLM); }}>
           <Bot size={11} /> Copy with context for an LLM
         </SmallButton>
         <span className="flex-1" />

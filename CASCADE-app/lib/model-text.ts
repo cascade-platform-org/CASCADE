@@ -432,20 +432,21 @@ const MAX_EXAMPLES = 12;
  * bulk operation addresses. A Type whose supplies differ in shape (a plain
  * number here, a Stock there) shows one of each, since each needs its own path.
  */
-function exampleElements(project: Project): string {
+function exampleElements(project: Project): string[] {
   const trim = ({ position: _p, geo: _g, responsibility_share: _r, ...rest }: Node) => rest;
   const byType = new Map<string, Node>();
   for (const nd of Object.values(project.nodes)) {
     const key = `${nd.node_type ?? ""}\n${JSON.stringify(shapeOf(nd.supply_capacity))}`;
     if (!byType.has(key) && byType.size < MAX_EXAMPLES) byType.set(key, nd);
   }
+  if (byType.size === 0) return [];
   const edge = Object.values(project.edges)[0];
-  return [
+  return [[
     "## One Element of each kind, as stored (read a field's shape here before operating on it)",
     "```json",
     JSON.stringify({ nodes: [...byType.values()].map(trim), ...(edge ? { edge } : {}) }, null, 1),
     "```",
-  ].join("\n");
+  ].join("\n")];
 }
 
 /**
@@ -460,12 +461,7 @@ export function modelTextContext(
   /** For Bulk operations in plain changes (`lib/model-text-v2.ts`): its format, and what it adds (the field census). */
   bulk?: { reference: string; extra: string },
 ): string {
-  const limit = 300;
-  const { project, config } = bundle;
-  const nodes = Object.values(project.nodes);
-  const edges = Object.values(project.edges);
-  const lines = (title: string, items: string[]) =>
-    `## ${title} (${items.length})\n${items.slice(0, limit).join("\n")}${items.length > limit ? `\n… ${items.length - limit} more` : ""}`;
+  const { project } = bundle;
   const sectionNotes = section && [
     section.registry === "nodes" && "- Deleting a node here also deletes its edges and removes it from every Canvas: do not edit those yourself.",
     section.registry && section.onCanvas && "- An Element you add here is placed on this Canvas.",
@@ -487,13 +483,27 @@ export function modelTextContext(
     ...(section?.pointer.startsWith("/project/temporal_simulations") ? [SIMULATION_REFERENCE] : []),
     ...(section?.pointer.startsWith("/config/events") || !section ? [EVENT_FIELDS] : []),
     ID_RULES,
-    ...(section ? [] : [...(bulk ? [bulk.extra] : []), exampleElements(project)]),
+    ...(section ? [] : [...(bulk ? [bulk.extra] : []), ...exampleElements(project)]),
     "# The rest of the model, for reference",
+    modelLists(bundle),
+  ].join("\n\n");
+}
+
+/** True when a pasted text is an LLM Design change set (either format), e.g. an LLM's reply. */
+export const isChangeSetText = (text: string): boolean => /"format"\s*:\s*"cascade\.model-change\/v\d+"/.test(text);
+
+/** The model's ids and names, list by list (capped at 300 each): what an LLM refers to. */
+export function modelLists(bundle: ProjectBundle): string {
+  const limit = 300;
+  const { project, config } = bundle;
+  const lines = (title: string, items: string[]) =>
+    `## ${title} (${items.length})\n${items.slice(0, limit).join("\n")}${items.length > limit ? `\n… ${items.length - limit} more` : ""}`;
+  return [
     lines("Canvases", project.canvases.map((c) => `- ${c.id} — ${c.label}`)),
-    lines("Nodes", nodes.map((nd) => `- ${nd.id} — ${nd.label ?? ""} — ${nd.node_type ?? ""}${nd.node_categories?.length ? ` — ${nd.node_categories.join(", ")}` : ""}`)),
-    lines("Edges", edges.map((e) => `- ${e.id} — ${e.source} → ${e.target}`)),
+    lines("Nodes", Object.values(project.nodes).map((nd) => `- ${nd.id} — ${nd.label ?? ""} — ${nd.node_type ?? ""}${nd.node_categories?.length ? ` — ${nd.node_categories.join(", ")}` : ""}`)),
+    lines("Edges", Object.values(project.edges).map((e) => `- ${e.id} — ${e.source} → ${e.target}`)),
     lines("Events", config.events.map((e) => `- ${e.id} — ${e.label} — ${e.type}`)),
-    lines("Categories", config.categories.map((c) => `- ${c.name}`)),
+    lines("Categories", config.categories.map((c) => `- ${c.name} (${c.category_type})`)),
     `## Functionality scale\n1..${config.functionality_scale.length} (${config.functionality_scale.length} = fully operational)`,
     `## Temporal Simulations\n${(project.temporal_simulations ?? []).map((s) => `- ${s.id} — ${s.timeline.name}`).join("\n") || "(none)"}`,
   ].join("\n\n");

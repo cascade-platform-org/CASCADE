@@ -843,6 +843,22 @@ since that quota — not an app-defined number — is the real storage limit.
 - A change is checked on a copy (size and nesting limits, JSON only, no `__proto__`/`constructor`/`prototype` key, the strict change-set schema, the dry run, the Project and Configuration schemas, the reference checks of §13.3) and previewed change by change; it is written only on confirmation, after the current project is kept as a Local version, and **Undo this edit** restores it. Refused while a Temporal Simulation run is shown.
 - *Copy section* copies any part by path; *Copy with context for an LLM* copies the format and the model's ids and names.
 
+### 13.3b LLM Design for people who do not know the platform — implemented (ADR-0022, revised 2026-10-08)
+
+A person describes their organisation or a question in their own words; an LLM, given what the app copies, writes the plain changes; the person reviews them. Nothing in §13.3a's check, preview or undo is bypassed.
+
+- **Recipes.** LLM Design offers four, each copying the instructions for one job, the model's context and, optionally, what the person typed or pasted:
+  - *Model from a description*: the LLM asks the person up to five questions when the description leaves gaps, then replies with plain changes that add the Categories, Canvases, Elements and edges, each with a `why` that names what in the description it comes from or says it is an assumption.
+  - *Import an organisation's data*: the same for a pasted table, list or document; a value the data does not give is left out and said so, never invented.
+  - *Red-team Events*: the LLM acts as a risk analyst with no stake in the organisation, infers its context from the names, and proposes Events across sectors (natural, technological, cyber, supply chain, social and organisational, compound), skipping what existing Events cover, each with a frequency estimate and the vulnerability levels of the Elements it strikes, and a `why` for each.
+  - *Explain the current state*: the applied Events, every Element below full Functionality with its responsibility shares, and the latest Analysis result; the LLM replies in plain words, so nothing is applied.
+- **Before the first copy for an LLM**, a notice says that the model leaves this computer when pasted, and recommends a chat that keeps no history, or an LLM running locally. A *Don't tell me again* tick hides it for this browser.
+- **Partial apply.** Each change of Bulk operations has a tick in the preview; Apply writes the ticked ones. A change left out is skipped in place, so a later change that needed it is refused with its reason.
+- **Provenance.** A node, edge or Event that LLM Design adds carries `provenance: { origin: "llm_design", rationale, confirmed: false }` (the change's `why`). The Inspector and the Events tab show it as *unconfirmed*, the Event's frequency as an estimate, until a person confirms it; the Inspector confirms a whole selection at once. The engine never reads it.
+- **Placement.** A node added without a position is placed on a grid below its Canvas's nodes.
+- **Entry points** open LLM Design focused on what the person is looking at: the Canvas's right-click menu (the selection, or the whole model), the Inspector's header (one Element's section, or the selection), the Events tab (*Red-team Events*), and the Analysis window (*Explain the current state*, copied directly). Pasting a plain-changes reply onto the Canvas opens it in Bulk operations, checked.
+- Deferred: an automatic layout for many added nodes, and letting an agent use the app directly (a local MCP server on a project file).
+
 ### 13.4 Server Sync (opt-in) — implemented
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.

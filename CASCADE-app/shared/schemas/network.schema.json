@@ -133,6 +133,41 @@
       "title": "Position",
       "type": "object"
     },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "properties": {
+        "origin": {
+          "const": "llm_design",
+          "title": "Origin",
+          "type": "string"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why it was added: the change's `why`.",
+          "title": "Rationale"
+        },
+        "confirmed": {
+          "default": false,
+          "description": "True once a person has confirmed it.",
+          "title": "Confirmed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "origin"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
     "Stock": {
       "additionalProperties": false,
       "description": "A supply rate with a level that persists across Temporal Simulation periods (ADR-0020).\n\nSits where a bare number would: `Node.supply_capacity[category]` or\n`Edge.capacity`. The engine never reads one: `buildPropagationPayload` sends\nits supply number, and only the client's step operator integrates `level`.\nWith `max_fill` it is **storage** (\u00a71c): it fills from the network's own flow\nof its Category and feeds that flow, used last and filled last.",
@@ -516,6 +551,17 @@
           ],
           "default": null,
           "title": "Properties"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -689,6 +735,17 @@
           ],
           "default": null,
           "title": "Properties"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

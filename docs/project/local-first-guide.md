@@ -265,6 +265,7 @@ window does not, the window says why and the file keeps the last valid one.
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes; an Event's Attribute Operations may write here. |
+| `provenance` | `{ origin: "llm_design", rationale?, confirmed }` | Set on what LLM Design adds (ADR-0022): the change's `why`, and whether a person has confirmed it. Shown as *unconfirmed* until then. The engine never reads it. |
 
 #### Per-category dependency profile fields
 
@@ -302,6 +303,7 @@ Applied only if it worsens the current `functionality`.
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes. |
+| `provenance` | `{ origin, rationale?, confirmed }` | Same as on nodes. |
 
 ---
 
@@ -383,6 +385,9 @@ The config file defines the functionality scale, categories, Events (Hazards and
   ]
 }
 ```
+
+An Event that LLM Design adds carries `provenance` too (same shape as on nodes):
+until `confirmed`, its `frequency_per_10y` is an LLM's estimate.
 
 The `global` graph type (referenced by `global_graph_type`) lists its constituent
 local graph types in `local_graph_types` instead of declaring `heuristics`
