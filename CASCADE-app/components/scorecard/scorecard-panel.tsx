@@ -38,7 +38,7 @@ import {
 import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
 import { resetFunctionality } from "@/lib/network-utils";
 import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
-import { formatMetric } from "@/lib/temporal-metrics";
+import { STANDARD_COLUMNS, formatMetric } from "@/lib/temporal-metrics";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
 import { SaveScorecardDialog } from "./operativity-scorecard";
@@ -838,8 +838,8 @@ function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after
 /**
  * A Temporal Simulation run saved to the Scorecard: its ticked periods, packed.
  * The run is not saved, so the card shows what the entry holds: each period's
- * end state (the run's start with the period's diff; Operativity derived from
- * it, as for any entry), stepped with a slider that opens on the last period;
+ * end state (the run's start with the period's diff), stepped with a slider
+ * that opens on the last period; the run's mean Operativity in the header;
  * the network coloured by Functionality, Stock level or Stock change; and the
  * Metric values at the period with their minimum and mean across the run.
  */
@@ -850,7 +850,13 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
   const [index, setIndex] = useState(last);
   const period = entry.periods[Math.min(index, last)];
   const snapshot = useMemo(() => periodEndState(entry, period), [entry, period]);
-  const operativity = useMemo(() => computeOperativityScore(snapshot, n), [snapshot, n]);
+  // The run's mean Operativity: the table's, when the run showed that column; else over the saved periods.
+  const meanOperativity = useMemo(() => {
+    const fromRun = entry.metric_mean[STANDARD_COLUMNS.operativity];
+    if (fromRun !== undefined && fromRun !== null) return fromRun;
+    const scores = entry.periods.map((p) => computeOperativityScore(periodEndState(entry, p), n));
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  }, [entry, n]);
   const levels = useMemo(() => stockValues(snapshot, snapshot, "level"), [snapshot]);
   const [colouring, setColouring] = useState<"functionality" | "level" | "change">(levels.length > 0 ? "level" : "functionality");
   const colors = useMemo(() => {
@@ -875,7 +881,7 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <ScorePill label={`Operativity at ${period.label}`} value={operativity} config={config} />
+          <ScorePill label="Mean Operativity across the run" value={meanOperativity} config={config} />
           <CardActions expanded={expanded} onToggle={() => setExpanded((v) => !v)} titles={["Collapse", "Show the periods' networks and Metrics"]} onDelete={onDelete} />
         </div>
       </div>
