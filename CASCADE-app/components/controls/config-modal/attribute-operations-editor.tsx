@@ -62,6 +62,7 @@ export function AttributeOperationsEditor({
     <div className="space-y-2">
       <p className="text-[11px] text-zinc-500">
         Each operation writes <code>op(current value, value)</code> at a field path, after the mutations, in this order.
+        With <em>× of</em>, the value is multiplied by what the same Element holds at that path just before.
         Arithmetic on an absent value, or a result outside the field&apos;s range, is refused for that Element and reported — never clamped.
       </p>
 
@@ -80,6 +81,10 @@ export function AttributeOperationsEditor({
                 <button type="button" title="Remove" className="hover:text-red-600" onClick={() => restructure(operations.filter((_, k) => k !== i))}><Trash2 size={12} /></button>
               </div>
             </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              × of the Element&apos;s
+              <TextBackedInput key={`${epoch}-${i}-of`} initial={op.of ? formatPath(op.of) : ""} placeholder="field path (optional)" onCommit={(t) => edit(i, { of: parsePath(t).length ? parsePath(t) : undefined })} />
+            </label>
             <TargetPicker target={op} onChange={(patch) => edit(i, patch)} />
             {problem && <p className="text-[11px] text-red-600 dark:text-red-400">{problem}</p>}
           </div>

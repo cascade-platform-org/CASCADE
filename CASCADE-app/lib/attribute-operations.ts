@@ -55,6 +55,18 @@ function computeOperation(
   }
 }
 
+/** The operand: `value`, or with `of`, `value` × the number this Element holds there (read before the operation). */
+function operandOf(element: Rec, op: AttributeOperation): { value: AttributeOperation["value"] } | { error: string } {
+  if (op.of === undefined) return { value: op.value };
+  const from = op.of.join(" › ");
+  if (!op.of.every(isSafeKey)) return { error: `of ${from}: __proto__, constructor and prototype cannot be field names` };
+  const read = readPath(element, op.of);
+  if ("error" in read) return { error: `of ${from}: ${read.error}` };
+  if (typeof read.value !== "number") return { error: `of ${from}: ${read.value === undefined ? "the Element holds no value there" : "not a number"}` };
+  if (typeof op.value !== "number") return { error: "with of, value is the factor: a number" };
+  return { value: op.value * read.value };
+}
+
 /** The Elements an operation (or any selector) acts on, in id order: its one Element if it exists, or its filter's matches. */
 export function operationTargets(op: Pick<AttributeOperation, "element" | "where">, model: FilterableModel): string[] {
   if (op.where) return matchElements(op.where, model);
@@ -75,7 +87,9 @@ export function applyOperationTo(
   if (!op.path.every(isSafeKey)) return { error: `${where}: __proto__, constructor and prototype cannot be field names` };
   const read = readPath(element, op.path);
   if ("error" in read) return { error: `${where}: ${read.error}` };
-  const result = computeOperation(op.op, read.value, op.value);
+  const operand = operandOf(element, op);
+  if ("error" in operand) return { error: `${where}: ${operand.error}` };
+  const result = computeOperation(op.op, read.value, operand.value);
   if ("error" in result) return { error: `${where}: ${result.error}` };
 
   const [field, ...inside] = op.path;

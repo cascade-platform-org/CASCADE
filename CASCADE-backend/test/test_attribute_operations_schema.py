@@ -75,3 +75,14 @@ def test_a_restorative_event_is_an_event_type():
     from schemas.config import EventDefinition
 
     assert EventDefinition(id="r", label="Repair", type="restorative").type == "restorative"
+
+
+def test_of_reads_the_operand_from_another_field_and_needs_a_number_factor():
+    op = AttributeOperation.model_validate(
+        {"element": "a", "path": ["properties", "balance"], "op": "add", "value": -0.5, "of": ["properties", "opening"]}
+    )
+    assert op.model_dump(exclude_none=True)["of"] == ["properties", "opening"]
+    with pytest.raises(ValidationError, match="with `of`, `value` is the factor"):
+        AttributeOperation.model_validate({"element": "a", "path": ["p"], "op": "set", "value": "text", "of": ["q"]})
+    with pytest.raises(ValidationError):
+        AttributeOperation.model_validate({"element": "a", "path": ["p"], "op": "add", "value": 1, "of": ["__proto__"]})

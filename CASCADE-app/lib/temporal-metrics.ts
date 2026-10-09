@@ -90,9 +90,10 @@ export function evaluateMetric(metric: Metric, states: GraphSnapshot[]): number 
     }
   }
 
+  // No matched Element holds the field: no value, which the table shows as "—" (a sum of nothing is not 0).
+  if (values.length === 0) return null;
   const filter = metric.value_filter;
   if (metric.aggregate === "share_where") {
-    if (values.length === 0) return null;
     return filter ? values.filter((v) => passes(v, filter)).length / values.length : 1;
   }
   const kept = filter ? values.filter((v) => passes(v, filter)) : values;
@@ -168,7 +169,8 @@ export function runTable(record: RunRecord, metrics: readonly Metric[], n: numbe
 export function runTableCsv(table: RunTable): string {
   const cell = (v: string | number | null) => {
     if (v === null) return "";
-    const text = String(v);
+    // 12 significant digits: drops binary-fraction noise (19345.199999999997 → 19345.2), keeps every real digit.
+    const text = typeof v === "number" ? String(Number(v.toPrecision(12))) : v;
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   return [["period", ...table.columns.map((c) => c.label)], ...table.rows.map((r) => [r.label, ...r.values])]

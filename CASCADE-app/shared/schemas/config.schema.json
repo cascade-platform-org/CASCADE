@@ -88,7 +88,7 @@
     },
     "AttributeOperation": {
       "additionalProperties": false,
-      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. Applied\nclient-side when the Event fires; the engine never reads it.",
+      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. With\n`of`, the operand is `value` \u00d7 the number the same Element holds at `of`,\nread just before the operation (a rule on a remembered value: \"pay 50% of the\nbalance saved in January\"). Applied client-side when the Event fires; the\nengine never reads it.",
       "properties": {
         "element": {
           "anyOf": [
@@ -151,6 +151,24 @@
             }
           ],
           "title": "Value"
+        },
+        "of": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Field path on the same Element: the operand becomes `value` \u00d7 the number held there.",
+          "title": "Of"
         }
       },
       "required": [

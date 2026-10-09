@@ -20,7 +20,7 @@
  * lines of controls) without costing anything per pointer-move.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import { X, Minus, Square, Copy, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,27 @@ function readStored(key: string | undefined): Geometry | null {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Stacking: the window opened or touched last is on top
+// ---------------------------------------------------------------------------
+
+/** Open windows, bottom to top. They stack in z 41–49: above the canvas, below menus (z-50) and modals. */
+let stack: string[] = [];
+const listeners = new Set<() => void>();
+const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const getStack = () => stack;
+function raise(id: string) {
+  if (stack[stack.length - 1] === id) return;
+  stack = [...stack.filter((x) => x !== id), id];
+  listeners.forEach((fn) => fn());
+}
+function drop(id: string) {
+  if (!stack.includes(id)) return;
+  stack = stack.filter((x) => x !== id);
+  listeners.forEach((fn) => fn());
+}
+const zOf = (order: readonly string[], id: string) => 41 + Math.min(Math.max(order.indexOf(id), 0), 8);
+
 export function FloatingWindow({
   open,
   title,
@@ -116,6 +137,14 @@ export function FloatingWindow({
   const [maximized, setMaximized] = useState(false);
   /** Non-null while the window is flying back into its anchor. */
   const [flight, setFlight] = useState<CSSProperties | null>(null);
+  const id = useId();
+  const order = useSyncExternalStore(subscribe, getStack, getStack);
+  // Opening puts the window on top; closing takes it out of the stack.
+  useEffect(() => {
+    if (!open) return;
+    raise(id);
+    return () => drop(id);
+  }, [open, id]);
 
   const commit = useCallback(
     (g: Geometry) => {
@@ -258,9 +287,10 @@ export function FloatingWindow({
       ref={shellRef}
       role="dialog"
       aria-label={title}
-      style={{ ...frame, ...flight, transitionDuration: `${FLIGHT_MS}ms` }}
+      onPointerDownCapture={() => raise(id)}
+      style={{ ...frame, ...flight, zIndex: zOf(order, id), transitionDuration: `${FLIGHT_MS}ms` }}
       className={cn(
-        "fixed z-50 flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
+        "fixed flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
         "origin-center transition-[transform,opacity] ease-in",
         flight && "pointer-events-none",
       )}

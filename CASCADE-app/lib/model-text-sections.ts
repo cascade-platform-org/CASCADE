@@ -85,12 +85,23 @@ function registrySection(bundle: ProjectBundle, registry: "nodes" | "edges", lab
 const SHOWN_CONFIG = new Set(["events", "categories", "functionality_scale"]);
 const SHOWN_PROJECT = new Set(["meta", "canvases", "nodes", "edges", "scorecard", "temporal_simulations", "update_history", "version"]);
 
+/** What a person calls the other saved fields; an unknown one reads as words ("graph_types" → "Graph types"). */
+const FIELD_LABELS: Record<string, string> = {
+  global_graph_type: "Global graph type",
+  graph_types: "Graph types",
+  level_scale: "Level Scale",
+  node_defaults: "Node defaults",
+  meta: "Configuration info",
+  version: "Format version",
+};
+const fieldLabel = (key: string) => FIELD_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ");
+
 export function sectionTree(bundle: ProjectBundle): Section[] {
   const { project, config } = bundle;
   const sims = project.temporal_simulations ?? [];
   const projectChildren: Section[] = [
     leaf("/project/meta", "Project info"),
-    ...Object.keys(project).filter((k) => !SHOWN_PROJECT.has(k)).map((k) => leaf(`/project/${enc(k)}`, k)),
+    ...Object.keys(project).filter((k) => !SHOWN_PROJECT.has(k)).map((k) => leaf(`/project/${enc(k)}`, fieldLabel(k))),
     { ...leaf("/project/canvases", "Canvases"), count: project.canvases.length, children: items("/project/canvases", project.canvases, (c, i) => str(c.label, str(c.id, `#${i}`))) },
     registrySection(bundle, "nodes", "Nodes"),
     registrySection(bundle, "edges", "Edges"),
@@ -101,7 +112,7 @@ export function sectionTree(bundle: ProjectBundle): Section[] {
     { ...leaf("/config/events", "Events"), count: config.events.length, children: items("/config/events", config.events, (e, i) => str(e.label, str(e.id, `#${i}`))) },
     { ...leaf("/config/categories", "Categories"), count: config.categories.length, children: items("/config/categories", config.categories, (c, i) => str(c.name, `#${i}`)) },
     leaf("/config/functionality_scale", "Functionality scale"),
-    ...Object.keys(config).filter((k) => !SHOWN_CONFIG.has(k)).map((k) => leaf(`/config/${enc(k)}`, k)),
+    ...Object.keys(config).filter((k) => !SHOWN_CONFIG.has(k)).map((k) => leaf(`/config/${enc(k)}`, fieldLabel(k))),
   ];
   return [
     { key: "/project", label: "Project", pointer: "/project", mode: "keys", children: projectChildren },

@@ -238,7 +238,7 @@ Propagation request leaves them out. A file with the older single
 | --- | --- |
 | `timeline.steps[]` | `label`, `unit` (`hour` \| `day` \| `week` \| `month` \| `quarter` \| `year` \| `none`), `repeat` (default 1) and `phases[]`. With a unit, each repeat advances the label (`2023-03-06`, `2023-03-07`, …); with `none` repeats are numbered `label#2`, `label#3`. |
 | `phases[]` | `advance_hours` (optional: hours that pass at the Phase's start, before its Events; backups count down), `events` (an Event id fires every period of its Step; `{event, every: N}` fires on the Step's periods N, 2N, …) and `propagate` (default `true`). |
-| `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021). |
+| `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021): `element` or `where`, `path`, `op`, `value`, and optional `of` (a field path on the same Element: the operand is `value` × the number held there). |
 | `standard_metrics` | The standard Metrics the Run table shows before `metrics`: any of `operativity`, `coverage`, `stock_level`. All three when absent, and the Text tab writes it only when one is hidden. |
 | `scope`, `canvas` | The Propagation scope every Propagation of a run uses: `global` (default), or `local` with `canvas`, the Canvas id it propagates. |
 | `metrics[]` | Read-outs per period: `name`, `target` (an Element Filter), `path`, `read` (`state` \| `change`), optional `phase`, `aggregate`, optional `percentile` and `value_filter`. |

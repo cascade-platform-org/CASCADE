@@ -49,7 +49,7 @@ export function TextTab() {
       explain(explainApply(parsed.errors.length, 0));
       return;
     }
-    const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState());
+    const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState(), useConfigStore.getState().config.functionality_scale.length);
     if (apply) {
       const draft = docToDraft(parsed.doc, nanoid);
       replaceDraft(draft);

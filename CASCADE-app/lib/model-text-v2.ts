@@ -635,7 +635,7 @@ export function starterPlain(bundle: ProjectBundle): string {
   const service = nodes.find((nd) => nd.node_type === "Service") ?? nodes[0];
   const event = bundle.config.events.find((e) => e.type !== "restorative");
   const changes: Rec[] = [];
-  if (source?.node_type) changes.push({ scale: "supply", by: 0.9, where: { kind: "node", node_type: source.node_type }, why: "Example: every Source supplies 10% less" });
+  if (source?.node_type) changes.push({ scale: "supply", by: 0.9, where: { kind: "node", node_type: source.node_type }, why: `Example: every ${source.node_type} node supplies 10% less` });
   if (service) changes.push({ set: "importance", to: 2, id: service.id, why: `Example: ${service.label ?? service.id} matters twice as much` });
   if (event && service) changes.push({ set: "vulnerability", event: event.id, to: 1, id: service.id, skip_unfit: true, why: `Example: ${event.label} costs it one level` });
   if (changes.length === 0) changes.push({ add: "event", value: { id: "evt-example", label: "Example hazard", type: "hazard", frequency_per_10y: 1 } });

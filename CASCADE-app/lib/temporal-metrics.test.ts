@@ -90,3 +90,18 @@ describe("buildRunEntry", () => {
     expect(periodEndState(entry, entry.periods[1])).toEqual(periodState(record, 3));
   });
 });
+
+describe("a Metric no Element can answer", () => {
+  it("reads as no value, shown as —, rather than a sum of 0", () => {
+    const s = snap([worker("a", 10)]);
+    expect(evaluateMetric(metric({ path: ["properties", "absent"] }), [s, s])).toBeNull();
+    expect(evaluateMetric(metric({ aggregate: "count", path: ["properties", "absent"] }), [s, s])).toBeNull();
+  });
+});
+
+describe("runTableCsv", () => {
+  it("writes numbers without binary-fraction noise", () => {
+    const csv = runTableCsv({ columns: [{ key: "m", label: "m" }], rows: [{ label: "p1", values: [19345.199999999997] }, { label: "p2", values: [0.1 + 0.2] }] });
+    expect(csv.split("\n").slice(1)).toEqual(["p1,19345.2", "p2,0.3"]);
+  });
+});

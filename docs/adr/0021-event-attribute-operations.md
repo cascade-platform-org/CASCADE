@@ -27,6 +27,7 @@ class AttributeOperation(BaseModel):
     path: list[str]                                      # ["supply_capacity", "hours", "level"]
     op: Literal["set", "add", "mul", "at_most", "at_least"]
     value: float | int | bool | str                      # a number for add/mul/at_most/at_least
+    of: Optional[list[str]] = None                       # revised 2026-10-09: operand = value × this field's number
 
 class ElementFilter(BaseModel):                          # every given condition must hold
     kind: Literal["node", "edge"] = "node"
@@ -136,3 +137,18 @@ brings to the top Functionality level loses its Responsibility Share (nothing ex
 working Element), and one it raises part of the way keeps the cause it had. Before, a
 repair was a Disservice whose operations raised Functionality, which recorded the repair as
 the cause of what remained degraded.
+
+## Revision (2026-10-09): `of`, an operand read from the Element
+
+Testing LLM Design on the Coop Noncello hours bank showed a rule operations could not write:
+"in June, pay 50% of the balance at 1 January". Every operand was a constant, so the LLM
+precomputed each June payout from the data, and changing the 50% meant regenerating the
+definition. An operation may now carry **`of`**, a field path on the same Element: the
+operand is `value` × the number the Element holds there, read just before the operation.
+With `set` it copies a field (a remembered value); with `add` it moves a share of one. The
+rule is then two operations — in January `set` `properties.opening` `of` the balance (and
+`at_least 0` on it), in June `add −0.5` `of` `properties.opening` — and still applies after
+the flows change. An Element holding no number at `of` refuses the operation, like
+arithmetic on an absent value. Events and a Temporal Simulation's profile read it alike;
+the Timeline grid keeps `of` as part of a row.
+

@@ -40,7 +40,11 @@ export const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_l
 export const valueFitsOp = (op: z.infer<typeof OperationKindSchema>, value: unknown): boolean =>
   op === "set" || typeof value === "number";
 
-/** ADR-0021: one operation, on one Element (`element`) or on every match of `where`. */
+/**
+ * ADR-0021: one operation, on one Element (`element`) or on every match of
+ * `where`. With `of`, the operand is `value` × the number the same Element holds
+ * at `of`, read just before the operation: a rule on a remembered value.
+ */
 export const AttributeOperationSchema = z
   .object({
     element: z.string().min(1).optional(),
@@ -48,6 +52,7 @@ export const AttributeOperationSchema = z
     path: FieldPathSchema,
     op: OperationKindSchema,
     value: z.union([z.number(), z.boolean(), z.string()]),
+    of: FieldPathSchema.optional(),
   })
   .strict()
   .refine((o) => (o.element === undefined) !== (o.where === undefined), {
@@ -55,6 +60,10 @@ export const AttributeOperationSchema = z
   })
   .refine((o) => valueFitsOp(o.op, o.value), {
     message: "add, mul, at_most and at_least need a number `value`",
+    path: ["value"],
+  })
+  .refine((o) => o.of === undefined || typeof o.value === "number", {
+    message: "with `of`, `value` is the factor: a number",
     path: ["value"],
   });
 export type AttributeOperation = z.infer<typeof AttributeOperationSchema>;

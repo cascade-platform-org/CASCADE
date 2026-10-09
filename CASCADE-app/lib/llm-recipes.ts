@@ -111,6 +111,12 @@ const MODELLING_GUIDE = `## Turning an organisation into a CASCADE model
 - "functionality" defaults to N (fully operational) and an edge's id is made for you: leave both out.
 - An edge runs from the provider to the node that depends on it (the direction the resource goes), on the
   Canvases of its ends; "capacity" limits what a SourceToDemands flow carries through it.
+- A quantity that carries over from one period to the next is kept where a Temporal Simulation can move it:
+  one the flow draws or fills (water in a tank, a fuel reserve) is a Stock, written in place of the supply number:
+  "supply_capacity": { "<category>": { "rate": supply per period, "level": amount held now, "min", "max" } };
+  one that is only counted (an hours balance, a backlog) is a property named for what it is now, e.g.
+  "properties": { "balance_h": 10007 }, never for a date ("balance_1_jan_2023"), since the simulation changes it.
+  Say in "notes" where each such quantity lives, so the simulation can be written against it.
 - "importance" weighs how much a Service matters (1 = default).
 - One Canvas per site or sector when the systems are clearly separate; one is fine otherwise. Give each node a
   "position" (x to the right, y downward, about 200 apart), providers above the nodes they feed.

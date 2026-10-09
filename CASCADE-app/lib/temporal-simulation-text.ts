@@ -12,6 +12,7 @@ import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS
 import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
+import { dryRunProblems } from "@/lib/temporal-dry-run";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
 import type { CapacityValue } from "@/lib/schemas/network";
 
@@ -44,7 +45,7 @@ export interface SimulationDraft {
 /** The operation a row applies in one period. */
 export function rowOperation(row: ProfileRow, value: AttributeOperation["value"]): AttributeOperation {
   const target = row.where !== undefined ? { where: row.where } : { element: row.element };
-  return { ...target, path: row.path, op: row.op, value };
+  return { ...target, path: row.path, op: row.op, value, ...(row.of ? { of: row.of } : {}) };
 }
 
 /** Rows → `{label: [operations]}`: a period's operations follow row order; labels in Timeline order, unknown ones after. */
@@ -69,7 +70,7 @@ function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () 
   for (const [label, ops] of Object.entries(profile)) {
     let previous = -1;
     for (const { value, ...op } of ops) {
-      const key = JSON.stringify([op.element, op.where, op.path, op.op]);
+      const key = JSON.stringify([op.element, op.where, op.path, op.op, op.of]);
       let i = keys.findIndex((k, j) => j > previous && k === key && !(label in rows[j].values));
       if (i < 0) {
         i = rows.push({ ...op, id: newId(), values: {} }) - 1;
@@ -166,8 +167,12 @@ export function checkDoc(raw: unknown): ParseResult {
   return parsed.success ? { ok: true, doc: parsed.data } : { ok: false, errors: formatIssues(parsed.error) };
 }
 
-/** Problems a valid document can still have against THIS project. Reported; applying is still allowed. */
-export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], model: FilterableModel): string[] {
+/**
+ * Problems a valid document can still have against THIS project, including
+ * what a run would refuse (`dryRunProblems`; `n` is the top Functionality
+ * level). Reported; applying is still allowed.
+ */
+export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], model: FilterableModel, n: number): string[] {
   const out: string[] = [];
   const eventIds = new Set(events.map((e) => e.id));
   const unknownEvents = new Set<string>();
@@ -177,24 +182,32 @@ export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], 
   const plan = planTimeline(doc.timeline);
   out.push(...plan.errors, ...plan.warnings);
   const labels = new Set(plan.periods.map((p) => p.label));
+  // One line per missing Element or empty filter, however many operations name it.
+  const missing = new Map<string, { count: number; first: string }>();
+  const note = (what: string, label: string) => {
+    const m = missing.get(what);
+    if (m) m.count++;
+    else missing.set(what, { count: 1, first: label });
+  };
   for (const [label, ops] of Object.entries(doc.profile)) {
     if (!labels.has(label)) out.push(`Profile label "${label}" is not a period of the Timeline; its ${ops.length} operation(s) never apply.`);
     ops.forEach((op, i) => {
-      const where = `profile["${label}"][${i}]`;
-      if (op.element !== undefined && !(op.element in model.nodes) && !(op.element in model.edges)) {
-        out.push(`${where}: no Element "${op.element}".`);
-      }
+      if (op.element !== undefined && !(op.element in model.nodes) && !(op.element in model.edges)) note(`no Element "${op.element}"`, label);
       if (op.where) {
-        filterMisuse(op.where).forEach((m) => out.push(`${where}.where: ${m}.`));
-        if (matchElements(op.where, model).length === 0) out.push(`${where}.where matches no Element.`);
+        filterMisuse(op.where).forEach((m) => out.push(`profile["${label}"][${i}].where: ${m}.`));
+        if (matchElements(op.where, model).length === 0) note(`the filter ${JSON.stringify(op.where)} matches no Element`, label);
       }
     });
+  }
+  for (const [what, { count, first }] of missing) {
+    out.push(`profile: ${what} — ${count} operation${count > 1 ? "s" : ""}, first in ${first}.`);
   }
   doc.metrics.forEach((m, i) => {
     filterMisuse(m.target).forEach((x) => out.push(`metrics[${i}].target: ${x}.`));
     if (matchElements(m.target, model).length === 0) out.push(`metrics[${i}] ("${m.name}"): target matches no Element.`);
   });
   if (doc.canvas !== undefined && !(doc.canvas in model.canvases)) out.push(`canvas: no Canvas "${doc.canvas}"; a local run needs one.`);
+  out.push(...dryRunProblems(doc, events, model, n));
   return out;
 }
 
@@ -227,7 +240,8 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
         "where": Filter,
         "path": ["supply_capacity", "<category>", "rate"],   // field path as a list
         "op": ${alternatives(OperationKindSchema.options)},        // at_most caps at value; at_least raises to value
-        "value": number (string/bool only with "set") }
+        "value": number (string/bool only with "set"),
+        "of": ["properties", "opening"] }   // optional: the operand is value × the number this Element holds there
     ]
   },
   "metrics": [
@@ -323,6 +337,11 @@ so on a Stock name the field: "halve a Stock's supply" is ["supply_capacity", "<
 
 Operations: set (write the value), add, mul, at_most (cap at the value), at_least (raise to the value).
 The last four need a number. An operation on a field the Element does not have is rejected (except set).
+With "of": [path], the operand is value × the number the same Element holds at that path, read just before:
+a rule on a remembered value. Remember it with { "op": "set", "path": ["properties", "opening"], "of": [balance
+path], "value": 1 } in one period, then e.g. { "op": "add", "path": [balance path], "of": ["properties",
+"opening"], "value": -0.5 } in a later one pays out half of it; at_least 0 on the remembered value keeps
+only a positive one.
 An operation with a filter should fit every Element it matches: in LLM Design, one that does not refuses
 the whole change, naming the Element; in a Temporal Simulation run that Element is skipped with a warning.
 When matches differ in shape (a plain supply here, a Stock there), use one operation per
@@ -392,6 +411,12 @@ export function llmContext(
   const listElements = nodes.length + edges.length <= 300;
   // A Stock is listed whole, as JSON, so an operation can address its fields by path.
   const capacity = (v: CapacityValue) => (typeof v === "number" ? String(v) : `Stock ${JSON.stringify(v)}`);
+  // Properties are where a model may keep its own quantities (a balance, a count): an operation addresses them by path.
+  const props = (p: Record<string, unknown> | undefined) => {
+    if (!p || Object.keys(p).length === 0) return "";
+    const json = JSON.stringify(p);
+    return ` — properties: ${json.length > 400 ? `${json.slice(0, 400)}…` : json}`;
+  };
   const fmt = (r: Record<string, CapacityValue> | undefined) => Object.entries(r ?? {}).map(([k, v]) => `${k} ${capacity(v)}`).join(", ");
   const lines = [
     "# CASCADE Temporal Simulation — write the definition",
@@ -432,13 +457,13 @@ export function llmContext(
     `${nodes.length} nodes, ${edges.length} edges.`,
   ];
   if (listElements) {
-    lines.push("Nodes (id — label — type — supplies / needs):");
+    lines.push("Nodes (id — label — type — supplies / needs — properties):");
     nodes.forEach((n) => {
       const needs = Object.entries(n.category_dependency_profiles ?? {}).map(([c, p]) => `${c}${p.demand !== undefined ? ` ${p.demand}` : ""}`).join(", ");
-      lines.push(`- ${n.id} — ${n.label ?? ""} — ${n.node_type ?? ""} — supplies: ${fmt(n.supply_capacity) || "—"} / needs: ${needs || "—"}`);
+      lines.push(`- ${n.id} — ${n.label ?? ""} — ${n.node_type ?? ""} — supplies: ${fmt(n.supply_capacity) || "—"} / needs: ${needs || "—"}${props(n.properties)}`);
     });
-    lines.push("Edges (id — source → target — capacity):");
-    edges.forEach((e) => lines.push(`- ${e.id} — ${e.source} → ${e.target}${e.capacity !== undefined ? ` — ${capacity(e.capacity)}` : ""}`));
+    lines.push("Edges (id — source → target — capacity — properties):");
+    edges.forEach((e) => lines.push(`- ${e.id} — ${e.source} → ${e.target}${e.capacity !== undefined ? ` — ${capacity(e.capacity)}` : ""}${props(e.properties)}`));
   } else {
     lines.push("Too many Elements to list: select them with \"where\" filters (kind, canvas, category, node_type, label_contains).");
   }

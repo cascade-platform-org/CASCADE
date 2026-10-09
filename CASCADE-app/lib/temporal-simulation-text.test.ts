@@ -138,11 +138,17 @@ describe("docWarnings", () => {
         "2023-02": [{ where: { kind: "node", node_type: "Source" }, path: ["x"], op: "set", value: 1 }],
       },
     };
-    const w = docWarnings(d, [], model).join("\n");
+    const w = docWarnings(d, [], model, 3).join("\n");
     expect(w).toMatch(/Unknown Event ids: settle, audit/);
     expect(w).toMatch(/"2024-12" is not a period/);
     expect(w).toMatch(/no Element "ghost"/);
     expect(w).toMatch(/matches no Element/);
+  });
+
+  it("names a missing Element once, however many periods use it", () => {
+    const ops = Object.fromEntries(["2023-01", "2023-02", "2023-03"].map((l) => [l, [{ element: "ghost", path: ["x"], op: "set" as const, value: 1 }]]));
+    const w = docWarnings({ ...doc, profile: ops }, [], model, 3).filter((x) => x.includes("ghost"));
+    expect(w).toEqual(['profile: no Element "ghost" — 3 operations, first in 2023-01.']);
   });
 });
 

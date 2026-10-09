@@ -70,8 +70,11 @@ AttributeOperationKind = Literal["set", "add", "mul", "at_most", "at_least"]
 class AttributeOperation(BaseModel):
     """`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).
 
-    `at_most` caps the value at `value`; `at_least` raises it to `value`. Applied
-    client-side when the Event fires; the engine never reads it.
+    `at_most` caps the value at `value`; `at_least` raises it to `value`. With
+    `of`, the operand is `value` × the number the same Element holds at `of`,
+    read just before the operation (a rule on a remembered value: "pay 50% of the
+    balance saved in January"). Applied client-side when the Event fires; the
+    engine never reads it.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -80,13 +83,20 @@ class AttributeOperation(BaseModel):
     path: FieldPath = Field(..., description='Field path, e.g. ["supply_capacity", "water"].')
     op: AttributeOperationKind
     value: float | int | bool | str
+    of: Optional[FieldPath] = Field(
+        default=None,
+        description="Field path on the same Element: the operand becomes `value` × the number held there.",
+    )
 
     @model_validator(mode="after")
     def _one_target_and_numeric_arithmetic(self) -> "AttributeOperation":
         if (self.element is None) == (self.where is None):
             raise ValueError("give exactly one of `element` (an id) or `where` (a filter)")
-        if self.op != "set" and (isinstance(self.value, bool) or not isinstance(self.value, (int, float))):
+        numeric = not isinstance(self.value, bool) and isinstance(self.value, (int, float))
+        if self.op != "set" and not numeric:
             raise ValueError("add, mul, at_most and at_least need a number `value`")
+        if self.of is not None and not numeric:
+            raise ValueError("with `of`, `value` is the factor: a number")
         return self
 
 

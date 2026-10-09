@@ -261,12 +261,18 @@ The whole definition — Timeline, profile and Metrics — is one document,
 schema whether it is edited in the window or pasted as JSON. Objects are strict, so a
 misspelt key is an error; a reference this project cannot satisfy (an unknown Event id, a
 missing Element, a filter matching nothing) is a warning, and the text still applies.
+*Revised 2026-10-09:* the check also dry-runs the profile and the firing Events' operations,
+period by period, on a copy of the model (`lib/temporal-dry-run.ts`, no Propagation), and
+warns about every operation a run would refuse, grouped by reason with the Elements it hits,
+and every Metric no matched Element can answer; such a Metric reads "—" in the table, never
+0. Before, a definition aimed at a field the model does not have read "Valid" and failed
+only at Run.
 Pasting accepts bare JSON or a whole LLM reply (the first fenced `json` block). **Copy with
 context** produces a prompt an LLM can act on from zero: a primer (what CASCADE models,
 how a run executes, which field paths an operation can reach, how filters and Metrics
 work), the format reference, a worked example that the test suite validates, this
 project's Functionality scale, Categories, Events and Canvases, the Element list with
-current supplies, demands and capacities (up to 300 Elements), and the current definition. Text is the bulk and LLM route; the window remains the route
+current supplies, demands, capacities and properties (up to 300 Elements), and the current definition. Text is the bulk and LLM route; the window remains the route
 that explains each control.
 
 ## Consequences

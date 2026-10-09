@@ -302,7 +302,9 @@ firing and normal propagation takes over.
    an Event change a value relative to what it is — halve a supply, add 5 to a
    demand, cap a capacity — on one element or on every element a filter
    selects (kind, canvas, node type, category, part of the label, then tick
-   the matches). An operation that cannot apply to an element (arithmetic on a
+   the matches). *× of* multiplies the value by what the same element holds in
+   another field just before, for a rule on a remembered value: "in June, pay
+   half the balance saved in January". An operation that cannot apply to an element (arithmetic on a
    value the element does not have, or a result out of range) is skipped for
    that element and reported when the Event fires; Save refuses an operation
    that is not filled in.
@@ -476,7 +478,10 @@ on the active canvas, and saves it with the Temporal Simulation.
 - **Metrics.** Your own read-outs, computed per period (§9.4).
 - **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
   *Copy with context for an LLM* adds a primer, the format and this project's
-  elements; paste the reply back and *Apply*. Events and the rest of the model
+  elements; paste the reply back and *Check*: besides the format, Check tries
+  the profile on your model and lists any operation a run would refuse (a
+  field an element does not have) and any Metric nothing can answer. Then
+  *Apply*. Events and the rest of the model
   change through LLM Design (§7.1).
 
 Every change over time goes in before a run, as a profile value or a Phase
@@ -547,7 +552,8 @@ each flow Category (delivered ÷ demand), each Category's total stock level, the
 your Metrics. Untick a standard one at the top of the Metrics tab to hide it. A Metric selects elements with a filter (§4), reads a field (its
 value at the period's end, or its change over the period or one Phase) and
 aggregates it: sum, mean, min, max, count, a percentile, or the share of values
-passing a comparison. **Export CSV** saves the table.
+passing a comparison. A Metric no selected element can answer shows "—".
+**Export CSV** saves the table.
 
 **Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
 its change over the period, divided by its reference: its own *level reference*

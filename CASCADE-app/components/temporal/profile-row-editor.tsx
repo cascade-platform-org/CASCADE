@@ -59,7 +59,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         </button>
       </div>
 
-      <div className="grid grid-cols-[auto_2fr_1fr] items-end gap-2">
+      <div className="grid grid-cols-[auto_2fr_1fr_2fr] items-end gap-2">
         <Field label="Applies to">
           <TargetModeToggle target={row} onChange={edit} />
         </Field>
@@ -73,6 +73,14 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         </Field>
         <Field label="Op">
           <OpSelect value={row.op} onChange={(op) => edit({ op })} />
+        </Field>
+        <Field label="× of the Element's (optional)">
+          <TextBackedInput
+            key={`${row.id}-of`}
+            initial={row.of ? formatPath(row.of) : ""}
+            placeholder="properties, opening_balance"
+            onCommit={(t) => edit({ of: parsePath(t).length ? parsePath(t) : undefined })}
+          />
         </Field>
       </div>
 

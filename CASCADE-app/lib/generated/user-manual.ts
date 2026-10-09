@@ -2144,7 +2144,15 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " let an Event change a value relative to what it is — halve a supply, add 5 to a demand, cap a capacity — on one element or on every element a filter selects (kind, canvas, node type, category, part of the label, then tick the matches). An operation that cannot apply to an element (arithmetic on a value the element does not have, or a result out of range) is skipped for that element and reported when the Event fires; Save refuses an operation that is not filled in."
+                "text": " let an Event change a value relative to what it is — halve a supply, add 5 to a demand, cap a capacity — on one element or on every element a filter selects (kind, canvas, node type, category, part of the label, then tick the matches). "
+              },
+              {
+                "kind": "em",
+                "text": "× of"
+              },
+              {
+                "kind": "text",
+                "text": " multiplies the value by what the same element holds in another field just before, for a rule on a remembered value: \"in June, pay half the balance saved in January\". An operation that cannot apply to an element (arithmetic on a value the element does not have, or a result out of range) is skipped for that element and reported when the Event fires; Save refuses an operation that is not filled in."
               }
             ],
             [
@@ -3144,6 +3152,14 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "em",
+                    "text": "Check"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": besides the format, Check tries the profile on your model and lists any operation a run would refuse (a field an element does not have) and any Metric nothing can answer. Then "
+                  },
+                  {
+                    "kind": "em",
                     "text": "Apply"
                   },
                   {
@@ -3421,7 +3437,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " has a row per period: the Operativity Score, the coverage of each flow Category (delivered ÷ demand), each Category's total stock level, then your Metrics. Untick a standard one at the top of the Metrics tab to hide it. A Metric selects elements with a filter (§4), reads a field (its value at the period's end, or its change over the period or one Phase) and aggregates it: sum, mean, min, max, count, a percentile, or the share of values passing a comparison. "
+                  "text": " has a row per period: the Operativity Score, the coverage of each flow Category (delivered ÷ demand), each Category's total stock level, then your Metrics. Untick a standard one at the top of the Metrics tab to hide it. A Metric selects elements with a filter (§4), reads a field (its value at the period's end, or its change over the period or one Phase) and aggregates it: sum, mean, min, max, count, a percentile, or the share of values passing a comparison. A Metric no selected element can answer shows \"—\". "
                 },
                 {
                   "kind": "strong",
