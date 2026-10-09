@@ -38,7 +38,8 @@ paste is also untrusted input.
   (a path must exist, an operation must apply, nothing is clamped); the full Project and
   Model Configuration schemas on the result; and the reference checks a loaded file gets
   (`validateBundle`), plus unique Event, Canvas and Temporal Simulation ids and registry keys
-  equal to their record's id. A removal that leaves a reference dangling is refused, never
+  equal to their record's id; a vulnerability to an Event that does not exist, which a loaded
+  file only warns about, is refused when the edit introduces it. A removal that leaves a reference dangling is refused, never
   repaired: the text says what to remove, and the check says what it forgot.
 - **A preview lists every change** (Elements and Canvases through `diffGraph`, the rest leaf by
   leaf, lists of records with ids matched by id), as before → after, with totals. **Nothing is
@@ -123,7 +124,8 @@ reviews". What that needed:
   did what was asked on the first try. What they asked about went into the guide: carrying a
   Category needs no dependency on it, `demand` and `backup_duration` are for flows, an edge takes a
   vulnerability too. The run also found that a vulnerability to an Event that does not exist
-  passed the check (a file load only warns); a plain change naming one is now refused.
+  passed the check (a file load only warns); the check now refuses an edit that introduces one, by
+  any path, and deleting an Event in the Events section takes its vulnerability levels along.
 
 ## Consequences
 

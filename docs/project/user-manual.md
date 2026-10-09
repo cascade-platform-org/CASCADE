@@ -402,8 +402,9 @@ save as a tree, each part as JSON you can edit by hand or with an LLM:
 
 Any level opens: a group shows everything under it, so one edit there changes
 many items; a single item shows just that one. Deleting a node in Nodes also
-deletes its edges and takes it off every canvas; a node added under a canvas is
-placed on it. The undo history is not shown and cannot be changed.
+deletes its edges and takes it off every canvas, and deleting an Event in Events
+removes its vulnerability levels; a node added under a canvas is placed on it.
+The undo history is not shown and cannot be changed.
 
 **Copy with context for an LLM** copies the open part with this model's ids and
 names. Paste the reply and press **Check & preview**: every change is shown as

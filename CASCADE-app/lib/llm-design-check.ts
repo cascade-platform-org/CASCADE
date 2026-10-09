@@ -7,8 +7,8 @@
  * what the edit added marked with its provenance, so Apply writes the mark.
  */
 
-import { MODEL_TEXT_FORMAT, checkChange, parseJsonText } from "@/lib/model-text";
-import { checkBulkText, type BulkResult } from "@/lib/model-text-v2";
+import { checkChange, parseJsonText } from "@/lib/model-text";
+import { asChangeSet, checkBulkText, type BulkResult } from "@/lib/model-text-v2";
 import { findSection, sectionPatch, sectionTree } from "@/lib/model-text-sections";
 import { markAdded } from "@/lib/provenance";
 import type { ProjectBundle } from "@/lib/file-io";
@@ -16,7 +16,10 @@ import type { ProjectBundle } from "@/lib/file-io";
 /** What the text edits: Bulk operations (with the changes left out of it), or one section. */
 export type DesignTarget = { bulk: true; leaveOut?: ReadonlySet<number> } | { bulk: false; sectionKey: string; label: string };
 
-export function checkDesignText(bundle: ProjectBundle, target: DesignTarget, text: string): BulkResult {
+export function checkDesignText(full: ProjectBundle, target: DesignTarget, text: string): BulkResult {
+  // The history is read-only to every text and kept by Apply: leave it out of the copies the check makes
+  // (it is most of a large project's size).
+  const bundle = { ...full, project: { ...full.project, update_history: [] } };
   const result = target.bulk ? checkBulkText(bundle, text, target.leaveOut) : checkSection(bundle, target, text);
   const r = result.checked;
   if (!r.ok) return result;
@@ -36,5 +39,5 @@ function checkSection(bundle: ProjectBundle, target: { sectionKey: string; label
   if (!section) return { checked: { ok: false, errors: [`${target.label} is no longer in the model.`] } };
   const patch = sectionPatch(bundle, section, json.value);
   if ("error" in patch) return { checked: { ok: false, errors: [patch.error] } };
-  return { checked: checkChange(bundle, { format: MODEL_TEXT_FORMAT, patch: patch.patch, elements: [] }) };
+  return { checked: checkChange(bundle, asChangeSet(patch.patch)) };
 }

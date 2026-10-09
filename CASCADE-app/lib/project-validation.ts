@@ -182,30 +182,28 @@ export function validateBundle(bundle: ProjectBundle): ValidationIssue[] {
 
   // ---- Unknown event IDs in vulnerability_levels ----
 
-  if (knownEventIds.size > 0) {
-    for (const [nodeId, node] of Object.entries(nodes)) {
-      for (const evtId of Object.keys(node.vulnerability_levels ?? {})) {
-        if (!knownEventIds.has(evtId)) {
-          const label = node.label ?? nodeId;
-          issues.push({
-            severity: "warning",
-            code: "NODE_UNKNOWN_EVENT",
-            message: `Node "${label}" has vulnerability_levels entry for event "${evtId}" which is not in config.events.`,
-            elementId: nodeId,
-          });
-        }
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    for (const evtId of Object.keys(node.vulnerability_levels ?? {})) {
+      if (!knownEventIds.has(evtId)) {
+        const label = node.label ?? nodeId;
+        issues.push({
+          severity: "warning",
+          code: "NODE_UNKNOWN_EVENT",
+          message: `Node "${label}" has vulnerability_levels entry for event "${evtId}" which is not in config.events.`,
+          elementId: nodeId,
+        });
       }
     }
-    for (const [edgeId, edge] of Object.entries(edges)) {
-      for (const evtId of Object.keys(edge.vulnerability_levels ?? {})) {
-        if (!knownEventIds.has(evtId)) {
-          issues.push({
-            severity: "warning",
-            code: "EDGE_UNKNOWN_EVENT",
-            message: `Edge "${edgeId}" has vulnerability_levels entry for event "${evtId}" which is not in config.events.`,
-            elementId: edgeId,
-          });
-        }
+  }
+  for (const [edgeId, edge] of Object.entries(edges)) {
+    for (const evtId of Object.keys(edge.vulnerability_levels ?? {})) {
+      if (!knownEventIds.has(evtId)) {
+        issues.push({
+          severity: "warning",
+          code: "EDGE_UNKNOWN_EVENT",
+          message: `Edge "${edgeId}" has vulnerability_levels entry for event "${evtId}" which is not in config.events.`,
+          elementId: edgeId,
+        });
       }
     }
   }

@@ -27,8 +27,7 @@ import { EdgeInspector } from "./edge-inspector";
 import { MultiSelectPanel } from "./multi-select-panel";
 import { CanvasMeta, AllCanvasesMeta } from "./canvas-meta";
 import { ProvenanceBanner } from "./provenance-banner";
-
-const pointerKey = (id: string) => id.replace(/~/g, "~0").replace(/\//g, "~1");
+import { encodePointerKey as pointerKey } from "@/lib/model-text";
 
 export function Inspector() {
   const inspectorOpen = useUiStore((s) => s.inspectorOpen);
@@ -86,8 +85,8 @@ export function Inspector() {
     const open = useUiStore.getState().openLlmDesign;
     if (singleNode) open({ pointer: `/project/nodes/${pointerKey(singleNode.id)}` });
     else if (singleEdge) open({ pointer: `/project/edges/${pointerKey(singleEdge.id)}` });
-    else if (isMulti) open({ bulk: true, focus: { nodeIds: nodeIdArr, edgeIds: edgeIdArr } });
-    else open({ bulk: true });
+    else if (isMulti) open({ focus: { nodeIds: nodeIdArr, edgeIds: edgeIdArr } });
+    else open({});
   }
 
   return (

@@ -20,7 +20,7 @@
  */
 
 import { deepEqual } from "@/lib/graph-diff";
-import { readPointer, type PatchOp } from "@/lib/model-text";
+import { encodePointerKey as enc, isPlain as isRecord, readPointer, type PatchOp } from "@/lib/model-text";
 import type { ProjectBundle } from "@/lib/file-io";
 
 export interface Section {
@@ -46,8 +46,6 @@ export interface Section {
 
 /** The section that holds the hand-written change set, not a part of the bundle. */
 export const BULK_KEY = "bulk";
-
-const enc = (key: string) => key.replace(/~/g, "~0").replace(/\//g, "~1");
 
 const leaf = (pointer: string, label: string): Section => ({ key: pointer, label, pointer, mode: "value" });
 
@@ -112,14 +110,19 @@ export function sectionTree(bundle: ProjectBundle): Section[] {
   ];
 }
 
-/** Every section, depth first: to find one by key. */
-export function findSection(tree: readonly Section[], key: string): Section | undefined {
+/** Every section, depth first. */
+export const flattenSections = (tree: readonly Section[]): Section[] => tree.flatMap((s) => [s, ...flattenSections(s.children ?? [])]);
+
+export const findSection = (tree: readonly Section[], key: string): Section | undefined => flattenSections(tree).find((s) => s.key === key);
+
+/** The keys of the groups above `key`, outermost first, or null when it is not in the tree. */
+export function sectionAncestors(tree: readonly Section[], key: string, path: string[] = []): string[] | null {
   for (const s of tree) {
-    if (s.key === key) return s;
-    const inner = s.children && findSection(s.children, key);
-    if (inner) return inner;
+    if (s.key === key) return path;
+    const below = sectionAncestors(s.children ?? [], key, [...path, s.key]);
+    if (below) return below;
   }
-  return undefined;
+  return null;
 }
 
 /** What a section shows: its value, a registry limited to its ids, the project without its history. */
@@ -136,8 +139,6 @@ export function sectionValue(bundle: ProjectBundle, section: Section): unknown {
   return value;
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-
 /**
  * The patch that turns `section`'s current value into `edited`, or why the
  * edited JSON cannot stand there (a list where an object belongs). The check
@@ -146,7 +147,11 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 export function sectionPatch(bundle: ProjectBundle, section: Section, edited: unknown): { patch: PatchOp[] } | { error: string } {
   const current = sectionValue(bundle, section);
   if (deepEqual(current, edited)) return { patch: [] };
-  if (section.mode === "value") return { patch: [{ op: "replace", path: section.pointer, value: edited }] };
+  if (section.mode === "value") {
+    const events = eventsAfter(bundle, section.pointer, edited);
+    const gone = events ? bundle.config.events.map((e) => e.id).filter((id) => !events.has(id)) : [];
+    return { patch: [{ op: "replace", path: section.pointer, value: edited }, ...eventFollowUps(bundle, gone)] };
+  }
   if (!isRecord(edited) || !isRecord(current)) return { error: `${section.label} is an object: { "key": value, … }` };
 
   const patch: PatchOp[] = [];
@@ -162,6 +167,33 @@ export function sectionPatch(bundle: ProjectBundle, section: Section, edited: un
     patch.push(...registryFollowUps(bundle, section.registry, removed, added, edited, section.canvasIndex));
   }
   return { patch };
+}
+
+/** The Event ids a section edit leaves, when the section holds Events; null otherwise. */
+function eventsAfter(bundle: ProjectBundle, pointer: string, edited: unknown): Set<string> | null {
+  const ids = (list: unknown) => new Set((Array.isArray(list) ? list : []).map((e) => (isRecord(e) ? e.id : undefined)).filter((id): id is string => typeof id === "string"));
+  if (pointer === "/config") return isRecord(edited) ? ids(edited.events) : null;
+  if (pointer === "/config/events") return ids(edited);
+  const one = /^\/config\/events\/(\d+)$/.exec(pointer);
+  if (!one) return null;
+  const list: unknown[] = [...bundle.config.events];
+  list[Number(one[1])] = edited;
+  return ids(list);
+}
+
+/** What follows from removing Events: their vulnerability levels on every Element go too. */
+export function eventFollowUps(bundle: ProjectBundle, removed: readonly string[]): PatchOp[] {
+  const ops: PatchOp[] = [];
+  for (const reg of ["nodes", "edges"] as const) {
+    for (const [id, el] of Object.entries(bundle.project[reg])) {
+      for (const event of removed) {
+        if (el.vulnerability_levels && Object.hasOwn(el.vulnerability_levels, event)) {
+          ops.push({ op: "remove", path: `/project/${reg}/${enc(id)}/vulnerability_levels/${enc(event)}` });
+        }
+      }
+    }
+  }
+  return ops;
 }
 
 /**

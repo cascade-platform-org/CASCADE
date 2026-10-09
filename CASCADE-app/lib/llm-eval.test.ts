@@ -27,8 +27,8 @@
 import { describe, it } from "vitest";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { deepEqual } from "./graph-diff";
-import { checkChange, modelTextContext, parseChangeText, type CheckedChange } from "./model-text";
-import { bulkContext, checkBulkText, repairContext } from "./model-text-v2";
+import { modelTextContext } from "./model-text";
+import { bulkContext, repairContext } from "./model-text-v2";
 import { recipeContext, type RecipeId } from "./llm-recipes";
 import { checkDesignText } from "./llm-design-check";
 import { DEFAULT_CONFIG } from "@/store/config-store";
@@ -255,11 +255,6 @@ const RECIPE_TASKS: RecipeTask[] = [
   },
 ];
 
-function checkReply(variant: Variant, bundle: ProjectBundle, text: string): CheckedChange {
-  if (variant === "v2") return checkBulkText(bundle, text).checked;
-  const parsed = parseChangeText(text);
-  return parsed.ok ? checkChange(bundle, parsed.change) : parsed;
-}
 
 describe.skipIf(!MODE)("llm eval", () => {
   it("writes the contexts", () => {
@@ -279,10 +274,10 @@ describe.skipIf(!MODE)("llm eval", () => {
     const score: Record<Variant, number> = { v1: 0, v2: 0 };
     const repaired: Record<Variant, number> = { v1: 0, v2: 0 };
     /** One reply scored: right, wrong (with why) or refused (with the errors). */
-    const grade = (t: Task, v: Variant, label: string, text: string) => {
+    const grade = (t: Task, label: string, text: string) => {
       const b = load(t.file);
-      // A repaired reply may come back in either form; the plain form says so in its format.
-      const r = label.includes("repair") ? checkBulkText(b, text).checked : checkReply(v, b, text);
+      // The window's own gate; it reads either format by its "format" field.
+      const r = checkDesignText(b, { bulk: true }, text).checked;
       if (!r.ok) { details.push(`### ${t.id} ${label}: refused\n${r.errors.slice(0, 8).map((e) => `- ${e}`).join("\n")}`); return { cell: "refused", errors: r.errors }; }
       const failures = t.expect(b, r.after);
       if (failures.length > 0) { details.push(`### ${t.id} ${label}: wrong outcome\n${failures.map((e) => `- ${e}`).join("\n")}`); return { cell: "wrong" }; }
@@ -293,12 +288,12 @@ describe.skipIf(!MODE)("llm eval", () => {
         const path = `${DIR}/${t.id}.${v}.reply.md`;
         if (!existsSync(path)) return ["no reply", ""];
         const text = readFileSync(path, "utf8");
-        const first = grade(t, v, v, text);
+        const first = grade(t, v, text);
         if (first.cell === "**right**") { score[v]++; return [first.cell, ""]; }
         if (first.errors) writeFileSync(`${DIR}/${t.id}.${v}.repair.context.md`, `${repairContext(load(t.file), text, first.errors)}\n\n## The original request\n${t.request}\n`);
         const repairPath = `${DIR}/${t.id}.${v}.repair.reply.md`;
         if (!existsSync(repairPath)) return [first.cell, first.errors ? "no reply" : ""];
-        const second = grade(t, v, `${v} after repair`, readFileSync(repairPath, "utf8"));
+        const second = grade(t, `${v} after repair`, readFileSync(repairPath, "utf8"));
         if (second.cell === "**right**") repaired[v]++;
         return [first.cell, second.cell];
       });

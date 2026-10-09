@@ -95,7 +95,6 @@ export function CanvasContextMenu({
     onClose();
     const { selectedNodeIds, selectedEdgeIds } = useNetworkStore.getState();
     useUiStore.getState().openLlmDesign({
-      bulk: true,
       focus: selectedCount > 0 ? { nodeIds: [...selectedNodeIds], edgeIds: [...selectedEdgeIds] } : undefined,
     });
   }, [onClose, selectedCount]);

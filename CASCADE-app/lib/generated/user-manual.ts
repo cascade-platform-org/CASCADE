@@ -2714,7 +2714,7 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "text",
-                  "text": "Any level opens: a group shows everything under it, so one edit there changes many items; a single item shows just that one. Deleting a node in Nodes also deletes its edges and takes it off every canvas; a node added under a canvas is placed on it. The undo history is not shown and cannot be changed."
+                  "text": "Any level opens: a group shows everything under it, so one edit there changes many items; a single item shows just that one. Deleting a node in Nodes also deletes its edges and takes it off every canvas, and deleting an Event in Events removes its vulnerability levels; a node added under a canvas is placed on it. The undo history is not shown and cannot be changed."
                 }
               ]
             },

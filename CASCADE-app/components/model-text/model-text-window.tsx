@@ -24,7 +24,7 @@
  * never run and never rendered as HTML.
  */
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Bot, Braces, Check, ChevronRight, ClipboardCopy, RotateCcw, Sparkles, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -38,7 +38,7 @@ import { useAnalysisStore } from "@/store/analysis-store";
 import { useUiStore, type LlmDesignRequest } from "@/store/ui-store";
 import { modelTextContext, type Preview } from "@/lib/model-text";
 import { PLAIN_REFERENCE, bulkContext, repairContext, starterPlain, type BulkResult, type PreviewGroup } from "@/lib/model-text-v2";
-import { BULK_KEY, findSection, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
+import { BULK_KEY, findSection, flattenSections, sectionAncestors, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
 import { checkDesignText } from "@/lib/llm-design-check";
 import { RECIPES, findRecipe, focusContext, recipeContext, type Focus, type RecipeId } from "@/lib/llm-recipes";
 import { copyText as copyPlain, useLlmCopy } from "./llm-copy";
@@ -140,7 +140,8 @@ function useBundle(): ProjectBundle {
   return useMemo(() => currentBundle(), [nodes, edges, canvases, canvasOrder, projectMeta, config, scorecard, simulations]);
 }
 
-function TreeRow({ section, depth, selected, open, onSelect, onToggle }: {
+/** One row of the tree and, when expanded, its children. Memoised: typing in the text re-renders none of them. */
+const TreeRow = memo(function Row({ section, depth, selected, open, onSelect, onToggle }: {
   section: Section;
   depth: number;
   selected: string;
@@ -177,18 +178,14 @@ function TreeRow({ section, depth, selected, open, onSelect, onToggle }: {
       )}
     </>
   );
-}
+});
 
-const flatten = (tree: readonly Section[]): Section[] => tree.flatMap((s) => [s, ...flatten(s.children ?? [])]);
-
-/** The keys of the groups above `key`, so a section opened from elsewhere is in view. */
-function ancestors(tree: readonly Section[], key: string, path: string[] = []): string[] | null {
-  for (const s of tree) {
-    if (s.key === key) return path;
-    const below = ancestors(s.children ?? [], key, [...path, s.key]);
-    if (below) return below;
-  }
-  return null;
+/** `set` with `x` added, or removed when it was there. */
+function toggled<T>(set: ReadonlySet<T>, x: T): Set<T> {
+  const next = new Set(set);
+  if (next.has(x)) next.delete(x);
+  else next.add(x);
+  return next;
 }
 
 const RECIPE_PREFIX = "recipe:";
@@ -197,7 +194,8 @@ const RECIPE_PREFIX = "recipe:";
 function landing(tree: readonly Section[], request: LlmDesignRequest): { key: string; text?: string } {
   if (request.recipe) return { key: `${RECIPE_PREFIX}${request.recipe}` };
   if (request.pointer) {
-    const hit = flatten(tree).find((s) => s.pointer === request.pointer && s.mode === "value") ?? flatten(tree).find((s) => s.pointer === request.pointer);
+    const all = flattenSections(tree).filter((s) => s.pointer === request.pointer);
+    const hit = all.find((s) => s.mode === "value") ?? all[0];
     if (hit) return { key: hit.key };
   }
   return { key: BULK_KEY, text: request.text };
@@ -254,31 +252,28 @@ function ModelTextPanel() {
   const bundle = useBundle();
   const tree = useMemo(() => sectionTree(bundle), [bundle]);
   const request = useUiStore((s) => s.llmDesignRequest);
-  const [start] = useState(() => (request ? landing(tree, request) : { key: Object.keys(bundle.project.nodes).length ? BULK_KEY : `${RECIPE_PREFIX}describe` }));
-  const [selectedKey, setSelectedKey] = useState(start.key);
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(["/project", "/config", ...(ancestors(tree, start.key) ?? [])]));
+  // An empty model starts on the Recipe that builds one.
+  const [selectedKey, setSelectedKey] = useState(() => (Object.keys(bundle.project.nodes).length ? BULK_KEY : `${RECIPE_PREFIX}describe`));
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(["/project", "/config"]));
   const [filter, setFilter] = useState("");
-  const [texts, setTexts] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    if (start.text !== undefined) initial[BULK_KEY] = start.text;
-    return initial;
-  });
-  const [focus, setFocus] = useState<Focus | null>(request?.focus ?? null);
+  const [texts, setTexts] = useState<Record<string, string>>({});
+  const [focus, setFocus] = useState<Focus | null>(null);
   const [recipeInputs, setRecipeInputs] = useState<Partial<Record<RecipeId, string>>>({});
   const [leaveOut, setLeaveOut] = useState<ReadonlySet<number>>(new Set());
-  const [result, setResult] = useState<Result | null>(() => (start.text !== undefined ? toResult(checkDesignText(currentBundle(), { bulk: true }, start.text)) : null));
-  const [seen, setSeen] = useState(request?.nonce ?? 0);
+  const [result, setResult] = useState<Result | null>(null);
+  // -1 never matches: the request that opened the window is handled below like any later one.
+  const [seen, setSeen] = useState(-1);
   const [showRef, setShowRef] = useState(false);
   const running = useTemporalSimulationStore((s) => s.running);
   const pushToast = useUiStore((s) => s.pushToast);
   const { copyForLlm, notice } = useLlmCopy();
 
-  // A request while open (a selection, a pasted reply): adjust during render, React's pattern for state that follows a prop.
+  // A request (a section, a selection, a pasted reply): adjust during render, React's pattern for state that follows a prop.
   if (request && request.nonce !== seen) {
     setSeen(request.nonce);
     const to = landing(tree, request);
     setSelectedKey(to.key);
-    setOpen((o) => new Set([...o, ...(ancestors(tree, to.key) ?? [])]));
+    setOpen((o) => new Set([...o, ...(sectionAncestors(tree, to.key) ?? [])]));
     setFocus(request.focus ?? null);
     setLeaveOut(new Set());
     if (to.text !== undefined) {
@@ -288,7 +283,7 @@ function ModelTextPanel() {
   }
 
   const recipeId = selectedKey.startsWith(RECIPE_PREFIX) ? (selectedKey.slice(RECIPE_PREFIX.length) as RecipeId) : null;
-  const section = findSection(tree, selectedKey) ?? findSection(tree, BULK_KEY)!;
+  const section = useMemo(() => findSection(tree, selectedKey) ?? findSection(tree, BULK_KEY)!, [tree, selectedKey]);
   const bulk = section.key === BULK_KEY;
   const currentText = useMemo(() => (bulk ? starterPlain(bundle) : JSON.stringify(sectionValue(bundle, section), null, 2) ?? ""), [bulk, bundle, section]);
   // An edited section keeps its text until it is applied or reverted; an untouched one follows the model.
@@ -297,15 +292,22 @@ function ModelTextPanel() {
   const dropText = (key: string) => setTexts((m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== key)));
   const matches = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    return q ? flatten(tree).filter((s) => s.label.toLowerCase().includes(q)).slice(0, TREE_ROWS) : null;
+    return q ? flattenSections(tree).filter((s) => s.label.toLowerCase().includes(q)).slice(0, TREE_ROWS) : null;
   }, [filter, tree]);
   const focusText = () => (focus ? focusContext(currentBundle(), focus) : undefined);
 
-  function select(key: string) {
-    setSelectedKey(key);
+  /** Forget the preview and the changes left out; an applied result stays, for its Undo this edit. */
+  const resetPreview = useCallback(() => {
     setLeaveOut(new Set());
-    if (result?.kind !== "applied") setResult(null);
-  }
+    setResult((r) => (r?.kind === "applied" ? r : null));
+  }, []);
+
+  const select = useCallback((key: string) => {
+    setSelectedKey(key);
+    resetPreview();
+  }, [resetPreview]);
+  const selectRow = useCallback((s: Section) => select(s.key), [select]);
+  const toggleRow = useCallback((key: string) => setOpen((o) => toggled(o, key)), []);
 
   /** The edited text checked against the live model, with the changes left out of Bulk operations. */
   const checked = (out: ReadonlySet<number> = leaveOut): BulkResult =>
@@ -316,9 +318,7 @@ function ModelTextPanel() {
   }
 
   function toggle(index: number) {
-    const next = new Set(leaveOut);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
+    const next = toggled(leaveOut, index);
     setLeaveOut(next);
     setResult(toResult(checked(next)));
   }
@@ -380,7 +380,7 @@ function ModelTextPanel() {
         />
         <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-2">
           {matches
-            ? matches.map((s) => <TreeRow key={s.key} section={{ ...s, children: undefined }} depth={0} selected={recipeId ? "" : section.key} open={open} onSelect={(x) => select(x.key)} onToggle={() => {}} />)
+            ? matches.map((s) => <TreeRow key={s.key} section={{ ...s, children: undefined }} depth={0} selected={recipeId ? "" : section.key} open={open} onSelect={selectRow} onToggle={toggleRow} />)
             : tree.map((s) => (
               <TreeRow
                 key={s.key}
@@ -388,8 +388,8 @@ function ModelTextPanel() {
                 depth={0}
                 selected={recipeId ? "" : section.key}
                 open={open}
-                onSelect={(x) => select(x.key)}
-                onToggle={(key) => setOpen((o) => { const next = new Set(o); if (next.has(key)) next.delete(key); else next.add(key); return next; })}
+                onSelect={selectRow}
+                onToggle={toggleRow}
               />
             ))}
         </div>
@@ -420,7 +420,7 @@ function ModelTextPanel() {
               <SmallButton onClick={() => copyForLlm(llmContext, "the section with context for an LLM")} title="This section, the format and the model's ids and names, to paste into an LLM with your request">
                 <Bot size={11} /> Copy with context for an LLM
               </SmallButton>
-              <SmallButton disabled={!dirty} onClick={() => { dropText(section.key); setLeaveOut(new Set()); setResult(null); }}><RotateCcw size={11} /> Revert</SmallButton>
+              <SmallButton disabled={!dirty} onClick={() => { dropText(section.key); resetPreview(); }}><RotateCcw size={11} /> Revert</SmallButton>
               <SmallButton onClick={check}><Check size={11} /> Check &amp; preview</SmallButton>
               <span data-run-locked>
                 <SmallButton tone="accent" disabled={result?.kind !== "preview" || changes === 0 || running} onClick={apply} title="Write the previewed changes; a version of the whole project is kept first">
@@ -434,7 +434,7 @@ function ModelTextPanel() {
               spellCheck={false}
               value={text}
               placeholder={bulk ? "Paste the LLM's reply here, then Check & preview." : undefined}
-              onChange={(e) => { setTexts((m) => ({ ...m, [section.key]: e.target.value })); setLeaveOut(new Set()); if (result?.kind !== "applied") setResult(null); }}
+              onChange={(e) => { setTexts((m) => ({ ...m, [section.key]: e.target.value })); resetPreview(); }}
               className="min-h-[160px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
             />
             <p className="text-[11px] text-zinc-400">

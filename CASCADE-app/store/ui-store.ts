@@ -34,14 +34,13 @@ export interface ConfigModalNewEvent {
 
 /**
  * What LLM Design opens on when another surface opens it (ADR-0022): a
- * section by pointer, Bulk operations (with a pasted text, checked at once),
- * or a Recipe; `focus` is the selection a request is about.
+ * Recipe, a section by pointer, or else Bulk operations (with a pasted text,
+ * checked at once); `focus` is the selection a request is about.
  */
 export interface LlmDesignRequest {
   /** Changes on every request, so the window acts on a repeat of the same one. */
   nonce: number;
   pointer?: string;
-  bulk?: boolean;
   recipe?: RecipeId;
   focus?: Focus;
   text?: string;

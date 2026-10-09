@@ -68,6 +68,30 @@ describe("partial apply", () => {
   });
 });
 
+describe("references to Events", () => {
+  it("refuses an edit that gives an Element a vulnerability to an Event that does not exist, by any path", () => {
+    for (const change of [
+      { set: "vulnerability", event: "typo", to: 1, id: "s" },
+      { set: ["vulnerability_levels", "typo"], to: 1, id: "s" },
+      { add: "node", value: { id: "x", label: "X", vulnerability_levels: { typo: 1 } } },
+    ]) {
+      const r = checkDesignText(bundle(), { bulk: true }, plain([change]));
+      expect(r.checked.ok).toBe(false);
+      if (!r.checked.ok) expect(r.checked.errors.join("\n")).toMatch(/"typo"/);
+    }
+  });
+
+  it("deleting an Event in the Events section takes its vulnerability levels along", () => {
+    const b = bundle();
+    b.project.nodes.s.vulnerability_levels = { q: 1 };
+    const r = checkDesignText(b, { bulk: false, sectionKey: "/config/events", label: "Events" }, "[]");
+    expect(r.checked.ok).toBe(true);
+    if (!r.checked.ok) return;
+    expect(r.checked.after.config.events).toEqual([]);
+    expect(r.checked.after.project.nodes.s.vulnerability_levels).toEqual({});
+  });
+});
+
 describe("placing added nodes", () => {
   it("puts nodes added without a position on a grid below the Canvas's nodes, and keeps a given one", () => {
     const r = checkDesignText(bundle(), { bulk: true }, plain([

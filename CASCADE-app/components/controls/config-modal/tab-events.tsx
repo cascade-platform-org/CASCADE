@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Bot, CheckCheck, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Bot, Plus, Trash2 } from "lucide-react";
+import { ProvenanceNote } from "@/components/canvas/inspector/provenance-banner";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import type { EventDefinition } from "@/lib/schemas/config";
@@ -73,20 +74,12 @@ export function TabEvents() {
             </div>
 
             {ev.provenance && (
-              <div className={ev.provenance.confirmed
-                ? "mb-2 text-[11px] text-zinc-500"
-                : "mb-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-900 dark:bg-amber-900/20 dark:text-amber-200"}
-              >
-                <p className="flex items-center gap-1 font-medium">
-                  <Sparkles size={11} /> Added through LLM Design{ev.provenance.confirmed ? "" : ", unconfirmed: its frequency is an estimate"}
-                  {!ev.provenance.confirmed && (
-                    <button type="button" onClick={() => updateEvent(ev.id, { provenance: confirmed(ev.provenance!) })} className="ml-auto flex items-center gap-0.5 rounded bg-white/70 px-1.5 py-0.5 hover:bg-white dark:bg-zinc-800">
-                      <CheckCheck size={11} /> Confirm
-                    </button>
-                  )}
-                </p>
-                {ev.provenance.rationale && <p className="mt-0.5 italic">{ev.provenance.rationale}</p>}
-              </div>
+              <ProvenanceNote
+                provenance={ev.provenance}
+                onConfirm={() => updateEvent(ev.id, { provenance: confirmed(ev.provenance!) })}
+                unconfirmedNote="its frequency is an estimate"
+                className="mb-2 rounded px-2 py-1"
+              />
             )}
 
             <div className="grid grid-cols-2 gap-2">

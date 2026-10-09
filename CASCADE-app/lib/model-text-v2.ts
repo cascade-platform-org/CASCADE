@@ -22,8 +22,8 @@ import { FieldPathSchema, isSafeKey } from "@/lib/schemas/field-path";
 import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
 import { canvasesById } from "@/lib/element-filter";
 import { deepEqual } from "@/lib/graph-diff";
-import { registryFollowUps } from "@/lib/model-text-sections";
-import { MODEL_TEXT_FORMAT, applyPatchOps, checkChange, modelTextContext, parseChangeValue, parseJsonText, type ChangeSet, type CheckedChange, type PatchOp, type Preview, type PreviewLine } from "@/lib/model-text";
+import { eventFollowUps, registryFollowUps } from "@/lib/model-text-sections";
+import { MODEL_TEXT_FORMAT, applyPatchOps, encodePointerKey as enc, isPlain as isRec, checkChange, modelTextContext, parseChangeValue, parseJsonText, type ChangeSet, type CheckedChange, type PatchOp, type Preview, type PreviewLine } from "@/lib/model-text";
 import type { ProjectBundle } from "@/lib/file-io";
 
 export const PLAIN_FORMAT = "cascade.model-change/v2";
@@ -51,13 +51,16 @@ const Text = z.string().min(1).refine(isSafeKey, { message: "__proto__, construc
 const Why = { why: z.string().optional() };
 const Record_ = z.record(z.string(), z.unknown());
 
+/** What a verb names: a field name, or a raw path. */
+const FieldRef = z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional();
+
 const ValueChangeSchema = z
   .object({
-    set: z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional(),
-    scale: z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional(),
-    increase: z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional(),
-    cap: z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional(),
-    floor: z.union([z.enum(FIELD_NAMES), FieldPathSchema]).optional(),
+    set: FieldRef,
+    scale: FieldRef,
+    increase: FieldRef,
+    cap: FieldRef,
+    floor: FieldRef,
     to: z.union([z.number(), z.boolean(), z.string()]).optional(),
     by: z.number().optional(),
     id: Text.optional(),
@@ -81,6 +84,12 @@ const ValueChangeSchema = z
     if (c[verb] === "property" && c.key === undefined) ctx.addIssue({ code: "custom", path: ["key"], message: 'property needs "key"' });
   });
 type ValueChange = z.infer<typeof ValueChangeSchema>;
+
+/** The one verb a value change carries (the schema guarantees exactly one), and the field it names. */
+function verbOf(c: ValueChange): { verb: Verb; field: FieldName | string[] } {
+  const verb = VERBS.find((v) => c[v] !== undefined)!;
+  return { verb, field: c[verb]! };
+}
 
 const AddSchema = z.object({ add: z.enum(KINDS), value: Record_, canvas: Text.optional(), ...Why }).strict();
 const UpdateSchema = z.object({ update: z.enum(KINDS), id: Text, value: Record_, ...Why }).strict();
@@ -150,7 +159,6 @@ export function parsePlainValue(value: unknown): { ok: true; set: PlainSet } | {
 // ---------------------------------------------------------------------------
 
 type Rec = Record<string, unknown>;
-const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
 
 const PROFILE_FIELDS = new Set<FieldName>(["demand", "priority", "backup_duration", "dependency_level"]);
 
@@ -222,8 +230,6 @@ export interface ChangeGroup {
 
 export type Compiled = { ok: true; patch: PatchOp[]; groups: ChangeGroup[]; notes?: string } | { ok: false; errors: string[] };
 
-const enc = (key: string) => key.replace(/~/g, "~0").replace(/\//g, "~1");
-
 /** Where each kind of thing lives, and how it is found by id. */
 const LISTS: Record<Exclude<Kind, "node" | "edge">, { pointer: string; read: (b: ProjectBundle) => Rec[]; id: (x: Rec) => unknown; name?: (x: Rec) => unknown }> = {
   event: { pointer: "/config/events", read: (b) => b.config.events as unknown as Rec[], id: (x) => x.id },
@@ -261,8 +267,8 @@ const describe = (verb: Verb, field: FieldName | string[], c: ValueChange) => {
 function headline(change: Change): string {
   switch (change.type) {
     case "value": {
-      const verb = VERBS.find((v) => change.c[v] !== undefined)!;
-      return describe(verb, change.c[verb]!, change.c);
+      const { verb, field } = verbOf(change.c);
+      return describe(verb, field, change.c);
     }
     case "add": return `add ${change.c.add} ${JSON.stringify(change.c.value[change.c.add === "category" ? "name" : "id"] ?? "")}`;
     case "update": return `update ${change.c.update} "${change.c.id}"`;
@@ -310,6 +316,20 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
     g.k++;
     return position;
   };
+  const targetsOf = (selector: { element?: string; where?: ValueChange["where"] }) =>
+    operationTargets(selector, { nodes: draft.project.nodes, edges: draft.project.edges, canvases: canvasesById(draft.project.canvases) });
+  /** Add an edge on the Canvases holding both its ends, or else its source's. */
+  const addEdge = (at: string, record: Rec & { id: string; source?: string; target?: string }, group: ChangeGroup) => {
+    const has = (k: number, id: string | undefined) => id !== undefined && draft.project.canvases[k].graph.node_ids.includes(id);
+    const all = draft.project.canvases.map((_, k) => k);
+    const both = all.filter((k) => has(k, record.source) && has(k, record.target));
+    const where = both.length > 0 ? both : all.filter((k) => has(k, record.source));
+    emit(at, [
+      { op: "add", path: `/project/edges/${enc(record.id)}`, value: record },
+      ...where.map((k): PatchOp => ({ op: "replace", path: `/project/canvases/${k}/graph/edge_ids`, value: [...draft.project.canvases[k].graph.edge_ids, record.id] })),
+    ]);
+    group.subjects.push(`edge:${record.id}`, ...where.map((k) => `canvas:${draft.project.canvases[k].id}`));
+  };
   const canvasIndex = (ref: string | undefined): number | string => {
     const list = draft.project.canvases;
     if (ref === undefined) return list.length === 1 ? 0 : `say which Canvas with "canvas" (one of: ${list.map((c) => c.label ?? c.id).join(", ")})`;
@@ -342,16 +362,11 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
 
     if (change.type === "value") {
       const c = change.c;
-      const verb = VERBS.find((v) => c[v] !== undefined)!;
-      const field = c[verb]!;
+      const { verb, field } = verbOf(c);
       const op = OP_OF[verb];
       const value = (verb === "scale" || verb === "increase" ? c.by : c.to)!;
-      const model = { nodes: draft.project.nodes, edges: draft.project.edges, canvases: canvasesById(draft.project.canvases) };
-      // A vulnerability to an Event that does not exist would never apply: a typo, or an Event not added yet.
-      const unknownEvent = field === "vulnerability" && !draft.config.events.some((e) => e.id === c.event);
-      const targets = unknownEvent ? [] : operationTargets(c.id !== undefined ? { element: c.id, path: ["x"], op: "set", value: 0 } : { where: c.where, path: ["x"], op: "set", value: 0 }, model);
-      if (unknownEvent) errors.push(`${at}: no Event "${c.event}" (add it in an earlier change, or use one of: ${draft.config.events.map((e) => e.id).join(", ") || "none yet"})`);
-      else if (targets.length === 0) errors.push(`${at}: ${c.id !== undefined ? `no Element "${c.id}"` : "the filter matches no Element"}`);
+      const targets = targetsOf({ element: c.id, where: c.where });
+      if (targets.length === 0) errors.push(`${at}: ${c.id !== undefined ? `no Element "${c.id}"` : "the filter matches no Element"}`);
       let changed = 0;
       for (const id of targets) {
         const kind = id in draft.project.nodes ? "node" : "edge";
@@ -386,27 +401,19 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
         const registry = kind === "node" ? draft.project.nodes : draft.project.edges;
         if (id in registry) errors.push(`${at}: ${kind} "${id}" already exists; use "update"`);
         else {
-          const record: Rec = { functionality: n, ...value };
-          let where: number[] = [];
-          if (kind === "node") {
+          const record: Rec & { id: string } = { functionality: n, ...value, id };
+          if (kind === "edge") addEdge(at, record, group);
+          else {
             const ci = canvasIndex(change.c.canvas);
             if (typeof ci === "string") errors.push(`${at}: ${ci}`);
             else {
-              where = [ci];
-              if (record.position === undefined) record.position = nextPosition(ci);
+              const node = { ...record, position: record.position ?? nextPosition(ci) };
+              emit(at, [
+                { op: "add", path: `/project/nodes/${enc(id)}`, value: node },
+                { op: "replace", path: `/project/canvases/${ci}/graph/node_ids`, value: [...draft.project.canvases[ci].graph.node_ids, id] },
+              ]);
+              group.subjects.push(`node:${id}`, `canvas:${draft.project.canvases[ci].id}`);
             }
-          } else {
-            const { source, target } = record as { source?: string; target?: string };
-            const both = draft.project.canvases.flatMap((c, k) => (c.graph.node_ids.includes(source ?? "") && c.graph.node_ids.includes(target ?? "") ? [k] : []));
-            where = both.length > 0 ? both : draft.project.canvases.flatMap((c, k) => (c.graph.node_ids.includes(source ?? "") ? [k] : []));
-          }
-          if (errors.length === before) {
-            const list = kind === "node" ? "node_ids" : "edge_ids";
-            emit(at, [
-              { op: "add", path: `/project/${kind}s/${enc(id)}`, value: record },
-              ...where.map((k): PatchOp => ({ op: "replace", path: `/project/canvases/${k}/graph/${list}`, value: [...draft.project.canvases[k].graph[list], id] })),
-            ]);
-            group.subjects.push(`${kind}:${id}`, ...where.map((k) => `canvas:${draft.project.canvases[k].id}`));
           }
         }
       } else {
@@ -414,7 +421,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
         if (list.read(draft).some((x) => list.id(x) === id)) errors.push(`${at}: ${kind} "${id}" already exists; use "update"`);
         else {
           const record = kind === "canvas" ? { graph: { graph_type: "generic", node_ids: [], edge_ids: [] }, ...value } : value;
-          if (kind === "simulation" && !list.read(draft).length && draft.project.temporal_simulations === undefined) emit(at, [{ op: "add", path: "/project/temporal_simulations", value: [] }]);
+          if (kind === "simulation" && draft.project.temporal_simulations === undefined) emit(at, [{ op: "add", path: "/project/temporal_simulations", value: [] }]);
           emit(at, [{ op: "add", path: `${list.pointer}/-`, value: record }]);
           group.subjects.push(`${kind}:${id}`);
         }
@@ -445,9 +452,8 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
     } else if (change.type === "delete") {
       const { delete: kind, id, where } = change.c;
       if (kind === "node" || kind === "edge") {
-        const model = { nodes: draft.project.nodes, edges: draft.project.edges, canvases: canvasesById(draft.project.canvases) };
         const registry = kind === "node" ? draft.project.nodes : draft.project.edges;
-        const ids = id !== undefined ? (id in registry ? [id] : []) : operationTargets({ where: { ...where!, kind }, path: ["x"], op: "set", value: 0 }, model);
+        const ids = id !== undefined ? (id in registry ? [id] : []) : targetsOf({ where: { ...where!, kind } });
         if (ids.length === 0) errors.push(`${at}: ${id !== undefined ? `no ${kind} "${id}"` : `the filter matches no ${kind}`}`);
         else {
           const removal = removeElements(kind === "node" ? "nodes" : "edges", ids);
@@ -461,19 +467,10 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
         if (k < 0) errors.push(`${at}: no ${kind} "${id}"`);
         else {
           const realId = String(list.id(list.read(draft)[k]));
-          const ops: PatchOp[] = [{ op: "remove", path: `${list.pointer}/${k}` }];
           // An Event's vulnerability levels on Elements go with it.
-          if (kind === "event") {
-            for (const reg of ["nodes", "edges"] as const) {
-              for (const [eid, el] of Object.entries(draft.project[reg])) {
-                if (el.vulnerability_levels && id! in el.vulnerability_levels) {
-                  ops.push({ op: "remove", path: `/project/${reg}/${enc(eid)}/vulnerability_levels/${enc(id!)}` });
-                  group.subjects.push(`${reg === "nodes" ? "node" : "edge"}:${eid}`);
-                }
-              }
-            }
-          }
-          emit(at, ops);
+          const follow = kind === "event" ? eventFollowUps(draft, [realId]) : [];
+          emit(at, [{ op: "remove", path: `${list.pointer}/${k}` }, ...follow]);
+          group.subjects.push(...follow.map((op) => op.path.startsWith("/project/nodes/") ? `node:${op.path.split("/")[3]}` : `edge:${op.path.split("/")[3]}`));
           group.subjects.push(`${kind}:${realId}`);
         }
         group.title = `delete ${kind} "${id}"`;
@@ -485,13 +482,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
       for (let k = 2; !id && edgeId in draft.project.edges; k++) edgeId = `edge-${from}-${to}-${k}`;
       if (id && id in draft.project.edges) errors.push(`${at}: edge "${id}" already exists`);
       if (errors.length === before) {
-        const both = draft.project.canvases.flatMap((c, k) => (c.graph.node_ids.includes(from) && c.graph.node_ids.includes(to) ? [k] : []));
-        const where = both.length > 0 ? both : draft.project.canvases.flatMap((c, k) => (c.graph.node_ids.includes(from) ? [k] : []));
-        emit(at, [
-          { op: "add", path: `/project/edges/${enc(edgeId)}`, value: { id: edgeId, source: from, target: to, functionality: functionality ?? n, ...(capacity !== undefined ? { capacity } : {}) } },
-          ...where.map((k): PatchOp => ({ op: "replace", path: `/project/canvases/${k}/graph/edge_ids`, value: [...draft.project.canvases[k].graph.edge_ids, edgeId] })),
-        ]);
-        group.subjects.push(`edge:${edgeId}`, ...where.map((k) => `canvas:${draft.project.canvases[k].id}`));
+        addEdge(at, { id: edgeId, source: from, target: to, functionality: functionality ?? n, ...(capacity !== undefined ? { capacity } : {}) }, group);
       }
       group.title = `connect ${from} → ${to}`;
     } else {
@@ -588,22 +579,27 @@ function summarize(values: unknown[]): string {
   return parts.join(", ");
 }
 
+/** Append `value` to the list at `key`, creating it. */
+function pushTo<T>(map: Map<string, T[]>, key: string, value: T) {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
+}
+
 /**
  * Which fields each kind of Element has, with their shapes and ranges, and
  * the values a filter can use: what a change can rely on, without the model.
  */
 export function fieldCensus(bundle: ProjectBundle): string {
   const { project, config } = bundle;
-  if (Object.keys(project.nodes).length === 0) return "## Field census\nThe model has no Elements yet: everything you add is new.";
   const byType = new Map<string, Rec[]>();
-  for (const nd of Object.values(project.nodes)) {
-    const t = nd.node_type ?? "(no type)";
-    byType.set(t, [...(byType.get(t) ?? []), nd as unknown as Rec]);
-  }
-  const lines: string[] = ["## Field census (what each kind of Element has: shape and range)"];
+  for (const nd of Object.values(project.nodes)) pushTo(byType, nd.node_type ?? "(no type)", nd as unknown as Rec);
+  const lines: string[] = [byType.size
+    ? "## Field census (what each kind of Element has: shape and range)"
+    : "## Field census\nThe model has no Elements yet: everything you add is new."];
   for (const [type, nodes] of byType) {
     const fields = new Map<string, unknown[]>();
-    const note = (name: string, v: unknown) => fields.set(name, [...(fields.get(name) ?? []), v]);
+    const note = (name: string, v: unknown) => pushTo(fields, name, v);
     for (const nd of nodes) {
       for (const [container, name] of [["supply_capacity", "supply"], ["throughput_capacity", "throughput"]] as const) {
         if (isRec(nd[container])) for (const [cat, v] of Object.entries(nd[container] as Rec)) note(`${name}.${cat}`, v);
@@ -646,11 +642,11 @@ export function starterPlain(bundle: ProjectBundle): string {
   return JSON.stringify({ format: PLAIN_FORMAT, notes: "An example on this model: edit it, or replace it with an LLM's reply.", changes }, null, 2);
 }
 
-/** Ids of Elements an error message names, as the model knows them. */
+/** Ids of Elements an error message names, as the model knows them: the words of the errors, looked up once. */
 function namedElements(bundle: ProjectBundle, errors: readonly string[]): string[] {
-  const text = errors.join("\n");
+  const words = new Set(errors.join("\n").split(/[\s"():,]+/));
   const ids = [...Object.keys(bundle.project.nodes), ...Object.keys(bundle.project.edges)];
-  return ids.filter((id) => new RegExp(`(^|[\\s"(])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([\\s":),]|$)`).test(text)).slice(0, 10);
+  return ids.filter((id) => words.has(id)).slice(0, 10);
 }
 
 /**

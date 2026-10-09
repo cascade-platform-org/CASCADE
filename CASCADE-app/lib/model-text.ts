@@ -127,6 +127,9 @@ export function parseChangeValue(value: unknown): ParsedChange {
 // JSON Pointer
 // ---------------------------------------------------------------------------
 
+/** One key as a JSON Pointer segment: `~` becomes `~0`, then `/` becomes `~1`. */
+export const encodePointerKey = (key: string): string => key.replace(/~/g, "~0").replace(/\//g, "~1");
+
 /** A JSON Pointer's segments: `~1` is `/`, `~0` is `~`. */
 const decodePointer = (path: string): string[] => path.slice(1).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
 
@@ -214,6 +217,8 @@ function idProblems(bundle: ProjectBundle): string[] {
   return out;
 }
 
+const UNKNOWN_EVENT = new Set(["NODE_UNKNOWN_EVENT", "EDGE_UNKNOWN_EVENT"]);
+
 const issueKey = (i: { code: string; message: string }) => `${i.code}\n${i.message}`;
 
 /**
@@ -255,9 +260,11 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
   errors.push(...idProblems(after));
   const known = new Set(validateBundle(before).map(issueKey));
   const found = validateBundle(after).filter((i) => !known.has(issueKey(i)));
-  errors.push(...found.filter((i) => i.severity === "error").map((i) => i.message));
+  // A file load only warns about a vulnerability to an unknown Event; an edit that introduces one made a mistake.
+  const refused = (i: (typeof found)[number]) => i.severity === "error" || UNKNOWN_EVENT.has(i.code);
+  errors.push(...found.filter(refused).map((i) => i.message));
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, after, preview: previewChange(before, after), warnings: found.filter((i) => i.severity === "warning").map((i) => i.message) };
+  return { ok: true, after, preview: previewChange(before, after), warnings: found.filter((i) => !refused(i)).map((i) => i.message) };
 }
 
 // ---------------------------------------------------------------------------
@@ -286,7 +293,8 @@ function shortValue(v: unknown): string {
   return text.length > 90 ? `${text.slice(0, 87)}…` : text;
 }
 
-const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+/** A JSON object: not null, not a list. */
+export const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 /** A record's identity in a list: its `id`, or a Category's `name`. */
 const identity = (x: unknown): string | undefined =>
   isPlain(x) ? (typeof x.id === "string" ? x.id : typeof x.name === "string" ? x.name : undefined) : undefined;
@@ -315,8 +323,9 @@ function jsonChanges(before: unknown, after: unknown, where: string, out: Previe
     const scalar = (v: unknown) => typeof v !== "object" || v === null;
     if (before.every(scalar) && after.every(scalar)) {
       // A list of values (a Canvas's node ids): what joined and what left reads better than a shifted list.
-      const added = after.filter((v) => !before.includes(v));
-      const gone = before.filter((v) => !after.includes(v));
+      const [was, now] = [new Set(before), new Set(after)];
+      const added = after.filter((v) => !was.has(v));
+      const gone = before.filter((v) => !now.has(v));
       if (added.length > 0) out.push({ kind: "add", where, after: shortValue(added), subject });
       if (gone.length > 0) out.push({ kind: "remove", where, before: shortValue(gone), subject });
       if (added.length === 0 && gone.length === 0) out.push({ kind: "change", where: `${where} (order)`, before: shortValue(before), after: shortValue(after), subject });
@@ -436,8 +445,9 @@ function exampleElements(project: Project): string[] {
   const trim = ({ position: _p, geo: _g, responsibility_share: _r, ...rest }: Node) => rest;
   const byType = new Map<string, Node>();
   for (const nd of Object.values(project.nodes)) {
+    if (byType.size === MAX_EXAMPLES) break;
     const key = `${nd.node_type ?? ""}\n${JSON.stringify(shapeOf(nd.supply_capacity))}`;
-    if (!byType.has(key) && byType.size < MAX_EXAMPLES) byType.set(key, nd);
+    if (!byType.has(key)) byType.set(key, nd);
   }
   if (byType.size === 0) return [];
   const edge = Object.values(project.edges)[0];

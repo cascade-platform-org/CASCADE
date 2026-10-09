@@ -477,19 +477,33 @@ function FlowCanvas() {
     // (the paste event, dispatched before that tick) can claim the keystroke.
     let nodePaste: ReturnType<typeof setTimeout> | undefined;
 
+    /** Keys and clipboard events typed into a field belong to the field. */
+    const inField = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    };
+
     function onPaste(e: ClipboardEvent) {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (inField(e.target)) return;
       const text = e.clipboardData?.getData("text/plain") ?? "";
       if (!isChangeSetText(text)) return;
       e.preventDefault();
       clearTimeout(nodePaste);
-      useUiStore.getState().openLlmDesign({ bulk: true, text });
+      useUiStore.getState().openLlmDesign({ text });
+    }
+
+    // Copied nodes also go on the system clipboard as JSON, for an LLM; that replaces an older
+    // reply a paste here would otherwise open. The copy event writes synchronously, with no permission.
+    function onCopy(e: ClipboardEvent) {
+      if (inField(e.target) || !e.clipboardData || selectedNodeIds.size === 0) return;
+      const nodes = [...selectedNodeIds].flatMap((id) => allNodes[id] ? [allNodes[id]] : []);
+      const edges = [...selectedEdgeIds].flatMap((id) => allEdges[id] ? [allEdges[id]] : []);
+      e.clipboardData.setData("text/plain", JSON.stringify({ nodes, edges }));
+      e.preventDefault();
     }
 
     function onKeyDown(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (inField(e.target)) return;
 
       // Delete / Backspace
       if (e.key === "Delete" || e.key === "Backspace") {
@@ -512,8 +526,6 @@ function FlowCanvas() {
         const nodes = [...selectedNodeIds].flatMap((id) => allNodes[id] ? [allNodes[id]] : []);
         const edges = [...selectedEdgeIds].flatMap((id) => allEdges[id] ? [allEdges[id]] : []);
         copyToClipboard(nodes, edges, activeCanvas.id);
-        // Also as JSON, for an LLM; it replaces an older reply that a paste here would otherwise open.
-        void navigator.clipboard?.writeText(JSON.stringify({ nodes, edges }, null, 1)).catch(() => {});
         return;
       }
 
@@ -607,10 +619,12 @@ function FlowCanvas() {
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("paste", onPaste);
+    window.addEventListener("copy", onCopy);
     return () => {
       clearTimeout(nodePaste);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("paste", onPaste);
+      window.removeEventListener("copy", onCopy);
     };
   }, [
     deleteSelected, activeCanvas, selectAll, setInspectorOpen,

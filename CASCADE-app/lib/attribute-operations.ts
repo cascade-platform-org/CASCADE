@@ -55,8 +55,8 @@ function computeOperation(
   }
 }
 
-/** The Elements an operation acts on, in id order: its one Element if it exists, or its filter's matches. */
-export function operationTargets(op: AttributeOperation, model: FilterableModel): string[] {
+/** The Elements an operation (or any selector) acts on, in id order: its one Element if it exists, or its filter's matches. */
+export function operationTargets(op: Pick<AttributeOperation, "element" | "where">, model: FilterableModel): string[] {
   if (op.where) return matchElements(op.where, model);
   return op.element !== undefined && (op.element in model.nodes || op.element in model.edges) ? [op.element] : [];
 }
