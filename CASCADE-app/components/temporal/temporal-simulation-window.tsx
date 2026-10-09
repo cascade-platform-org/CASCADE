@@ -13,7 +13,7 @@
  */
 
 import React from "react";
-import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces, Plus, Copy, Trash2 } from "lucide-react";
+import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces, Plus, Copy, Trash2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
@@ -25,6 +25,7 @@ import { RunTab } from "./run-tab";
 import { MetricsTab } from "./metrics-tab";
 import { TextTab } from "./text-tab";
 import { SmallButton } from "./fields";
+import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import { useCanvasStore } from "@/store/canvas-store";
 
 /** `definition`: the tab edits the Temporal Simulation, so it is read-only while a run is shown. */
@@ -163,8 +164,9 @@ export function TemporalSimulationWindow() {
         <SimulationPicker />
         <SaveStatus />
         {locked && (
-          <div className="border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
-            A run is shown, so the definition is read-only. End run (Run tab) to edit it; every change over time goes in before the run.
+          <div className="flex items-center gap-2 border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[11px] text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
+            <span className="flex-1">A run is shown, so the definition is read-only. End run to edit it; every change over time goes in before the run.</span>
+            <SmallButton onClick={() => endTemporalSimulationRun()}><RotateCcw size={11} /> End run</SmallButton>
           </div>
         )}
         <div className="min-h-0 flex-1 overflow-y-auto p-4">

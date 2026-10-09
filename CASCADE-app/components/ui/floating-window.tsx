@@ -248,8 +248,9 @@ export function FloatingWindow({
 
   if (!open || !geom) return null;
 
+  // Collapsed is the title bar alone, maximized or not.
   const frame = maximized
-    ? { left: 8, top: 8, width: window.innerWidth - 16, height: window.innerHeight - 16 }
+    ? { left: 8, top: 8, width: window.innerWidth - 16, height: collapsed ? HEADER_H : window.innerHeight - 16 }
     : { left: geom.x, top: geom.y, width: geom.w, height: collapsed ? HEADER_H : geom.h };
 
   return (
