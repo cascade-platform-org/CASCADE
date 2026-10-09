@@ -183,16 +183,18 @@ export function columnSummaries(table: RunTable): ColumnSummary[] {
   });
 }
 
+/** One CSV cell: empty for no value, quoted when it holds a comma, a quote or a line break. */
+export function csvCell(v: string | number | null): string {
+  if (v === null) return "";
+  // 12 significant digits: drops binary-fraction noise (19345.199999999997 → 19345.2), keeps every real digit.
+  const text = typeof v === "number" ? String(Number(v.toPrecision(12))) : v;
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 /** The table as CSV: a `period` column, then one per Metric. Empty cells for no value. */
 export function runTableCsv(table: RunTable): string {
-  const cell = (v: string | number | null) => {
-    if (v === null) return "";
-    // 12 significant digits: drops binary-fraction noise (19345.199999999997 → 19345.2), keeps every real digit.
-    const text = typeof v === "number" ? String(Number(v.toPrecision(12))) : v;
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-  };
   return [["period", ...table.columns.map((c) => c.label)], ...table.rows.map((r) => [r.label, ...r.values])]
-    .map((row) => row.map(cell).join(","))
+    .map((row) => row.map(csvCell).join(","))
     .join("\n");
 }
 

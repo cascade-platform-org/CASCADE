@@ -13,7 +13,7 @@
  */
 
 import React from "react";
-import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces, Plus, Copy, Trash2, RotateCcw } from "lucide-react";
+import { CalendarClock, ListOrdered, Play, Sigma, Info, Braces, Plus, Copy, Trash2, RotateCcw, GitCompare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { TEMPORAL_SIMULATION_ANCHOR_ID } from "@/lib/ui-anchors";
@@ -22,6 +22,7 @@ import { useUiStore } from "@/store/ui-store";
 import { EXPLAIN_TAB } from "@/lib/temporal-simulation-explainers";
 import { TimelineTab } from "./timeline-tab";
 import { RunTab } from "./run-tab";
+import { CompareTab } from "./compare-tab";
 import { MetricsTab } from "./metrics-tab";
 import { TextTab } from "./text-tab";
 import { SmallButton } from "./fields";
@@ -32,6 +33,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 const TABS: { id: SimTab; label: string; icon: React.ReactNode; definition?: true }[] = [
   { id: "timeline", label: "Timeline", icon: <ListOrdered size={15} />, definition: true },
   { id: "run", label: "Run", icon: <Play size={15} /> },
+  { id: "compare", label: "Compare", icon: <GitCompare size={15} /> },
   { id: "metrics", label: "Metrics", icon: <Sigma size={15} />, definition: true },
   { id: "text", label: "Text", icon: <Braces size={15} />, definition: true },
 ];
@@ -175,6 +177,7 @@ export function TemporalSimulationWindow() {
           <fieldset data-run-locked disabled={locked && tab !== "text"} className="contents">
           {tab === "timeline" && <TimelineTab />}
           {tab === "run" && <RunTab />}
+          {tab === "compare" && <CompareTab />}
           {tab === "metrics" && <MetricsTab />}
           {tab === "text" && <TextTab />}
           </fieldset>

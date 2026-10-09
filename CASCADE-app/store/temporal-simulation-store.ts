@@ -29,9 +29,10 @@ import { FIRST_SIMULATION_ID, STANDARD_METRICS, type CalendarUnit, type Timeline
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
+import type { ComparedRun } from "@/lib/temporal-comparison";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 
-export type SimTab = "timeline" | "run" | "metrics" | "text";
+export type SimTab = "timeline" | "run" | "compare" | "metrics" | "text";
 
 interface TemporalSimulationState {
   open: boolean;
@@ -69,6 +70,13 @@ interface TemporalSimulationState {
   explanation: Explanation;
   /** Counts the refusals a shown run caused; each one makes every End run button pulse. */
   endRunCue: number;
+  /** While a comparison computes: Propagations done of the total, and the Simulation and period reached. */
+  compareProgress: { done: number; total: number; label: string } | null;
+  /**
+   * The last comparison's runs, in memory only, with the Simulations list they
+   * were run from (a newer list means the definitions changed since).
+   */
+  comparison: { runs: ComparedRun[]; from: StoredTemporalSimulation[] } | null;
 
   openWindow: () => void;
   closeWindow: () => void;
@@ -110,6 +118,10 @@ interface TemporalSimulationState {
   setLevelReading: (r: "level" | "change") => void;
   /** Something the run blocks was used: point at End run. */
   cueEndRun: () => void;
+  beginCompare: (total: number) => void;
+  setCompareProgress: (done: number, label: string) => void;
+  /** The comparison finished, or stopped: `runs` holds what it computed. */
+  finishCompare: (runs: ComparedRun[], from: StoredTemporalSimulation[]) => void;
 }
 
 export const newPhase = (propagate: boolean): Phase => ({ events: [], propagate });
@@ -208,6 +220,8 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     levelReading: "level",
     explanation: EXPLAIN_INTRO,
     endRunCue: 0,
+    compareProgress: null,
+    comparison: null,
 
     openWindow: () => set((s) => { s.open = true; s.explanation = EXPLAIN_INTRO; }),
     closeWindow: () => set((s) => { s.open = false; }),
@@ -217,6 +231,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       else showDraft(s, FIRST_SIMULATION_ID, starterDraft());
       leaveRun(s);
       s.runError = null;
+      s.comparison = null;
     }),
     selectSimulation: (id) => set(listing((s) => {
       const doc = s.simulations.find((x) => x.id === id);
@@ -299,6 +314,12 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     setDisplay: (d) => set((s) => { s.display = d; }),
     setLevelReading: (r) => set((s) => { s.levelReading = r; }),
     cueEndRun: () => set((s) => { s.endRunCue++; }),
+    beginCompare: (total) => set((s) => { s.compareProgress = { done: 0, total, label: "" }; }),
+    setCompareProgress: (done, label) => set((s) => { if (s.compareProgress) s.compareProgress = { ...s.compareProgress, done, label }; }),
+    finishCompare: (runs, from) => set((s) => {
+      s.compareProgress = null;
+      s.comparison = { runs, from };
+    }),
   })),
 );
 

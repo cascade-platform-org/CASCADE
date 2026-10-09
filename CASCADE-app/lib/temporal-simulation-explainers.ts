@@ -7,6 +7,7 @@
  * can be reviewed in one place.
  */
 
+import type { Statistic } from "@/lib/temporal-comparison";
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
 import { filterConditions, type FilterableModel } from "@/lib/element-filter";
 import type { CalendarUnit, Metric, StandardMetric } from "@/lib/schemas/temporal-simulation";
@@ -48,6 +49,15 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
       "Running needs the engine: a signed-in account allowed to Propagate, and the server reachable.",
     ],
     refs: ["ADR-0019 §2", "ADR-0019 §3"],
+  },
+  compare: {
+    title: "Compare",
+    lines: [
+      "Runs several of the project's Temporal Simulations one after the other and lines their Run tables up by Metric name, to weigh interventions against each other.",
+      "Each runs as Run does, on its own Reset copy of the model at the shared scope, calling the engine once per propagating Phase. The Run View, the model and the definitions are untouched.",
+      "The comparison lives in memory for the session; a later edit to a Temporal Simulation marks it out of date.",
+    ],
+    refs: ["ADR-0019 §4"],
   },
   metrics: {
     title: "Metrics",
@@ -412,6 +422,28 @@ export const EXPLAIN_SAVE_SCORECARD: Explanation = {
   ],
   refs: ["ADR-0019 §4", "ADR-0006"],
 };
+
+export const EXPLAIN_COMPARE: Explanation = {
+  title: "Compare",
+  lines: [
+    "Runs each ticked Temporal Simulation in turn from the Reset model: its profile, its Phases and their Events, one Engine Evaluation per propagating Phase, as Run does.",
+    "A Temporal Simulation that cannot run (an invalid definition, an engine error) is listed with the reason, and the others still run. Cancel keeps the ones already finished.",
+    "The table then shows one statistic of each Metric per Temporal Simulation, and the chart one Metric over time with a line each.",
+  ],
+  refs: ["ADR-0019 §4"],
+};
+
+const STATISTIC_TEXT: Record<Statistic, string> = {
+  end: "the value at the last period: where each Temporal Simulation leaves things",
+  mean: "the mean over the periods that have a value: the typical level along the way",
+  min: "the smallest value over the run",
+  max: "the largest value over the run",
+  total: "the sum over the periods: what a per-period flow (hours settled this month, say) adds up to over the run; meaningless for a level",
+};
+
+export function explainStatistic(s: Statistic): Explanation {
+  return { title: `Compare — ${s}`, lines: [`Each cell is ${STATISTIC_TEXT[s]}.`, "Export CSV writes all five statistics for every Temporal Simulation and Metric."], refs: ["ADR-0019 §4"] };
+}
 
 export const EXPLAIN_EXPORT_CSV: Explanation = {
   title: "Export CSV",

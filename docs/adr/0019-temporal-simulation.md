@@ -228,6 +228,15 @@ level** over its saved periods, divided by its reference and coloured by its Lev
 as a list and as a network colouring. Both are computed when shown, from the run table and
 from the stored end states, so neither adds a field.
 
+*Revised 2026-10-09 (2):* **Compare** runs several of a project's Temporal Simulations one
+after the other, each exactly as Run does (its own Reset copy, the shared scope, one Engine
+Evaluation per propagating Phase) but without the Run View, and lines their Run tables up by
+column name. Per Simulation and column it shows the end, mean, minimum, maximum or total (the
+sum over periods, which is what a per-period flow such as an hours settlement adds up to),
+and charts one column over time. A Simulation that cannot run is listed with the reason and
+the others still run. Like a run, a comparison is kept in memory only; it is the policy
+frontier's working surface, and its CSV is how it leaves the session.
+
 ### 5. Reset ends the Run View
 
 Reset, or End run, leaves the Run View and its Level Mode. The model never changed, so

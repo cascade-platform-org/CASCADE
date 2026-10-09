@@ -3471,6 +3471,27 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "strong",
+                  "text": "Compare"
+                },
+                {
+                  "kind": "text",
+                  "text": " (a tab of the Simulate window) weighs several Temporal Simulations against each other: tick them and press Compare. Each runs in turn as Run does, on its own Reset copy of the model, without opening the Run View. The table then has a row per Temporal Simulation and a column per Metric, matched by name, showing the run's End, Mean, Min, Max or Total (the sum over periods, for a per-period flow). Click a Metric's name to chart it over time, one line per Temporal Simulation. "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Export CSV"
+                },
+                {
+                  "kind": "text",
+                  "text": " writes all five statistics. The comparison is kept for the session; editing a Temporal Simulation marks it out of date."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
                   "text": "Level Mode"
                 },
                 {

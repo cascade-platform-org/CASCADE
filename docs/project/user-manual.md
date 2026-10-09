@@ -559,6 +559,15 @@ Above the table, **Results** has a card per column: its value at the selected
 period, its minimum, mean and maximum across the run, and a line of the whole
 run. Click a line to select the period under the pointer.
 
+**Compare** (a tab of the Simulate window) weighs several Temporal Simulations
+against each other: tick them and press Compare. Each runs in turn as Run does,
+on its own Reset copy of the model, without opening the Run View. The table
+then has a row per Temporal Simulation and a column per Metric, matched by
+name, showing the run's End, Mean, Min, Max or Total (the sum over periods, for
+a per-period flow). Click a Metric's name to chart it over time, one line per
+Temporal Simulation. **Export CSV** writes all five statistics. The comparison
+is kept for the session; editing a Temporal Simulation marks it out of date.
+
 **Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
 its change over the period, divided by its reference: its own *level reference*
 or *change reference*, else max(|Min|, |Max|). The bands are the **Level

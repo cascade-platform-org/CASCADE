@@ -20,7 +20,8 @@ import { resetSnapshot } from "@/lib/scenario-baseline";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
 import { RunStopped, runTimeline } from "@/lib/step-operator";
-import { runTableCsv, type RunTable } from "@/lib/temporal-metrics";
+import { runTable, runTableCsv, type RunTable } from "@/lib/temporal-metrics";
+import { comparisonCsv, type ComparedRun, type Comparison } from "@/lib/temporal-comparison";
 import { buildRunEntry } from "@/lib/period-entry";
 import { CSV_FILE, safeName, saveAs } from "@/lib/file-io";
 import { useScorecardStore } from "@/store/scorecard-store";
@@ -28,6 +29,7 @@ import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 
 let controller: AbortController | null = null;
+let comparing: AbortController | null = null;
 
 /**
  * Run the window's definition. Returns when the run is shown or has stopped;
@@ -130,4 +132,78 @@ export async function saveRunToScorecard(table: RunTable, numbers: readonly numb
   });
   useScorecardStore.getState().addScorecardEntry(entry);
   return entry.label;
+}
+
+/**
+ * Run several saved Temporal Simulations one after the other, each on its own
+ * Reset copy of the model and at the shared scope, as Run does, and keep each
+ * one's Run table for the Compare tab. Nothing is shown in the Run View and
+ * nothing is written. A Simulation that cannot run (an invalid definition, an
+ * engine error) is kept with the reason, and the others still run; Cancel
+ * keeps the ones already finished.
+ */
+export async function startComparison(ids: readonly string[]): Promise<void> {
+  const sim = useTemporalSimulationStore.getState();
+  if (sim.compareProgress || sim.runProgress) return;
+  const chosen = sim.simulations.filter((x) => ids.includes(x.id));
+  if (chosen.length === 0) return;
+
+  const { activeCanvasId } = useCanvasStore.getState();
+  const shared = useUiStore.getState().propagationScope;
+  const fixed = shared === "local" && activeCanvasId ? { scope: "local" as const, canvasId: activeCanvasId } : { scope: "global" as const, canvasId: activeCanvasId };
+  const config = useConfigStore.getState();
+  const n = selectN(config);
+  const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
+
+  const prepared = chosen.map(({ id, ...doc }) => {
+    const checked = checkDoc(doc);
+    const plan = checked.ok ? planTimeline(checked.doc.timeline) : null;
+    return { id, name: doc.timeline.name || id, checked, plan };
+  });
+  const total = prepared.reduce((a, p) => a + (p.plan?.engineCalls ?? 0), 0);
+
+  const mine = new AbortController();
+  comparing = mine;
+  sim.beginCompare(total);
+  const runs: ComparedRun[] = [];
+  let done = 0;
+  for (const { id, name, checked, plan } of prepared) {
+    if (mine.signal.aborted) break;
+    if (!checked.ok || !plan || plan.errors.length > 0 || plan.periods.length === 0) {
+      const why = !checked.ok ? checked.errors[0] : plan?.errors[0] ?? "its Timeline has no period";
+      runs.push({ id, name, table: null, warnings: [], error: `Not run: ${why}` });
+      continue;
+    }
+    const before = done;
+    try {
+      const record = await runTimeline({
+        start,
+        plan,
+        profile: checked.doc.profile,
+        events: config.config.events,
+        n,
+        propagate: (snapshot) => (mine.signal.aborted ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
+        signal: mine.signal,
+        onProgress: (k, label) => useTemporalSimulationStore.getState().setCompareProgress(before + k, `${name} · ${label}`),
+      });
+      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings });
+    } catch (e) {
+      if (mine.signal.aborted) break;
+      const message = e instanceof RunStopped ? `Stopped: ${e.message} — in period ${e.period}` : `Stopped: ${e instanceof Error ? e.message : String(e)}`;
+      runs.push({ id, name, table: null, warnings: [], error: message });
+    }
+    done = before + plan.engineCalls;
+  }
+  if (comparing === mine) comparing = null;
+  useTemporalSimulationStore.getState().finishCompare(runs, sim.simulations);
+}
+
+/** Stop a computing comparison after its current Propagation; the Simulations already run are kept. */
+export function cancelComparison(): void {
+  comparing?.abort();
+}
+
+/** Save the comparison as CSV through the app's Save-As path. */
+export async function exportComparisonCsv(comparison: Comparison): Promise<void> {
+  await saveAs("temporal-simulation-comparison.csv", comparisonCsv(comparison), CSV_FILE);
 }

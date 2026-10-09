@@ -32,6 +32,7 @@ export function RunTab() {
   const progress = useTemporalSimulationStore((s) => s.runProgress);
   const runError = useTemporalSimulationStore((s) => s.runError);
   const runWarnings = useTemporalSimulationStore((s) => s.runRecord?.warnings);
+  const comparing = useTemporalSimulationStore((s) => s.compareProgress !== null);
   const { cued: endRunCued, ref: endRunRef } = useEndRunCue<HTMLSpanElement>();
   // The Run View: a finished run is shown, and its periods can be selected.
   const hasRun = useTemporalSimulationStore((s) => s.runRecord !== null);
@@ -68,8 +69,8 @@ export function RunTab() {
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={running || plan.periods.length === 0 || errors.length > 0 || !canPropagate || !serverReachable}
-          title={!canPropagate ? "Running needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : undefined}
+          disabled={running || comparing || plan.periods.length === 0 || errors.length > 0 || !canPropagate || !serverReachable}
+          title={!canPropagate ? "Running needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : comparing ? "A comparison is computing (Compare tab)" : undefined}
           onClick={() => {
             explain(explainRun(plan, eventLabel));
             void startTemporalSimulationRun();
