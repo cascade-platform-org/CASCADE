@@ -12,22 +12,8 @@
 import { applyGraphDiff, diffGraph } from "@/lib/graph-diff";
 import { stockValues } from "@/lib/level-mode";
 import { walkPeriods, type RunRecord } from "@/lib/step-operator";
-import type { RunTable } from "@/lib/temporal-metrics";
+import { columnSummaries, type RunTable } from "@/lib/temporal-metrics";
 import type { GraphSnapshot, SimulationPeriod, TemporalSimulationScorecardEntry } from "@/lib/schemas/network";
-
-type Summary = Record<string, number | null>;
-
-/** Each column's minimum and mean over the run's periods that have a value. */
-function runSummary(table: RunTable): { min: Summary; mean: Summary } {
-  const min: Summary = {};
-  const mean: Summary = {};
-  table.columns.forEach((c, i) => {
-    const values = table.rows.map((r) => r.values[i]).filter((v): v is number => v !== null);
-    min[c.label] = values.length ? Math.min(...values) : null;
-    mean[c.label] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-  });
-  return { min, mean };
-}
 
 export function buildRunEntry(input: {
   record: RunRecord;
@@ -41,7 +27,8 @@ export function buildRunEntry(input: {
   now?: () => Date;
 }): TemporalSimulationScorecardEntry {
   const { record, table, now = () => new Date() } = input;
-  const { min, mean } = runSummary(table);
+  const summaries = columnSummaries(table);
+  const summary = (pick: "min" | "mean") => Object.fromEntries(table.columns.map((c, i) => [c.label, summaries[i][pick]]));
   const numbers = [...input.numbers].sort((a, b) => a - b);
   const periods: SimulationPeriod[] = [];
   let state = record.start;
@@ -67,8 +54,8 @@ export function buildRunEntry(input: {
     timeline_name: input.timelineName,
     start: record.start,
     periods,
-    metric_min: min,
-    metric_mean: mean,
+    metric_min: summary("min"),
+    metric_mean: summary("mean"),
   };
 }
 

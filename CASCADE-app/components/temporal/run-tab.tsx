@@ -10,7 +10,7 @@ import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
 import { cancelTemporalSimulationRun, endTemporalSimulationRun, exportRunCsv, saveRunToScorecard, startTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import type { RunRecord } from "@/lib/step-operator";
-import { STANDARD_COLUMNS, formatMetric, runTable } from "@/lib/temporal-metrics";
+import { STANDARD_COLUMNS, columnSummaries, formatMetric, runTable } from "@/lib/temporal-metrics";
 import {
   EXPLAIN_END_RUN,
   EXPLAIN_EXPORT_CSV,
@@ -21,6 +21,7 @@ import {
 } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, useEventLookup, usePlan } from "./fields";
 import { CUE_CLASS, useEndRunCue } from "./end-run-cue";
+import { RunResults } from "./run-results";
 
 
 const NONE: ReadonlySet<number> = new Set();
@@ -48,6 +49,7 @@ export function RunTab() {
   const n = useConfigStore(selectN);
   // The run's table: computed at read time from the run record (ADR-0019 §4).
   const table = useMemo(() => (record ? runTable(record, metrics.map((m) => m.metric), n, standard) : null), [record, metrics, n, standard]);
+  const summaries = useMemo(() => (table ? columnSummaries(table) : []), [table]);
   const { explain, selectPeriod, setDisplay, setLevelReading } = useTemporalSimulationStore.getState();
   const { eventLabel } = useEventLookup();
   // Periods unticked for Save to Scorecard; every period starts ticked, for each new run.
@@ -139,6 +141,19 @@ export function RunTab() {
             <Save size={11} /> Save {toSave.length} period{toSave.length === 1 ? "" : "s"} to Scorecard
           </SmallButton>
         </div>
+      )}
+
+      {table && hasRun && (
+        <RunResults
+          table={table}
+          summaries={summaries}
+          selected={selected}
+          onSelect={(number) => {
+            selectPeriod(number);
+            const period = plan.periods[number - 1];
+            if (period) explain(explainSelectPeriod(period, eventLabel));
+          }}
+        />
       )}
 
       <div className="overflow-x-auto">

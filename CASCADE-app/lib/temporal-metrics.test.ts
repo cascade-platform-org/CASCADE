@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateMetric, runTable, runTableCsv } from "./temporal-metrics";
+import { columnSummaries, evaluateMetric, runTable, runTableCsv } from "./temporal-metrics";
 import { runTimeline } from "./step-operator";
 import { planTimeline } from "./timeline-plan";
 import type { GraphSnapshot, Node, Stock } from "./schemas/network";
@@ -103,5 +103,17 @@ describe("runTableCsv", () => {
   it("writes numbers without binary-fraction noise", () => {
     const csv = runTableCsv({ columns: [{ key: "m", label: "m" }], rows: [{ label: "p1", values: [19345.199999999997] }, { label: "p2", values: [0.1 + 0.2] }] });
     expect(csv.split("\n").slice(1)).toEqual(["p1,19345.2", "p2,0.3"]);
+  });
+});
+
+describe("columnSummaries", () => {
+  it("gives each column its values in order and the min, mean and max of those present", () => {
+    const table = { columns: [{ key: "a", label: "A" }, { key: "b", label: "B" }], rows: [
+      { label: "1", values: [2, null] }, { label: "2", values: [null, null] }, { label: "3", values: [6, null] },
+    ] };
+    expect(columnSummaries(table)).toEqual([
+      { values: [2, null, 6], min: 2, mean: 4, max: 6 },
+      { values: [null, null, null], min: null, mean: null, max: null },
+    ]);
   });
 });

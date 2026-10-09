@@ -46,7 +46,9 @@ import { SnapshotFlowView } from "./snapshot-flow-view";
 import { buildColorMap } from "@/lib/analysis-legend";
 import { scoresToResult } from "@/lib/topological-analysis";
 import type { GraphSnapshot, PropagationScorecardEntry, AnalysisScorecardEntry, TemporalSimulationScorecardEntry } from "@/lib/schemas/network";
-import { colorsFor, stockValues } from "@/lib/level-mode";
+import { averageStockValues, bandColor, bandOfValue, colorsFor, stockValues } from "@/lib/level-mode";
+import { elementLabel } from "@/lib/coalition";
+import { brandColor } from "@/lib/brand";
 import { periodEndState } from "@/lib/period-entry";
 import { Segmented } from "@/components/temporal/fields";
 
@@ -840,8 +842,10 @@ function ImpactedNodesTable({ before, after, n }: { before: GraphSnapshot; after
  * The run is not saved, so the card shows what the entry holds: each period's
  * end state (the run's start with the period's diff), stepped with a slider
  * that opens on the last period; the run's mean Operativity in the header;
- * the network coloured by Functionality, Stock level or Stock change; and the
- * Metric values at the period with their minimum and mean across the run.
+ * the network coloured by Functionality, Stock level, Stock change or each
+ * Stock's average level over the saved periods, that average also listed with
+ * its Level Scale band; and the Metric values at the period with their minimum
+ * and mean across the run.
  */
 function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulationScorecardEntry; n: number; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -858,12 +862,18 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
     return scores.reduce((a, b) => a + b, 0) / scores.length;
   }, [entry, n]);
   const levels = useMemo(() => stockValues(snapshot, snapshot, "level"), [snapshot]);
-  const [colouring, setColouring] = useState<"functionality" | "level" | "change">(levels.length > 0 ? "level" : "functionality");
+  // Each Stock's mean level over the saved periods, most owed or drawn first.
+  const averages = useMemo(() => {
+    if (levels.length === 0) return [];
+    const ratio = (v: { value: number; reference?: number }) => (v.reference ? v.value / v.reference : 0);
+    return averageStockValues(entry.periods.map((p) => periodEndState(entry, p))).sort((a, b) => ratio(a) - ratio(b));
+  }, [entry, levels.length]);
+  const [colouring, setColouring] = useState<"functionality" | "level" | "change" | "average">(levels.length > 0 ? "level" : "functionality");
   const colors = useMemo(() => {
-    const shown = colouring === "level" ? levels : colouring === "change" ? period.stock_values : null;
+    const shown = colouring === "level" ? levels : colouring === "change" ? period.stock_values : colouring === "average" ? averages : null;
     if (!shown || shown.length === 0) return undefined;
     return colorsFor(shown, [...Object.keys(snapshot.nodes), ...Object.keys(snapshot.edges)], config.level_scale);
-  }, [colouring, levels, period, snapshot, config.level_scale]);
+  }, [colouring, levels, period, averages, snapshot, config.level_scale]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40">
@@ -897,19 +907,49 @@ function SimulationEntryCard({ entry, n, onDelete }: { entry: TemporalSimulation
           )}
           <div className="mb-3 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
             <div className="flex items-center gap-2 border-b border-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
-              <span className="flex-1">End of {period.label}</span>
+              <span className="flex-1">{colouring === "average" ? `Stock average over the ${entry.periods.length} saved periods` : `End of ${period.label}`}</span>
               <Segmented
                 value={colouring}
                 options={[
                   { id: "functionality", label: "Functionality" },
                   ...(levels.length > 0 ? [{ id: "level" as const, label: "Stock level" }] : []),
                   ...(period.stock_values.length > 0 ? [{ id: "change" as const, label: "Stock change" }] : []),
+                  ...(averages.length > 0 && entry.periods.length > 1 ? [{ id: "average" as const, label: "Stock average" }] : []),
                 ]}
                 onChange={setColouring}
               />
             </div>
             <SnapshotFlowView snapshot={snapshot} colors={colors} heightClass="h-52" />
           </div>
+          {averages.length > 0 && entry.periods.length > 1 && (
+            <div className="mb-3">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+                Stock average over the {entry.periods.length} saved periods
+              </p>
+              <table className="w-full text-xs">
+                <tbody>
+                  {averages.map((v) => {
+                    const band = bandOfValue(v, config.level_scale);
+                    return (
+                      <tr key={`${v.element}/${v.category ?? ""}`}>
+                        <td className="w-4 py-0.5">
+                          <span className="block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: band ? bandColor(band) : brandColor("neutral", 700) }} />
+                        </td>
+                        <td className="truncate py-0.5 text-zinc-600 dark:text-zinc-400">
+                          {elementLabel(snapshot, v.element)}{v.category ? ` · ${v.category}` : ""}
+                        </td>
+                        <td className="py-0.5 text-right font-mono text-zinc-800 dark:text-zinc-200">{formatMetric(v.value)}</td>
+                        <td className="py-0.5 pl-2 text-right font-mono text-zinc-500" title="Average level ÷ reference">
+                          {v.reference ? (v.value / v.reference).toFixed(2) : "—"}
+                        </td>
+                        <td className="truncate py-0.5 pl-2 text-zinc-500">{band?.label ?? "no reference"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-widest text-zinc-400">

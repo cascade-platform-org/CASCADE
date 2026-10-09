@@ -555,6 +555,10 @@ aggregates it: sum, mean, min, max, count, a percentile, or the share of values
 passing a comparison. A Metric no selected element can answer shows "—".
 **Export CSV** saves the table.
 
+Above the table, **Results** has a card per column: its value at the selected
+period, its minimum, mean and maximum across the run, and a line of the whole
+run. Click a line to select the period under the pointer.
+
 **Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
 its change over the period, divided by its reference: its own *level reference*
 or *change reference*, else max(|Min|, |Max|). The bands are the **Level
@@ -565,8 +569,11 @@ grey.
 unless you untick some) together, as one entry: per period its end state, the
 table's values and its Stocks, with each Metric's minimum and mean across the
 run. On the Scorecard, a slider steps through the saved periods and the network
-switches between Functionality, Stock level and Stock change. The run's start
-is stored once and each period only what changed since it.
+switches between Functionality, Stock level, Stock change and Stock average.
+When the entry holds Stocks and more than one period, it also lists each
+Stock's average level over the saved periods, divided by its reference, with
+the colour and name of its Level Scale band. The run's start is stored once
+and each period only what changed since it.
 
 ### 9.5 Importing an aqueduct
 

@@ -3453,6 +3453,23 @@ export const USER_MANUAL: ManualDoc = {
               "type": "paragraph",
               "spans": [
                 {
+                  "kind": "text",
+                  "text": "Above the table, "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Results"
+                },
+                {
+                  "kind": "text",
+                  "text": " has a card per column: its value at the selected period, its minimum, mean and maximum across the run, and a line of the whole run. Click a line to select the period under the pointer."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
                   "kind": "strong",
                   "text": "Level Mode"
                 },
@@ -3495,7 +3512,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " keeps the ticked periods of the Run table (all of them unless you untick some) together, as one entry: per period its end state, the table's values and its Stocks, with each Metric's minimum and mean across the run. On the Scorecard, a slider steps through the saved periods and the network switches between Functionality, Stock level and Stock change. The run's start is stored once and each period only what changed since it."
+                  "text": " keeps the ticked periods of the Run table (all of them unless you untick some) together, as one entry: per period its end state, the table's values and its Stocks, with each Metric's minimum and mean across the run. On the Scorecard, a slider steps through the saved periods and the network switches between Functionality, Stock level, Stock change and Stock average. When the entry holds Stocks and more than one period, it also lists each Stock's average level over the saved periods, divided by its reference, with the colour and name of its Level Scale band. The run's start is stored once and each period only what changed since it."
                 }
               ]
             }

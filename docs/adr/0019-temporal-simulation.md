@@ -221,6 +221,13 @@ run. Its card steps through the periods and shows the network by Functionality, 
 level or Stock change. An entry saved earlier (one period with its whole `snapshot`) loads
 as a run of one.
 
+*Revised 2026-10-09:* after a run, a **Results** card per Run-table column sits above the
+table: the selected period's value, the run's minimum, mean and maximum, and a line of the
+run. A saved entry with Stocks and more than one period also shows each Stock's **average
+level** over its saved periods, divided by its reference and coloured by its Level Scale band,
+as a list and as a network colouring. Both are computed when shown, from the run table and
+from the stored end states, so neither adds a field.
+
 ### 5. Reset ends the Run View
 
 Reset, or End run, leaves the Run View and its Level Mode. The model never changed, so

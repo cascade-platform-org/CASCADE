@@ -42,8 +42,6 @@ export function bandFor(ratio: number, scale: readonly LevelBand[]): LevelBand {
   return scale.find((band) => band.below !== undefined && ratio < band.below) ?? scale[scale.length - 1];
 }
 
-const bandColor = (band: LevelBand) => brandColor(band.role, band.step);
-
 const keyOf = (s: PlacedStock) => `${s.element}/${s.category ?? ""}`;
 
 const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2));
@@ -62,6 +60,30 @@ export function stockValues(state: GraphSnapshot, before: GraphSnapshot, reading
     return { element, ...(category !== undefined ? { category } : {}), value, ...(reference !== null ? { reference } : {}) };
   });
 }
+
+/**
+ * Each Stock's mean level over several period end states, with its level
+ * reference (absent when it has none): what a Scorecard entry shows as the
+ * run's average. A Stock missing from a state is averaged over the states it is in.
+ */
+export function averageStockValues(states: readonly GraphSnapshot[]): StockValue[] {
+  const sums = new Map<string, { value: StockValue; total: number; count: number }>();
+  for (const state of states) {
+    for (const value of stockValues(state, state, "level")) {
+      const key = `${value.element}/${value.category ?? ""}`;
+      const seen = sums.get(key);
+      sums.set(key, { value, total: (seen?.total ?? 0) + value.value, count: (seen?.count ?? 0) + 1 });
+    }
+  }
+  return [...sums.values()].map(({ value, total, count }) => ({ ...value, value: total / count }));
+}
+
+/** The Level Scale band a Stock value falls in, or null when it has no reference. */
+export const bandOfValue = (value: StockValue, scale: readonly LevelBand[]): LevelBand | null =>
+  value.reference === undefined ? null : bandFor(value.value / value.reference, scale);
+
+/** A band's colour, as Level Mode paints it. */
+export const bandColor = (band: LevelBand) => brandColor(band.role, band.step);
 
 /** Every Element's colour from its Stocks' values; a node with several shows the most extreme ratio. */
 export function colorsFor(values: readonly StockValue[], elementIds: Iterable<string>, scale: readonly LevelBand[]): Record<string, string> {

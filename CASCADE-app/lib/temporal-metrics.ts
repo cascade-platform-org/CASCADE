@@ -165,6 +165,24 @@ export function runTable(record: RunRecord, metrics: readonly Metric[], n: numbe
   return { columns, rows };
 }
 
+/** One column across the run: its values in period order (null = no value), and their min, mean and max. */
+export interface ColumnSummary {
+  values: (number | null)[];
+  min: number | null;
+  mean: number | null;
+  max: number | null;
+}
+
+/** Each column's values over the run's periods, with the minimum, mean and maximum of those that have a value. */
+export function columnSummaries(table: RunTable): ColumnSummary[] {
+  return table.columns.map((_, i) => {
+    const values = table.rows.map((r) => r.values[i]);
+    const present = values.filter((v): v is number => v !== null);
+    if (present.length === 0) return { values, min: null, mean: null, max: null };
+    return { values, min: Math.min(...present), mean: present.reduce((a, b) => a + b, 0) / present.length, max: Math.max(...present) };
+  });
+}
+
 /** The table as CSV: a `period` column, then one per Metric. Empty cells for no value. */
 export function runTableCsv(table: RunTable): string {
   const cell = (v: string | number | null) => {

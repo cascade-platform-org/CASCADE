@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandFor, levelPaint, stockReference } from "./level-mode";
+import { averageStockValues, bandFor, bandOfValue, levelPaint, stockReference } from "./level-mode";
 import { brandColor } from "./brand";
 import { DEFAULT_LEVEL_SCALE, LevelBandSchema } from "./schemas/config";
 import type { GraphSnapshot, Stock } from "./schemas/network";
@@ -38,6 +38,18 @@ describe("Level Mode", () => {
       "large surplus (≥ 0.50)", "surplus (0.10 to 0.50)", "balanced (-0.10 to 0.10)", "deficit (-0.50 to -0.10)",
       "large deficit (< -0.50)", "no reference: set min/max or a reference", "no Stock",
     ]);
+  });
+});
+
+describe("averageStockValues", () => {
+  it("averages each Stock's level over the states, keeping its level reference", () => {
+    const states = [-10, -30, -50].map((level) => snap(stock({ level, min: -100 }), stock({ level: 4, level_reference: 8 })));
+    const [pool, edge] = averageStockValues(states);
+    expect(pool).toEqual({ element: "pool", category: "hours", value: -30, reference: 100 });
+    expect(edge).toEqual({ element: "e", value: 4, reference: 8 });
+    expect(bandOfValue(pool, DEFAULT_LEVEL_SCALE)?.label).toBe("deficit");        // −0.3
+    expect(bandOfValue(edge, DEFAULT_LEVEL_SCALE)?.label).toBe("large surplus");  // 0.5
+    expect(bandOfValue({ element: "x", value: 1 }, DEFAULT_LEVEL_SCALE)).toBeNull();
   });
 });
 
