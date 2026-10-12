@@ -1,0 +1,3 @@
+- CASCADE: open-source framework for cascading failures in interdependent services.
+- Functionality-status propagation engine plus adapted Shapley value node analysis.
+- Rapid, knowledge-based stress-testing for multi-hazard essential-service resilience.

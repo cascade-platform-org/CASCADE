@@ -7,10 +7,12 @@ abstract: >-
   purely logical interdependencies share one discrete functionality scale and
   converge through a single monotonic update rule.
 type: software
+version: 1.0.0
+date-released: 2026-10-12
 authors:
   - family-names: Curaba
     given-names: Cristian
-    affiliation: University of Udine, Udine, Italy
+    affiliation: SPRINT-Lab, Polytechnic Department of Engineering and Architecture, University of Udine, Italy
     email: cristian.curaba@uniud.it
 license: AGPL-3.0-or-later
 repository-code: https://github.com/cascade-platform-org/CASCADE

@@ -7,6 +7,19 @@ of record live with their publishers.
 
 ---
 
+## Which version of the code
+
+All three papers describe release
+[**v1.0.0**](https://github.com/cascade-platform-org/CASCADE/releases/tag/v1.0.0)
+of this repository (the `main` branch at the time of release). It contains the
+engine, the importers, the case-study and sample models, and the experiment
+scripts the paper sections below point to. Later development (for example the
+Temporal Simulation, planned for v1.1) happens on other branches and is not part
+of the version the papers describe, so check out the `v1.0.0` tag to reproduce
+what you read: `git checkout v1.0.0`.
+
+---
+
 ## Composable, Knowledge-Driven Disservice Propagation for Complex Interdependent Services with a Flow-Allocation Module Validated Against Hydraulic Simulation
 
 A category-typed propagation architecture in which quantity-aware and purely logical

@@ -7,11 +7,17 @@ It has not been peer-reviewed and may change before publication.
 **Title:** Customizable Assessment of System Cascades And Dependency Effects for
 Improving Resilience of Interdependent Essential Services
 
-**Authors:** Cristian Curaba, Fabio Zorzini, Stefano Grimaz (University of Udine)
+**Authors:** Cristian Curaba, Fabio Zorzini, Stefano Grimaz (SPRINT-Lab, Polytechnic Department of Engineering and Architecture, University of Udine)
 
 Posting a preprint is permitted under Elsevier's article-sharing policy and does
 not affect the submission. Once the article is accepted, a citation and DOI link
 to the published version will be added here.
+
+## Code version
+
+The manuscript describes release
+[v1.0.0](https://github.com/cascade-platform-org/CASCADE/releases/tag/v1.0.0)
+of the CASCADE repository. Check out that tag to reproduce the case study.
 
 ## Build
 
