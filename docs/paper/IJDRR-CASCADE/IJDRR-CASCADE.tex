@@ -1,7 +1,9 @@
-\documentclass[article,12pt]{elsarticle}
+\documentclass[review,12pt]{elsarticle}
 \usepackage[utf8]{inputenc}
 
 \usepackage{amsmath}
+\usepackage{eurosym}
+\usepackage{lineno}
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage[
@@ -33,6 +35,7 @@
 
 \begin{document}
 
+\linenumbers
 \begin{frontmatter}
 
 \title{Customizable Assessment of System Cascades And Dependency Effects for Improving Resilience of Interdependent Essential Services}
@@ -43,7 +46,7 @@
 \author[uniud]{Fabio Zorzini}
 \author[uniud]{Stefano Grimaz}
 \affiliation[uniud]{%
-  organization={University of Udine},%
+  organization={SPRINT-Lab, Polytechnic Department of Engineering and Architecture, University of Udine},%
   city={Udine},%
   postcode={33100},%
   %state={},%
@@ -56,8 +59,7 @@
 Climate-induced hazards increasingly threaten interconnected critical infrastructure systems, where cascading failures can amplify initial impacts and lead to catastrophic service disruptions. Managing such systems effectively requires understanding their behaviour under stress, including the systemic, cross-sector effects that arise from interdependencies. Existing decision support tools for disaster risk reduction often require extensive historical data, computational resources, and specialized expertise, making them inaccessible in resource-constrained contexts.
 This paper introduces CASCADE (Customizable Assessment of System Cascades And Dependency Effects), a compositional framework enabling rapid, collaborative operativity assessment of interdependent essential services. CASCADE addresses key gaps by supporting cross-sector dependency modelling, facilitating stakeholder collaboration through intuitive interfaces, enabling knowledge-based rather than data-intensive analysis, and providing systematic stress-testing for disaster preparedness.
 The framework offers two methodological innovations: (1) a functionality-status propagation engine modelling how operativity degradation cascades through networks, including time-limited backup systems; and (2) a game-theoretic analysis adapting the Shapley value approach to identify neuralgic nodes across combinatorial failure scenarios. Unlike traditional simulation tools, CASCADE employs a compositional, bottom-up paradigm in which subsystems are developed independently by domain experts and integrated into network-of-networks representations.
-Through a realistic demonstration of urban critical infrastructure under multi-hazard scenarios, we show how CASCADE generates concrete decision-support outputs for strategic investment and emergency preparedness. Its low data requirements, rapid modelling capability, and explicit handling of all relevant dependencies are intended to make it well suited to accessible disaster risk reduction applications in vulnerable, resource-limited contexts, strengthening the resilience of essential services\footnote{Code and results are available at:
-\url{https://github.com/cascade-platform-org/CASCADE}. The platform itself runs at \url{https://app.cascade-platform.org/}.}.
+Through a realistic demonstration of urban critical infrastructure under multi-hazard scenarios, we show how CASCADE generates concrete decision-support outputs for strategic investment and emergency preparedness. Its low data requirements, rapid modelling capability, and explicit handling of all relevant dependencies are intended to make it well suited to accessible disaster risk reduction applications in vulnerable, resource-limited contexts, strengthening the resilience of essential services.
 \end{abstract}
 
 \begin{graphicalabstract}
@@ -127,9 +129,9 @@ More recent literature has sought to refine these classifications to support ope
 \subsection{Quantitative resilience assessment via graph modelling}
 \label{subsec:graph}
 
-Graph-theoretic approaches remain a cornerstone of quantitative resilience assessment for critical infrastructures (CIs), providing computationally efficient tools to analyse and prioritise vulnerabilities. A substantial body of research utilises topology-based metrics (improving and specialising standard ones such as betweenness and eigenvalue centrality) to assess the relative importance of components \cite{WANG2021100459, Survey_centrality_hypergraphs}, optionally with labelled nodes/edges. In these models, resilience is often equated with structural connectivity or efficiency; critical nodes are identified as those whose removal causes the most significant fragmentation or hinders an aggregated measure such as average shortest path. While these measures offer rapid, data-parsimonious proxies for vulnerability, they cannot provide essential information about the flow of real CIs and service capacities that govern real-world infrastructure operations \cite{hines_topological_2010}, \cite{ouyang2013comparisons}, \cite{bachmann_survey_2020}.
+Graph-theoretic approaches remain a cornerstone of quantitative resilience assessment for critical infrastructures (CIs), providing computationally efficient tools to analyse and prioritise vulnerabilities. A substantial body of research utilises topology-based metrics (improving and specialising standard ones such as betweenness and eigenvalue centrality) to assess the relative importance of components \cite{WANG2021100459, Survey_centrality_hypergraphs}, optionally with labelled nodes/edges. In these models, resilience is often equated with structural connectivity or efficiency; critical nodes are identified as those whose removal causes the most significant fragmentation or hinders an aggregated measure such as average shortest path. While these measures offer rapid, data-parsimonious proxies for vulnerability, they cannot provide essential information about the flow of real CIs and service capacities that govern real-world infrastructure operations \cite{hines_topological_2010,ouyang2013comparisons,bachmann_survey_2020}.
 
-Recent scholarship has increasingly pivoted towards performance-based and dynamic graph modelling to address these limitations. De Marco et al. \cite{DeMarco2025} classify purely topological approaches as useful screening tools for structural vulnerability but emphasise that they are insufficient for quantifying resilience. To bridge this gap, modern frameworks integrate graph topology with functional/flow models to capture cascading failures and restoration trajectories. For instance, Ouyang and Wang \cite{OuyangWang2015} quantify resilience as the ratio of realised to target performance over time, utilising optimisation algorithms to schedule restoration in interdependent systems. Such performance-based and optimisation-based models, however, require hazard-specific fragility curves, physical flow solvers (e.g.\ DC power flow, maximum-flow gas models) calibrated per sector, and genetic-algorithm search over simulated damage scenarios to schedule restoration --- a data and compute-intensive pipeline that De Marco et al.'s own SWOT analysis \cite{DeMarco2025} flags as a recurring weakness of both approach families. CASCADE instead trades this physical fidelity for a lightweight, rule-based heuristic pipeline (Section~\ref{subsec:propagation_engine}) that lets domain experts encode the same restoration and redundancy logic directly as qualitative dependency levels and rules, without fitting per-sector physical models or running scenario-search optimisations.
+Recent scholarship has increasingly pivoted towards performance-based and dynamic graph modelling to address these limitations. De Marco et al. \cite{DeMarco2025} classify purely topological approaches as useful screening tools for structural vulnerability but emphasise that they are insufficient for quantifying resilience. To bridge this gap, modern frameworks integrate graph topology with functional/flow models to capture cascading failures and restoration trajectories. For instance, Ouyang and Wang \cite{OuyangWang2015} quantify resilience as the ratio of realised to target performance over time, utilising optimisation algorithms to schedule restoration in interdependent systems. Such performance-based and optimisation-based models, however, require hazard-specific fragility curves, physical flow solvers (e.g.\ DC power flow, maximum-flow gas models) calibrated per sector, and genetic-algorithm search over simulated damage scenarios to schedule restoration --- a data and compute-intensive pipeline that De Marco et al.'s own SWOT analysis \cite{DeMarco2025} flags as a recurring weakness of both approach families. This calls for lightweight, rule-based approaches that let domain experts encode restoration and redundancy logic directly as qualitative dependency levels and rules, without fitting per-sector physical models or running scenario-search optimisations.
 
 \subsection{Decision support systems for disaster management}
 \label{subsec:dss_twins}
@@ -202,7 +204,7 @@ knowledge into a structured, analysable network which guides the users to
 surface inconsistencies, missing information, and divergent assumptions.
 
 Conceptually, CASCADE represents an interdependent system as a directed graph
-of nodes and edges. Nodes represent sources, infrastructures\footnote{more generally, an "infrastructure" node can also represent equipment or devices.}, personnel or services; edges represent the provision of any service/utility from the tail node to the head node, hence modelling the dependency.
+of nodes and edges. Nodes represent sources, infrastructures (more generally, an "infrastructure" node can also represent equipment or devices), personnel or services; edges represent the provision of any service/utility from the tail node to the head node, hence modelling the dependency.
 Each node and each edge is associated with a \emph{Functionality} value drawn
 from a discrete integer scale $1\ldots N$ (1\,=\,worst, $N$\,=\,fully
 operational), configured per project (the default sets $N=3$, with labels
@@ -240,7 +242,7 @@ From a user's viewpoint, CASCADE is software designed to support an intuitive, i
 See Figure~\ref{fig:CASCADEworkflow} for a visual summary of the workflow described in the following.
 
 \paragraph{Modelling the system as a multi-labelled graph}
-Users begin by building a graph/network model of their system. They add nodes for key sources, infrastructures, services, and operators, and connect them with directed dependency edges. Nodes are grouped into categories (e.g.\ electric, water, transport, manager), which later determine how propagation is handled by correctly interpreting redundant services. For each node, users can set a per-category dependency level that controls how strongly an upstream degradation in that category propagates to the node, and can enable a time-constrained backup for any category.
+Users begin by building a graph/network model of their system. They add nodes for key sources, infrastructures, services, and operators, and connect them with directed dependency edges. Nodes are grouped into categories (e.g.\ electric, water, transport, managerial), which later determine how propagation is handled by correctly interpreting redundant services. For each node, users can set a per-category dependency level that controls how strongly an upstream degradation in that category propagates to the node, and can enable a time-constrained backup for any category.
 
 \paragraph{Encoding operational knowledge as rules}
 CASCADE allows users to formalise operational knowledge as explicit if--then, intercategorical and intracategorical rules that modify or complement the default propagation behaviour. Rules can target both nodes and edges, and their conditions can refer to any attribute of the involved elements (e.g.\ any custom attribute added), though by default they are based on Functionality values. Intracategorical rules describe how multiple predecessors within the same category interact to serve a target node (e.g.\ redundant feeds), while intercategorical rules describe how different services jointly determine a node's Functionality (e.g.\ a hospital requiring both electricity and road access). Because rules are written in a strict but readable form, users can inspect, discuss, and revise them.
@@ -282,15 +284,17 @@ the system as an interdependent network-of-networks (labelled nodes and edges, o
   Beyond its status, a node carries knowledge-based attributes. A source declares how much it can provide through \texttt{supply\_capacity}, and a consumer how much it needs through \texttt{demand}. For every category it depends on,
   a node sets a \texttt{dependency\_level} which
   tunes how strongly a shortfall in that category drags it down. It may also keep a \texttt{backup} for a given category, a reserve that holds it at its current status for \texttt{backup\_duration} hours after that supply fails.
-  Node's exposure to a hazard is represented by the \texttt{vulnerability\_level}, from unaffected to fully degraded. Finally, \texttt{rules} are user-written \texttt{if--then} guards attached to the element they act on.
+  Node's exposure to a hazard is represented by the \texttt{vulnerability\_level}, from unaffected to fully degraded. Finally, \texttt{rules} are user-written \texttt{if--then} statements attached to the element they act on.
  The \emph{scenario} initialises the state: an Earthquake sets the \texttt{Electric Source} to
   \emph{critical} via its \texttt{vulnerability\_level} (direct damage is rendered as a crack).
   %
-  \textbf{Engine (centre).} The propagation engine iterates to a fixed point. For
-  each node it forms a \emph{proposal}, passes it through \emph{guards} (dependency-level attenuation, time-limited backups, and custom rules), and \emph{commits} it monotonically.
+  \textbf{Engine (centre).} The propagation engine repeats the following steps for every node until no node changes any more (a fixed point).
+  (i)~It forms a \emph{proposal}: the Functionality the node would take given the current status of the nodes that supply it.
+  (ii)~It \emph{adjusts} the proposal with the node's own knowledge-based attributes, the so-called \emph{guards}: the \texttt{dependency\_level} softens how much a shortfall affects the node, a \texttt{backup} delays the drop, and user-written \texttt{rules} can override the result.
+  (iii)~It \emph{commits} the adjusted proposal, i.e.\ writes it as the node's new Functionality, only if it is worse than the current one. Functionality can therefore only decrease during a run, which guarantees that the iteration terminates.
   %
   \textbf{Output (right) --- two complementary readings.}
-  \emph{(1)~Propagated state}: the cascaded Functionality of every node thorugh the colour code, where an amber ring marks a node currently \emph{holding on
+  \emph{(1)~Propagated state}: the cascaded Functionality of every node through the colour code, where an amber ring marks a node currently \emph{holding on
   backup}. Here the blackout criticalises the \texttt{Substation} (the rule
   cracks it representing a physical damage requiring intervention), the \texttt{City} degrades to warning, while the \texttt{Hospital}
   and \texttt{Water Pump} survive on backup; the single-number \emph{Operativity
@@ -314,7 +318,7 @@ Two category types exist:
 \paragraph{Complementary propagation mechanisms}
 To accurately reflect these differing realities, the engine combines two complementary mechanisms operating over the same network:
 \begin{enumerate}
-  \item \textbf{Universal logical propagation:} In every round, the engine runs a logical aggregation pass over every\footnote{Except for those that have a category typed \emph{SourceToDemands} and with every parent node of the same category: this case is handled with the Capacity-based propagation.} node. The aggregation follows two nested rules. First, among all incoming nodes that carry the \emph{same} category, the engine proposes the best available status (i.e., a \texttt{best\_of} across co-category suppliers): a single healthy supplier is sufficient to satisfy the need of the service associated with that category. Second, across \emph{different} categories the engine takes the worst result (i.e., a \texttt{worst\_of} across categories): a node that receives both electricity and water must have both adequately supplied, so a failure in any one category degrades the node. The resulting status is then fed into the monotonic commit step alongside the capacity-based proposal. By running this pass universally, the engine automatically reads the dependency structure from the labelled graph topology itself: a node that happens to receive edges from two different categories is implicitly treated as requiring both, deferring the need for the user to declare an explicit cross-category rule only to change the defaulting behaviour.
+  \item \textbf{Universal logical propagation:} In every round, the engine runs a logical aggregation pass over every node (except those that have a category typed \emph{SourceToDemands} and with every parent node of the same category: this case is handled with the Capacity-based propagation). The aggregation follows two nested rules. First, among all incoming nodes that carry the \emph{same} category, the engine proposes the best available status (i.e., a \texttt{best\_of} across co-category suppliers): a single healthy supplier is sufficient to satisfy the need of the service associated with that category. Second, across \emph{different} categories the engine takes the worst result (i.e., a \texttt{worst\_of} across categories): a node that receives both electricity and water must have both adequately supplied, so a failure in any one category degrades the node. The resulting status is the node's \emph{proposal} from this pass. It is then adjusted and finally \emph{committed}, i.e.\ written as the node's new Functionality only if it is worse than the current one (see the heuristic pipeline below), together with the proposal of the capacity-based pass. By running this pass universally, the engine automatically reads the dependency structure from the labelled graph topology itself: a node that happens to receive edges from two different categories is implicitly treated as requiring both, deferring the need for the user to declare an explicit cross-category rule only to change the defaulting behaviour.
   \item \textbf{Capacity-based propagation:} For nodes with positive demand in a \emph{SourceToDemands} category, the engine additionally runs a priority-aware min-cost max-flow pass (\cite{edmonds1972theoretical,orlin1997polynomial,SciPyProceedings_11}) and maps the served ratio to a Functionality proposal. This module captures quantity-dependent flow dynamics---such as partial supply and priority-driven flows---that purely logical dependency models cannot represent faithfully.
 \end{enumerate}
 
@@ -330,7 +334,7 @@ After the propagation mechanisms produce a candidate Functionality proposal for 
 
       \item \emph{Time-Constrained Backups:} If a node possesses a backup and its Functionality would drop due to the current proposal,  the drop is deferred: the node holds its current Functionality and its Functionality Time is set to the backup duration. The deferred drop is noticeable through a  \emph{Temporal Jump} event that advances simulated time.
     \end{itemize}
-  \item \textbf{Specific-Rule Override}\textbf{:} The engine then evaluates user-defined conditional rules that encode policy-level behaviours and workarounds. These take the explicit form:
+  \item \textbf{Specific-Rule Override:} The engine then evaluates user-defined conditional rules that encode policy-level behaviours and workarounds. These take the explicit form:
     \texttt{if} $\langle\text{condition}\rangle$ \texttt{then}
     $\langle\text{target}\rangle$ \texttt{is} $\langle\text{value}\rangle$.
     Conditions are Boolean formulas (\texttt{and}, \texttt{or}, \texttt{not})  evaluating node or edge attributes (generally, Functionality values). If a condition evaluates to true, the rule's consequent value replaces the adjusted proposal, overriding both the dependency attenuation and any
@@ -385,7 +389,7 @@ Because every sampled failure scenario is evaluated using CASCADE's core propaga
 \label{subsec:case_modelling}
 
 The demonstration network is a synthetic yet realistic multi-layered network representing a medium-sized multi-urban context with electric power, water, transport, and organisational layers.
-The network comprises \textbf{39 nodes} and \textbf{93 directed edges}, distributed across five layers (Electrical, Water, Transport, Managerial, and Service) with inter-layer edges dashed in Figure~\ref{fig:layers_all}. Realistic redundancies, backup buffers, and vulnerability profiles are compiled with a mixture of existing online resources (\href{https://openinframap.org/about}{Openinframap}, \href{https://eaglefvg.regione.fvg.it/}{Eaglefvg}), the author's territorial knowledge, and informed by brief, informal feedback from operators; this feedback was not a structured empirical validation protocol, and the case study should be read as a proof-of-concept demonstration rather than a validated model (see Section~\ref{subsec:limitations}). All network maps in this section follow the legend detailed in Figure~\ref{fig:map_legend}.
+The network comprises \textbf{39 nodes} and \textbf{93 directed edges}, distributed across five layers (Electrical, Water, Transport, Managerial, and Service) with inter-layer edges dashed in Figure~\ref{fig:layers_all}. Realistic redundancies, backup buffers, and vulnerability profiles are compiled with a mixture of existing online resources (Openinframap~\cite{openinframap}, Eaglefvg~\cite{eaglefvg}), the author's territorial knowledge, and informed by brief, informal feedback from operators; this feedback was not a structured empirical validation protocol, and the case study should be read as a proof-of-concept demonstration rather than a validated model (see Section~\ref{subsec:limitations}). All network maps in this section follow the legend detailed in Figure~\ref{fig:map_legend}.
 
 \paragraph{Electric subsystem}
 A single high-level source (\texttt{Electric Source},
@@ -467,7 +471,7 @@ Functionality degradation reflects loss of access routes rather than capacity co
 \end{figure}
 
 \paragraph{Managerial layer}
-Four organisational nodes (\texttt{water Operator}, \texttt{electric Operator}, \texttt{transport Operator}, \texttt{civil protection Operator};
+Four organisational nodes, typed \emph{Personnel} and drawn as squares (\texttt{water Operator}, \texttt{electric Operator}, \texttt{transport Operator}, \texttt{civil protection Operator};
 all \texttt{node\_category = manager}) represent the entities responsible
 for managing the respective services and coordinating emergency response.
 \texttt{civil protection Operator} acts as the coordination hub, exchanging
@@ -479,8 +483,8 @@ $\to$ \texttt{Electric Source}; \texttt{water Operator} $\to$ \texttt{Fauglis wa
   \centering
   \includegraphics[width=0.6\linewidth, clip]%
       {Figures/Managerial.png}
-  \caption{Managerial layers: four organisational operators
-  (\texttt{civil protection Operator} as coordination hub,
+  \caption{Managerial layer: four organisational operators, drawn as squares (the \emph{Personnel} node type;
+  \texttt{civil protection Operator} as coordination hub,
   plus \texttt{water}, \texttt{electric}, and \texttt{transport} operators).}
   \label{fig:layers_Managerial}
 \end{figure}
@@ -494,9 +498,9 @@ Two essential-service nodes (\texttt{Hospital}, \texttt{Civil Protection}) repre
 One major economic node (\texttt{Industrial}) represents the industrial district.
 Economic relevance is encoded through
 \texttt{cost\_of\_disservice\_per\_day}:
-\texttt{Hospital} and \texttt{Palmanova} (100\,000~€/day);
+\texttt{Hospital} and \texttt{Palmanova} (100\,000~\euro{}/day);
 \texttt{Sottoselva}, \texttt{San Marco}, \texttt{Jalmicco},
-\texttt{Civil Protection}, and \texttt{Industrial} (10\,000~€/day).
+\texttt{Civil Protection}, and \texttt{Industrial} (10\,000~\euro{}/day).
 
 \begin{figure}[H]
   \centering
@@ -587,9 +591,8 @@ This is captured by an \texttt{average\_of} aggregation rule:
 average_of(Udine Access, Aquileia access, Cividale Access)
   propagates to Palmanova transport
 \end{verbatim}
-For example, with one route at \texttt{critical} and two at
-\texttt{operational}, the propagated proposal yields
-\texttt{operational\_warning} ($\lfloor(1+3+3)/3\rfloor = 2$), correctly reflecting a city still reachable but under significant congestion pressure.
+For example, with one route at \texttt{critical} (Functionality at~1) and two at
+\texttt{operational} (Functionality at~3), the average is $(1+3+3)/3 \approx 2.3$, which is rounded down to a Functionality of~2, \texttt{operational\_warning}. The city remains reachable but under significant congestion pressure.
 
 \paragraph{Specific guard rule (Fauglis water Source)}
 The \texttt{Fauglis water Source} has a power dependency at level~2.
@@ -907,7 +910,7 @@ Finally, we compare traditional topological metrics with the proposed Shapley-ba
 We computed:
 \begin{itemize}
   \item \textbf{Eigenvector and Betweenness Centrality}, computed with NetworkX (power-iteration eigenvector centrality; shortest-path betweenness) on the directed dependency graph (39 nodes, 93 edges);
-  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations, and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop the $\hat{\phi}_i$ estimate required about a minute (1297 propagation-engine evaluations). The values reported here are produced by the same estimator the CASCADE application runs, exported from it, and joined against the NetworkX centralities by the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE repository, run on the case-study model \texttt{CASCADE/samples/public/Palmanova\_Complete.json}); reproduction instructions are in \texttt{docs/papers.md}.}.
+  \item \textbf{Approximate Shapley Values ($\hat{\phi}_i$)} using the sampling procedure described in Section~\ref{subsec:shapley}, on nodes only, with coalition size limited to three ($k_{\max}=3$) and $M=800$ permutations, and a uniform (constant) Operativity Index weight, so that each node contributes equally to the score regardless of assigned importance or cost\footnote{On a mid-range laptop the $\hat{\phi}_i$ estimate required about a minute (1297 propagation-engine evaluations). The values reported here are produced by the same estimator the CASCADE application runs, exported from it, and joined against the NetworkX centralities by the analysis script (\texttt{CASCADE-backend/scripts/paper\_shapley\_vs\_centrality.py} in the CASCADE repository, run on the case-study model \texttt{CASCADE-app/samples/public/Palmanova\_Complete.json}); reproduction instructions are in \texttt{docs/papers.md}.}.
 \end{itemize}
 
 \noindent\textbf{Interpretation of results.}
@@ -1032,7 +1035,7 @@ The framework is currently validated on synthetic demonstrations (Section~\ref{s
 Future iterations will expand the framework's methodological scope and practical applications.
 
 \paragraph{Explore Applications}
-The CASCADE capability to aggregate information enables the modelling of very different organisations at varying levels of granularity. Application examples may be considered from internal hospital services \cite{Grimaz2021}, to the national-level critical utilities \cite{Liu2017} and supply chains \cite{khakifirooz_assessing_2025} resilience analysis, from humanitarian logistics \cite{Liao2023} to complex multi-agency coordination during large-scale evacuations \cite{Harris2021}.
+The CASCADE capability to aggregate information enables the modelling of very different organisations at varying levels of granularity. Published studies that report their own results offer natural benchmarks: a CASCADE model of the same system can be built from the knowledge those studies describe, and its propagated states and neuralgic elements can be compared with their findings. Candidate benchmarks span scales and sectors: the situational assessment of hospital facilities \cite{Grimaz2021}, the resilience analysis of interconnected national-level critical utilities \cite{Liu2017}, the stress testing of supply chain networks \cite{khakifirooz_assessing_2025}, the comparison of humanitarian logistic structures \cite{Liao2023}, and the multi-agency coordination during large-scale evacuations \cite{Harris2021}. Agreement would support the framework, and disagreement would show which dependencies or rules the compared study leaves out.
 
 \paragraph{Integration with real-time data}
 Integrating CASCADE with sensor networks and SCADA systems would enable real-time operativity assessment during evolving emergencies. As sensors detect degradation, the software could dynamically update functionalities, transitioning CASCADE from a proactive help into an active operational decision aid.
@@ -1048,14 +1051,16 @@ Finally, another promising avenue is leveraging the propagation engine to extrac
 
 \section{Conclusion} \label{sec:conclusion} Climate-induced hazards and cascading failures represent escalating global challenges, demanding decision-support tools that bridge the gap between theoretical understanding and practical implementation. This paper introduced CASCADE (Customizable Assessment of System Cascades And Dependency Effects), a compositional framework designed to enable rapid, collaborative operativity assessment of interdependent entities, particularly in resource-constrained disaster risk reduction contexts and in the preparedness phase for intersectoral safety enhancement.
 
-The work addressed three core issues. First, it demonstrated how cross-sector interdependencies can be modelled systematically even when formal quantitative data are scarce, utilising a compositional network-of-networks paradigm. This approach enables multi-stakeholder collaboration, allowing diverse organisations to independently encode tacit operational knowledge and seamlessly integrate their subsystems into a shared model of cascading dynamics. Second, it addressed the need for decision-support tools to expand operators' understanding rather than acting as passive, black-box calculators. By making implicit assumptions explicit, the modelling process itself serves as an active learning environment that forces the systematic consideration of dependencies, reveals blind spots, and builds user intuition regarding plausible failure sequences. 
+The work addressed three core issues. First, it explored how cross-sector interdependencies can be modelled systematically even when formal quantitative data are scarce, utilising a compositional network-of-networks paradigm. This approach enables multi-stakeholder collaboration, allowing diverse organisations to independently encode tacit operational knowledge and seamlessly integrate their subsystems into a shared model of cascading dynamics. Second, it addressed the need for decision-support tools to expand operators' understanding rather than acting as passive, black-box calculators. By making implicit assumptions explicit, the modelling process itself serves as an active learning environment that forces the systematic consideration of dependencies, reveals blind spots, and builds user intuition regarding plausible failure sequences. 
 Third, it provided a mechanism for rapid stress-testing under diverse hazard scenarios to support proactive governance. By combining functionality-status propagation with an adapted Shapley value analysis, the framework allows stakeholders to interactively explore "what-if" situations, evaluating hardening measures or joint failures—to proactively assess system operativity, thereby guiding strategic investment and anticipatory preparedness.
 
-The realistic demonstration in Section~\ref{sec:case} illustrated the framework's capability to generate concrete decision-support outputs for disaster preparedness. Notably, the framework translates operativity analysis into financial metrics via cost-of-disservice estimates, enabling budget authorities to perform strategic cost--benefit comparisons. The tool's low data requirements, rapid modelling, and inherently instructive process are intended to support bottom-up disaster risk reduction, helping to broaden access to operativity analysis.
+The case study of Section~\ref{sec:case} illustrated the framework's capability to generate concrete decision-support outputs for disaster preparedness. Notably, the framework translates operativity analysis into financial metrics via cost-of-disservice estimates, enabling budget authorities to perform strategic cost--benefit comparisons. The tool's low data requirements, rapid modelling, and inherently instructive process are intended to support bottom-up disaster risk reduction, helping to broaden access to operativity analysis.
 
-While CASCADE fills a crucial niche in the disaster toolkit, its operational constraints must be acknowledged. It is not a high-fidelity physical simulation discovering dynamics from first principles and requires domain knowledge for meaningful modelling. Furthermore, the software relies on synthetic demonstrations, highlighting the need for future empirical validation.
+While CASCADE fills a crucial niche in the disaster toolkit, its operational constraints must be acknowledged. It is not a high-fidelity physical simulation discovering dynamics from first principles and requires domain knowledge for meaningful modelling. Furthermore, the software has so far been applied to synthetic case studies, highlighting the need for future empirical validation.
 
-Ultimately, CASCADE represents not just a software tool, but a shift toward a complementary paradigm: knowledge modelling alongside data-intensive simulation. This approach recognises that operational expertise is itself valuable, overlooked information, that model building can be inherently instructive and participatory, and that rapid insights from structured knowledge often provide more decision value than incomplete but precise predictions.
+Ultimately, CASCADE contributes a complementary paradigm: knowledge modelling alongside data-intensive simulation. Operational expertise is valuable information in its own right, model building is instructive and participatory, and rapid insights from structured knowledge often provide greater decision value than incomplete but precise predictions.
+
+Preparedness begins with knowing how a system fails and what could be done about it. By turning the knowledge that operators already hold into a shared, testable model, CASCADE lets communities rehearse disruptions before they occur, compare alternative interventions side by side, and direct limited resources towards the elements that matter most. In this way, knowledge becomes a first line of defence, strengthening the capacity of essential services to withstand, adapt to and recover from the next crisis.
 
 \section*{Ethics statement}
 This work did not involve a formal human-subjects research protocol. Vulnerability levels and network parameters for the case study (Section~\ref{sec:case}) were informed by publicly available infrastructure data, the authors' territorial knowledge, and brief, informal, non-identifying feedback from infrastructure operators; no personal or identifiable data were collected, and no animal subjects were involved.
@@ -1066,14 +1071,13 @@ Fabio Zorzini: Conceptualization, Validation, Visualizations, Writing – review
 Stefano Grimaz: Supervision, Conceptualization, Writing – review \& editing.
 
 \section*{Funding}
-This research did not receive any specific grant from funding agencies in the
-public, commercial, or not-for-profit sectors.
+This work was supported by the CISM contribution under Art.~7, paragraphs 38, 39 and 40 of Regional Law (Friuli Venezia Giulia) 13/2023, for the activities supporting the initiatives of the UNESCO Chair, which funds the research assignment of C.~Curaba [research grant AR24\_013, CUP D27G23000130002]; and by the free-research funds of Prof.\ Grimaz.
 
 \section*{Declaration of competing interest}
 The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
 
 \section*{Data availability}
-The synthetic case-study data and the CASCADE software are available at\newline \href{https://github.com/Cristian-Curaba/CASCADE}{https://github.com/Cristian-Curaba/CASCADE}. The case-study model of Section~\ref{sec:case} is \texttt{CASCADE/samples/public/Palmanova\_Complete.json} (with \texttt{\_water\_improvement} and \texttt{\_electric\_priority} variants for the strategic updates of Section~\ref{subsec:case_strategic}), and the file \texttt{docs/papers.md} in the repository maps each section and figure of this paper to the source file that implements or reproduces it.
+The synthetic case-study data and the CASCADE software are available at\newline \href{https://github.com/cascade-platform-org/CASCADE}{https://github.com/cascade-platform-org/CASCADE}; the platform runs at \url{https://app.cascade-platform.org/}. The case-study model of Section~\ref{sec:case} is \texttt{CASCADE-app/samples/public/Palmanova\_Complete.json} (with \texttt{\_water\_improvement} and \texttt{\_electric\_priority} variants for the strategic updates of Section~\ref{subsec:case_strategic}), and the file \texttt{docs/papers.md} in the repository maps each section and figure of this paper to the source file that implements or reproduces it.
 
 \section*{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
 During the preparation of this work the author(s) used Claude to improve language and readability. After using this tool, the author(s) reviewed and edited the content as needed and take full responsibility for the content of the publication.
