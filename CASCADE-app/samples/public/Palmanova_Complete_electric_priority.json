@@ -12,7 +12,7 @@
         "id": "node_1762946740143",
         "functionality": 3,
         "label": "water Operator",
-        "node_type": "Infrastructure",
+        "node_type": "Personnel",
         "node_categories": [
           "manager"
         ],
@@ -47,7 +47,7 @@
         "id": "node_1762946753934",
         "functionality": 3,
         "label": "electric Operator",
-        "node_type": "Infrastructure",
+        "node_type": "Personnel",
         "node_categories": [
           "manager"
         ],
@@ -76,7 +76,7 @@
         "id": "node_1769766555762",
         "functionality": 3,
         "label": "transport Operator",
-        "node_type": "Infrastructure",
+        "node_type": "Personnel",
         "node_categories": [
           "manager"
         ],
@@ -319,7 +319,7 @@
         "id": "node_1764760818917",
         "functionality": 3,
         "label": "civil protection Operator",
-        "node_type": "Infrastructure",
+        "node_type": "Personnel",
         "node_categories": [
           "manager"
         ],
@@ -2498,7 +2498,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -2533,7 +2533,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -2562,7 +2562,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -2793,7 +2793,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -4936,7 +4936,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -4971,7 +4971,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -5000,7 +5000,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -5243,7 +5243,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -7422,7 +7422,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -7457,7 +7457,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -7486,7 +7486,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -7717,7 +7717,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -9860,7 +9860,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -9895,7 +9895,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -9924,7 +9924,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -10155,7 +10155,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -12305,7 +12305,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -12340,7 +12340,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -12369,7 +12369,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -12618,7 +12618,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -14799,7 +14799,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -14834,7 +14834,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -14863,7 +14863,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -15094,7 +15094,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -17245,7 +17245,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -17280,7 +17280,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -17309,7 +17309,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -17539,7 +17539,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -19682,7 +19682,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -19717,7 +19717,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -19746,7 +19746,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -19994,7 +19994,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -22182,7 +22182,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -22217,7 +22217,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -22246,7 +22246,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -22476,7 +22476,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -24619,7 +24619,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -24654,7 +24654,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -24683,7 +24683,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -24913,7 +24913,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -27063,7 +27063,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -27098,7 +27098,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -27127,7 +27127,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -27425,7 +27425,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -29666,7 +29666,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -29701,7 +29701,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -29730,7 +29730,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -29960,7 +29960,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -32111,7 +32111,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -32146,7 +32146,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -32175,7 +32175,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -32436,7 +32436,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -34666,7 +34666,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -34701,7 +34701,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -34730,7 +34730,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -35028,7 +35028,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -37277,7 +37277,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -37312,7 +37312,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -37341,7 +37341,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -37571,7 +37571,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -39714,7 +39714,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -39749,7 +39749,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -39778,7 +39778,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -40039,7 +40039,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -42276,7 +42276,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -42311,7 +42311,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -42340,7 +42340,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -42570,7 +42570,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -44713,7 +44713,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -44748,7 +44748,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -44777,7 +44777,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -45007,7 +45007,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -47157,7 +47157,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -47192,7 +47192,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -47221,7 +47221,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -47451,7 +47451,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -49651,7 +49651,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -49686,7 +49686,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -49715,7 +49715,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -49945,7 +49945,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -52096,7 +52096,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -52131,7 +52131,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -52160,7 +52160,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -52390,7 +52390,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -54551,7 +54551,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -54586,7 +54586,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -54615,7 +54615,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -54845,7 +54845,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -57052,7 +57052,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -57087,7 +57087,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -57116,7 +57116,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -57346,7 +57346,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -59489,7 +59489,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -59524,7 +59524,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -59553,7 +59553,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -59783,7 +59783,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -61965,7 +61965,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -62000,7 +62000,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -62029,7 +62029,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -62259,7 +62259,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -64402,7 +64402,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -64437,7 +64437,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -64466,7 +64466,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -64696,7 +64696,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -66846,7 +66846,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -66881,7 +66881,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -66910,7 +66910,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -67140,7 +67140,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -69334,7 +69334,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -69369,7 +69369,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -69398,7 +69398,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -69628,7 +69628,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -71778,7 +71778,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -71813,7 +71813,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -71842,7 +71842,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -72072,7 +72072,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -74260,7 +74260,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -74295,7 +74295,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -74324,7 +74324,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -74554,7 +74554,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -76756,7 +76756,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -76791,7 +76791,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -76820,7 +76820,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -77050,7 +77050,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -79205,7 +79205,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -79240,7 +79240,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -79269,7 +79269,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -79499,7 +79499,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -81694,7 +81694,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -81729,7 +81729,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -81758,7 +81758,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -81988,7 +81988,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -84125,7 +84125,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -84160,7 +84160,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -84189,7 +84189,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -84419,7 +84419,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -86595,7 +86595,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -86630,7 +86630,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -86659,7 +86659,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -86889,7 +86889,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -89077,7 +89077,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -89112,7 +89112,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -89141,7 +89141,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -89371,7 +89371,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -91516,7 +91516,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -91551,7 +91551,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -91580,7 +91580,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -91810,7 +91810,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -93964,7 +93964,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -93999,7 +93999,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -94028,7 +94028,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -94258,7 +94258,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -96452,7 +96452,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -96487,7 +96487,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -96516,7 +96516,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -96746,7 +96746,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -98882,7 +98882,7 @@
               "id": "node_1762946740143",
               "functionality": 3,
               "label": "water Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -98917,7 +98917,7 @@
               "id": "node_1762946753934",
               "functionality": 3,
               "label": "electric Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -98946,7 +98946,7 @@
               "id": "node_1769766555762",
               "functionality": 3,
               "label": "transport Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],
@@ -99176,7 +99176,7 @@
               "id": "node_1764760818917",
               "functionality": 3,
               "label": "civil protection Operator",
-              "node_type": "Infrastructure",
+              "node_type": "Personnel",
               "node_categories": [
                 "manager"
               ],

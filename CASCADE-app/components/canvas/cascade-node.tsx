@@ -7,7 +7,7 @@
  *   Source         → diamond
  *   Infrastructure → octagon
  *   Service        → circle
- *   Personnel      → rounded-square
+ *   Personnel      → square
  *
  * Node size ∝ importance; fill = Functionality level colour from config.
  * functionality_time > 0 → pulsing amber ring; direct_damage → crack overlay.
@@ -131,12 +131,11 @@ function Circle({ size, fill, stroke = brandColor("neutral", 200), strokeWidth =
   );
 }
 
-function RoundedSquare({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Square({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   return (
     <rect
       x={1} y={1}
       width={size - 2} height={size - 2}
-      rx={size * 0.2} ry={size * 0.2}
       fill={fill}
       stroke={stroke}
       strokeWidth={strokeWidth}
@@ -152,7 +151,7 @@ function RoundedSquare({ size, fill, stroke = brandColor("neutral", 200), stroke
 // category names appear in user configs.
 // ---------------------------------------------------------------------------
 
-type ShapeType = typeof Diamond | typeof Octagon | typeof Circle | typeof RoundedSquare;
+type ShapeType = typeof Diamond | typeof Octagon | typeof Circle | typeof Square;
 
 // ---------------------------------------------------------------------------
 // Category icons — rendered as absolutely-positioned Lucide icons inside the shape
@@ -419,7 +418,7 @@ InfrastructureNode.displayName = "InfrastructureNode";
 const ServiceNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={Circle} selected={selected} />);
 ServiceNode.displayName = "ServiceNode";
 
-const PersonnelNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={RoundedSquare} selected={selected} />);
+const PersonnelNode = memo(({ data, selected }: RFNodeProps) => <CascadeNodeBase data={data} Shape={Square} selected={selected} />);
 PersonnelNode.displayName = "PersonnelNode";
 
 export const nodeTypes: NodeTypes = {
