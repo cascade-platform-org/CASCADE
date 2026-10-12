@@ -31,6 +31,12 @@
   \def\urlprefix{}%      % ...and its "URL " prefix
   \def\newline{\unskip}% % ...and the dangling line break it sat on
 }
+% --- Review layout: the class double-spaces the body (1.5), which pushes long
+% figure captions off the page. Captions stay single-spaced. ---
+\makeatletter
+\let\cascade@oldmakecaption\@makecaption
+\long\def\@makecaption#1#2{{\def\baselinestretch{1}\cascade@oldmakecaption{#1}{#2}}}
+\makeatother
 \journal{International Journal of Disaster Risk Reduction}
 
 \begin{document}
@@ -47,9 +53,6 @@
 \author[uniud]{Stefano Grimaz}
 \affiliation[uniud]{%
   organization={SPRINT-Lab, Polytechnic Department of Engineering and Architecture, University of Udine},%
-  city={Udine},%
-  postcode={33100},%
-  %state={},%
   country={Italy}%
 }
 
