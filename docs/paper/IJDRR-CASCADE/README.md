@@ -13,6 +13,12 @@ Posting a preprint is permitted under Elsevier's article-sharing policy and does
 not affect the submission. Once the article is accepted, a citation and DOI link
 to the published version will be added here.
 
+## Code version
+
+The manuscript describes release
+[v1.0.0](https://github.com/cascade-platform-org/CASCADE/releases/tag/v1.0.0)
+of the CASCADE repository. Check out that tag to reproduce the case study.
+
 ## Build
 
 ```bash
