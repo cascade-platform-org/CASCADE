@@ -2594,7 +2594,7 @@ export const USER_MANUAL: ManualDoc = {
               [
                 {
                   "kind": "text",
-                  "text": "Save to your computer, open a "
+                  "text": "Save to your computer as "
                 },
                 {
                   "kind": "code",
@@ -2602,7 +2602,23 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " file, and the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab."
+                  "text": ", or as a workbook ("
+                },
+                {
+                  "kind": "code",
+                  "text": ".xlsx"
+                },
+                {
+                  "kind": "text",
+                  "text": ", "
+                },
+                {
+                  "kind": "code",
+                  "text": ".ods"
+                },
+                {
+                  "kind": "text",
+                  "text": "); open any of the three; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab."
                 }
               ]
             ],
@@ -2656,6 +2672,71 @@ export const USER_MANUAL: ManualDoc = {
                 }
               ]
             ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "kind": "text",
+              "text": "A "
+            },
+            {
+              "kind": "strong",
+              "text": "workbook"
+            },
+            {
+              "kind": "text",
+              "text": " is the whole project as a spreadsheet, to edit in Excel or LibreOffice. One sheet per kind of thing (Nodes, Edges, Events, Simulations, Profile, a sheet per Series…), one row per thing, and a column per field, named by its path as operations write it ("
+            },
+            {
+              "kind": "code",
+              "text": "supply_capacity.water.rate"
+            },
+            {
+              "kind": "text",
+              "text": "). Ids are how rows refer to each other; a column starting with "
+            },
+            {
+              "kind": "code",
+              "text": "~"
+            },
+            {
+              "kind": "text",
+              "text": " is a label for reading. Sheets you add are kept with their formulas. The "
+            },
+            {
+              "kind": "code",
+              "text": "README"
+            },
+            {
+              "kind": "text",
+              "text": " sheet explains the rest; leave the hidden "
+            },
+            {
+              "kind": "code",
+              "text": "_cascade"
+            },
+            {
+              "kind": "text",
+              "text": " sheet as it is. Opening a workbook replaces the open project, as a "
+            },
+            {
+              "kind": "code",
+              "text": ".json"
+            },
+            {
+              "kind": "text",
+              "text": " does; a value a spreadsheet changed (a number typed as text, "
+            },
+            {
+              "kind": "code",
+              "text": "1,5"
+            },
+            {
+              "kind": "text",
+              "text": ") is read back with a warning naming its cell, and one that cannot be read stops the opening, naming the cell too."
+            }
           ]
         },
         {

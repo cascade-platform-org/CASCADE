@@ -30,10 +30,8 @@ interface HistoryEntry {
   bundle: ProjectBundle;
 }
 
-export interface ProjectBundle {
-  project: Project;
-  config: ModelConfiguration;
-}
+export type { ProjectBundle } from "@/lib/schemas/bundle";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 function loadHistory(): HistoryEntry[] {
   try {
@@ -179,9 +177,11 @@ export interface FileKind {
 
 const JSON_FILE: FileKind = { mime: "application/json", description: "JSON file", extension: ".json" };
 export const CSV_FILE: FileKind = { mime: "text/csv", description: "CSV file", extension: ".csv" };
+const XLSX_FILE: FileKind = { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", description: "Excel workbook", extension: ".xlsx" };
+const ODS_FILE: FileKind = { mime: "application/vnd.oasis.opendocument.spreadsheet", description: "OpenDocument spreadsheet", extension: ".ods" };
 
-export async function saveAs(filename: string, content: string, kind: FileKind = JSON_FILE): Promise<void> {
-  const blob = new Blob([content], { type: kind.mime });
+export async function saveAs(filename: string, content: string | Uint8Array, kind: FileKind = JSON_FILE): Promise<void> {
+  const blob = new Blob([typeof content === "string" ? content : new Uint8Array(content)], { type: kind.mime });
 
   // Modern path: shows the OS file picker so the user can choose folder + name
   if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
@@ -383,6 +383,40 @@ export function parseBundle(raw: unknown): ProjectBundle | null {
   });
   const result = BundleSchema.safeParse(raw);
   return result.success ? result.data : null;
+}
+
+/**
+ * Save the project as a Workbook (ADR-0023): the same bundle as `.xlsx` or
+ * `.ods`, written only after the read-back check passes. Recorded in Recent
+ * saves like a `.json` save.
+ */
+export async function saveBundleAsWorkbook(bundle: ProjectBundle, kind: "xlsx" | "ods"): Promise<void> {
+  const { bundleToWorkbook } = await import("@/lib/workbook");
+  const bytes = await bundleToWorkbook(bundle, kind);
+  await saveAs(`${safeName(bundle.project.meta.name)}.${kind}`, bytes, kind === "xlsx" ? XLSX_FILE : ODS_FILE);
+  pushToHistory({ saved_at: new Date().toISOString(), name: bundle.project.meta.name, bundle });
+  clearAutosave();
+}
+
+/** True for a zip file (an `.xlsx` or `.ods` Workbook), by its first bytes. */
+export async function isWorkbookFile(file: File): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  return head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
+}
+
+/** A Workbook file as a bundle: what it refused (cell by cell), repaired and noted. */
+export async function loadWorkbookFile(file: File): Promise<{ result: LoadResult<ProjectBundle>; warnings: string[]; notes: string[] }> {
+  try {
+    const { workbookToBundle } = await import("@/lib/workbook");
+    const opened = await workbookToBundle(new Uint8Array(await file.arrayBuffer()));
+    if (!opened.bundle) {
+      const shown = opened.errors.slice(0, 8).join("\n");
+      return { result: { ok: false, error: `"${file.name}" did not open:\n${shown}${opened.errors.length > 8 ? `\n… and ${opened.errors.length - 8} more` : ""}` }, warnings: opened.warnings, notes: opened.notes };
+    }
+    return { result: { ok: true, data: opened.bundle }, warnings: opened.warnings, notes: opened.notes };
+  } catch (e) {
+    return { result: { ok: false, error: `"${file.name}" is not a workbook CASCADE can read (${e instanceof Error ? e.message : String(e)}).` }, warnings: [], notes: [] };
+  }
 }
 
 /** Read a File object and validate its JSON as a project. */

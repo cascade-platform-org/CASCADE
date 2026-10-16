@@ -80,12 +80,25 @@ All application state is managed through ten Zustand stores:
 - **`config-store`** — `ModelConfiguration`: functionality scale, category definitions, Event definitions, graph-type algorithm pipelines. Owns a draft/commit lifecycle for the Config modal.
 - **`scorecard-store`** — the Scorecard entry list, serialised into `Project.scorecard` via canvas-store.
 - **`temporal-simulation-store`** — the project's Temporal Simulations, serialised into `Project.temporal_simulations` via canvas-store (ADR-0019), and the window's draft of the selected one. An edit is saved only when it passes the schema; otherwise the window lists why and the project keeps the last valid document. Also the run: progress, the in-memory run record (`lib/step-operator.ts`) and the period the **Run View** paints. While a run computes or is shown, canvas-store's model writers refuse (`modelLocked()`), and the canvas views and Inspector read the period through `useShownElements`.
+- **`project-data-store`** — the project's Series and custom sheets, serialised into `Project.series` and `Project.sheets` via canvas-store, left out of every Propagation request. Series edits are refused while a run is shown.
 - **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
 - **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.
 - **`ui-store`** — panel visibility, active tool, propagation scope, category filter, toast queue.
 
 The stores are the single source of truth. Components subscribe to slices they need.
+
+### The Workbook
+
+`lib/workbook/` reads and writes the project as `.xlsx` / `.ods` (ADR-0023), in three layers. The
+codec (`codec.ts`, with `table.ts`, `cells.ts`, `residual.ts`, `paths.ts`) turns a bundle into a
+library-free model of sheets and cells and back, and is pure, so its tests need no file:
+`encodeWorkbook` refuses to produce a model that does not read back as the bundle, and
+`parseDecoded` validates with the schemas, repairing typed spreadsheet values with a warning on the
+cell. `sheetjs-adapter.ts` is the only module that imports SheetJS, by dynamic import, and fixes
+what it gets wrong (formulas written without stored values, `.ods` formulas and hidden sheets
+through `content.xml`, with `formula.ts` translating to OpenFormula). `index.ts` joins them for
+`lib/file-io.ts`. The workbook never imports a store.
 
 ### Event Application
 

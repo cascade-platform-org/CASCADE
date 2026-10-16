@@ -32,6 +32,9 @@ import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 import {
   saveBundle,
+  saveBundleAsWorkbook,
+  isWorkbookFile,
+  loadWorkbookFile,
   saveProject,
   saveConfig,
   getProjectHistory,
@@ -151,6 +154,8 @@ export function FileIoPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [saveProject_, setSaveProject_] = useState(true);
+  /** The format Save writes: the .json, or the same project as a Workbook (ADR-0023). */
+  const [saveFormat, setSaveFormat] = useState<"json" | "xlsx" | "ods">("json");
   const [saveConfig_, setSaveConfig_] = useState(true);
 
   const [syncVersions, setSyncVersions] = useState<ProjectVersionSummary[]>([]);
@@ -217,6 +222,14 @@ export function FileIoPanel() {
 
   async function handleSave() {
     try {
+      if (saveFormat !== "json") {
+        // A Workbook is the whole project file, configuration included.
+        await saveBundleAsWorkbook(currentBundle(), saveFormat);
+        pushToast({ message: `Saved as .${saveFormat}.`, variant: "success", durationMs: 3000 });
+        refreshHistory();
+        markSaved();
+        return;
+      }
       if (saveProject_ && saveConfig_) {
         await saveBundle(currentBundle());
         pushToast({ message: "Saved.", variant: "success", durationMs: 3000 });
@@ -234,7 +247,7 @@ export function FileIoPanel() {
       markSaved();
     } catch (err) {
       console.error("[CASCADE] Save failed:", err);
-      pushToast({ message: "Save failed.", variant: "error", durationMs: 4000 });
+      pushToast({ message: err instanceof Error && err.name !== "Error" ? "Save failed." : `Save failed: ${err instanceof Error ? err.message : String(err)}`, variant: "error", durationMs: 6000 });
     }
   }
 
@@ -325,6 +338,24 @@ export function FileIoPanel() {
   async function handleFileSelected(file: File) {
     setLoadError(null);
     setValidationIssues([]);
+    if (await isWorkbookFile(file)) {
+      const { result, warnings, notes } = await loadWorkbookFile(file);
+      if (!result.ok) { setLoadError(result.error); return; }
+      loadProject(result.data.project);
+      loadConfig(result.data.config);
+      const issues: ValidationIssue[] = [
+        ...validateBundle(result.data),
+        ...warnings.map((message) => ({ severity: "warning" as const, code: "WORKBOOK", message })),
+      ];
+      if (issues.length === 0) {
+        pushToast({ message: `Opened "${file.name}"${notes.length ? ` (${notes.length} value${notes.length === 1 ? "" : "s"} read as the spreadsheet saved ${notes.length === 1 ? "it" : "them"})` : ""}.`, variant: "success", durationMs: 4000 });
+        closeFileIoPanel();
+      } else {
+        pushToast({ message: `Opened "${file.name}" — ${issues.length} thing${issues.length === 1 ? "" : "s"} to check.`, variant: "info", durationMs: 6000 });
+        setValidationIssues(issues);
+      }
+      return;
+    }
     let text: string;
     try {
       text = await file.text();
@@ -493,7 +524,18 @@ export function FileIoPanel() {
             <div className="space-y-5">
               <div>
                 <Label>Save to this computer</Label>
-                <div className="mb-2 flex gap-4">
+                <div className="mb-2 flex flex-wrap items-center gap-4">
+                  <select
+                    value={saveFormat}
+                    onChange={(e) => setSaveFormat(e.target.value as typeof saveFormat)}
+                    className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                    title="A Workbook (.xlsx, .ods) is the whole project, the same as the .json, for editing in a spreadsheet"
+                  >
+                    <option value="json">.json</option>
+                    <option value="xlsx">Excel workbook (.xlsx)</option>
+                    <option value="ods">LibreOffice workbook (.ods)</option>
+                  </select>
+                  {saveFormat === "json" && <>
                   <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                     <input type="checkbox" checked={saveProject_} onChange={(e) => setSaveProject_(e.target.checked)} className="h-3 w-3" />
                     Project
@@ -502,10 +544,11 @@ export function FileIoPanel() {
                     <input type="checkbox" checked={saveConfig_} onChange={(e) => setSaveConfig_(e.target.checked)} className="h-3 w-3" />
                     Config
                   </label>
+                  </>}
                 </div>
                 <button
                   onClick={handleSave}
-                  disabled={!saveProject_ && !saveConfig_}
+                  disabled={saveFormat === "json" && !saveProject_ && !saveConfig_}
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-40"
                 >
                   <Download size={14} /> Save
@@ -519,9 +562,9 @@ export function FileIoPanel() {
                   className="w-full rounded-md border border-dashed border-zinc-300 px-3 py-3 text-center text-xs text-zinc-500 hover:border-blue-400 hover:bg-blue-50 dark:border-zinc-600 dark:hover:bg-blue-900/20"
                 >
                   <Upload size={14} className="mx-auto mb-1 text-zinc-400" />
-                  Choose a .json file
+                  Choose a .json, .xlsx or .ods file
                 </button>
-                <input ref={uploadInputRef} type="file" accept=".json" className="hidden"
+                <input ref={uploadInputRef} type="file" accept=".json,.xlsx,.ods" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); e.target.value = ""; }} />
               </div>
 

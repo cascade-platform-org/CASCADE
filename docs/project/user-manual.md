@@ -381,10 +381,21 @@ The **File** button in the Topbar opens four tabs.
 
 | Tab              | What it does                                                                                                                                         |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**  | Save to your computer, open a `.json` file, and the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
+| **Local**  | Save to your computer as `.json`, or as a workbook (`.xlsx`, `.ods`); open any of the three; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
 | **Cloud**  | Save to your account and open it on any device. Last 10 kept. Needs sign-in with Sync.                                                                |
 | **Import** | Build a project from an EPANET `.inp` file.                                                                                                           |
 | **New**    | Start a fresh project. The current one stays open until the setup is finished, so Cancel costs nothing.                                               |
+
+A **workbook** is the whole project as a spreadsheet, to edit in Excel or
+LibreOffice. One sheet per kind of thing (Nodes, Edges, Events, Simulations,
+Profile, a sheet per Series…), one row per thing, and a column per field,
+named by its path as operations write it (`supply_capacity.water.rate`). Ids
+are how rows refer to each other; a column starting with `~` is a label for
+reading. Sheets you add are kept with their formulas. The `README` sheet
+explains the rest; leave the hidden `_cascade` sheet as it is. Opening a
+workbook replaces the open project, as a `.json` does; a value a spreadsheet
+changed (a number typed as text, `1,5`) is read back with a warning naming its
+cell, and one that cannot be read stops the opening, naming the cell too.
 
 Local and cloud saves are independent: clearing the browser does not touch the
 cloud saves, and deleting a cloud save does not touch the computer.

@@ -47,7 +47,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { loadBundleFile, loadProjectFile } from "@/lib/file-io";
+import { isWorkbookFile, loadBundleFile, loadProjectFile, loadWorkbookFile } from "@/lib/file-io";
 import { loadSampleManifest, loadSampleBundle, type SampleManifestEntry } from "@/lib/samples";
 import { useCanvasStore } from "@/store/canvas-store";
 import { startTour } from "@/lib/tour/start-tour";
@@ -101,6 +101,14 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
   // Load an existing project/bundle file — hydrates stores and skips to editor
   async function handleLoadFile(file: File) {
     setLoadError(null);
+    if (await isWorkbookFile(file)) {
+      const { result } = await loadWorkbookFile(file);
+      if (!result.ok) { setLoadError(result.error); return; }
+      fromProject(result.data.project);
+      loadConfig(result.data.config);
+      onComplete();
+      return;
+    }
     // Try bundle first (project + config), then project-only
     const bundleResult = await loadBundleFile(file);
     if (bundleResult.ok) {
@@ -406,7 +414,7 @@ function StartScreen({
       <input
         ref={fileRef}
         type="file"
-        accept=".json,application/json"
+        accept=".json,application/json,.xlsx,.ods"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
