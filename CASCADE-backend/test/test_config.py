@@ -82,8 +82,7 @@ def test_development_without_auth_is_local_only_mode(monkeypatch: pytest.MonkeyP
 
 @pytest.mark.parametrize("algorithm", ["HS256", "HS512", "none"])
 def test_jwt_algorithm_refuses_symmetric(monkeypatch: pytest.MonkeyPatch, algorithm: str) -> None:
-    """HS* verified against the IdP's public keys lets a key holder forge tokens
-    (CVE-2026-85394, unfixed in python-jose); only RS* is accepted."""
+    """HS* verified against the IdP's public keys lets a key holder forge tokens; only RS* is accepted."""
     monkeypatch.setenv("JWT_ALGORITHM", algorithm)
     with pytest.raises(ValidationError):
         Settings()

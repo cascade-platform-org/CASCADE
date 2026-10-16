@@ -21,18 +21,7 @@ echo "── bandit (security) ────────────────�
 bandit -c pyproject.toml -r .
 
 echo "── pip-audit (known CVEs) ───────────────────────────"
-# PYSEC-2026-1325 (ecdsa): NO fix version exists — it is ecdsa's documented lack
-# of side-channel resistance, not a defect an upgrade closes. ecdsa arrives only
-# as a transitive dep of python-jose ("ecdsa!=0.15") and is reachable only for
-# ES* JWT algorithms; this service signs with RS256 (config.py::jwt_algorithm),
-# which python-jose routes through the `cryptography` backend instead. Re-check
-# this exception if jwt_algorithm ever moves to an ES* curve.
-# CVE-2026-85394 (python-jose ≤ 3.5.0, the latest): HMAC accepts a DER public key,
-# so a holder of the public key can forge HS256 tokens WHEN the algorithms are not
-# restricted. No fixed release exists. auth/oauth2.py pins algorithms=[jwt_algorithm]
-# and config.py allows only RS256/384/512, so the forged HS256 path is refused.
-# Drop this ignore as soon as a fixed python-jose ships (upgrade, then re-run).
-pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln CVE-2026-85394
+pip-audit -r requirements.txt
 
 echo "── vulture (dead code) ──────────────────────────────"
 vulture . --config pyproject.toml
