@@ -88,6 +88,35 @@ names its cell** (`Nodes!F7`).
   an import; the window says so.
 - `update_history`, the Scorecard and the timestamps are never imported as changes.
 
+### 4a. Custom sheets: a person's own analysis, kept and able to write the model
+
+A person adds sheets of their own: an analysis of an organisation's data, a forecast, a
+policy's numbers worked out with formulas. They are part of the project.
+
+- **Kept in the project file**: `Project.sheets: [{name, writes?, computed_at?, rows}]`, `rows`
+  holding each cell's value (number, text, true/false, or empty) and its formula when it has one,
+  as the spreadsheet stored them; styles are left out. Saved as `.json` and opened again as a
+  Workbook, a custom sheet has its formulas back.
+- **The spreadsheet app computes; CASCADE never evaluates a formula.** It keeps each formula's
+  last value, so every function of the person's spreadsheet works and no second engine holds
+  logic. The Workbook asks the app to recalculate on opening, so formulas that look values up in
+  the model's sheets (by id, e.g. with XLOOKUP) see the model as CASCADE wrote it. In CASCADE a
+  custom sheet is shown read-only with its last values and when they were computed.
+- **What a custom sheet writes is declared**, in the `Sheets` index (`name | writes`): the name
+  of a model sheet (`Nodes`, `Edges`, `Canvases`, `Events`, `Event operations`, `Categories`,
+  `Functionality scale`, `Level scale`, `Simulations`, `Steps`, `Parameters`, `Profile`,
+  `Metrics`, a Series `S·<name>`, `Project`), so anything the platform edits, the Model
+  Configuration included. It then uses that sheet's identity column and column keys, any subset
+  of them. A sheet with no `writes` is analysis only, kept and never applied.
+- **Its values reach the model through Import changes**, in the same preview as edits to the
+  model's sheets, record by record and open to leaving out; opening a Workbook applies them as
+  part of the project it describes. A custom sheet writes the cells it has: a missing row or
+  column changes nothing (only a model sheet's missing row is a deletion), and a new identity
+  creates a record as a new row does. A field that a model sheet and a custom sheet, or two
+  custom sheets, set to different values is refused at every cell involved.
+- **A formula without a stored value**, in any sheet, is refused at its cell: the file was not
+  saved by a spreadsheet app, which computes it.
+
 ### 5. Library
 
 SheetJS Community Edition (Apache-2.0) reads and writes both `.xlsx` and `.ods`, and is the only
@@ -101,9 +130,12 @@ its updates are checked by hand (deployment.md).
 
 - *An embedded spreadsheet component* (Univer, Fortune-sheet, jspreadsheet CE): rejected, see
   Context; Handsontable is not open source for commercial use (CLAUDE.md §1).
-- *Formulas kept per cell and written back*: the platform would hold logic it does not run.
-  Formulas stay in the person's spreadsheet; the Workbook carries their results, and the README
-  sheet says so.
+- *Formulas in the model's own sheets kept*: a model sheet is what CASCADE writes from the
+  project, so a formula typed there is read as its value and the next export writes the value.
+  Formulas belong in custom sheets (§4a), which keep them.
+- *A formula engine inside CASCADE* (HyperFormula, GPLv3): live recomputation without leaving the
+  app, at the cost of a second place logic runs, a subset of the spreadsheet's functions and about
+  1 MB; a custom sheet recomputed every period of a run would be a second step operator.
 - *The whole bundle as JSON in cells*: lossless and unreadable.
 - *A zip of CSV files*: no types, so every number and date would be guessed.
 - *Importing through LLM Design's plain changes (v2)*: a Workbook is a state, and turning a state
@@ -125,5 +157,8 @@ its updates are checked by hand (deployment.md).
   containers, empty labels and orders; a Workbook edited in Excel and one edited in LibreOffice
   are committed as fixtures.
 - History, autosave and recovery stay JSON.
+- `Project.sheets` is client data: the Propagation request leaves it out, and Pydantic declares it
+  so Server Sync keeps it. Its size counts toward the project file, so a very large analysis
+  belongs in its own spreadsheet with only its results in a custom sheet.
 - Deferred (requirements §16): an undo history entry for a whole-project edit (shared with LLM
   Design), saved Parameter Sweeps, Series resampled across calendar units.

@@ -110,6 +110,10 @@ _Avoid_: "AI-generated" (the person may have written the change)
 The project file as a spreadsheet (`.xlsx` or `.ods`): one sheet per kind of record, one row per record, ids as identity, per-period values across; what has no table sits in the hidden `_cascade` sheet. Lossless both ways with the `.json`. Opening one replaces the project; **Import changes** compares one with the open project and applies the difference through LLM Design's check and preview. ADR-0023.
 _Avoid_: "spreadsheet export" (it is a complete project file), "Excel file" (`.ods` too)
 
+**Custom sheet**:
+A sheet of a person's own inside a **Workbook**, kept in the project with its values and formulas; the spreadsheet app computes it, CASCADE never does. One that declares a model sheet it writes (`Nodes`, `Events`, `Parameters`, a Series…) sends its values to the model through Import changes; one that declares none is analysis only. ADR-0023 §4a.
+_Avoid_: "formula sheet", "macro"
+
 **Parameter**:
 A named number a Temporal Simulation declares (`art8_share = 0.5`), read by Attribute Operations of its profile and of the Events it fires; an Event declares defaults for when it is fired by hand. Changing it once changes every operation that reads it; a **Parameter Sweep** runs over several of its values. ADR-0019, ADR-0021.
 _Avoid_: "variable", "constant", "setting"

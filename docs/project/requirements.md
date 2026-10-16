@@ -865,6 +865,7 @@ A person describes their organisation or a question in their own words; an LLM, 
 - **Import changes from a Workbook** previews the difference with the open project as one change per record, setting and list order, each open to leaving out, checked as LLM Design's changes are (§13.3a). A missing sheet changes nothing; a missing row is a deletion; a reference to a deleted record is refused at its cell; a new row creates a record (an id from its label, the top Functionality level, a grid position, the only Canvas). Records added are marked `origin: "spreadsheet"` with file, sheet and row, unconfirmed. Undo this import restores the project kept before applying.
 - Every problem names its cell; spreadsheet habits are read with a warning or refused with a reason (dates in labels, lost leading zeros, decimal commas, formulas without a stored result).
 - *Download an empty Workbook* gives a template for building a model from an organisation's lists.
+- **Custom sheets** (ADR-0023 §4a): a person's own sheets are kept in the project (`Project.sheets`: values and formulas); the spreadsheet app computes them. A custom sheet that declares which model sheet it writes (any, the Model Configuration's included) applies its values through Import changes, previewed with the rest; one without is analysis only. Conflicting values for one field are refused at their cells.
 
 ### 13.4 Server Sync (opt-in) — implemented
 
