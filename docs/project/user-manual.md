@@ -590,6 +590,13 @@ a per-period flow). Click a Metric's name to chart it over time, one line per
 Temporal Simulation. **Export CSV** writes all five statistics. The comparison
 is kept for the session; editing a Temporal Simulation marks it out of date.
 
+**Sweep a Parameter** runs one Temporal Simulation once per value of one of its
+Parameters, beside the ticked ones: choose it, its Parameter, and the values
+(`0.10, 0.15, 0.20`, or `0.1 to 0.3 step 0.05`; at most 50). Each value is one
+run, named after it. A second chart then plots the chosen statistic of the
+chosen Metric against the value, and the CSV has `parameter` and `value`
+columns.
+
 **Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
 its change over the period, divided by its reference: its own *level reference*
 or *change reference*, else max(|Min|, |Max|). The bands are the **Level

@@ -24,6 +24,7 @@ import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
 import { RunStopped, runTimeline } from "@/lib/step-operator";
 import { runTable, runTableCsv, type RunTable } from "@/lib/temporal-metrics";
 import { comparisonCsv, type ComparedRun, type Comparison } from "@/lib/temporal-comparison";
+import type { CompareRequest } from "@/lib/temporal-sweep";
 import { buildRunEntry } from "@/lib/period-entry";
 import { CSV_FILE, safeName, saveAs } from "@/lib/file-io";
 import { useScorecardStore } from "@/store/scorecard-store";
@@ -146,10 +147,14 @@ export async function saveRunToScorecard(table: RunTable, numbers: readonly numb
  * engine error) is kept with the reason, and the others still run; Cancel
  * keeps the ones already finished.
  */
-export async function startComparison(ids: readonly string[]): Promise<void> {
+export async function startComparison(requests: readonly CompareRequest[]): Promise<void> {
   const sim = useTemporalSimulationStore.getState();
   if (sim.compareProgress || sim.runProgress) return;
-  const chosen = sim.simulations.filter((x) => ids.includes(x.id));
+  const byId = new Map(sim.simulations.map((x) => [x.id, x]));
+  const chosen = requests.flatMap((r) => {
+    const doc = byId.get(r.simulationId);
+    return doc ? [{ request: r, doc }] : [];
+  });
   if (chosen.length === 0) return;
 
   const { activeCanvasId } = useCanvasStore.getState();
@@ -159,10 +164,10 @@ export async function startComparison(ids: readonly string[]): Promise<void> {
   const n = selectN(config);
   const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
 
-  const prepared = chosen.map(({ id, ...doc }) => {
+  const prepared = chosen.map(({ request, doc: { id: _id, ...doc } }) => {
     const checked = checkDoc(doc);
     const plan = checked.ok ? planTimeline(checked.doc.timeline) : null;
-    return { id, name: doc.timeline.name || id, checked, plan };
+    return { id: request.simulationId, name: request.name, request, checked, plan };
   });
   const total = prepared.reduce((a, p) => a + (p.plan?.engineCalls ?? 0), 0);
 
@@ -171,11 +176,12 @@ export async function startComparison(ids: readonly string[]): Promise<void> {
   sim.beginCompare(total);
   const runs: ComparedRun[] = [];
   let done = 0;
-  for (const { id, name, checked, plan } of prepared) {
+  for (const { id, name, request, checked, plan } of prepared) {
+    const sweep = request.sweep ? { sweep: request.sweep } : {};
     if (mine.signal.aborted) break;
     if (!checked.ok || !plan || plan.errors.length > 0 || plan.periods.length === 0) {
       const why = !checked.ok ? checked.errors[0] : plan?.errors[0] ?? "its Timeline has no period";
-      runs.push({ id, name, table: null, warnings: [], error: `Not run: ${why}` });
+      runs.push({ id, name, table: null, warnings: [], error: `Not run: ${why}`, ...sweep });
       continue;
     }
     const before = done;
@@ -186,17 +192,17 @@ export async function startComparison(ids: readonly string[]): Promise<void> {
         profile: checked.doc.profile,
         events: config.config.events,
         n,
-        parameters: parameterValues(checked.doc),
+        parameters: parameterValues(checked.doc, request.overrides),
         series: useProjectDataStore.getState().series,
         propagate: (snapshot) => (mine.signal.aborted ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
         signal: mine.signal,
         onProgress: (k, label) => useTemporalSimulationStore.getState().setCompareProgress(before + k, `${name} · ${label}`),
       });
-      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings });
+      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings, ...sweep });
     } catch (e) {
       if (mine.signal.aborted) break;
       const message = e instanceof RunStopped ? `Stopped: ${e.message} — in period ${e.period}` : `Stopped: ${e instanceof Error ? e.message : String(e)}`;
-      runs.push({ id, name, table: null, warnings: [], error: message });
+      runs.push({ id, name, table: null, warnings: [], error: message, ...sweep });
     }
     done = before + plan.engineCalls;
   }

@@ -3576,6 +3576,51 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "strong",
+                  "text": "Sweep a Parameter"
+                },
+                {
+                  "kind": "text",
+                  "text": " runs one Temporal Simulation once per value of one of its Parameters, beside the ticked ones: choose it, its Parameter, and the values ("
+                },
+                {
+                  "kind": "code",
+                  "text": "0.10, 0.15, 0.20"
+                },
+                {
+                  "kind": "text",
+                  "text": ", or "
+                },
+                {
+                  "kind": "code",
+                  "text": "0.1 to 0.3 step 0.05"
+                },
+                {
+                  "kind": "text",
+                  "text": "; at most 50). Each value is one run, named after it. A second chart then plots the chosen statistic of the chosen Metric against the value, and the CSV has "
+                },
+                {
+                  "kind": "code",
+                  "text": "parameter"
+                },
+                {
+                  "kind": "text",
+                  "text": " and "
+                },
+                {
+                  "kind": "code",
+                  "text": "value"
+                },
+                {
+                  "kind": "text",
+                  "text": " columns."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
                   "text": "Level Mode"
                 },
                 {

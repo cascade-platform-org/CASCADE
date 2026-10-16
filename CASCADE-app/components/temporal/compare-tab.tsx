@@ -10,8 +10,11 @@ import { CATEGORY_COLORS } from "@/lib/colors";
 import { formatMetric } from "@/lib/temporal-metrics";
 import { STATISTICS, compareRuns, type Comparison, type Statistic } from "@/lib/temporal-comparison";
 import { cancelComparison, exportComparisonCsv, startComparison } from "@/lib/temporal-simulation-run";
+import { compareRequests, parameterReads, parseSweepValues } from "@/lib/temporal-sweep";
+import { useConfigStore } from "@/store/config-store";
+import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { EXPLAIN_COMPARE, explainStatistic } from "@/lib/temporal-simulation-explainers";
-import { Notices, Segmented, SmallButton } from "./fields";
+import { Notices, Segmented, SmallButton, inputCls } from "./fields";
 
 const STATISTIC_LABEL: Record<Statistic, string> = { end: "End", mean: "Mean", min: "Min", max: "Max", total: "Total" };
 // Three hues apart (the palette is ten even hues), so neighbouring rows never get neighbouring colours.
@@ -19,7 +22,7 @@ const colorOf = (i: number) => CATEGORY_COLORS[(i * 3) % CATEGORY_COLORS.length]
 
 /** The first column whose values differ somewhere: a flat one makes an empty-looking chart. */
 function firstVarying(c: Comparison): string | null {
-  const varies = (col: string) => new Set(c.rows.flatMap((r) => (r.series[col] ?? []).filter((v) => v !== null))).size > 1;
+  const varies = (col: string) => new Set(c.rows.flatMap((r) => (r.values[col] ?? []).filter((v) => v !== null))).size > 1;
   return c.columns.find(varies) ?? c.columns[0] ?? null;
 }
 
@@ -42,6 +45,13 @@ export function CompareTab() {
   const ticked = simulations.filter((x) => !unticked.has(x.id)).map((x) => x.id);
   const [statistic, setStatistic] = useState<Statistic>("mean");
   const comparison = useMemo(() => (result ? compareRuns(result.runs) : null), [result]);
+  const [sweep, setSweep] = useState<{ simulationId: string; parameter: string; text: string } | null>(null);
+  const sweepValues = sweep ? parseSweepValues(sweep.text) : null;
+  const requests = compareRequests(
+    simulations,
+    ticked,
+    sweep && sweepValues && "values" in sweepValues ? { simulationId: sweep.simulationId, parameter: sweep.parameter, values: sweepValues.values } : undefined,
+  );
   const [chosen, setChosen] = useState<string | null>(null);
   const metric = comparison && chosen && comparison.columns.includes(chosen) ? chosen : comparison ? firstVarying(comparison) : null;
   const stale = result !== null && result.from !== simulations;
@@ -69,14 +79,16 @@ export function CompareTab() {
         </div>
       </div>
 
+      <SweepRow simulations={simulations} sweep={sweep} values={sweepValues} onChange={setSweep} />
+
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={ticked.length < 2 || progress !== null || runBusy || !canPropagate || !serverReachable}
-          title={!canPropagate ? "Comparing needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : ticked.length < 2 ? "Tick at least two" : undefined}
-          onClick={() => { explain(EXPLAIN_COMPARE); void startComparison(ticked); }}
+          disabled={requests.length < 2 || progress !== null || runBusy || !canPropagate || !serverReachable}
+          title={!canPropagate ? "Comparing needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : requests.length < 2 ? "Tick at least two, or sweep a Parameter" : undefined}
+          onClick={() => { explain(EXPLAIN_COMPARE); void startComparison(requests); }}
         >
-          <GitCompare size={11} /> Compare {ticked.length}
+          <GitCompare size={11} /> Compare {requests.length}
         </SmallButton>
         <span className="text-xs text-zinc-500">Each runs from the Reset model at the shared scope; the Run View and the model are untouched.</span>
       </div>
@@ -108,6 +120,7 @@ export function CompareTab() {
           </div>
           <SummaryTable comparison={comparison} statistic={statistic} metric={metric} onPick={setChosen} />
           {metric && <ComparisonChart comparison={comparison} metric={metric} />}
+          {metric && comparison.rows.some((r) => r.sweep) && <SweepChart comparison={comparison} metric={metric} statistic={statistic} />}
         </>
       )}
     </div>
@@ -137,7 +150,7 @@ function SummaryTable({ comparison, statistic, metric, onPick }: { comparison: C
         </thead>
         <tbody>
           {comparison.rows.map((row, i) => (
-            <tr key={row.id} className="border-b border-zinc-100 dark:border-zinc-800">
+            <tr key={`${i}-${row.id}`} className="border-b border-zinc-100 dark:border-zinc-800">
               <td className="min-w-[14rem] py-1 pr-2 font-medium text-zinc-700 dark:text-zinc-200">
                 <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ backgroundColor: colorOf(i) }} />
                 {row.name}
@@ -162,7 +175,7 @@ const PAD = 4;
 
 /** One Metric over time, a line per Temporal Simulation, on a shared scale. */
 function ComparisonChart({ comparison, metric }: { comparison: Comparison; metric: string }) {
-  const lines = comparison.rows.map((row, i) => ({ row, color: colorOf(i), values: row.series[metric] ?? [] }));
+  const lines = comparison.rows.map((row, i) => ({ key: `${i}-${row.id}`, row, color: colorOf(i), values: row.values[metric] ?? [] }));
   const all = lines.flatMap((l) => l.values.filter((v): v is number => v !== null));
   if (all.length === 0) return null;
   const lo = Math.min(...all);
@@ -186,7 +199,7 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-40 w-full" role="img" aria-label={`${metric} over time, one line per Temporal Simulation`}>
           {zero !== null && <line x1={0} x2={W} y1={zero} y2={zero} stroke={brandColor("neutral", 300)} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />}
-          {lines.map(({ row, color, values }) => {
+          {lines.map(({ key, color, values }) => {
             const segments: string[] = [];
             let current: string[] = [];
             values.forEach((v, i) => {
@@ -195,7 +208,7 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
             });
             if (current.length) segments.push(current.join(" "));
             return segments.map((points, k) => (
-              <polyline key={`${row.id}-${k}`} points={points} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
+              <polyline key={`${key}-${k}`} points={points} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
             ));
           })}
         </svg>
@@ -205,11 +218,111 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
         <span>{periods[periods.length - 1]}</span>
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-        {lines.map(({ row, color }) => (
-          <span key={row.id} className="flex items-center gap-1 text-[10px] text-zinc-500">
+        {lines.map(({ key, row, color }) => (
+          <span key={key} className="flex items-center gap-1 text-[10px] text-zinc-500">
             <span className="h-0.5 w-3" style={{ backgroundColor: color }} />{row.name}
           </span>
         ))}
+      </div>
+    </figure>
+  );
+}
+
+/**
+ * Sweep a Parameter: one Simulation (one with Parameters), one of its
+ * Parameters and the values to run it at; each value is one more run.
+ */
+function SweepRow({
+  simulations,
+  sweep,
+  values,
+  onChange,
+}: {
+  simulations: readonly StoredTemporalSimulation[];
+  sweep: { simulationId: string; parameter: string; text: string } | null;
+  values: ReturnType<typeof parseSweepValues> | null;
+  onChange: (s: { simulationId: string; parameter: string; text: string } | null) => void;
+}) {
+  const events = useConfigStore((s) => s.config.events);
+  const withParameters = simulations.filter((x) => x.parameters.length > 0);
+  if (withParameters.length === 0) {
+    return <p className="text-[11px] text-zinc-400">To sweep a Parameter, declare one in a Temporal Simulation (Timeline tab → Parameters).</p>;
+  }
+  const chosen = withParameters.find((x) => x.id === sweep?.simulationId);
+  const reads = chosen && sweep ? parameterReads(chosen, sweep.parameter, (id) => events.find((e) => e.id === id)?.attribute_operations ?? []) : null;
+  const pick = (simulationId: string) => {
+    const x = withParameters.find((y) => y.id === simulationId);
+    onChange(x ? { simulationId, parameter: x.parameters[0].name, text: sweep?.text ?? "" } : null);
+  };
+  return (
+    <div className="space-y-1 rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-medium text-zinc-600 dark:text-zinc-300">Sweep a Parameter</span>
+        <select className={`${inputCls} w-auto`} value={sweep?.simulationId ?? ""} onChange={(e) => pick(e.target.value)}>
+          <option value="">none</option>
+          {withParameters.map((x) => <option key={x.id} value={x.id}>{x.timeline.name || x.id}</option>)}
+        </select>
+        {chosen && sweep && (
+          <>
+            <select className={`${inputCls} w-auto font-mono`} value={sweep.parameter} onChange={(e) => onChange({ ...sweep, parameter: e.target.value })}>
+              {chosen.parameters.map((p) => <option key={p.name} value={p.name}>{p.name} ({p.value})</option>)}
+            </select>
+            <input
+              className={`${inputCls} w-64`}
+              value={sweep.text}
+              placeholder="0.10, 0.15, 0.20 — or 0.1 to 0.3 step 0.05"
+              onChange={(e) => onChange({ ...sweep, text: e.target.value })}
+            />
+            {values && "values" in values && <span className="text-zinc-500">{values.values.length} run{values.values.length === 1 ? "" : "s"}</span>}
+          </>
+        )}
+      </div>
+      {sweep?.text && values && "error" in values && <p className="text-[11px] text-red-600 dark:text-red-400">{values.error}</p>}
+      {reads === 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">Nothing in this Simulation reads {sweep?.parameter}: every run would be the same.</p>}
+    </div>
+  );
+}
+
+/** A statistic of one Metric against the swept value, one point per run of the sweep. */
+function SweepChart({ comparison, metric, statistic }: { comparison: Comparison; metric: string; statistic: Statistic }) {
+  const points = comparison.rows
+    .filter((r) => r.sweep && r.stats[metric]?.[statistic] !== null && r.stats[metric]?.[statistic] !== undefined)
+    .map((r) => ({ x: r.sweep!.value, y: r.stats[metric][statistic] as number }))
+    .sort((a, b) => a.x - b.x);
+  if (points.length === 0) return null;
+  const parameter = comparison.rows.find((r) => r.sweep)!.sweep!.parameter;
+  const [xl, xh] = [points[0].x, points[points.length - 1].x];
+  const ys = points.map((p) => p.y);
+  const [yl, yh] = [Math.min(...ys), Math.max(...ys)];
+  const px = (v: number) => (xh === xl ? W / 2 : ((v - xl) / (xh - xl)) * (W - 2 * PAD) + PAD);
+  const py = (v: number) => (yh === yl ? H / 2 : H - PAD - ((v - yl) / (yh - yl)) * (H - 2 * PAD));
+  const color = brandColor("accent", 600);
+  return (
+    <figure className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
+      <figcaption className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">{metric} — {STATISTIC_LABEL[statistic].toLowerCase()} of the run, against {parameter}</figcaption>
+      <div className="flex gap-2">
+        <div className="flex w-16 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums text-zinc-400">
+          <span>{formatMetric(yh)}</span>
+          <span>{formatMetric(yl)}</span>
+        </div>
+        <div className="relative h-40 w-full">
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`${metric} against ${parameter}`}>
+            <polyline points={points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
+          </svg>
+          {/* Markers outside the stretched SVG, so they stay round. */}
+          {points.map((p) => (
+            <span
+              key={p.x}
+              title={`${parameter} = ${p.x}: ${formatMetric(p.y)}`}
+              className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{ left: `${(px(p.x) / W) * 100}%`, top: `${(py(p.y) / H) * 100}%`, backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="ml-[4.5rem] flex justify-between text-[10px] tabular-nums text-zinc-400">
+        <span>{parameter} = {xl}</span>
+        <span>{xh}</span>
       </div>
     </figure>
   );
