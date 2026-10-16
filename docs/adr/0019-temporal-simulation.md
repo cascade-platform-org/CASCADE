@@ -201,7 +201,7 @@ custom ones:
 Each is shown by default and can be hidden (`standard_metrics`, saved with the definition;
 revised 2026-10-08); a hidden one leaves the table, the CSV and periods saved afterwards.
 
-**Series leave as CSV.** The Run table (periods × Metrics) exports as CSV; post-hoc
+**Run tables leave as CSV.** The Run table (periods × Metrics) exports as CSV; post-hoc
 summaries (averages, normalisation against the run's maximum) are left to the spreadsheet.
 
 **A period saved to the Scorecard is a new `temporal_simulation` entry** in ADR-0006's union.
@@ -319,3 +319,36 @@ that explains each control.
 - ADR-0006's Scorecard union gains a `temporal_simulation` entry (§4).
 - **Open (design doc §7):** automatic repair; backups whose countdown stops when supply
   returns.
+
+## Revision (2026-10-12): Parameters, Series and the Parameter Sweep
+
+The Coop Noncello simulations (seven policies, two stress tests, four spike scenarios) showed
+two habits a spreadsheet user brings that the definition had no home for. A policy's numbers
+(the 50% of Art. 8, a 0.20 threshold) were repeated in every operation that used them, so
+changing one meant editing many; and the monthly data (hours worked per activity) were spread
+over some 800 literal profile operations. ADR-0023 makes the spreadsheet a form of the project
+file; these two concepts give its sheets something to map onto.
+
+- **Parameters.** A Temporal Simulation declares `parameters: [{name, value, description?}]`,
+  names unique. An Attribute Operation reads one through `parameter` (ADR-0021, revised). An
+  Event's operations may read a Parameter too; the Event declares `parameter_defaults` for
+  when it fires by hand. **Which value applies:** in a run, a Parameter Sweep's value, else the
+  Simulation's, else (for an Event's operations) the Event's default; fired by hand, the
+  Event's default. With none, the write is refused and reported, before the run by Check and
+  the dry run (§7). A profile operation never reads an Event's default.
+- **Series.** `Project.series: [{name, unit?, description?, rows}]`: project-wide tables of
+  numbers by Element and period label, `rows[element id or "*"][period label]`. An operation
+  reads one through `series`; the value is the row of the Element being written, or the `*`
+  row when that Element has none, at the label of the period being run. **Labels match
+  exactly**; a value that is missing refuses the write (never 0), and Check lists the gaps
+  before the run, grouped by Series and period. A Series is data shared by every Temporal
+  Simulation, so a policy variant never copies it. An Event fired by hand has no period, so
+  an operation of it that reads a Series is refused, and the Event editor says so. Deleting an
+  Element keeps its rows (an undo brings the Element back with them); rows whose Element is
+  gone are reported, with an action that removes them. The engine never receives a Series.
+- **Parameter Sweep.** Compare can run one Temporal Simulation over several values of one of
+  its Parameters (`0.10, 0.15, 0.20`, or `0.10 to 0.30 step 0.05`; at most 50), each value one
+  run named `<Simulation> · <parameter> = <value>`, without duplicating the Simulation. The
+  table and chart line the runs up as for several Simulations, and a chart plots a statistic
+  of a column against the value. A sweep belongs to the session, like the comparison; its CSV
+  carries `parameter` and `value` columns.

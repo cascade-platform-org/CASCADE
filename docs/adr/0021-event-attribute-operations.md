@@ -152,3 +152,28 @@ the flows change. An Element holding no number at `of` refuses the operation, li
 arithmetic on an absent value. Events and a Temporal Simulation's profile read it alike;
 the Timeline grid keeps `of` as part of a row.
 
+## Revision (2026-10-12): the operand is a product of factors
+
+`of` showed the shape the operand needs; Parameters and Series (ADR-0019, revised the same
+day) add two more sources. An operation now carries up to three optional factors beside
+`value`, and **the operand is their product**:
+
+```
+operand = value × parameter × series[this Element, this period] × the number at `of`
+```
+
+- `parameter`: a Parameter's name. `series`: a Series' name. `of`: a field path on the same
+  Element, as before. Each is optional; with any of them, `value` is a number, the factor.
+  Names follow `^[A-Za-z_][A-Za-z0-9_]{0,63}$`, which keeps them usable as sheet headers.
+- A product needs no precedence and no formula language, and covers the policies met so far:
+  "pay `art8_share` of the 1 January balance" (`parameter` × `of`), "keep the level at least
+  `threshold` of a month's contract hours" (`value: -1`, `parameter` × `of`), "demand is the
+  data this month times a surge" (`series` × `parameter`).
+- **Each factor that has no value refuses the operation** for that Element, with its reason:
+  a Parameter nobody gives a value; a Series that does not exist, has no period (an Event fired
+  by hand) or has no value at that label; no number at `of`. Never 0, as for arithmetic on an
+  absent value.
+- Still static client-side arithmetic, applied by the step operator and Event application with
+  a context (the period, the Parameters' values, the project's Series); outside a run an Event
+  gets its own defaults and no period. The engine ignores operations and never sees a Series.
+  Pydantic validates the new fields on every Propagation, since Events travel with it.

@@ -859,6 +859,13 @@ A person describes their organisation or a question in their own words; an LLM, 
 - **Entry points** open LLM Design focused on what the person is looking at: the Canvas's right-click menu (the selection, or the whole model), the Inspector's header (one Element's section, or the selection), the Events tab (*Red-team Events*), and the Analysis window (*Explain the current state*, copied directly). Pasting a plain-changes reply onto the Canvas opens it in Bulk operations, checked.
 - Deferred: an automatic layout for many added nodes, and letting an agent use the app directly (a local MCP server on a project file).
 
+### 13.3c Workbook (.xlsx, .ods) — planned (ADR-0023)
+
+- **Open and Save** accept `.json`, `.xlsx` and `.ods`; a Workbook is the whole project, lossless both ways, written only after a read-back check passes. Layout: one sheet per kind of record, one row per record, ids as identity with read-only label columns beside references, maps keyed by Category, Event or property as columns, per-period values across (Profile, Series); `update_history`, the Scorecard and oversized cells in a hidden `_cascade` sheet.
+- **Import changes from a Workbook** previews the difference with the open project as one change per record, setting and list order, each open to leaving out, checked as LLM Design's changes are (§13.3a). A missing sheet changes nothing; a missing row is a deletion; a reference to a deleted record is refused at its cell; a new row creates a record (an id from its label, the top Functionality level, a grid position, the only Canvas). Records added are marked `origin: "spreadsheet"` with file, sheet and row, unconfirmed. Undo this import restores the project kept before applying.
+- Every problem names its cell; spreadsheet habits are read with a warning or refused with a reason (dates in labels, lost leading zeros, decimal commas, formulas without a stored result).
+- *Download an empty Workbook* gives a template for building a model from an organisation's lists.
+
 ### 13.4 Server Sync (opt-in) — implemented
 
 `can_sync`-permitted users (analyst and above) can push explicit saves to PostgreSQL via `POST/GET/DELETE /api/projects` and `GET /api/projects/{id}`. Each save is a **new version**, never an overwrite — the version list is accessible across devices. Up to 10 versions are kept per project name; older ones are pruned automatically on the next save (mirrors the existing local save-history cap, `lib/file-io.ts`'s `MAX_HISTORY`). Strictly owner-scoped: no cross-user access, including admins. Conflict resolution (§16) remains out of scope because there is no merge — versions are independent, additive rows; the user picks which to load.

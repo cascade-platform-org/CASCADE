@@ -103,8 +103,24 @@ One job LLM Design copies for an LLM: its instructions, the model's context, and
 _Avoid_: "prompt template", "preset"
 
 **Provenance**:
-The mark on a node, edge or Event that LLM Design added: `origin`, the `rationale` (the change's `why`) and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
+The mark on a node, edge or Event that LLM Design or a Workbook import added: `origin` (`llm_design` or `spreadsheet`), the `rationale` (the change's `why`), for a spreadsheet the `source` (file, sheet, row), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022, ADR-0023.
 _Avoid_: "AI-generated" (the person may have written the change)
+
+**Workbook**:
+The project file as a spreadsheet (`.xlsx` or `.ods`): one sheet per kind of record, one row per record, ids as identity, per-period values across; what has no table sits in the hidden `_cascade` sheet. Lossless both ways with the `.json`. Opening one replaces the project; **Import changes** compares one with the open project and applies the difference through LLM Design's check and preview. ADR-0023.
+_Avoid_: "spreadsheet export" (it is a complete project file), "Excel file" (`.ods` too)
+
+**Parameter**:
+A named number a Temporal Simulation declares (`art8_share = 0.5`), read by Attribute Operations of its profile and of the Events it fires; an Event declares defaults for when it is fired by hand. Changing it once changes every operation that reads it; a **Parameter Sweep** runs over several of its values. ADR-0019, ADR-0021.
+_Avoid_: "variable", "constant", "setting"
+
+**Series**:
+A project-wide table of numbers by Element and period label (hours worked per activity per month), read by an Attribute Operation as one factor of its operand at the period being run. A `*` row serves Elements without a row of their own; a missing value refuses the write. Data shared by every Temporal Simulation; the engine never sees it. ADR-0019.
+_Avoid_: "time series" bare (a Run table column is a Metric), "dataset", "profile" (the profile is a Simulation's operations)
+
+**Parameter Sweep**:
+One Temporal Simulation run by Compare once per value of one of its Parameters, each run named after the value, kept for the session like the comparison. ADR-0019.
+_Avoid_: "Sweep" bare (that is the EPANET importer's demand-multiplier Sweep), "sensitivity analysis"
 
 **Timeline**:
 The saved input of a Temporal Simulation: an ordered list of Steps whose Phases let hours pass (`advance_hours`) and hold Events (each firing every period, or every N-th period of its Step), and a profile of per-period Attribute Operations. Stores inputs only; a run's record lives in memory for the session. Every change over time is an Event in a Phase or a profile value, authored before the run. ADR-0019.
@@ -135,7 +151,7 @@ The canvas recoloured by the Level Scale while a run is shown (the **Run View**)
 _Avoid_: "heatmap" (that is the Analysis Heatmap)
 
 **Attribute Operation**:
-An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. Runs last in Event application; a result outside the field's range, or arithmetic on an absent value, is refused for that Element and reported, never clamped. ADR-0021. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
+An entry in an Event's `attribute_operations` (or a Timeline profile): `(element | where, path, op, value)` with `op` one of `set`, `add`, `mul`, `at_most`, `at_least`, and an operand that is `value` times its optional factors (a **Parameter**, a **Series** at the period, the number the Element holds at `of`), applied to the value the field holds when the operation runs, on one Element or on every Element an **Element Filter** selects. Runs last in Event application; a result outside the field's range, or arithmetic on an absent value, is refused for that Element and reported, never clamped. ADR-0021. How a policy such as "settle half the balance" is expressed, and the only way an Event writes a Stock. Static client-side arithmetic, not a Rule. ADR-0021.
 _Avoid_: "mutation" (`attribute_mutations`, the literal overwrite it absorbed on 2026-10-08), "formula", "expression"
 
 **Element Filter**:
@@ -321,3 +337,5 @@ _Avoid_: "privacy policy" (legal doc; this is the engineering rule)
 - Convergence not reached — partial result merges normally + persistent warning; nothing rolls back.
 - Edge `functionality` — the user-set intrinsic level; the engine commits `worst_of(intrinsic, source_node)` (ADR-0004); the frontend never recomputes it.
 - "Temporal Propagation Sequence" — retired; a chain of Temporal Jumps each followed by a Propagation.
+- "Sweep" — the EPANET importer's demand-multiplier **Sweep**; Compare's runs over a Parameter's values are a **Parameter Sweep**.
+- "series" — a **Series** is project data an operation reads; a Run table column over the periods holds that Metric's values.

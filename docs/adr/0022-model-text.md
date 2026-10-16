@@ -143,3 +143,18 @@ reviews". What that needed:
   reply passed the check on the first try.
 - Property tests (fast-check) throw random change sets at the check: each is refused with
   reasons or yields a bundle both schemas accept, and the starting bundle never changes.
+
+## Revision (2026-10-12): a second producer, the Workbook import
+
+ADR-0023 imports an edited Workbook through this ADR's gate. Three changes follow:
+
+- **Provenance has two origins.** `origin` is `"llm_design"` or `"spreadsheet"`; a
+  spreadsheet mark also carries `source {file, sheet, row}`, the row the record came from. What
+  an import adds is unconfirmed until a person confirms it, like what an LLM adds; the
+  Inspector names the file, sheet and row.
+- **The check returns structured issues** beside its messages: the message, the JSON pointer
+  it concerns, the Element and a code, so a producer that knows where a value came from (a
+  cell) can say so. `validateBundle` issues carry a pointer.
+- **The gate is split** into applying a change and checking the result, so a producer that
+  builds the result itself (the import composes each record from its new or old version) runs
+  the same checks and the same preview. The preview list is shared by both windows.
