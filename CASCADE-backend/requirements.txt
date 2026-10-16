@@ -33,7 +33,7 @@ psycopg2-binary==2.9.12      # sync driver — used only in scripts/ and migrati
 # Authentication (OAuth2 / OIDC + JWT)
 # ---------------------------------------------------------------------------
 
-python-jose[cryptography]==3.5.0   # JWT encode/decode; [cryptography] adds RS256
+PyJWT[crypto]==2.15.1              # JWT verify against the IdP's JWKS; [crypto] adds RS256
 httpx==0.28.1                      # async HTTP — fetches OIDC discovery documents
 
 # ---------------------------------------------------------------------------

@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     # cannot be refreshed and dies on access-token expiry, forcing a full
     # re-login. Zitadel honours it when the app has the refresh-token grant.
     oidc_scopes: str = "openid profile email offline_access"
-    jwt_algorithm: str = "RS256"
+    # Only asymmetric algorithms: an HS* algorithm verified against the IdP's
+    # public keys would let anyone holding those keys forge tokens.
+    jwt_algorithm: Literal["RS256", "RS384", "RS512"] = "RS256"
     jwt_audience: Optional[str] = None
     # Zitadel IdP id for the "Continue with Google" shortcut. When set, the app
     # advertises the button (GET /api/auth/config) and GET /api/auth/login?idp=google

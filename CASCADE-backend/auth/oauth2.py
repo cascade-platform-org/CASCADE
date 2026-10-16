@@ -17,7 +17,7 @@ import time
 from typing import Any, Optional
 
 import httpx
-from jose import jwt
+import jwt
 
 from config import get_settings
 
@@ -68,21 +68,29 @@ async def fetch_jwks(force: bool = False) -> dict[str, Any]:
 
 def _jwks_has_kid(jwks: dict[str, Any], kid: Optional[str]) -> bool:
     if kid is None:
-        # No kid in the token header — let jose try every cached key.
+        # No kid in the token header — every cached key is tried.
         return True
     return any(k.get("kid") == kid for k in jwks.get("keys", []))
+
+
+def _candidate_keys(jwks: dict[str, Any], kid: Optional[str]) -> list[jwt.PyJWK]:
+    """The JWKS keys that may have signed a token with this `kid`: the matching
+    one, or every signing key when the header names none. Keys PyJWT cannot use
+    (another key type, a missing algorithm backend) are skipped."""
+    keys = jwt.PyJWKSet.from_dict(jwks).keys if jwks.get("keys") else []
+    return [k for k in keys if kid is None or k.key_id == kid]
 
 
 async def _decode_verified(token: str, audience: Optional[str]) -> dict[str, Any]:
     """Signature-, audience-, and issuer-verify a JWT and return its claims.
 
     Shared by verify_token (access token) and verify_id_token (id token); the
-    two differ only in expected audience. Raises jose.JWTError / ValueError on
+    two differ only in expected audience. Raises jwt.PyJWTError / ValueError on
     an invalid, expired, wrong-audience, or wrong-issuer token.
     """
     if not audience:
-        # No configured audience means jose would skip the aud check; fail
-        # closed rather than accept a token minted for any other client.
+        # No configured audience would skip the aud check; fail closed rather
+        # than accept a token minted for any other client.
         raise ValueError("No audience configured; cannot verify token.")
 
     kid = jwt.get_unverified_header(token).get("kid")
@@ -94,19 +102,29 @@ async def _decode_verified(token: str, audience: Optional[str]) -> dict[str, Any
 
     issuer = (await fetch_oidc_config()).get("issuer")
     if not issuer:
-        # jose treats issuer=None as "do not validate iss"; fail closed instead
-        # of silently dropping the issuer binding this function intends to enforce.
+        # An issuer of None would skip the iss check; fail closed instead of
+        # silently dropping the issuer binding this function intends to enforce.
         raise ValueError("OIDC discovery document has no issuer; cannot verify token.")
 
     settings = get_settings()
-    return jwt.decode(
-        token,
-        jwks,
-        algorithms=[settings.jwt_algorithm],
-        audience=audience,
-        issuer=issuer,
-        options={"verify_at_hash": False},
-    )
+    candidates = _candidate_keys(jwks, kid)
+    if not candidates:
+        raise jwt.InvalidKeyError(f"No signing key in the JWKS for kid={kid}.")
+    last: jwt.PyJWTError = jwt.InvalidSignatureError("No key verified the signature.")
+    for key in candidates:
+        try:
+            # `algorithms` is the only accepted list: an HS256 token is refused
+            # before any key is used, which is what blocks algorithm confusion.
+            return jwt.decode(
+                token,
+                key=key,
+                algorithms=[settings.jwt_algorithm],
+                audience=audience,
+                issuer=issuer,
+            )
+        except jwt.InvalidSignatureError as exc:  # another key may have signed it
+            last = exc
+    raise last
 
 
 async def verify_token(token: str) -> dict[str, Any]:
@@ -121,7 +139,7 @@ async def verify_token(token: str) -> dict[str, Any]:
     (called from the /callback exchange).
 
     Returns a synthetic admin claim set when auth is disabled (local-only mode).
-    Raises jose.JWTError / ValueError on invalid or expired tokens.
+    Raises jwt.PyJWTError / ValueError on invalid or expired tokens.
     """
     settings = get_settings()
     if not settings.auth_enabled:
@@ -164,7 +182,7 @@ async def verify_id_token(id_token: str) -> dict[str, Any]:
     control. The claim can arrive as a JSON boolean or the string "false"
     (Zitadel encodes it as a string), so both are caught. Raises
     EmailNotVerifiedError for that one user-actionable case, and
-    jose.JWTError / ValueError for an otherwise invalid token or missing config.
+    jwt.PyJWTError / ValueError for an otherwise invalid token or missing config.
     """
     settings = get_settings()
     claims = await _decode_verified(id_token, settings.oidc_client_id)
