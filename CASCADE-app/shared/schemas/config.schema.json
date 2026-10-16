@@ -88,7 +88,7 @@
     },
     "AttributeOperation": {
       "additionalProperties": false,
-      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. With\n`of`, the operand is `value` \u00d7 the number the same Element holds at `of`,\nread just before the operation (a rule on a remembered value: \"pay 50% of the\nbalance saved in January\"). Applied client-side when the Event fires; the\nengine never reads it.",
+      "description": "`new = op(current, operand)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at the operand; `at_least` raises it to it. The\noperand is `value` times each factor given (ADR-0021, revised 2026-10-12): a\nParameter's value (`parameter`), a Series at this Element and the period being\nrun (`series`), and the number the same Element holds at `of`, read just before\nthe operation. A factor with no value refuses the write. Applied client-side;\nthe engine never reads it.",
       "properties": {
         "element": {
           "anyOf": [
@@ -167,8 +167,34 @@
             }
           ],
           "default": null,
-          "description": "Field path on the same Element: the operand becomes `value` \u00d7 the number held there.",
+          "description": "Field path on the same Element: the operand is multiplied by the number held there.",
           "title": "Of"
+        },
+        "parameter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A Parameter's name: the operand is multiplied by its value.",
+          "title": "Parameter"
+        },
+        "series": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A Series' name: the operand is multiplied by its value for this Element at the period.",
+          "title": "Series"
         }
       },
       "required": [
@@ -266,10 +292,13 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge or Event that LLM Design or a Workbook import added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "const": "llm_design",
+          "enum": [
+            "llm_design",
+            "spreadsheet"
+          ],
           "title": "Origin",
           "type": "string"
         },
@@ -291,12 +320,54 @@
           "description": "True once a person has confirmed it.",
           "title": "Confirmed",
           "type": "boolean"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For a spreadsheet: the file, sheet and row."
         }
       },
       "required": [
         "origin"
       ],
       "title": "Provenance",
+      "type": "object"
+    },
+    "SourceLocator": {
+      "additionalProperties": false,
+      "description": "The Workbook row a record came from.",
+      "properties": {
+        "file": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "File",
+          "type": "string"
+        },
+        "sheet": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Sheet",
+          "type": "string"
+        },
+        "row": {
+          "minimum": 1,
+          "title": "Row",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file",
+        "sheet",
+        "row"
+      ],
+      "title": "SourceLocator",
       "type": "object"
     },
     "EventDefinition": {
@@ -401,6 +472,22 @@
           "default": null,
           "description": "Ordered operations on the value a field holds when the Event fires, applied last (ADR-0021). Operations on one Element and path compose in order. A Restorative Event does nothing else. Client-side only; the engine never reads them.",
           "title": "Attribute Operations"
+        },
+        "parameter_defaults": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Values for the Parameters this Event's operations read when it is fired by hand. Inside a Temporal Simulation run, the Simulation's value wins. Client-side only.",
+          "title": "Parameter Defaults"
         },
         "provenance": {
           "anyOf": [

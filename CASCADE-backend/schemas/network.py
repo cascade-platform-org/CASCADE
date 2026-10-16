@@ -6,6 +6,9 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_valida
 
 from schemas.field_path import SafeKey
 from schemas.provenance import Provenance
+from schemas.custom_sheet import CustomSheet
+from schemas.operand import duplicate_names
+from schemas.series import Series
 from schemas.temporal_simulation import FIRST_SIMULATION_ID, StoredTemporalSimulation
 
 if TYPE_CHECKING:
@@ -818,3 +821,25 @@ class Project(BaseModel):
             "Metrics and scope. Input only; runs are not saved. The engine never reads them."
         ),
     )
+    series: list[Series] = Field(
+        default_factory=list,
+        description=(
+            "Project-wide numbers by Element and period label that Attribute Operations "
+            "read (ADR-0019, revised 2026-10-12). Client data; the engine never reads them."
+        ),
+    )
+    sheets: list[CustomSheet] = Field(
+        default_factory=list,
+        description=(
+            "A person's own Workbook sheets, values and formulas, computed by the spreadsheet "
+            "app (ADR-0023 §4a). Client data; the engine never reads them."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _unique_series_and_sheet_names(self) -> "Project":
+        for kind, names in (("series", [x.name for x in self.series]), ("sheets", [x.name for x in self.sheets])):
+            repeated = duplicate_names(names)
+            if repeated:
+                raise ValueError(f"{kind}: the name '{repeated[0]}' is used twice")
+        return self

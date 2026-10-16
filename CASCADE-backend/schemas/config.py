@@ -5,6 +5,7 @@ from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from schemas.field_path import FieldPath
+from schemas.operand import FiniteFloat, OperandName
 from schemas.provenance import Provenance
 
 
@@ -68,13 +69,14 @@ AttributeOperationKind = Literal["set", "add", "mul", "at_most", "at_least"]
 
 
 class AttributeOperation(BaseModel):
-    """`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).
+    """`new = op(current, operand)` at `path`, on one Element or every match of `where` (ADR-0021).
 
-    `at_most` caps the value at `value`; `at_least` raises it to `value`. With
-    `of`, the operand is `value` × the number the same Element holds at `of`,
-    read just before the operation (a rule on a remembered value: "pay 50% of the
-    balance saved in January"). Applied client-side when the Event fires; the
-    engine never reads it.
+    `at_most` caps the value at the operand; `at_least` raises it to it. The
+    operand is `value` times each factor given (ADR-0021, revised 2026-10-12): a
+    Parameter's value (`parameter`), a Series at this Element and the period being
+    run (`series`), and the number the same Element holds at `of`, read just before
+    the operation. A factor with no value refuses the write. Applied client-side;
+    the engine never reads it.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -85,7 +87,11 @@ class AttributeOperation(BaseModel):
     value: float | int | bool | str
     of: Optional[FieldPath] = Field(
         default=None,
-        description="Field path on the same Element: the operand becomes `value` × the number held there.",
+        description="Field path on the same Element: the operand is multiplied by the number held there.",
+    )
+    parameter: Optional[OperandName] = Field(default=None, description="A Parameter's name: the operand is multiplied by its value.")
+    series: Optional[OperandName] = Field(
+        default=None, description="A Series' name: the operand is multiplied by its value for this Element at the period."
     )
 
     @model_validator(mode="after")
@@ -95,8 +101,8 @@ class AttributeOperation(BaseModel):
         numeric = not isinstance(self.value, bool) and isinstance(self.value, (int, float))
         if self.op != "set" and not numeric:
             raise ValueError("add, mul, at_most and at_least need a number `value`")
-        if self.of is not None and not numeric:
-            raise ValueError("with `of`, `value` is the factor: a number")
+        if (self.of is not None or self.parameter is not None or self.series is not None) and not numeric:
+            raise ValueError("with of, parameter or series, value is the factor: a number")
         return self
 
 
@@ -164,7 +170,14 @@ class EventDefinition(BaseModel):
             "Restorative Event does nothing else. Client-side only; the engine never reads them."
         ),
     )
-    provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022)
+    parameter_defaults: Optional[dict[OperandName, FiniteFloat]] = Field(
+        default=None,
+        description=(
+            "Values for the Parameters this Event's operations read when it is fired by hand. "
+            "Inside a Temporal Simulation run, the Simulation's value wins. Client-side only."
+        ),
+    )
+    provenance: Optional[Provenance] = None  # set by LLM Design or a Workbook import (ADR-0022, ADR-0023)
 
     @model_validator(mode="before")
     @classmethod

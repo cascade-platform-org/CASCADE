@@ -30,9 +30,9 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
   return rest;
 }
 
-/** The Temporal Simulation is client-side input (ADR-0019); the engine never reads it. */
-function withoutTemporalSimulation(project: Project): Project {
-  const { temporal_simulations: _unused, ...rest } = project;
+/** Temporal Simulations, Series and custom sheets are client-side input (ADR-0019, ADR-0023); the engine never reads them. */
+function withoutClientData(project: Project): Project {
+  const { temporal_simulations: _simulations, series: _series, sheets: _sheets, ...rest } = project;
   return rest;
 }
 
@@ -89,7 +89,7 @@ export function buildPropagationPayload({
     // while the engine reads neither.
     return {
       project: {
-        ...withoutTemporalSimulation(project),
+        ...withoutClientData(project),
         canvases: project.canvases.map(stripUnusedInpContent),
         update_history: [],
         scorecard: [],
@@ -138,7 +138,7 @@ export function buildPropagationPayload({
   });
 
   const trimmedProject: Project = {
-    ...withoutTemporalSimulation(project),
+    ...withoutClientData(project),
     nodes: trimmedNodes,
     edges: trimmedEdges,
     canvases: [trimmedCanvas],

@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { FieldPathSchema } from "./field-path";
+import { OperandNameSchema } from "./operand";
 
 /**
  * Selects Elements by what they are. Every given condition must hold; an
@@ -40,10 +41,16 @@ export const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_l
 export const valueFitsOp = (op: z.infer<typeof OperationKindSchema>, value: unknown): boolean =>
   op === "set" || typeof value === "number";
 
+/** True when the operation reads a factor beyond `value`, which then must be a number. */
+export const hasFactors = (o: { of?: unknown; parameter?: unknown; series?: unknown }): boolean =>
+  o.of !== undefined || o.parameter !== undefined || o.series !== undefined;
+
 /**
  * ADR-0021: one operation, on one Element (`element`) or on every match of
- * `where`. With `of`, the operand is `value` × the number the same Element holds
- * at `of`, read just before the operation: a rule on a remembered value.
+ * `where`. The operand is `value` times each factor given (revised 2026-10-12):
+ * a Parameter's value (`parameter`), a Series at this Element and the period
+ * being run (`series`), and the number the same Element holds at `of`, read just
+ * before the operation. A factor with no value refuses the write.
  */
 export const AttributeOperationSchema = z
   .object({
@@ -53,6 +60,10 @@ export const AttributeOperationSchema = z
     op: OperationKindSchema,
     value: z.union([z.number(), z.boolean(), z.string()]),
     of: FieldPathSchema.optional(),
+    /** A Parameter's name: the operand is multiplied by its value. */
+    parameter: OperandNameSchema.optional(),
+    /** A Series' name: the operand is multiplied by its value for this Element at the period. */
+    series: OperandNameSchema.optional(),
   })
   .strict()
   .refine((o) => (o.element === undefined) !== (o.where === undefined), {
@@ -62,8 +73,8 @@ export const AttributeOperationSchema = z
     message: "add, mul, at_most and at_least need a number `value`",
     path: ["value"],
   })
-  .refine((o) => o.of === undefined || typeof o.value === "number", {
-    message: "with `of`, `value` is the factor: a number",
+  .refine((o) => !hasFactors(o) || typeof o.value === "number", {
+    message: "with of, parameter or series, value is the factor: a number",
     path: ["value"],
   });
 export type AttributeOperation = z.infer<typeof AttributeOperationSchema>;

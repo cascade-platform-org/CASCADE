@@ -249,7 +249,7 @@
     },
     "AttributeOperation": {
       "additionalProperties": false,
-      "description": "`new = op(current, value)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at `value`; `at_least` raises it to `value`. With\n`of`, the operand is `value` \u00d7 the number the same Element holds at `of`,\nread just before the operation (a rule on a remembered value: \"pay 50% of the\nbalance saved in January\"). Applied client-side when the Event fires; the\nengine never reads it.",
+      "description": "`new = op(current, operand)` at `path`, on one Element or every match of `where` (ADR-0021).\n\n`at_most` caps the value at the operand; `at_least` raises it to it. The\noperand is `value` times each factor given (ADR-0021, revised 2026-10-12): a\nParameter's value (`parameter`), a Series at this Element and the period being\nrun (`series`), and the number the same Element holds at `of`, read just before\nthe operation. A factor with no value refuses the write. Applied client-side;\nthe engine never reads it.",
       "properties": {
         "element": {
           "anyOf": [
@@ -328,8 +328,34 @@
             }
           ],
           "default": null,
-          "description": "Field path on the same Element: the operand becomes `value` \u00d7 the number held there.",
+          "description": "Field path on the same Element: the operand is multiplied by the number held there.",
           "title": "Of"
+        },
+        "parameter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A Parameter's name: the operand is multiplied by its value.",
+          "title": "Parameter"
+        },
+        "series": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A Series' name: the operand is multiplied by its value for this Element at the period.",
+          "title": "Series"
         }
       },
       "required": [
@@ -629,6 +655,68 @@
         "name"
       ],
       "title": "ConfigMeta",
+      "type": "object"
+    },
+    "CustomSheet": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 31,
+          "minLength": 1,
+          "pattern": "^[^\\[\\]:*?/\\\\']([^\\[\\]:*?/\\\\]*[^\\[\\]:*?/\\\\'])?$",
+          "title": "Name",
+          "type": "string"
+        },
+        "writes": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model sheet whose columns this sheet uses and whose records it writes (e.g. 'Nodes', 'S\u00b7demand'); None = analysis only.",
+          "title": "Writes"
+        },
+        "computed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When the spreadsheet app last computed it (ISO 8601), if known.",
+          "title": "Computed At"
+        },
+        "rows": {
+          "description": "Row by row from A1; None = an empty cell.",
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SheetCell"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CustomSheet",
       "type": "object"
     },
     "DirectDamageEffect": {
@@ -1108,6 +1196,22 @@
           "default": null,
           "description": "Ordered operations on the value a field holds when the Event fires, applied last (ADR-0021). Operations on one Element and path compose in order. A Restorative Event does nothing else. Client-side only; the engine never reads them.",
           "title": "Attribute Operations"
+        },
+        "parameter_defaults": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Values for the Parameters this Event's operations read when it is fired by hand. Inside a Temporal Simulation run, the Simulation's value wins. Client-side only.",
+          "title": "Parameter Defaults"
         },
         "provenance": {
           "anyOf": [
@@ -1968,6 +2072,38 @@
       "title": "Node",
       "type": "object"
     },
+    "Parameter": {
+      "additionalProperties": false,
+      "description": "A named number the Simulation's operations, and the Events it fires, read\n(ADR-0019, revised 2026-10-12).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Parameter",
+      "type": "object"
+    },
     "Phase": {
       "additionalProperties": false,
       "description": "Lets time pass, applies its Events, then optionally runs one Propagation.",
@@ -2124,6 +2260,22 @@
             "$ref": "#/$defs/StoredTemporalSimulation"
           },
           "title": "Temporal Simulations",
+          "type": "array"
+        },
+        "series": {
+          "description": "Project-wide numbers by Element and period label that Attribute Operations read (ADR-0019, revised 2026-10-12). Client data; the engine never reads them.",
+          "items": {
+            "$ref": "#/$defs/Series"
+          },
+          "title": "Series",
+          "type": "array"
+        },
+        "sheets": {
+          "description": "A person's own Workbook sheets, values and formulas, computed by the spreadsheet app (ADR-0023 \u00a74a). Client data; the engine never reads them.",
+          "items": {
+            "$ref": "#/$defs/CustomSheet"
+          },
+          "title": "Sheets",
           "type": "array"
         }
       },
@@ -2411,10 +2563,13 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge or Event that LLM Design or a Workbook import added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "const": "llm_design",
+          "enum": [
+            "llm_design",
+            "spreadsheet"
+          ],
           "title": "Origin",
           "type": "string"
         },
@@ -2436,6 +2591,18 @@
           "description": "True once a person has confirmed it.",
           "title": "Confirmed",
           "type": "boolean"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For a spreadsheet: the file, sheet and row."
         }
       },
       "required": [
@@ -2486,6 +2653,96 @@
         "op"
       ],
       "title": "RecordDiff",
+      "type": "object"
+    },
+    "Series": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "rows": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "description": "Row key (an Element id, or '*' for every Element without a row of its own) \u2192 period label \u2192 number.",
+          "title": "Rows",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Series",
+      "type": "object"
+    },
+    "SheetCell": {
+      "additionalProperties": false,
+      "description": "One cell: its value as the spreadsheet stored it, and its formula if any.",
+      "properties": {
+        "v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The value (the formula's last result); None = empty.",
+          "title": "V"
+        },
+        "f": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The formula, in A1 syntax without the leading '='.",
+          "title": "F"
+        }
+      },
+      "title": "SheetCell",
       "type": "object"
     },
     "SimulationPeriod": {
@@ -2539,6 +2796,36 @@
         "diff"
       ],
       "title": "SimulationPeriod",
+      "type": "object"
+    },
+    "SourceLocator": {
+      "additionalProperties": false,
+      "description": "The Workbook row a record came from.",
+      "properties": {
+        "file": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "File",
+          "type": "string"
+        },
+        "sheet": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Sheet",
+          "type": "string"
+        },
+        "row": {
+          "minimum": 1,
+          "title": "Row",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file",
+        "sheet",
+        "row"
+      ],
+      "title": "SourceLocator",
       "type": "object"
     },
     "Step": {
@@ -2850,6 +3137,14 @@
           "default": null,
           "description": "For `local`: the Canvas id the run propagates.",
           "title": "Canvas"
+        },
+        "parameters": {
+          "description": "Named numbers its operations read; a Parameter Sweep in Compare runs it over several values of one.",
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          },
+          "title": "Parameters",
+          "type": "array"
         },
         "id": {
           "minLength": 1,

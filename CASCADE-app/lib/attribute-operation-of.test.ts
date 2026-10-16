@@ -42,6 +42,7 @@ describe("an operation with of", () => {
 describe("the Art. 8 rule as a Temporal Simulation", () => {
   const doc: TemporalSimulation = {
     format: "cascade.temporal-simulation/v1",
+    parameters: [],
     timeline: { name: "Art. 8", steps: [{ label: "2024-01", unit: "month", repeat: 12, phases: [{ events: [], propagate: false }] }] },
     profile: {
       // January: remember the opening balance, kept only when positive.
@@ -81,7 +82,7 @@ describe("the Simulation's LLM context", () => {
   it("lists each Element's properties, where a model keeps its own quantities", () => {
     const op: AttributeOperation = { element: "a", path: ["properties", "balance"], op: "add", value: 1 };
     const text = llmContext(
-      { format: "cascade.temporal-simulation/v1", timeline: { name: "t", steps: [] }, profile: { x: [op] }, metrics: [], standard_metrics: [], scope: "global" },
+      { format: "cascade.temporal-simulation/v1", timeline: { name: "t", steps: [] }, profile: { x: [op] }, metrics: [], standard_metrics: [], scope: "global", parameters: [] },
       { events: [], categories: [], functionality_scale: DEFAULT_CONFIG.functionality_scale },
       { nodes: { a: bank("a", 10007) }, edges: {}, canvases: {} },
     );

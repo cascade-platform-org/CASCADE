@@ -10,6 +10,7 @@ import { z } from "zod";
 import { RAMP_STEPS } from "@/lib/brand";
 import { NodeSchema } from "./network";
 import { ProvenanceSchema } from "./provenance";
+import { FiniteNumberSchema, OperandNameSchema } from "./operand";
 import { AttributeOperationSchema, migrateEventMutations } from "./attribute-operation";
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,8 @@ export const EventDefinitionSchema = z.object({
    * (`lib/event-application.ts`).
    */
   attribute_operations: z.array(AttributeOperationSchema).optional(),
+  /** Values for the Parameters its operations read when it is fired by hand; in a run the Simulation's value wins. */
+  parameter_defaults: z.record(OperandNameSchema, FiniteNumberSchema).optional(),
   /** Set by LLM Design (ADR-0022). */
   provenance: ProvenanceSchema.optional(),
 });

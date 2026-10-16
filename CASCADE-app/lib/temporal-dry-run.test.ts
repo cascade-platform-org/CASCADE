@@ -15,6 +15,7 @@ const model: FilterableModel = { nodes: { a: bank("a", 100), b: bank("b", -10) }
 
 const doc = (profile: TemporalSimulation["profile"], metrics: TemporalSimulation["metrics"] = []): TemporalSimulation => ({
   format: "cascade.temporal-simulation/v1",
+  parameters: [],
   timeline: { name: "t", steps: [{ label: "2024-01", unit: "month", repeat: 6, phases: [{ events: [], propagate: false }] }] },
   profile,
   metrics,

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from schemas.config import AttributeOperation, ElementFilter
 from schemas.field_path import FieldPath
+from schemas.operand import FiniteFloat, OperandName, duplicate_names
 
 CalendarUnit = Literal["hour", "day", "week", "month", "quarter", "year", "none"]
 
@@ -110,6 +111,16 @@ STANDARD_METRICS: tuple[StandardMetric, ...] = ("operativity", "coverage", "stoc
 SimulationScope = Literal["global", "local"]
 
 
+class Parameter(BaseModel):
+    """A named number the Simulation's operations, and the Events it fires, read
+    (ADR-0019, revised 2026-10-12)."""
+    model_config = ConfigDict(extra="forbid")
+
+    name: OperandName
+    value: FiniteFloat
+    description: Optional[str] = None
+
+
 class TemporalSimulation(BaseModel):
     """The whole definition: Timeline, profile, Metrics and Propagation scope."""
     model_config = ConfigDict(extra="forbid")
@@ -137,6 +148,17 @@ class TemporalSimulation(BaseModel):
         ),
     )
     canvas: Optional[str] = Field(default=None, min_length=1, description="For `local`: the Canvas id the run propagates.")
+    parameters: list[Parameter] = Field(
+        default_factory=list,
+        description="Named numbers its operations read; a Parameter Sweep in Compare runs it over several values of one.",
+    )
+
+    @model_validator(mode="after")
+    def _unique_parameters(self) -> "TemporalSimulation":
+        repeated = duplicate_names([p.name for p in self.parameters])
+        if repeated:
+            raise ValueError(f"parameters: the name '{repeated[0]}' is used twice")
+        return self
 
     @model_validator(mode="after")
     def _canvas_with_local_scope(self) -> "TemporalSimulation":

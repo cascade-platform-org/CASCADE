@@ -8,7 +8,7 @@
  */
 
 import type { ZodError } from "zod";
-import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, SimulationScopeSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type SimulationScope, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
+import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, SimulationScopeSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type Parameter, type SimulationScope, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
 import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
@@ -40,12 +40,21 @@ export interface SimulationDraft {
   scope: SimulationScope;
   /** For a local scope: the Canvas id. */
   canvas?: string;
+  parameters: Parameter[];
 }
 
 /** The operation a row applies in one period. */
 export function rowOperation(row: ProfileRow, value: AttributeOperation["value"]): AttributeOperation {
   const target = row.where !== undefined ? { where: row.where } : { element: row.element };
-  return { ...target, path: row.path, op: row.op, value, ...(row.of ? { of: row.of } : {}) };
+  return {
+    ...target,
+    path: row.path,
+    op: row.op,
+    value,
+    ...(row.of ? { of: row.of } : {}),
+    ...(row.parameter ? { parameter: row.parameter } : {}),
+    ...(row.series ? { series: row.series } : {}),
+  };
 }
 
 /** Rows → `{label: [operations]}`: a period's operations follow row order; labels in Timeline order, unknown ones after. */
@@ -70,7 +79,7 @@ function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () 
   for (const [label, ops] of Object.entries(profile)) {
     let previous = -1;
     for (const { value, ...op } of ops) {
-      const key = JSON.stringify([op.element, op.where, op.path, op.op, op.of]);
+      const key = JSON.stringify([op.element, op.where, op.path, op.op, op.of, op.parameter, op.series]);
       let i = keys.findIndex((k, j) => j > previous && k === key && !(label in rows[j].values));
       if (i < 0) {
         i = rows.push({ ...op, id: newId(), values: {} }) - 1;
@@ -92,6 +101,7 @@ export function draftToDoc(d: SimulationDraft): TemporalSimulation {
     standard_metrics: d.standardMetrics,
     scope: d.scope,
     ...(d.scope === "local" && d.canvas !== undefined ? { canvas: d.canvas } : {}),
+    parameters: d.parameters,
   };
 }
 
@@ -105,6 +115,7 @@ export function docToDraft(doc: TemporalSimulation, newId: () => string): Simula
     standardMetrics: doc.standard_metrics ?? [...STANDARD_METRICS],
     scope: doc.scope ?? "global",
     ...(doc.canvas !== undefined ? { canvas: doc.canvas } : {}),
+    parameters: doc.parameters ?? [],
   };
 }
 
@@ -365,6 +376,7 @@ export const SIMULATION_REFERENCE = [SIMULATION_PRIMER, METRICS_PRIMER, "## Form
 /** A complete, valid definition used as the worked example (tested to parse). */
 export const EXAMPLE_DOC: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
+  parameters: [],
   standard_metrics: [...STANDARD_METRICS],
   scope: "global",
   timeline: {

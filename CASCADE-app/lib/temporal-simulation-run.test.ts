@@ -35,6 +35,7 @@ beforeEach(() => {
   canvas.addNodeToCanvas("a", "c1");
   sim().loadFromProject([{
     id: "s",
+    parameters: [],
     format: TEMPORAL_SIMULATION_FORMAT,
     standard_metrics: [...STANDARD_METRICS],
     scope: "global",

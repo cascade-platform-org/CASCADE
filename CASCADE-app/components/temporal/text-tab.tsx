@@ -30,7 +30,7 @@ import { Notices, SmallButton } from "./fields";
 
 export function TextTab() {
   const draft = useTemporalSimulationStore(
-    useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics, standardMetrics: s.standardMetrics, scope: s.scope, canvas: s.canvas })),
+    useShallow((s) => ({ timeline: s.timeline, profile: s.profile, metrics: s.metrics, standardMetrics: s.standardMetrics, scope: s.scope, canvas: s.canvas, parameters: s.parameters })),
   );
   const { explain, replaceDraft } = useTemporalSimulationStore.getState();
   const running = useTemporalSimulationStore((s) => s.running);

@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { FieldPathSchema } from "./field-path";
 import { AttributeOperationSchema, ElementFilterSchema } from "./attribute-operation";
+import { duplicateNames, FiniteNumberSchema, OperandNameSchema } from "./operand";
 
 export const CalendarUnitSchema = z.enum(["hour", "day", "week", "month", "quarter", "year", "none"]);
 export type CalendarUnit = z.infer<typeof CalendarUnitSchema>;
@@ -82,6 +83,16 @@ export const STANDARD_METRICS = StandardMetricSchema.options;
 
 export const TEMPORAL_SIMULATION_FORMAT = "cascade.temporal-simulation/v1";
 
+/** A named number the Simulation's operations, and the Events it fires, read (ADR-0019, revised 2026-10-12). */
+export const ParameterSchema = z
+  .object({
+    name: OperandNameSchema,
+    value: FiniteNumberSchema,
+    description: z.string().optional(),
+  })
+  .strict();
+export type Parameter = z.infer<typeof ParameterSchema>;
+
 export const SimulationScopeSchema = z.enum(["global", "local"]);
 export type SimulationScope = z.infer<typeof SimulationScopeSchema>;
 
@@ -97,10 +108,14 @@ const simulationFields = {
   scope: SimulationScopeSchema.default("global"),
   /** For `local`: the Canvas id the run propagates. */
   canvas: z.string().min(1).optional(),
+  /** Named numbers its operations read; a Parameter Sweep in Compare runs it over several values of one. */
+  parameters: z.array(ParameterSchema).default([]),
 };
 
-/** A local scope names its Canvas; a global one names none. */
-function canvasWithLocalScope(doc: { scope: SimulationScope; canvas?: string }, ctx: z.RefinementCtx) {
+/** A local scope names its Canvas; a global one names none; Parameter names are unique. */
+function canvasWithLocalScope(doc: { scope: SimulationScope; canvas?: string; parameters: readonly Parameter[] }, ctx: z.RefinementCtx) {
+  const repeated = duplicateNames(doc.parameters.map((p) => p.name));
+  if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["parameters"], message: `parameters: the name '${repeated[0]}' is used twice` });
   if (doc.scope === "local" && doc.canvas === undefined) ctx.addIssue({ code: "custom", path: ["canvas"], message: "a local scope needs `canvas`, the Canvas id it runs on" });
   if (doc.scope === "global" && doc.canvas !== undefined) ctx.addIssue({ code: "custom", path: ["canvas"], message: "`canvas` is only for a local scope" });
 }

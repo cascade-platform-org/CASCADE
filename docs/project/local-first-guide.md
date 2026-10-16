@@ -238,13 +238,36 @@ Propagation request leaves them out. A file with the older single
 | --- | --- |
 | `timeline.steps[]` | `label`, `unit` (`hour` \| `day` \| `week` \| `month` \| `quarter` \| `year` \| `none`), `repeat` (default 1) and `phases[]`. With a unit, each repeat advances the label (`2023-03-06`, `2023-03-07`, …); with `none` repeats are numbered `label#2`, `label#3`. |
 | `phases[]` | `advance_hours` (optional: hours that pass at the Phase's start, before its Events; backups count down), `events` (an Event id fires every period of its Step; `{event, every: N}` fires on the Step's periods N, 2N, …) and `propagate` (default `true`). |
-| `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021): `element` or `where`, `path`, `op`, `value`, and optional `of` (a field path on the same Element: the operand is `value` × the number held there). |
+| `profile` | Period label → Attribute Operations applied at the start of that period, in order (ADR-0021): `element` or `where`, `path`, `op`, `value`, and optional factors that multiply it into the operand: `parameter` (a Parameter's name), `series` (a Series' name, read for this Element at the period) and `of` (a field path on the same Element). A factor with no value refuses the write. |
+| `parameters[]` | `{name, value, description?}`: named numbers the profile and the Phase Events' operations read. Names are unique identifiers (`^[A-Za-z_][A-Za-z0-9_]{0,63}$`). |
 | `standard_metrics` | The standard Metrics the Run table shows before `metrics`: any of `operativity`, `coverage`, `stock_level`. All three when absent, and the Text tab writes it only when one is hidden. |
 | `scope`, `canvas` | The Propagation scope every Propagation of a run uses: `global` (default), or `local` with `canvas`, the Canvas id it propagates. |
 | `metrics[]` | Read-outs per period: `name`, `target` (an Element Filter), `path`, `read` (`state` \| `change`), optional `phase`, `aggregate`, optional `percentile` and `value_filter`. |
 
 A project saves only a definition that passes the schema; while an edit in the
 window does not, the window says why and the file keeps the last valid one.
+
+#### Series (`series`) and custom sheets (`sheets`)
+
+Optional, client data the Propagation request leaves out (ADR-0019, ADR-0023 §4a).
+
+```json
+"series": [{
+  "name": "worked_h", "unit": "h",
+  "rows": { "act-pulizie": { "2023-01": 21555, "2023-02": 21890 }, "*": { "2023-01": 0 } }
+}],
+"sheets": [{
+  "name": "Forecast", "writes": "S·worked_h",
+  "rows": [[{ "v": "element" }, { "v": "2023-01" }], [{ "v": "act-pulizie" }, { "v": 21555, "f": "XLOOKUP(A2,Nodes!A:A,Nodes!F:F)*1.1" }]]
+}]
+```
+
+| Field | Description |
+| --- | --- |
+| `series[].rows` | Row key (an Element id, or `*` for every Element without a row of its own) → period label → number. An operation reads the value at the exact label of the period being run; a missing one refuses the write. Names unique. |
+| `sheets[].rows` | Cells row by row from A1: `{v, f?}` (the value, and the formula in A1 syntax without `=`) or `null`. The spreadsheet app computes them; CASCADE never evaluates a formula. |
+| `sheets[].writes` | The model sheet whose columns the sheet uses and whose records it writes through Import changes (`Nodes`, `Events`, `Parameters`, `S·<series>`…); absent = analysis only. |
+| `sheets[].computed_at` | When the spreadsheet app last computed it, if known. |
 
 #### Node fields reference
 
@@ -265,7 +288,7 @@ window does not, the window says why and the file keeps the last valid one.
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes; an Event's Attribute Operations may write here. |
-| `provenance` | `{ origin: "llm_design", rationale?, confirmed }` | Set on what LLM Design adds (ADR-0022): the change's `why`, and whether a person has confirmed it. Shown as *unconfirmed* until then. The engine never reads it. |
+| `provenance` | `{ origin, rationale?, confirmed, source? }` | Set on what LLM Design (`origin: "llm_design"`, ADR-0022) or a Workbook import (`"spreadsheet"`, with `source: {file, sheet, row}`, ADR-0023) adds: why, and whether a person has confirmed it. Shown as *unconfirmed* until then. The engine never reads it. |
 
 #### Per-category dependency profile fields
 
@@ -303,7 +326,7 @@ Applied only if it worsens the current `functionality`.
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes. |
-| `provenance` | `{ origin, rationale?, confirmed }` | Same as on nodes. |
+| `provenance` | `{ origin, rationale?, confirmed, source? }` | Same as on nodes. |
 
 ---
 
@@ -386,8 +409,12 @@ The config file defines the functionality scale, categories, Events (Hazards and
 }
 ```
 
-An Event that LLM Design adds carries `provenance` too (same shape as on nodes):
-until `confirmed`, its `frequency_per_10y` is an LLM's estimate.
+An Event that LLM Design or a Workbook import adds carries `provenance` too (same
+shape as on nodes): until `confirmed`, its `frequency_per_10y` is an estimate.
+An Event's `attribute_operations` take the same operand factors as a profile
+(`parameter`, `series`, `of`), and `parameter_defaults` (`{name: number}`) gives
+the values its Parameters take when it is fired by hand; inside a Temporal
+Simulation run, the Simulation's value wins.
 
 The `global` graph type (referenced by `global_graph_type`) lists its constituent
 local graph types in `local_graph_types` instead of declaring `heuristics`

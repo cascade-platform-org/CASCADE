@@ -36,6 +36,7 @@ import { clearEventReversal } from "@/lib/scenario-baseline";
 import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry";
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
+import { useProjectDataStore } from "@/store/project-data-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { migrateProjectSimulations } from "@/lib/schemas/temporal-simulation";
 import { useNetworkStore } from "@/store/network-store";
@@ -104,7 +105,8 @@ export interface CanvasState {
   /** Currently visible Canvas. Null only before the first Canvas is created. */
   activeCanvasId: string | null;
   /** Project-level metadata (name, description, global graph type). */
-  projectMeta: { name: string; description?: string; global_graph_type?: string };
+  /** `created_at` is kept from the file (stamped on first load when absent); `updated_at` is written at save. */
+  projectMeta: { name: string; description?: string; global_graph_type?: string; created_at?: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -727,12 +729,13 @@ export const useCanvasStore = create<CanvasStore>()(
     toProject(): Project {
       const state = get();
       const { simulations } = useTemporalSimulationStore.getState();
+      const { series, sheets } = useProjectDataStore.getState();
       return {
         version: "2.0",
         meta: {
           name: state.projectMeta.name,
           description: state.projectMeta.description,
-          created_at: new Date().toISOString(),
+          created_at: state.projectMeta.created_at ?? new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
         global_graph_type: state.projectMeta.global_graph_type,
@@ -743,6 +746,8 @@ export const useCanvasStore = create<CanvasStore>()(
         scorecard: useScorecardStore.getState().scorecard,
         // Left out while there is none, so a project that never used one keeps its file unchanged.
         temporal_simulations: simulations.length > 0 ? simulations : undefined,
+        series: series.length > 0 ? series : undefined,
+        sheets: sheets.length > 0 ? sheets : undefined,
       };
     },
 
@@ -763,8 +768,10 @@ export const useCanvasStore = create<CanvasStore>()(
           name: project.meta.name,
           description: project.meta.description,
           global_graph_type: project.global_graph_type,
+          created_at: project.meta.created_at ?? new Date().toISOString(),
         };
       });
+      useProjectDataStore.getState().loadFromProject(project.series, project.sheets);
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
       useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
       // A working copy saved before the list existed reaches here unparsed.

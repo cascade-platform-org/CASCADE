@@ -25,7 +25,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { current, type Draft } from "immer";
 import { nanoid } from "nanoid";
-import { FIRST_SIMULATION_ID, STANDARD_METRICS, type CalendarUnit, type Timeline, type Phase, type SimulationScope, type Step, type StandardMetric, type StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { FIRST_SIMULATION_ID, STANDARD_METRICS, type CalendarUnit, type Timeline, type Phase, type SimulationScope, type Step, type StandardMetric, type StoredTemporalSimulation, type Parameter } from "@/lib/schemas/temporal-simulation";
 import { checkDoc, docToDraft, draftToDoc, type MetricEntry, type ProfileRow, type SimulationDraft } from "@/lib/temporal-simulation-text";
 import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
@@ -45,6 +45,8 @@ interface TemporalSimulationState {
   /** Every Propagation of a run uses it; `canvas` is the Canvas a local run propagates. */
   scope: SimulationScope;
   canvas?: string;
+  /** Named numbers its operations read (ADR-0019, revised 2026-10-12). */
+  parameters: Parameter[];
   /** `Project.temporal_simulations`: each Simulation's last draft that passed the schema. */
   simulations: StoredTemporalSimulation[];
   /** The Simulation the window edits and Run runs; not in `simulations` until its first valid edit. */
@@ -145,7 +147,7 @@ const STARTER_TIMELINE: Timeline = {
   ],
 };
 
-const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [], standardMetrics: [...STANDARD_METRICS], scope: "global" });
+const starterDraft = (): SimulationDraft => ({ timeline: structuredClone(STARTER_TIMELINE), profile: [], metrics: [], standardMetrics: [...STANDARD_METRICS], scope: "global", parameters: [] });
 
 const newSimulationId = () => `simulation-${nanoid(8)}`;
 
@@ -175,6 +177,7 @@ function showDraft(s: State, id: string, draft: SimulationDraft) {
   s.scope = draft.scope;
   if (draft.canvas === undefined) delete s.canvas;
   else s.canvas = draft.canvas;
+  s.parameters = draft.parameters;
   s.unsaved = [];
 }
 
@@ -288,6 +291,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       s.scope = d.scope;
       if (d.canvas === undefined) delete s.canvas;
       else s.canvas = d.canvas;
+      s.parameters = d.parameters;
     })),
     beginRun: (total) => set((s) => {
       leaveRun(s);

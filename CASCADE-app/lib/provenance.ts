@@ -9,7 +9,7 @@
  */
 
 import { deepEqual } from "@/lib/graph-diff";
-import { PROVENANCE_ORIGIN, type Provenance } from "@/lib/schemas/provenance";
+import type { Provenance } from "@/lib/schemas/provenance";
 import type { ProjectBundle } from "@/lib/file-io";
 
 /** True for an Element or Event LLM Design added that no person has confirmed yet. */
@@ -35,7 +35,7 @@ function withMark<T extends { provenance?: Provenance }>(x: T, provenance: Prove
 export function markAdded(before: ProjectBundle, after: ProjectBundle, rationale: ReadonlyMap<string, string> = new Map()): ProjectBundle {
   const mark = (key: string): Provenance => {
     const why = rationale.get(key);
-    return { origin: PROVENANCE_ORIGIN, ...(why ? { rationale: why } : {}), confirmed: false };
+    return { origin: "llm_design", ...(why ? { rationale: why } : {}), confirmed: false };
   };
   const settle = <T extends { provenance?: Provenance }>(x: T, was: T | undefined, key: string): T => {
     const target = was ? was.provenance : mark(key);

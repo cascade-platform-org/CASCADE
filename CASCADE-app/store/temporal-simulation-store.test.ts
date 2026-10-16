@@ -19,6 +19,7 @@ import { STANDARD_METRICS, TEMPORAL_SIMULATION_FORMAT, type StoredTemporalSimula
 
 const doc: StoredTemporalSimulation = {
   id: "week",
+  parameters: [],
   format: TEMPORAL_SIMULATION_FORMAT,
   standard_metrics: [...STANDARD_METRICS],
   scope: "global",
