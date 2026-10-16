@@ -59,7 +59,7 @@ export function rowOperation(row: ProfileRow, value: AttributeOperation["value"]
 }
 
 /** Rows → `{label: [operations]}`: a period's operations follow row order; labels in Timeline order, unknown ones after. */
-function rowsToProfile(rows: ProfileRow[], timeline: Timeline): Record<string, AttributeOperation[]> {
+export function rowsToProfile(rows: ProfileRow[], timeline: Timeline): Record<string, AttributeOperation[]> {
   const labels = new Set([...planTimeline(timeline).periods.map((p) => p.label), ...rows.flatMap((r) => Object.keys(r.values))]);
   const profile: Record<string, AttributeOperation[]> = {};
   for (const label of labels) {
@@ -74,7 +74,7 @@ function rowsToProfile(rows: ProfileRow[], timeline: Timeline): Record<string, A
  * same target, path and op when that keeps its period's order; otherwise it
  * starts a row. So rows → document gives back exactly the lists it came from.
  */
-function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () => string): ProfileRow[] {
+export function profileToRows(profile: Record<string, AttributeOperation[]>, newId: () => string): ProfileRow[] {
   const rows: ProfileRow[] = [];
   const keys: string[] = [];
   for (const [label, ops] of Object.entries(profile)) {

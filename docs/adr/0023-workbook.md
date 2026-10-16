@@ -35,10 +35,17 @@ otherwise the save is refused and names the JSON pointer that would be lost.
   `S·<name>` sheet per Series.
 - **Identity is the id; every reference is an id.** A read-only `~label` column sits beside a
   reference (`source`, `~source_label`) and is ignored on read.
-- **Maps keyed by Category, Event or property become columns**: `supply:<category>` (a rate) or
-  `supply:<category>.<field>` (a Stock), `throughput:<category>`, `dep:<category>.<field>`,
-  `vuln:<event>`, `prop:<key>`; on an edge, `capacity` or `capacity.<field>`. A key holding `.`,
-  `:` or a quote is written as a JSON string.
+- **A column is the field path of what it holds**, dotted, as an Attribute Operation writes it:
+  `label`, `supply_capacity.water.rate` (a Stock's field), `supply_capacity.water` (a plain rate),
+  `category_dependency_profiles.water.demand`, `vulnerability_levels.<event>`,
+  `properties.workers`, `capacity.level` on an edge. So a map keyed by Category, Event or property
+  is a column per key, and a field added to the schema later becomes a column with no codec
+  change. A segment holding `.`, `"` or `:` is written as a JSON string (`properties."a.b"`).
+  A column ending in `[]` holds a list of texts (`canvases[]`, `node_categories[]`, `path[]`);
+  a column starting with `~` is a label for reading. A field with more than 200 columns across
+  the records (a properties map that large) is one JSON column. *Revised at build (2026-10-16):*
+  the first draft named columns by short prefixes (`supply:`, `dep:`, `prop:`); the field path is
+  one rule for every field and reads exactly as the operations that write it.
 - **Time runs across**: the Profile has one row per operation and one column per period label,
   as the Timeline grid does; an `S·` sheet has one row per Element and one column per period.
 - **An empty cell is an absent value**, never 0. Lists are `; `-joined, paths `.`-joined, Rules
@@ -55,13 +62,24 @@ otherwise the save is refused and names the JSON pointer that would be lost.
 
 ### 3. What a spreadsheet does to a value is undone in one place
 
-`lib/workbook/cells.ts` reads every cell. Period labels and ids are written as text; a label a
-spreadsheet turned into a date is matched back to the known labels through its displayed text;
-an id that lost its leading zeros is an error naming the cell; `1,5` reads as 1.5 with a
-warning and `1.234,5` is an error; a formula's stored result is used and a formula without one
-is an error; `TRUE`, `false`, 1 and 0 typed in a yes/no column are accepted with a warning;
-`#N/A` is an error; an unknown column is ignored with a near-match suggestion. **Every problem
-names its cell** (`Nodes!F7`).
+Cells describe themselves: a number cell is a number, a true/false cell a boolean, a text cell a
+string, and what a plain cell cannot hold (null, an empty list, text that starts with `json:`,
+holds control characters or `_xHHHH_`, which spreadsheet files decode) is `json:` and the JSON.
+After reading, the schemas check the result and **repair what a spreadsheet typically does to a
+value**, with a warning on its cell: a number where text belongs is read as its displayed text
+(an id that lost its leading zeros is then named, with "type it as text"), a date in a text
+column as its displayed text, `1,5` or `"12"` where a number belongs as the number, `TRUE` or
+`false` typed as text where a yes/no belongs as the boolean. A formula's stored result is used;
+a formula without one, and an error value (`#N/A`), are refused. **Every problem names its
+cell** (`Nodes!F7 — …`).
+
+Measured with LibreOffice 24.2 re-saving what CASCADE wrote (*2026-10-16*): LibreOffice saves
+true/false as 1/0, so a 0 or 1 where the schema wants a boolean is read back with a note only;
+in a field that may hold a number, true/false or text (an operation's or profile's `value`,
+`properties`), true/false is therefore written in its `json:` form. LibreOffice also rounds a
+number to 15 significant digits when it saves `.xlsx` (a canvas position's last digits), so
+Import changes compares numbers to 15 significant digits. XLOOKUP needs LibreOffice 24.8 or
+later; VLOOKUP and INDEX/MATCH work everywhere.
 
 ### 4. Two actions: Open, and Import changes
 
