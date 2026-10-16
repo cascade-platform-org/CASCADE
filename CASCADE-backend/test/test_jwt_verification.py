@@ -39,7 +39,8 @@ def _token(private: Any, kid: str | None = "a", **claims: Any) -> str:
 
 @pytest.fixture
 def idp(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """An IdP whose JWKS holds key `a`; `state["jwks"]` changes what the next fetch returns."""
+    """An IdP whose JWKS holds key `a`; `state["jwks"]` changes what the next fetch returns.
+    The settings are pinned, so a developer's .env (JWT_AUDIENCE, say) does not leak in."""
     state: dict[str, Any] = {"jwks": {"keys": [JWK_A]}, "fetches": 0}
 
     async def fetch_jwks(force: bool = False) -> dict[str, Any]:
@@ -50,7 +51,7 @@ def idp(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         return {"issuer": ISSUER}
 
     settings = config.get_settings().model_copy(
-        update={"oidc_discovery_url": f"{ISSUER}/.well-known/openid-configuration", "oidc_client_id": CLIENT}
+        update={"oidc_discovery_url": f"{ISSUER}/.well-known/openid-configuration", "oidc_client_id": CLIENT, "jwt_audience": None, "jwt_algorithm": "RS256"}
     )
     monkeypatch.setattr(oauth2, "fetch_jwks", fetch_jwks)
     monkeypatch.setattr(oauth2, "fetch_oidc_config", fetch_oidc_config)
