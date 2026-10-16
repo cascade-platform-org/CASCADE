@@ -73,7 +73,7 @@ export function TextTab() {
       {notice}
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton onClick={() => { void copyText(text, "the Simulation text"); explain(EXPLAIN_COPY); }}><ClipboardCopy size={11} /> Copy</SmallButton>
-        <SmallButton onClick={() => { copyForLlm(() => llmContext(doc, useConfigStore.getState().config, useCanvasStore.getState()), "the Simulation with context for an LLM"); explain(EXPLAIN_COPY_LLM); }}>
+        <SmallButton onClick={() => { copyForLlm(() => llmContext(doc, useConfigStore.getState().config, useCanvasStore.getState(), useProjectDataStore.getState().series), "the Simulation with context for an LLM"); explain(EXPLAIN_COPY_LLM); }}>
           <Bot size={11} /> Copy with context for an LLM
         </SmallButton>
         <span className="flex-1" />

@@ -103,6 +103,9 @@ interface TemporalSimulationState {
   /** Write cells of one row; undefined empties a cell. */
   writeCells: (id: string, cells: [label: string, value: ProfileRow["values"][string] | undefined][]) => void;
   updateMetrics: (fn: (rows: MetricEntry[]) => void) => void;
+  updateParameters: (fn: (parameters: Parameter[]) => void) => void;
+  /** Rename a Parameter, and every profile row of this Simulation that reads it. Events keep their own names. */
+  renameParameter: (from: string, to: string) => void;
   /** Show or hide one standard Metric. */
   showStandardMetric: (metric: StandardMetric, shown: boolean) => void;
   /** Replace the whole draft — the Text tab's Apply. */
@@ -279,6 +282,11 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       if (row) for (const [label, value] of cells) { if (value === undefined) delete row.values[label]; else row.values[label] = value; }
     })),
     updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
+    updateParameters: (fn) => set(editing((s) => fn(s.parameters))),
+    renameParameter: (from, to) => set(editing((s) => {
+      for (const p of s.parameters) if (p.name === from) p.name = to;
+      for (const row of s.profile) if (row.parameter === from) row.parameter = to;
+    })),
     showStandardMetric: (metric, shown) => set(editing((s) => {
       // Kept in the standard order, so the table's columns never move.
       s.standardMetrics = STANDARD_METRICS.filter((m) => (m === metric ? shown : s.standardMetrics.includes(m)));

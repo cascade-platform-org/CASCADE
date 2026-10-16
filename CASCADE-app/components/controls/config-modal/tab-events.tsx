@@ -175,6 +175,9 @@ export function TabEvents() {
               <AttributeOperationsEditor
                 operations={ev.attribute_operations ?? []}
                 onChange={(next) => updateEvent(ev.id, { attribute_operations: next.length > 0 ? next : undefined })}
+                parameterDefaults={ev.parameter_defaults}
+                onChangeDefaults={(next) => updateEvent(ev.id, { parameter_defaults: next })}
+                handFireable={!ev.temporal_simulation_only}
               />
             </CollapsibleSection>
           </div>

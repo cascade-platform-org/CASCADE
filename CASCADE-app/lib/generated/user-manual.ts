@@ -2152,7 +2152,31 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " multiplies the value by what the same element holds in another field just before, for a rule on a remembered value: \"in June, pay half the balance saved in January\". An operation that cannot apply to an element (arithmetic on a value the element does not have, or a result out of range) is skipped for that element and reported when the Event fires; Save refuses an operation that is not filled in."
+                "text": " multiplies the value by what the same element holds in another field just before, for a rule on a remembered value: \"in June, pay half the balance saved in January\". "
+              },
+              {
+                "kind": "em",
+                "text": "× Parameter"
+              },
+              {
+                "kind": "text",
+                "text": " multiplies it by a named number a Temporal Simulation declares (§9.1), and "
+              },
+              {
+                "kind": "em",
+                "text": "× Series"
+              },
+              {
+                "kind": "text",
+                "text": " by project data at the period being run. Give the Event a "
+              },
+              {
+                "kind": "strong",
+                "text": "Parameter default"
+              },
+              {
+                "kind": "text",
+                "text": " for each Parameter it reads, used when you fire it yourself; inside a Temporal Simulation run the Simulation's value wins, and an operation that reads a Series applies only there. An operation that cannot apply to an element (arithmetic on a value the element does not have, or a result out of range) is skipped for that element and reported when the Event fires; Save refuses an operation that is not filled in."
               }
             ],
             [
@@ -3108,6 +3132,24 @@ export const USER_MANUAL: ManualDoc = {
                 [
                   {
                     "kind": "strong",
+                    "text": "Parameters."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " Named numbers this Temporal Simulation's operations read, above the grid: a policy's share or threshold, written once. Each shows how many operations read it; renaming one renames it in the profile. Names are letters, digits and "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "_"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", so they also work as spreadsheet headers."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
                     "text": "Profile."
                   },
                   {
@@ -3120,7 +3162,31 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": " value stays until the next one, shown greyed in the cells after it."
+                    "text": " value stays until the next one, shown greyed in the cells after it. A row can multiply its value by factors: "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "× Parameter"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "× Series"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " (a project table by element and period, read at the period being run) and "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "× of"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". A factor with no value (an undeclared Parameter, a Series with no value at that period) refuses the write for that element, and Check lists it before the run."
                   }
                 ],
                 [

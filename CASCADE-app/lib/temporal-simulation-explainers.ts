@@ -233,12 +233,25 @@ export function explainEventEvery(label: string, every: number, repeat: number):
 // Profile
 // ---------------------------------------------------------------------------
 
-export function explainProfileOp(label: string, op: AttributeOperation, matches: number | null): Explanation {
+/**
+ * What the operand is: the value, times each factor the operation names
+ * (ADR-0021, revised 2026-10-12). Given the Parameters' values, they are shown.
+ */
+export function describeOperand(op: Pick<AttributeOperation, "value" | "parameter" | "series" | "of">, parameters?: Readonly<Record<string, number>>): string {
+  const factors = [
+    op.parameter !== undefined ? `Parameter ${op.parameter}${parameters && Object.hasOwn(parameters, op.parameter) ? ` (${parameters[op.parameter]})` : ""}` : null,
+    op.series !== undefined ? `Series ${op.series} for this Element at the period` : null,
+    op.of !== undefined ? `the Element's ${op.of.join(" › ")}` : null,
+  ].filter((f): f is string => f !== null);
+  return factors.length === 0 ? String(op.value) : `${String(op.value)} × ${factors.join(" × ")}`;
+}
+
+export function explainProfileOp(label: string, op: AttributeOperation, matches: number | null, parameters?: Readonly<Record<string, number>>): Explanation {
   const target = describeTarget(op, matches);
   return {
     title: "Profile operation",
     lines: [
-      `At the start of period "${label}": ${describeOp(op.op)} (${String(op.value)}) at ${op.path.join(" › ") || "(path)"} on ${target}.`,
+      `At the start of period "${label}": ${describeOp(op.op)} (${describeOperand(op, parameters)}) at ${op.path.join(" › ") || "(path)"} on ${target}.`,
       op.where
         ? "The filter is resolved when the operation runs, against the model at that moment, so an Element added later is included."
         : "path is a list (supply_capacity › category › field) so it can reach a Stock field and survives dotted ids.",
@@ -256,10 +269,11 @@ function describeTarget(op: Pick<AttributeOperation, "element" | "where">, match
 }
 
 export function explainProfileRow(row: Omit<AttributeOperation, "value">, matches: number | null, periods: number): Explanation {
+  const factors = describeOperand({ ...row, value: "the cell's value" });
   return {
     title: "Profile row",
     lines: [
-      `One operation: ${describeOp(row.op)} at ${row.path.join(" › ") || "(path)"} on ${describeTarget(row, matches)}, at the start of each period whose cell holds a value (${periods} now).`,
+      `One operation: ${describeOp(row.op)} at ${row.path.join(" › ") || "(path)"} on ${describeTarget(row, matches)}, at the start of each period whose cell holds a value (${periods} now)${row.of || row.parameter || row.series ? `; the operand is ${factors}` : ""}.`,
       row.op === "set"
         ? "A written value stays until a later cell, an Event or another row changes it; an empty cell shows the value carried into it in grey."
         : "An empty cell applies nothing. → on a filled cell repeats its value into the following empty cells, so a monthly mul 1.02 compounds.",
@@ -326,6 +340,32 @@ function describeOp(op: string): string {
     case "at_least": return "at_least raises the current value to the value";
     default: return op;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Parameters
+// ---------------------------------------------------------------------------
+
+export const EXPLAIN_PARAMETERS: Explanation = {
+  title: "Parameters",
+  lines: [
+    "A Parameter is a named number this Temporal Simulation's operations read: name it in a profile row's × Parameter, or in an Event's operation, and change it here once.",
+    "The operand is the cell's value times each factor the row names (a Parameter, a Series at the period, a field of the Element), so a policy's number lives in one place.",
+    "An Event fired in a Phase reads the Simulation's value; fired by hand it uses the defaults it declares. Compare can sweep a Parameter over several values.",
+    "Names are letters, digits and _ (not starting with a digit), so they work as spreadsheet headers too. Renaming one renames it in this Simulation's profile rows.",
+  ],
+  refs: ["ADR-0019", "ADR-0021"],
+};
+
+export function explainParameter(name: string, value: number, reads: number): Explanation {
+  return {
+    title: `Parameter ${name || "(unnamed)"}`,
+    lines: [
+      `${name || "It"} = ${value}. ${reads === 0 ? "Nothing reads it yet: name it in a profile row's × Parameter or in an Event's operation." : `${reads} operation${reads === 1 ? "" : "s"} read${reads === 1 ? "s" : ""} it.`}`,
+      "An Event that reads it and declares a default uses this value inside a run, and its default only when fired by hand.",
+    ],
+    refs: ["ADR-0019"],
+  };
 }
 
 // ---------------------------------------------------------------------------

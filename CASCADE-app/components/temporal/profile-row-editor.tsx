@@ -10,9 +10,10 @@ import { useMemo, useState } from "react";
 import { Copy, Trash2, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { useProjectDataStore } from "@/store/project-data-store";
 import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
 import { firesEvery } from "@/lib/timeline-plan";
-import { valueFitsOp } from "@/lib/schemas/attribute-operation";
+import { hasFactors, valueFitsOp } from "@/lib/schemas/attribute-operation";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { NumberInput } from "@/components/ui/number-input";
 import { OpSelect, TargetModeToggle, TargetPicker } from "./operation-target";
@@ -24,7 +25,11 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
   const labels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
 
   function edit(patch: Partial<Omit<ProfileRow, "id" | "values">>) {
-    updateRow(row.id, (r) => { Object.assign(r, patch); });
+    updateRow(row.id, (r) => {
+      Object.assign(r, patch);
+      // An emptied factor leaves the row, so the document holds no `undefined` key.
+      for (const key of ["of", "parameter", "series"] as const) if (key in patch && patch[key] === undefined) delete r[key];
+    });
     describeRow({ ...row, ...patch });
   }
 
@@ -84,6 +89,8 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
         </Field>
       </div>
 
+      <FactorPickers row={row} onChange={edit} />
+
       <ValueWriter row={row} labels={labels} />
 
       <div className="mt-2">
@@ -94,6 +101,33 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
           onChange={(patch) => (patch.where ? updateRow(row.id, (r) => { r.where = patch.where; }) : edit(patch))}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * The row's other operand factors: a Parameter of this Simulation and a Series
+ * of the project. A name not (or no longer) declared stays selectable, so the
+ * Check can say what is missing instead of the choice vanishing.
+ */
+function FactorPickers({ row, onChange }: { row: ProfileRow; onChange: (patch: Partial<Pick<ProfileRow, "parameter" | "series">>) => void }) {
+  const parameters = useTemporalSimulationStore((s) => s.parameters);
+  const series = useProjectDataStore((s) => s.series);
+  const options = (names: string[], current: string | undefined) => (current && !names.includes(current) ? [...names, current] : names);
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <Field label="× Parameter (optional)">
+        <select className={inputCls} value={row.parameter ?? ""} onChange={(e) => onChange({ parameter: e.target.value || undefined })}>
+          <option value="">none</option>
+          {options(parameters.map((p) => p.name), row.parameter).map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </Field>
+      <Field label="× Series at the period (optional)">
+        <select className={inputCls} value={row.series ?? ""} onChange={(e) => onChange({ series: e.target.value || undefined })}>
+          <option value="">none</option>
+          {options(series.map((x) => x.name), row.series).map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </Field>
     </div>
   );
 }
@@ -122,13 +156,14 @@ function ValueWriter({ row, labels }: { row: ProfileRow; labels: string[] }) {
   const problem =
     parsed === undefined ? "Type the value first."
       : !valueFitsOp(row.op, parsed) ? `${row.op} needs a number.`
+        : hasFactors(row) && typeof parsed !== "number" ? "With a factor (× of, × Parameter, × Series), the value is a number."
         : span.length === 0 ? "The span holds no period." : null;
   const describe = () => explain(explainProfileWrite(row.op, value, span));
 
   return (
     <div className="mt-2 rounded-md bg-zinc-50 p-2 dark:bg-zinc-800/60" onFocus={(e) => { e.stopPropagation(); describe(); }}>
       <div className="grid grid-cols-[1.2fr_1fr_1fr_0.6fr_auto] items-end gap-2">
-        <Field label={`Value (${row.op})`}>
+        <Field label={`${hasFactors(row) ? "Factor" : "Value"} (${row.op})`}>
           <input className={inputCls} value={value} placeholder={row.op === "mul" ? "1.02" : "120"} onChange={(e) => setValue(e.target.value)} />
         </Field>
         <Field label="From">

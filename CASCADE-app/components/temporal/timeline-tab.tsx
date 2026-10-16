@@ -28,6 +28,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Field, SmallButton, inputCls, useEventLookup } from "./fields";
 import { TimelineGrid } from "./timeline-grid";
 import { ProfileRowEditor } from "./profile-row-editor";
+import { ParametersPanel } from "./parameters-panel";
 
 /** What "Create new Event" adds to Config → Events. */
 const NEW_EVENT: Omit<EventDefinition, "id"> = {
@@ -88,6 +89,8 @@ export function TimelineTab() {
       <Field label="Timeline name">
         <input className={inputCls} value={timeline.name} onChange={(e) => update((t) => { t.name = e.target.value; })} />
       </Field>
+
+      <ParametersPanel />
 
       <TimelineGrid selectedRow={row?.id ?? null} onSelectRow={setSelectedRow} />
       {row && <ProfileRowEditor row={row} onClose={() => setSelectedRow(null)} onSelect={setSelectedRow} />}

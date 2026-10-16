@@ -130,12 +130,15 @@ export function TextBackedInput({
   onFocus,
   placeholder,
   className,
+  list,
 }: {
   initial: string;
   onCommit: (text: string) => void;
   onFocus?: () => void;
   placeholder?: string;
   className?: string;
+  /** A datalist id offering suggestions. */
+  list?: string;
 }) {
   const [text, setText] = useState(initial);
   return (
@@ -143,6 +146,7 @@ export function TextBackedInput({
       className={className ?? inputCls}
       value={text}
       placeholder={placeholder}
+      list={list}
       onFocus={onFocus}
       onChange={(e) => { setText(e.target.value); onCommit(e.target.value); }}
     />

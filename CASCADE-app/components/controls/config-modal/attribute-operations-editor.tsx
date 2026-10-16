@@ -6,6 +6,11 @@
  * on every Element a filter selects. They run last, in this order, so the
  * order is editable.
  *
+ * The operand is the value times each factor an operation names (× of, ×
+ * Parameter, × Series; ADR-0021, revised 2026-10-12). An Event declares the
+ * defaults its Parameters take when it is fired by hand; inside a run, the
+ * Simulation's value wins.
+ *
  * Each row states its problem inline. Config's Save refuses while any row is
  * invalid (`operationProblems`): the Model Configuration travels with every
  * Propagation request and the backend validates it, so one half-written
@@ -18,6 +23,8 @@ import { AttributeOperationSchema, type AttributeOperation } from "@/lib/schemas
 import type { EventDefinition } from "@/lib/schemas/config";
 import { OpSelect, TargetModeToggle, TargetPicker } from "@/components/temporal/operation-target";
 import { TextBackedInput, formatPath, parsePath, parseValue } from "@/components/temporal/fields";
+import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { useProjectDataStore } from "@/store/project-data-store";
 
 /** Why an operation is invalid, or null. */
 function operationProblem(op: AttributeOperation): string | null {
@@ -39,13 +46,36 @@ export function operationProblems(events: readonly EventDefinition[]): string[] 
   );
 }
 
+/**
+ * What firing the Event by hand would refuse: a Parameter with no default, or a
+ * Series (it needs a period). Only a note: inside a run both can have values.
+ */
+export function handFiringNotes(event: Pick<EventDefinition, "attribute_operations" | "parameter_defaults" | "temporal_simulation_only">): string[] {
+  if (event.temporal_simulation_only) return [];
+  return (event.attribute_operations ?? []).flatMap((op, i) => [
+    ...(op.parameter && !Object.hasOwn(event.parameter_defaults ?? {}, op.parameter) ? [`Fired by hand, operation ${i + 1} is refused: Parameter ${op.parameter} has no default here.`] : []),
+    ...(op.series ? [`Fired by hand, operation ${i + 1} is refused: Series ${op.series} is read only inside a Temporal Simulation run.`] : []),
+  ]);
+}
+
 export function AttributeOperationsEditor({
   operations,
   onChange,
+  parameterDefaults,
+  onChangeDefaults,
+  handFireable,
 }: {
   operations: AttributeOperation[];
   onChange: (next: AttributeOperation[]) => void;
+  parameterDefaults: Record<string, number> | undefined;
+  onChangeDefaults: (next: Record<string, number> | undefined) => void;
+  /** False for a Temporal-Simulation-only Event, which is never fired by hand. */
+  handFireable: boolean;
 }) {
+  const parameterNames = useTemporalSimulationStore((s) => s.simulations).flatMap((x) => x.parameters.map((p) => p.name));
+  const seriesNames = useProjectDataStore((s) => s.series).map((x) => x.name);
+  const used = [...new Set(operations.map((op) => op.parameter).filter((n): n is string => !!n))];
+  const notes = handFiringNotes({ attribute_operations: operations, parameter_defaults: parameterDefaults, temporal_simulation_only: !handFireable });
   // The text inputs keep their own text, keyed by row position; a move or a removal
   // shifts positions, so it bumps the epoch and the inputs reload from the operations.
   const [epoch, setEpoch] = useState(0);
@@ -62,7 +92,7 @@ export function AttributeOperationsEditor({
     <div className="space-y-2">
       <p className="text-[11px] text-zinc-500">
         Each operation writes <code>op(current value, value)</code> at a field path, after the mutations, in this order.
-        With <em>× of</em>, the value is multiplied by what the same Element holds at that path just before.
+        The value is multiplied by each factor given: <em>× of</em> (what the same Element holds at that path just before), <em>× Parameter</em> (a named number) and <em>× Series</em> (project data at the period being run).
         Arithmetic on an absent value, or a result outside the field&apos;s range, is refused for that Element and reported — never clamped.
       </p>
 
@@ -81,10 +111,20 @@ export function AttributeOperationsEditor({
                 <button type="button" title="Remove" className="hover:text-red-600" onClick={() => restructure(operations.filter((_, k) => k !== i))}><Trash2 size={12} /></button>
               </div>
             </div>
-            <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-              × of the Element&apos;s
-              <TextBackedInput key={`${epoch}-${i}-of`} initial={op.of ? formatPath(op.of) : ""} placeholder="field path (optional)" onCommit={(t) => edit(i, { of: parsePath(t).length ? parsePath(t) : undefined })} />
-            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                <span className="shrink-0 whitespace-nowrap">× of</span>
+                <TextBackedInput key={`${epoch}-${i}-of`} initial={op.of ? formatPath(op.of) : ""} placeholder="the Element's field (optional)" onCommit={(t) => edit(i, { of: parsePath(t).length ? parsePath(t) : undefined })} />
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                <span className="shrink-0 whitespace-nowrap">× Parameter</span>
+                <TextBackedInput key={`${epoch}-${i}-parameter`} initial={op.parameter ?? ""} placeholder="name (optional)" list="cascade-parameter-names" onCommit={(t) => edit(i, { parameter: t.trim() || undefined })} />
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                <span className="shrink-0 whitespace-nowrap">× Series</span>
+                <TextBackedInput key={`${epoch}-${i}-series`} initial={op.series ?? ""} placeholder="name (optional)" list="cascade-series-names" onCommit={(t) => edit(i, { series: t.trim() || undefined })} />
+              </label>
+            </div>
             <TargetPicker target={op} onChange={(patch) => edit(i, patch)} />
             {problem && <p className="text-[11px] text-red-600 dark:text-red-400">{problem}</p>}
           </div>
@@ -98,6 +138,37 @@ export function AttributeOperationsEditor({
       >
         <Plus size={12} /> Add operation
       </button>
+
+      {used.length > 0 && (
+        <div className="rounded border border-zinc-200 p-2 dark:border-zinc-700">
+          <p className="mb-1 text-[11px] text-zinc-500">
+            Parameter defaults: the values used when this Event is fired by hand. Inside a Temporal Simulation run, the Simulation&apos;s value wins.
+          </p>
+          <div className="grid grid-cols-[auto_8rem] items-center gap-x-2 gap-y-1">
+            {used.map((name) => (
+              <label key={name} className="contents text-[11px]">
+                <span className="font-mono text-zinc-600 dark:text-zinc-300">{name}</span>
+                <TextBackedInput
+                  key={`${epoch}-default-${name}`}
+                  initial={parameterDefaults?.[name] === undefined ? "" : String(parameterDefaults[name])}
+                  placeholder="no default"
+                  onCommit={(t) => {
+                    const value = parseValue(t);
+                    const next = { ...(parameterDefaults ?? {}) };
+                    if (typeof value === "number" && Number.isFinite(value)) next[name] = value;
+                    else delete next[name];
+                    onChangeDefaults(Object.keys(next).length > 0 ? next : undefined);
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+      {notes.map((n) => <p key={n} className="text-[11px] text-amber-700 dark:text-amber-400">{n}</p>)}
+
+      <datalist id="cascade-parameter-names">{[...new Set(parameterNames)].map((n) => <option key={n} value={n} />)}</datalist>
+      <datalist id="cascade-series-names">{seriesNames.map((n) => <option key={n} value={n} />)}</datalist>
     </div>
   );
 }

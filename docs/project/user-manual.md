@@ -304,7 +304,12 @@ firing and normal propagation takes over.
    selects (kind, canvas, node type, category, part of the label, then tick
    the matches). *× of* multiplies the value by what the same element holds in
    another field just before, for a rule on a remembered value: "in June, pay
-   half the balance saved in January". An operation that cannot apply to an element (arithmetic on a
+   half the balance saved in January". *× Parameter* multiplies it by a named
+   number a Temporal Simulation declares (§9.1), and *× Series* by project data
+   at the period being run. Give the Event a **Parameter default** for each
+   Parameter it reads, used when you fire it yourself; inside a Temporal
+   Simulation run the Simulation's value wins, and an operation that reads a
+   Series applies only there. An operation that cannot apply to an element (arithmetic on a
    value the element does not have, or a result out of range) is skipped for
    that element and reported when the Event fires; Save refuses an operation
    that is not filled in.
@@ -471,10 +476,18 @@ on the active canvas, and saves it with the Temporal Simulation.
   in a Phase fires every period of its Step, or every N-th. An Event meant only
   for simulations (a repair, a settlement) is marked *Temporal Simulation only*
   in Config → Events, which keeps it off the Action Bar.
+- **Parameters.** Named numbers this Temporal Simulation's operations read,
+  above the grid: a policy's share or threshold, written once. Each shows how
+  many operations read it; renaming one renames it in the profile. Names are
+  letters, digits and `_`, so they also work as spreadsheet headers.
 - **Profile.** The grid under the Timeline: one row per value that changes over
   time (a demand, a supply), one cell per period. A row is an Attribute
   Operation (§4) with a value per period; a `set` value stays until the next
-  one, shown greyed in the cells after it.
+  one, shown greyed in the cells after it. A row can multiply its value by
+  factors: *× Parameter*, *× Series* (a project table by element and period,
+  read at the period being run) and *× of*. A factor with no value (an
+  undeclared Parameter, a Series with no value at that period) refuses the
+  write for that element, and Check lists it before the run.
 - **Metrics.** Your own read-outs, computed per period (§9.4).
 - **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
   *Copy with context for an LLM* adds a primer, the format and this project's

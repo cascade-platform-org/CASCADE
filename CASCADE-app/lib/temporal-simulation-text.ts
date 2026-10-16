@@ -125,10 +125,12 @@ export function docToDraft(doc: TemporalSimulation, newId: () => string): Simula
  * and `standard_metrics` only when one is hidden.
  */
 export function serializeDoc(doc: TemporalSimulation): string {
-  const { standard_metrics, ...rest } = doc;
+  const { standard_metrics, parameters, ...rest } = doc;
   const compact = {
     ...rest,
     ...(STANDARD_METRICS.every((m) => standard_metrics.includes(m)) ? {} : { standard_metrics }),
+    // Written only when there are some, so a definition without Parameters reads as before.
+    ...(parameters.length > 0 ? { parameters } : {}),
     timeline: {
       ...doc.timeline,
       steps: doc.timeline.steps.map((s) => ({
@@ -253,9 +255,16 @@ export const FORMAT_REFERENCE = `Format "${TEMPORAL_SIMULATION_FORMAT}" — JSON
         "path": ["supply_capacity", "<category>", "rate"],   // field path as a list
         "op": ${alternatives(OperationKindSchema.options)},        // at_most caps at value; at_least raises to value
         "value": number (string/bool only with "set"),
-        "of": ["properties", "opening"] }   // optional: the operand is value × the number this Element holds there
+        // optional factors; with any of them "value" is a number, and the operand is value × each factor:
+        "parameter": ParameterName,    // × a Parameter's value (declared in "parameters")
+        "series": SeriesName,          // × the project Series' value for this Element at the period being run
+        "of": ["properties", "opening"] }   // × the number this Element holds there, read just before
     ]
   },
+  "parameters": [                      // optional: named numbers the operations read; change one in one place
+    { "name": ParameterName,           // letters, digits and _, not starting with a digit
+      "value": number, "description": string (optional) }
+  ],
   "metrics": [
     { "name": string, "target": Filter, "path": [..],
       "read": "state"|"change",        // end-of-period value, or after − before
@@ -349,6 +358,9 @@ so on a Stock name the field: "halve a Stock's supply" is ["supply_capacity", "<
 
 Operations: set (write the value), add, mul, at_most (cap at the value), at_least (raise to the value).
 The last four need a number. An operation on a field the Element does not have is rejected (except set).
+The operand is value × each optional factor: "parameter" (a named number the Temporal Simulation declares, so
+a policy's share or threshold is written once), "series" (project data by Element and period, e.g. hours worked
+per month, read at the period being run), and "of". A factor with no value refuses that write, never 0.
 With "of": [path], the operand is value × the number the same Element holds at that path, read just before:
 a rule on a remembered value. Remember it with { "op": "set", "path": ["properties", "opening"], "of": [balance
 path], "value": 1 } in one period, then e.g. { "op": "add", "path": [balance path], "of": ["properties",
@@ -377,7 +389,7 @@ export const SIMULATION_REFERENCE = [SIMULATION_PRIMER, METRICS_PRIMER, "## Form
 /** A complete, valid definition used as the worked example (tested to parse). */
 export const EXAMPLE_DOC: TemporalSimulation = {
   format: TEMPORAL_SIMULATION_FORMAT,
-  parameters: [],
+  parameters: [{ name: "dry_season_factor", value: 0.8, description: "share of the springs' supply left from March" }],
   standard_metrics: [...STANDARD_METRICS],
   scope: "global",
   timeline: {
@@ -399,7 +411,7 @@ export const EXAMPLE_DOC: TemporalSimulation = {
       { where: { kind: "node", category: "water", node_type: "Source" }, path: ["supply_capacity", "water"], op: "set", value: 100 },
     ],
     "2024-03": [
-      { where: { kind: "node", category: "water", node_type: "Source" }, path: ["supply_capacity", "water"], op: "mul", value: 0.8 },
+      { where: { kind: "node", category: "water", node_type: "Source" }, path: ["supply_capacity", "water"], op: "mul", value: 1, parameter: "dry_season_factor" },
     ],
     "2024-04": [
       { where: { kind: "node", node_type: "Service", label_contains: "hospital" }, path: ["category_dependency_profiles", "water", "priority"], op: "set", value: 10 },
@@ -416,6 +428,8 @@ export function llmContext(
   doc: TemporalSimulation,
   config: Pick<ModelConfiguration, "events" | "categories" | "functionality_scale">,
   model: FilterableModel,
+  /** The project's Series: listed by name, unit, rows and labels, never their values. */
+  series: readonly Series[] = [],
 ): string {
   const { events } = config;
   const nodes = Object.values(model.nodes);
@@ -463,8 +477,16 @@ export function llmContext(
     `Categories: ${config.categories.map((c) => `${c.name} (${c.category_type})`).join(", ") || "(none)"}`,
     "Events (id — label — type — used in):",
     ...(events.length
-      ? events.map((e) => `- ${e.id} — ${e.label} — ${e.type} — ${e.temporal_simulation_only ? "Temporal Simulation only" : "scenario"}`)
+      ? events.map((e) => `- ${e.id} — ${e.label} — ${e.type} — ${e.temporal_simulation_only ? "Temporal Simulation only" : "scenario"}${e.parameter_defaults ? ` — Parameter defaults ${JSON.stringify(e.parameter_defaults)}` : ""}`)
       : ["- (none yet)"]),
+    "Series (name — unit — rows — period labels):",
+    ...(series.length
+      ? series.map((x) => {
+          const labels = [...new Set(Object.values(x.rows).flatMap((r) => Object.keys(r)))].sort();
+          const rows = Object.keys(x.rows);
+          return `- ${x.name} — ${x.unit ?? "no unit"} — ${rows.length} row${rows.length === 1 ? "" : "s"}${rows.includes("*") ? " (with a * row for every other Element)" : ""} — ${labels.length ? `${labels[0]} … ${labels[labels.length - 1]} (${labels.length})` : "no values"}${x.description ? ` — ${x.description}` : ""}`;
+        })
+      : ["- (none)"]),
     `Canvases: ${Object.values(model.canvases).map((c) => `${c.id} (${c.label})`).join(", ") || "(none)"}`,
     `Node types: ${nodeTypes.join(", ") || "(none)"}`,
     `${nodes.length} nodes, ${edges.length} edges.`,

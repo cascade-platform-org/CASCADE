@@ -23,7 +23,7 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import type { PlannedPeriod } from "@/lib/timeline-plan";
 import { filterConditions, filterLabel, type FilterableModel } from "@/lib/element-filter";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
-import { valueFitsOp, type AttributeOperation } from "@/lib/schemas/attribute-operation";
+import { hasFactors, valueFitsOp, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { EXPLAIN_STRIP, explainSelectPeriod } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { describeCell, describeRow, parseValue, useEventLookup, usePlan } from "./fields";
@@ -111,7 +111,7 @@ const ProfileCell = memo(function ProfileCell({
   const shown = has ? String(row.values[label]) : "";
   /** What is being typed; null = show the stored value. */
   const [draft, setDraft] = useState<string | null>(null);
-  const invalid = has && !valueFitsOp(row.op, row.values[label]);
+  const invalid = has && (!valueFitsOp(row.op, row.values[label]) || (hasFactors(row) && typeof row.values[label] !== "number"));
 
   function commit() {
     if (draft !== null && draft !== shown) onWrite(row.id, label, [cellValue(draft)]);
@@ -124,7 +124,7 @@ const ProfileCell = memo(function ProfileCell({
         aria-label={`${label} value`}
         value={draft ?? shown}
         placeholder={carried ?? "·"}
-        title={invalid ? `${row.op} needs a number` : undefined}
+        title={invalid ? (hasFactors(row) ? "with a factor, the value is a number" : `${row.op} needs a number`) : undefined}
         onFocus={() => { setDraft(shown); describeCell(row, label, carried); }}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -311,6 +311,9 @@ export function TimelineGrid({ selectedRow, onSelectRow }: { selectedRow: string
                   <span className="truncate text-[11px] text-zinc-700 dark:text-zinc-200">{targets[ri]}</span>
                   <span className="truncate text-[9px] text-zinc-400">
                     {row.op} · {row.path.join(" › ") || "(path)"}
+                    {row.parameter && <> · × {row.parameter}</>}
+                    {row.series && <> · × {row.series}[t]</>}
+                    {row.of && <> · × {row.of.join(" › ")}</>}
                     {Object.keys(row.values).length === 0 && <span className="text-amber-600 dark:text-amber-400"> · no value yet</span>}
                   </span>
                 </button>

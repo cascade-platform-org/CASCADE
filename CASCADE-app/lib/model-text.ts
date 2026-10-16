@@ -414,7 +414,10 @@ const EVENT_FIELDS = `## Event fields (config.events[])
 - "frequency_per_10y": expected occurrences in 10 years (0.1 = once a century); not meaningful for restorative
 - optional: "icon" (a Lucide icon name), "temporal_simulation_only" (true: used only in Temporal Simulations),
   "expected_recovery_time" (hours, disservice), "default_repair_time" (hours, hazard),
-  "attribute_operations" (operations applied when it fires; a restorative Event does only these)
+  "attribute_operations" (operations applied when it fires; a restorative Event does only these; an operation
+  may name factors "parameter" and "series" as in a Temporal Simulation profile),
+  "parameter_defaults" ({ "<parameter name>": number }: the values its Parameters take when fired by hand;
+  inside a Temporal Simulation run the Simulation's value wins)
 - which Elements a hazard or disservice hits is on the Elements: "vulnerability_levels": { "<event id>": levels lost }`;
 
 const ID_RULES = `## Ids and values
