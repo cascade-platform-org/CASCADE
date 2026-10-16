@@ -13,6 +13,7 @@ import { AlertTriangle, Check, ClipboardCopy, Bot, RotateCcw, Upload } from "luc
 import { nanoid } from "nanoid";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
+import { useProjectDataStore } from "@/store/project-data-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useUiStore } from "@/store/ui-store";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -49,7 +50,7 @@ export function TextTab() {
       explain(explainApply(parsed.errors.length, 0));
       return;
     }
-    const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState(), useConfigStore.getState().config.functionality_scale.length);
+    const warnings = docWarnings(parsed.doc, useConfigStore.getState().config.events, useCanvasStore.getState(), useConfigStore.getState().config.functionality_scale.length, useProjectDataStore.getState().series);
     if (apply) {
       const draft = docToDraft(parsed.doc, nanoid);
       replaceDraft(draft);

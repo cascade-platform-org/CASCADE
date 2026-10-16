@@ -15,6 +15,8 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { useProjectDataStore } from "@/store/project-data-store";
+import { parameterValues } from "@/lib/schemas/temporal-simulation";
 import { propagateSnapshot } from "@/lib/ephemeral-propagation";
 import { resetSnapshot } from "@/lib/scenario-baseline";
 import { planTimeline } from "@/lib/timeline-plan";
@@ -70,6 +72,8 @@ export async function startTemporalSimulationRun(): Promise<void> {
       profile: checked.doc.profile,
       events: config.config.events,
       n,
+      parameters: parameterValues(checked.doc),
+      series: useProjectDataStore.getState().series,
       propagate: (snapshot) => (ended() ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
       signal: mine.signal,
       onProgress: (done, label) => useTemporalSimulationStore.getState().setRunProgress(done, label),
@@ -182,6 +186,8 @@ export async function startComparison(ids: readonly string[]): Promise<void> {
         profile: checked.doc.profile,
         events: config.config.events,
         n,
+        parameters: parameterValues(checked.doc),
+        series: useProjectDataStore.getState().series,
         propagate: (snapshot) => (mine.signal.aborted ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
         signal: mine.signal,
         onProgress: (k, label) => useTemporalSimulationStore.getState().setCompareProgress(before + k, `${name} · ${label}`),

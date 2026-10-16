@@ -14,6 +14,7 @@ import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element
 import { planTimeline } from "@/lib/timeline-plan";
 import { dryRunProblems } from "@/lib/temporal-dry-run";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
+import type { Series } from "@/lib/schemas/series";
 import type { CapacityValue } from "@/lib/schemas/network";
 
 /**
@@ -183,7 +184,7 @@ export function checkDoc(raw: unknown): ParseResult {
  * what a run would refuse (`dryRunProblems`; `n` is the top Functionality
  * level). Reported; applying is still allowed.
  */
-export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], model: FilterableModel, n: number): string[] {
+export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], model: FilterableModel, n: number, series: readonly Series[] = []): string[] {
   const out: string[] = [];
   const eventIds = new Set(events.map((e) => e.id));
   const unknownEvents = new Set<string>();
@@ -218,7 +219,7 @@ export function docWarnings(doc: TemporalSimulation, events: EventDefinition[], 
     if (matchElements(m.target, model).length === 0) out.push(`metrics[${i}] ("${m.name}"): target matches no Element.`);
   });
   if (doc.canvas !== undefined && !(doc.canvas in model.canvases)) out.push(`canvas: no Canvas "${doc.canvas}"; a local run needs one.`);
-  out.push(...dryRunProblems(doc, events, model, n));
+  out.push(...dryRunProblems(doc, events, model, n, series));
   return out;
 }
 

@@ -93,6 +93,11 @@ export const ParameterSchema = z
   .strict();
 export type Parameter = z.infer<typeof ParameterSchema>;
 
+/** A Simulation's Parameters as the values a run reads, with overrides (a Parameter Sweep's) on top. */
+export function parameterValues(doc: { parameters: readonly Parameter[] }, overrides: Readonly<Record<string, number>> = {}): Record<string, number> {
+  return { ...Object.fromEntries(doc.parameters.map((p) => [p.name, p.value])), ...overrides };
+}
+
 export const SimulationScopeSchema = z.enum(["global", "local"]);
 export type SimulationScope = z.infer<typeof SimulationScopeSchema>;
 

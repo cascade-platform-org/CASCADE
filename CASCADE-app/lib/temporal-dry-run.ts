@@ -12,19 +12,28 @@
  * Stock levels, never which fields exist.
  */
 
-import { applyOperationTo, operationTargets, readPath } from "@/lib/attribute-operations";
+import { applyOperationTo, eventContext, operationTargets, readPath, type OperandContext } from "@/lib/attribute-operations";
 import { matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
 import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
 import type { EventDefinition } from "@/lib/schemas/config";
-import type { TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { parameterValues, type TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import type { Series } from "@/lib/schemas/series";
 
 type Rec = Record<string, unknown>;
 
 /** Elements named in a message: the first few by label, then how many more. */
 const some = (names: string[]) => `${names.slice(0, 3).join(", ")}${names.length > 3 ? ` and ${names.length - 3} more` : ""}`;
 
-export function dryRunProblems(doc: TemporalSimulation, events: readonly EventDefinition[], model: FilterableModel, n: number): string[] {
+export function dryRunProblems(
+  doc: TemporalSimulation,
+  events: readonly EventDefinition[],
+  model: FilterableModel,
+  n: number,
+  /** The project's Series, which operations read at each period. */
+  series: readonly Series[] = [],
+): string[] {
+  const parameters = parameterValues(doc);
   const state = new Map<string, Rec>();
   const current = (id: string): Rec => state.get(id) ?? ((model.nodes[id] ?? model.edges[id]) as unknown as Rec);
   const name = (id: string) => String((model.nodes[id]?.label ?? model.edges[id]?.id) ?? id);
@@ -32,10 +41,10 @@ export function dryRunProblems(doc: TemporalSimulation, events: readonly EventDe
   const refused = new Map<string, { names: string[]; first: string }>();
   const byId = new Map(events.map((e) => [e.id, e]));
 
-  const run = (source: string, ops: readonly AttributeOperation[], period: string) => {
+  const run = (source: string, ops: readonly AttributeOperation[], period: string, ctx: OperandContext) => {
     for (const op of ops) {
       for (const id of operationTargets(op, model)) {
-        const result = applyOperationTo(current(id), id in model.nodes ? "node" : "edge", op, n);
+        const result = applyOperationTo(current(id), id in model.nodes ? "node" : "edge", op, n, ctx);
         if ("element" in result) { state.set(id, result.element); continue; }
         const key = `${source}: ${result.error}`;
         const entry = refused.get(key) ?? { names: [], first: period };
@@ -46,11 +55,12 @@ export function dryRunProblems(doc: TemporalSimulation, events: readonly EventDe
   };
 
   for (const period of planTimeline(doc.timeline).periods) {
-    run("profile", doc.profile[period.label] ?? [], period.label);
+    const ctx: OperandContext = { period: period.label, parameters, series };
+    run("profile", doc.profile[period.label] ?? [], period.label, ctx);
     for (const phase of period.phases) {
       for (const eventId of phase.events) {
         const event = byId.get(eventId);
-        if (event?.attribute_operations) run(`Event "${event.label}"`, event.attribute_operations, period.label);
+        if (event?.attribute_operations) run(`Event "${event.label}"`, event.attribute_operations, period.label, eventContext(ctx, event));
       }
     }
   }

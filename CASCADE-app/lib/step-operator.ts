@@ -37,6 +37,7 @@ import { integrateStocks, type StockOutcome } from "@/lib/stock-integration";
 import type { PropagationResult } from "@/lib/schemas/propagation";
 import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
 import type { EventDefinition } from "@/lib/schemas/config";
+import type { Series } from "@/lib/schemas/series";
 import type { Edge, GraphDiff, GraphSnapshot, Node } from "@/lib/schemas/network";
 
 /** What one Propagation returns to the step operator. */
@@ -71,6 +72,10 @@ export interface RunInput {
   events: readonly EventDefinition[];
   /** Top of the Functionality scale. */
   n: number;
+  /** Parameter name → value: the Simulation's, with a Parameter Sweep's override applied. */
+  parameters?: Readonly<Record<string, number>>;
+  /** The project's Series, read at each period's label. */
+  series?: readonly Series[];
   /** One engine call: the snapshot after a Propagation, and what it delivered. */
   propagate: (snapshot: GraphSnapshot) => Promise<Propagated>;
   signal?: AbortSignal;
@@ -135,9 +140,11 @@ export async function runTimeline(input: RunInput): Promise<RunRecord> {
   let done = 0;
   let label = "";
 
+  const parameters = input.parameters ?? {};
+  const series = input.series ?? [];
   const applyAll = (snapshot: GraphSnapshot, events: EventDefinition[], report: boolean): GraphSnapshot =>
     events.reduce((s, event) => {
-      const applied = applyEventToSnapshot(s, event, n);
+      const applied = applyEventToSnapshot(s, event, n, { period: label, parameters, series });
       if (report) warnings.push(...applied.warnings.map((w) => `${label}: ${w}`));
       return applied.snapshot;
     }, snapshot);

@@ -31,7 +31,7 @@
 
 import { nanoid } from "nanoid";
 
-import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
+import { applyOperationTo, eventContext, NO_CONTEXT, operationTargets, type OperandContext } from "@/lib/attribute-operations";
 import { canvasesById, filterLabel } from "@/lib/element-filter";
 import { DIFF_ABSENT } from "@/lib/schemas/network";
 import type { Node, Edge, GraphSnapshot } from "@/lib/schemas/network";
@@ -215,6 +215,8 @@ export function applyEventToSnapshot(
   snapshot: GraphSnapshot,
   event: EventDefinition,
   n: number,
+  /** The run's period, Parameters and Series; absent when fired by hand (its own defaults, no period). */
+  ctx: OperandContext = NO_CONTEXT,
 ): EventApplication {
   const writer = new ElementWriter(snapshot);
   const reversal: MutationReversal = {};
@@ -284,12 +286,13 @@ export function applyEventToSnapshot(
   const operations = event.attribute_operations ?? [];
   if (operations.length > 0) {
     const canvases = canvasesById(snapshot.canvases);
+    const operandContext = eventContext(ctx, event);
     for (const op of operations) {
       for (const id of operationTargets(op, { ...writer.registries(), canvases })) {
         const el = writer.current(id);
         if (!el) continue;
         const kind = id in snapshot.nodes ? "node" : "edge";
-        const out = applyOperationTo(el as unknown as Record<string, unknown>, kind, op, n);
+        const out = applyOperationTo(el as unknown as Record<string, unknown>, kind, op, n, operandContext);
         if ("error" in out) {
           warnings.push(`${event.label} → ${filterLabel(id, writer.registries())}: ${out.error}`);
           continue;

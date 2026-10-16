@@ -525,7 +525,8 @@ export const useCanvasStore = create<CanvasStore>()(
       // inverse; the entry's Graph Diff records the same thing in the same shape
       // for EVERY update type, and the Scenario Baseline reads it (ADR-0016).
       // It is still READ off entries older builds wrote — see clearEvent.
-      const { snapshot, warnings } = applyEventToSnapshot(get().toGraphSnapshot(), event, n);
+      // Fired by hand: the Event's own Parameter defaults and no period, so an operation reading a Series is refused.
+      const { snapshot, warnings } = applyEventToSnapshot(get().toGraphSnapshot(), event, n, { parameters: {}, series: useProjectDataStore.getState().series });
       withHistory(
         get,
         () => set((draft) => {
