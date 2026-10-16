@@ -92,21 +92,6 @@ export function setIn(root: JsonObject, path: readonly string[], value: Json | u
   }
 }
 
-/** Deep equality of JSON values: arrays in order, object keys in any order; an undefined key equals an absent one. */
-export function jsonEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((x, i) => jsonEqual(x, b[i]));
-  }
-  if (isObject(a) && isObject(b)) {
-    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-    for (const k of keys) if (!jsonEqual(own(a, k), own(b, k))) return false;
-    return true;
-  }
-  return typeof a === "number" && typeof b === "number" ? Object.is(a + 0, b + 0) : false;
-}
-
 /** JSON with sorted keys and undefined keys left out: equal values give equal text. */
 function canonical(v: unknown): string {
   if (v === undefined) return "undefined";

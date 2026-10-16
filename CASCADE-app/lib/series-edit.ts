@@ -9,6 +9,7 @@ import { ALL_ELEMENTS, type Series } from "@/lib/schemas/series";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import type { EventDefinition } from "@/lib/schemas/config";
 import type { AttributeOperation } from "@/lib/schemas/attribute-operation";
+import { withDecimalPoint } from "@/lib/decimal-comma";
 
 /**
  * A block pasted from a spreadsheet: rows on newlines, cells on tabs (or `;`).
@@ -21,7 +22,7 @@ export function parseBlock(text: string): { cells: (number | null)[][] } | { err
   for (const [r, line] of lines.entries()) {
     const row: (number | null)[] = [];
     for (const [c, raw] of line.split(/\t|;/).entries()) {
-      const t = raw.trim().replace(/^([+-]?\d+),(\d+)$/, "$1.$2");
+      const t = withDecimalPoint(raw);
       if (t === "") { row.push(null); continue; }
       const n = Number(t);
       if (!Number.isFinite(n)) return { error: `row ${r + 1}, column ${c + 1}: "${raw.trim()}" is not a number` };
@@ -48,6 +49,9 @@ export function writeBlock(series: Series, rowKeys: readonly string[], labels: r
   });
   return { ...series, rows };
 }
+
+/** Every period label the Series holds a value for, in first-seen order. */
+export const seriesLabels = (series: { rows: Record<string, Record<string, unknown>> }): string[] => [...new Set(Object.values(series.rows).flatMap((r) => Object.keys(r)))];
 
 /** For each row, the labels of `labels` it has no value for: what a run reading it would refuse. */
 export function seriesGaps(series: Series, labels: readonly string[]): Map<string, string[]> {

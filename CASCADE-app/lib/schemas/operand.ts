@@ -27,3 +27,11 @@ export function duplicateNames(names: readonly string[]): string[] {
   }
   return repeated;
 }
+
+/** A name not yet taken: `<prefix>_1`, `<prefix>_2`… */
+export function freshOperandName(prefix: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  let k = 1;
+  while (used.has(`${prefix}_${k}`)) k++;
+  return `${prefix}_${k}`;
+}

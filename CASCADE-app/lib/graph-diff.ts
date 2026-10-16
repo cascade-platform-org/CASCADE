@@ -78,8 +78,9 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   const ao = a as Record_;
   const bo = b as Record_;
   const keys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
+  // Own keys only: a key named like an inherited one (valueOf, toString) is a field.
   for (const k of keys) {
-    if (!deepEqual(ao[k], bo[k])) return false;
+    if (!deepEqual(Object.hasOwn(ao, k) ? ao[k] : undefined, Object.hasOwn(bo, k) ? bo[k] : undefined)) return false;
   }
   return true;
 }

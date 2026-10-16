@@ -26,8 +26,8 @@ describe("the runs Compare makes", () => {
     const sims = [sim("a", "Art. 8"), sim("b", "Twice")];
     expect(compareRequests(sims, ["b"], { simulationId: "a", parameter: "share", values: [0.4, 0.6] })).toEqual([
       { simulationId: "b", name: "Twice" },
-      { simulationId: "a", name: "Art. 8 · share = 0.4", overrides: { share: 0.4 }, sweep: { parameter: "share", value: 0.4 } },
-      { simulationId: "a", name: "Art. 8 · share = 0.6", overrides: { share: 0.6 }, sweep: { parameter: "share", value: 0.6 } },
+      { simulationId: "a", name: "Art. 8 · share = 0.4", sweep: { parameter: "share", value: 0.4 } },
+      { simulationId: "a", name: "Art. 8 · share = 0.6", sweep: { parameter: "share", value: 0.6 } },
     ]);
   });
 
@@ -37,7 +37,7 @@ describe("the runs Compare makes", () => {
       profile: { "2024-01": [op, { ...op, parameter: undefined }] },
       timeline: { name: "A", steps: [{ label: "2024-01", unit: "month", repeat: 1, phases: [{ events: [{ event: "pay", every: 1 }], propagate: false }] }] },
     });
-    expect(parameterReads(s, "share", (id) => (id === "pay" ? [op, op] : []))).toBe(3);
-    expect(parameterReads(s, "other", () => [])).toBe(0);
+    expect(parameterReads(Object.values(s.profile).flat(), s.timeline.steps, "share", (id) => (id === "pay" ? [op, op] : []))).toBe(3);
+    expect(parameterReads(Object.values(s.profile).flat(), s.timeline.steps, "other", () => [])).toBe(0);
   });
 });

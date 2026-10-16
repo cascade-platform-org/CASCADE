@@ -1,8 +1,8 @@
 """Names and numbers an Attribute Operation's operand reads (ADR-0021, revised
 2026-10-12): Parameter and Series names, and the finite numbers they hold.
 
-A name is an identifier, so it works unchanged as a sheet header
-(`param:<name>`), a sheet title (`S·<name>`) and in LLM text. Mirrors
+A name is an identifier, so it works unchanged as a column header, a
+sheet title (`S·<name>`) and in LLM text. Mirrors
 `CASCADE-app/lib/schemas/operand.ts`.
 """
 

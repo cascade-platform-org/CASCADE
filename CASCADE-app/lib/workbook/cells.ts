@@ -59,6 +59,29 @@ const isPlainList = (v: unknown): v is string[] =>
 /** A value as its JSON form, `json:` and the JSON. */
 export const writeJson = (v: Json, blobs: Blobs): Cell => textOrBlob(JSON_PREFIX + safeJson(v), blobs);
 
+/**
+ * A value of a field that may hold a number, true/false or text (a property, a profile value):
+ * its true/false is written in its `json:` form, because LibreOffice saves a true/false cell as
+ * the number 1/0 with nothing in the file to say which was meant (measured with LibreOffice 24.2).
+ */
+export const writeFreeValue = (v: Json, blobs: Blobs): Cell => (typeof v === "boolean" ? writeJson(v, blobs) : writeValue(v, blobs));
+
+/** A text as one cell of the hidden `_cascade` sheet: as it is, or in its `json:` form when a spreadsheet would change it. */
+export const writeText = (s: string): Cell => ({ v: needsJson(s) ? JSON_PREFIX + safeJson(s) : s, text: true });
+
+/** A `_cascade` cell's text, as `writeText` wrote it. */
+export function readText(c: Cell | null | undefined): string {
+  if (!c || c.v === null) return "";
+  if (typeof c.v !== "string") return String(c.v);
+  if (!c.v.startsWith(JSON_PREFIX)) return c.v;
+  try {
+    const parsed: unknown = JSON.parse(c.v.slice(JSON_PREFIX.length));
+    return typeof parsed === "string" ? parsed : c.v;
+  } catch {
+    return c.v;
+  }
+}
+
 /** A value as a cell; `list` for a list column. */
 export function writeValue(v: Json, blobs: Blobs, list = false): Cell {
   if (typeof v === "number" || typeof v === "boolean") return { v };
@@ -68,7 +91,7 @@ export function writeValue(v: Json, blobs: Blobs, list = false): Cell {
 }
 
 export type ReadResult =
-  | { value: Json; date?: boolean; text?: string }
+  | { value: Json }
   | { absent: true }
   | { error: string };
 
@@ -77,8 +100,7 @@ export function readValue(c: Cell | null | undefined, blobs: readonly string[], 
   if (!c || (c.v === null && c.f === undefined)) return { absent: true };
   if (c.error) return { error: `the cell holds an error (${c.w ?? "#ERROR"})` };
   if (c.v === null) return { error: "a formula without a stored value: open and save the file in a spreadsheet app, or type the value" };
-  if (typeof c.v === "boolean") return { value: c.v };
-  if (typeof c.v === "number") return { value: c.v, ...(c.date ? { date: true, text: c.w } : {}), ...(c.w !== undefined ? { text: c.w } : {}) };
+  if (typeof c.v !== "string") return { value: c.v };
   let s = c.v;
   if (s.startsWith(BLOB_PREFIX)) {
     const n = Number(s.slice(BLOB_PREFIX.length));

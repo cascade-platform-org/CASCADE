@@ -5,16 +5,16 @@
  * of runs Compare makes.
  */
 
-import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import type { StoredTemporalSimulation, Timeline } from "@/lib/schemas/temporal-simulation";
+import { withDecimalPoint } from "@/lib/decimal-comma";
 
 /** The most values one sweep runs: each is a whole run. */
 export const MAX_SWEEP_VALUES = 50;
 
-/** One run Compare makes: a saved Simulation, with Parameter overrides when it is one value of a sweep. */
+/** One run Compare makes: a saved Simulation, with its swept Parameter's value when it is one value of a sweep. */
 export interface CompareRequest {
   simulationId: string;
   name: string;
-  overrides?: Record<string, number>;
   sweep?: { parameter: string; value: number };
 }
 
@@ -25,7 +25,7 @@ export interface SweepSpec {
 }
 
 const round = (x: number) => Number(x.toFixed(10));
-const number = (t: string) => Number(t.trim().replace(/^([+-]?\d+),(\d+)$/, "$1.$2"));
+const number = (t: string) => Number(withDecimalPoint(t));
 
 /**
  * "0.1, 0.2; 0.3" (a list: commas, semicolons or spaces; "0,5 0,7" reads
@@ -64,16 +64,19 @@ export function compareRequests(simulations: readonly StoredTemporalSimulation[]
   const swept = sweep && simulations.find((s) => s.id === sweep.simulationId);
   if (sweep && swept) {
     for (const value of sweep.values) {
-      out.push({ simulationId: swept.id, name: `${name(swept)} · ${sweep.parameter} = ${value}`, overrides: { [sweep.parameter]: value }, sweep: { parameter: sweep.parameter, value } });
+      out.push({ simulationId: swept.id, name: `${name(swept)} · ${sweep.parameter} = ${value}`, sweep: { parameter: sweep.parameter, value } });
     }
   }
   return out;
 }
 
-/** How many operations of a Simulation's run read a Parameter: its profile, and the Events its Phases fire. */
-export function parameterReads(simulation: StoredTemporalSimulation, parameter: string, eventOps: (id: string) => readonly { parameter?: string }[]): number {
-  const profile = Object.values(simulation.profile).flat().filter((op) => op.parameter === parameter).length;
-  const fired = new Set(simulation.timeline.steps.flatMap((s) => s.phases.flatMap((p) => p.events.map((e) => e.event))));
+/**
+ * How many operations of a Simulation's run read a Parameter: its profile's (`profile`, saved
+ * operations or the draft's rows), and those of the Events its Phases fire.
+ */
+export function parameterReads(profile: readonly { parameter?: string }[], steps: Timeline["steps"], parameter: string, eventOps: (id: string) => readonly { parameter?: string }[]): number {
+  const own = profile.filter((op) => op.parameter === parameter).length;
+  const fired = new Set(steps.flatMap((s) => s.phases.flatMap((p) => p.events.map((e) => e.event))));
   const events = [...fired].reduce((n, id) => n + eventOps(id).filter((op) => op.parameter === parameter).length, 0);
-  return profile + events;
+  return own + events;
 }

@@ -30,10 +30,13 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
   return rest;
 }
 
-/** Temporal Simulations, Series and custom sheets are client-side input (ADR-0019, ADR-0023); the engine never reads them. */
+/**
+ * The project without what only the client reads: Temporal Simulations, Series and custom sheets
+ * (ADR-0019, ADR-0023) left out, update history and Scorecard emptied (the schema requires them).
+ */
 function withoutClientData(project: Project): Project {
   const { temporal_simulations: _simulations, series: _series, sheets: _sheets, ...rest } = project;
-  return rest;
+  return { ...rest, update_history: [], scorecard: [] };
 }
 
 type StorageMarker = NonNullable<PropagationRequest["storage"]>;
@@ -91,8 +94,6 @@ export function buildPropagationPayload({
       project: {
         ...withoutClientData(project),
         canvases: project.canvases.map(stripUnusedInpContent),
-        update_history: [],
-        scorecard: [],
       },
       config,
       scope,
@@ -142,9 +143,6 @@ export function buildPropagationPayload({
     nodes: trimmedNodes,
     edges: trimmedEdges,
     canvases: [trimmedCanvas],
-    // update_history and scorecard are not needed by the engine
-    update_history: [],
-    scorecard: [],
   };
 
   return {

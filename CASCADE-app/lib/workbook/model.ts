@@ -56,4 +56,8 @@ export interface Problem {
   message: string;
 }
 
+/** A header cell's text: a date as the spreadsheet showed it (a period label it turned into a date). */
+export const cellText = (c: Cell | null | undefined): string =>
+  !c || c.v === null ? "" : typeof c.v === "string" ? c.v : c.date && c.w ? c.w : String(c.v);
+
 export const textCell = (v: string): Cell => ({ v, text: true });

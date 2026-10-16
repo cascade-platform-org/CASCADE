@@ -11,32 +11,24 @@ import { Plus, Trash2 } from "lucide-react";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useConfigStore } from "@/store/config-store";
 import { EXPLAIN_PARAMETERS, explainParameter } from "@/lib/temporal-simulation-explainers";
-import { OPERAND_NAME_PATTERN } from "@/lib/schemas/operand";
+import { OPERAND_NAME_PATTERN, freshOperandName } from "@/lib/schemas/operand";
+import { parameterReads } from "@/lib/temporal-sweep";
 import { NumberInput } from "@/components/ui/number-input";
 import { cn } from "@/lib/utils";
 import { SmallButton, TextBackedInput, inputCls } from "./fields";
 
-/** A name not yet used: param_1, param_2… */
-const freshName = (taken: ReadonlySet<string>) => {
-  let k = 1;
-  while (taken.has(`param_${k}`)) k++;
-  return `param_${k}`;
-};
-
 export function ParametersPanel() {
   const parameters = useTemporalSimulationStore((s) => s.parameters);
   const profile = useTemporalSimulationStore((s) => s.profile);
+  const steps = useTemporalSimulationStore((s) => s.timeline.steps);
   const events = useConfigStore((s) => s.config.events);
   const { explain, updateParameters, renameParameter } = useTemporalSimulationStore.getState();
 
-  // How many operations read each name: this Simulation's profile rows, and every Event's operations.
+  // How many operations read each name: this Simulation's profile rows, and the Events its Phases fire.
   const reads = useMemo(() => {
-    const count = new Map<string, number>();
-    const add = (name: string | undefined) => { if (name) count.set(name, (count.get(name) ?? 0) + 1); };
-    profile.forEach((r) => add(r.parameter));
-    events.forEach((e) => e.attribute_operations?.forEach((op) => add(op.parameter)));
-    return count;
-  }, [profile, events]);
+    const eventOps = (id: string) => events.find((e) => e.id === id)?.attribute_operations ?? [];
+    return new Map(parameters.map((p) => [p.name, parameterReads(profile, steps, p.name, eventOps)]));
+  }, [parameters, profile, steps, events]);
 
   return (
     <section className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" onFocus={() => explain(EXPLAIN_PARAMETERS)}>
@@ -46,7 +38,7 @@ export function ParametersPanel() {
         <span className="flex-1" />
         <SmallButton
           onClick={() => {
-            const name = freshName(new Set(parameters.map((p) => p.name)));
+            const name = freshOperandName("param", parameters.map((p) => p.name));
             updateParameters((ps) => { ps.push({ name, value: 0 }); });
             explain(explainParameter(name, 0, 0));
           }}

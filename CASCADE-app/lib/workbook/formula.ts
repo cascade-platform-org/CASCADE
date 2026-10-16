@@ -37,7 +37,8 @@ function segments(f: string): { text: string; quoted: boolean }[] {
   return out;
 }
 
-const unquoteExcel = (s: string) => (s.startsWith("'") ? s.slice(1, -1).replace(/''/g, "'") : s);
+/** A sheet name without its quotes; quoted names double a quote inside, in both syntaxes. */
+const unquote = (s: string) => (s.startsWith("'") ? s.slice(1, -1).replace(/''/g, "'") : s);
 const quoteOds = (name: string) => (/^[A-Za-z_][\w]*$/.test(name) ? name : `'${name.replace(/'/g, "''")}'`);
 const quoteExcel = (name: string) => (/^[A-Za-z_][\w.]*$/.test(name) && !/^[A-Z]{1,3}\d+$/.test(name) ? name : `'${name.replace(/'/g, "''")}'`);
 
@@ -47,7 +48,7 @@ export function excelToOds(f: string): string {
     if (quoted) return text;
     const refs = text.replace(EXCEL_REF, (_m, sheet: string | undefined, ref: string) => {
       const [a, b] = ref.split(":");
-      const where = sheet ? `$${quoteOds(unquoteExcel(sheet.slice(0, -1)))}` : "";
+      const where = sheet ? `$${quoteOds(unquote(sheet.slice(0, -1)))}` : "";
       return `[${where}.${a}${b !== undefined ? `:.${b}` : ""}]`;
     });
     return refs.replace(/;/g, "|").replace(/,/g, ";");
@@ -65,7 +66,7 @@ export function odsToExcel(f: string): string {
     if (quoted) return text;
     const refs = text.replace(ODS_REF, (_m, sheet: string | undefined, a: string, _sheet2: string | undefined, b: string | undefined) => {
       const name = sheet ? sheet.replace(/^\$/, "") : "";
-      const prefix = name ? `${quoteExcel(name.startsWith("'") ? name.slice(1, -1).replace(/''/g, "'") : name)}!` : "";
+      const prefix = name ? `${quoteExcel(unquote(name))}!` : "";
       return `${prefix}${a}${b !== undefined ? `:${b}` : ""}`;
     });
     return refs.replace(/COM\.MICROSOFT\./g, "").replace(/;/g, ",").replace(/\|/g, ";");

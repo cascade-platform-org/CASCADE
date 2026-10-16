@@ -46,7 +46,8 @@ export async function writeBytes(model: WorkbookModel, kind: WorkbookKind): Prom
     X.utils.book_append_sheet(wb, ws, sheet.name);
   }
   wb.Workbook = { Sheets: model.sheets.map((s) => ({ Hidden: s.hidden ? 1 : 0 })) };
-  const bytes = new Uint8Array(X.write(wb, { type: "array", bookType: kind, compression: true }) as ArrayBuffer);
+  // An .ods is re-zipped by patchOds, which compresses it then.
+  const bytes = new Uint8Array(X.write(wb, { type: "array", bookType: kind, compression: kind === "xlsx" }) as ArrayBuffer);
   return kind === "ods" ? patchOds(bytes, formulas, model.sheets.filter((s) => s.hidden).map((s) => s.name)) : bytes;
 }
 
@@ -87,16 +88,18 @@ async function patchOds(bytes: Uint8Array, formulas: readonly string[], hidden: 
 export async function readBytes(bytes: Uint8Array): Promise<WorkbookModel> {
   const X = await import("xlsx");
   const wb = X.read(bytes, { type: "array", cellFormula: true, cellText: true, cellNF: true, cellDates: false });
-  const ods = await readOdsCells(bytes);
+  // SheetJS names the format it read: only an .ods is opened a second time, for what SheetJS reads wrong in it.
+  const ods = wb.bookType === "ods" ? await readOdsCells(bytes) : null;
   const sheets: SheetModel[] = wb.SheetNames.map((name, i) => {
     const ws = wb.Sheets[name];
+    const odsSheet = ods?.get(name);
     const rows: (Cell | null)[][] = [];
     const range = ws["!ref"] ? X.utils.decode_range(ws["!ref"]) : null;
     for (let r = 0; range && r <= range.e.r; r++) {
       const row: (Cell | null)[] = [];
       for (let c = 0; c <= range.e.c; c++) {
         const cellObj = ws[X.utils.encode_cell({ r, c })] as CellObject | undefined;
-        const extra = ods?.get(name)?.get(`${r},${c}`);
+        const extra = odsSheet?.get(`${r},${c}`);
         row.push(cellObj ? fromSheetJs(cellObj, extra, X.SSF.is_date) : extra?.formula ? { v: null, f: odsToExcel(extra.formula) } : null);
       }
       while (row.length > 0 && row[row.length - 1] === null) row.pop();
@@ -127,16 +130,21 @@ interface OdsCell {
   boolean?: boolean;
 }
 
-/** An `.ods` file's formulas and true/false cells by sheet and "row,col", as its content.xml has them; null for an `.xlsx`. */
+const ATTRIBUTES = new Map<string, RegExp>();
+/** An XML attribute's raw value in a tag's attribute text. */
+function attr(attrs: string, name: string): string | undefined {
+  let re = ATTRIBUTES.get(name);
+  if (!re) ATTRIBUTES.set(name, (re = new RegExp(`\\s${name}="([^"]*)"`)));
+  return re.exec(attrs)?.[1];
+}
+
+/** An `.ods` file's formulas and true/false cells by sheet and "row,col", as its content.xml has them. */
 async function readOdsCells(bytes: Uint8Array): Promise<Map<string, Map<string, OdsCell>> | null> {
   const { default: JSZip } = await import("jszip");
   let zip;
   try { zip = await JSZip.loadAsync(bytes); } catch { return null; }
-  const mime = await zip.file("mimetype")?.async("string");
-  if (!mime?.startsWith(ODS_MIME)) return null;
   const xml = (await zip.file("content.xml")?.async("string")) ?? "";
   const out = new Map<string, Map<string, OdsCell>>();
-  const attr = (attrs: string, name: string) => new RegExp(`\\s${name}="([^"]*)"`).exec(attrs)?.[1];
   const TAG = /<table:table-row\b([^>]*?)(\/?)>|<\/table:table-row>|<table:(?:covered-)?table-cell\b([^>]*?)(\/?)>|<table:table(?=[\s>])([^>]*)>|<\/table:table>/g;
   let sheet: Map<string, OdsCell> | null = null;
   let r = 0;

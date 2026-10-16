@@ -1,10 +1,11 @@
+import { deepEqual } from "@/lib/graph-diff";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { DEFAULT_CONFIG } from "@/store/config-store";
 import { parseBundle, type ProjectBundle } from "@/lib/file-io";
 import { decodeWorkbook, describeProblem, encodeWorkbook, parseDecoded, SHEETS } from "./codec";
 import { readValue, writeValue, Blobs } from "./cells";
-import { formatKey, jsonEqual, parseKey, type Json } from "./paths";
+import { formatKey, parseKey, type Json } from "./paths";
 import type { WorkbookModel } from "./model";
 
 const hostile = fc.oneof(
@@ -46,7 +47,7 @@ describe("a generated project with hostile values", () => {
         const model = encodeWorkbook(b);
         const parsed = parseDecoded(decodeWorkbook(model), model);
         expect(parsed.problems.filter((p) => p.severity === "error").map(describeProblem)).toEqual([]);
-        expect(jsonEqual(JSON.parse(JSON.stringify(parsed.bundle)), JSON.parse(JSON.stringify(b)))).toBe(true);
+        expect(deepEqual(JSON.parse(JSON.stringify(parsed.bundle)), JSON.parse(JSON.stringify(b)))).toBe(true);
       }),
       { numRuns: 150 },
     );
@@ -58,7 +59,7 @@ describe("cells and keys", () => {
     fc.assert(fc.property(json, fc.boolean(), (v, list) => {
       const blobs = new Blobs();
       const read = readValue(writeValue(v, blobs, list), blobs.texts, list);
-      if (Array.isArray(v) || !list) expect("value" in read && jsonEqual(read.value, v)).toBe(true);
+      if (Array.isArray(v) || !list) expect("value" in read && deepEqual(read.value, v)).toBe(true);
     }), { numRuns: 300 });
   });
 

@@ -164,10 +164,16 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
   const n = selectN(config);
   const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
 
-  const prepared = chosen.map(({ request, doc: { id: _id, ...doc } }) => {
-    const checked = checkDoc(doc);
-    const plan = checked.ok ? planTimeline(checked.doc.timeline) : null;
-    return { id: request.simulationId, name: request.name, request, checked, plan };
+  // A sweep runs one Simulation many times: it is checked and planned once.
+  const checkedById = new Map<string, { checked: ReturnType<typeof checkDoc>; plan: ReturnType<typeof planTimeline> | null }>();
+  const prepared = chosen.map(({ request, doc: { id, ...doc } }) => {
+    let entry = checkedById.get(id);
+    if (!entry) {
+      const checked = checkDoc(doc);
+      entry = { checked, plan: checked.ok ? planTimeline(checked.doc.timeline) : null };
+      checkedById.set(id, entry);
+    }
+    return { id, name: request.name, sweep: request.sweep, ...entry };
   });
   const total = prepared.reduce((a, p) => a + (p.plan?.engineCalls ?? 0), 0);
 
@@ -176,12 +182,11 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
   sim.beginCompare(total);
   const runs: ComparedRun[] = [];
   let done = 0;
-  for (const { id, name, request, checked, plan } of prepared) {
-    const sweep = request.sweep ? { sweep: request.sweep } : {};
+  for (const { id, name, sweep, checked, plan } of prepared) {
     if (mine.signal.aborted) break;
     if (!checked.ok || !plan || plan.errors.length > 0 || plan.periods.length === 0) {
       const why = !checked.ok ? checked.errors[0] : plan?.errors[0] ?? "its Timeline has no period";
-      runs.push({ id, name, table: null, warnings: [], error: `Not run: ${why}`, ...sweep });
+      runs.push({ id, name, table: null, warnings: [], error: `Not run: ${why}`, sweep });
       continue;
     }
     const before = done;
@@ -192,17 +197,17 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
         profile: checked.doc.profile,
         events: config.config.events,
         n,
-        parameters: parameterValues(checked.doc, request.overrides),
+        parameters: parameterValues(checked.doc, sweep ? { [sweep.parameter]: sweep.value } : {}),
         series: useProjectDataStore.getState().series,
         propagate: (snapshot) => (mine.signal.aborted ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
         signal: mine.signal,
         onProgress: (k, label) => useTemporalSimulationStore.getState().setCompareProgress(before + k, `${name} · ${label}`),
       });
-      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings, ...sweep });
+      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings, sweep });
     } catch (e) {
       if (mine.signal.aborted) break;
       const message = e instanceof RunStopped ? `Stopped: ${e.message} — in period ${e.period}` : `Stopped: ${e instanceof Error ? e.message : String(e)}`;
-      runs.push({ id, name, table: null, warnings: [], error: message, ...sweep });
+      runs.push({ id, name, table: null, warnings: [], error: message, sweep });
     }
     done = before + plan.engineCalls;
   }

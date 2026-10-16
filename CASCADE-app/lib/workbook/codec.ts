@@ -10,14 +10,18 @@
  * cell. Pure: no file library, no store.
  */
 
+import { deepEqual } from "@/lib/graph-diff";
 import { planTimeline } from "@/lib/timeline-plan";
+import { withDecimalPoint } from "@/lib/decimal-comma";
+import { seriesLabels } from "@/lib/series-edit";
 import { profileToRows, rowsToProfile, type ProfileRow } from "@/lib/temporal-simulation-text";
 import { ProjectSchema } from "@/lib/schemas/network";
 import { ModelConfigurationSchema } from "@/lib/schemas/config";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
-import { Blobs, readValue, writeJson, writeValue } from "./cells";
-import { a1, type Cell, type CellRef, type Problem, type SheetModel, type WorkbookModel, textCell } from "./model";
-import { clone, formatKey, getIn, isObject, jsonEqual, own, parseKey, setIn, type Json, type JsonObject } from "./paths";
+import { OPERAND_FACTORS } from "@/lib/schemas/attribute-operation";
+import { Blobs, readValue, writeFreeValue, writeValue } from "./cells";
+import { a1, type Cell, type CellRef, type Problem, type SheetModel, type WorkbookModel, cellText, textCell } from "./model";
+import { clone, formatKey, getIn, isObject, own, parseKey, setIn, type Json, type JsonObject } from "./paths";
 import { CASCADE_SHEET, WORKBOOK_FORMAT, applyResidual, readCascadeSheet, residual, writeCascadeSheet, type ResidualEntry } from "./residual";
 import { leaves, place, readHeader, readTable, writeTable, type ReadRecord, type TableSpec } from "./table";
 
@@ -65,7 +69,7 @@ function freshTitle(wanted: string, taken: Set<string>): string {
 // Specs of the record sheets
 // ---------------------------------------------------------------------------
 
-const OP_FIRST = ["element", "where.kind", "where.canvas", "where.node_type", "where.category", "where.label_contains", "where.exclude", "path", "op", "value", "parameter", "series", "of"];
+const OP_FIRST = ["element", "where.kind", "where.canvas", "where.node_type", "where.category", "where.label_contains", "where.exclude", "path", "op", "value", ...OPERAND_FACTORS];
 
 const SPEC = {
   canvases: { name: SHEETS.canvases, first: ["id", "label", "color", "graph.graph_type", "georeferenced"] },
@@ -87,8 +91,19 @@ const SPEC = {
 } satisfies Record<string, TableSpec>;
 
 /** The tops of a Profile row's operation block: a period header that reads as one of them is written `period:<label>`. */
-const OP_TOPS = new Set(["simulation", "element", "where", "path", "op", "parameter", "series", "of"]);
+const OP_TOPS = new Set(["simulation", "element", "where", "path", "op", ...OPERAND_FACTORS]);
 const PERIOD_PREFIX = "period:";
+
+/** A period label as a column header; one that would read as another column (`isColumn`), or as a skipped one, is written `period:<label>`. */
+const periodHeader = (label: string, isColumn: (l: string) => boolean): string =>
+  isColumn(label) || label.startsWith(PERIOD_PREFIX) || label.startsWith("~") || label === "" ? `${PERIOD_PREFIX}${label}` : label;
+/** A period column's header text as the label it stands for. */
+const periodLabel = (text: string): string => (text.startsWith(PERIOD_PREFIX) ? text.slice(PERIOD_PREFIX.length) : text);
+/** True when a Profile header names an operation field. */
+const isOpColumn = (text: string): boolean => {
+  const top = parseKey(text.endsWith("[]") ? text.slice(0, -2) : text)?.[0];
+  return top !== undefined && OP_TOPS.has(top);
+};
 
 const README_LINES = [
   "CASCADE Workbook (cascade.workbook/v1): the whole project. Open it in CASCADE as you would a .json; edit it here and import it with File → Import changes.",
@@ -138,21 +153,20 @@ function profileSheet(sims: JsonObject[], blobs: Blobs): SheetModel {
     }
   }
   const block = writeTable({ name: SHEETS.profile, first: ["simulation", ...OP_FIRST.filter((k) => k !== "value")] }, rows.map((r) => r.op), blobs);
-  const header = (l: string) => {
-    const top = parseKey(l)?.[0];
-    return (top !== undefined && OP_TOPS.has(top)) || l.startsWith(PERIOD_PREFIX) || l.startsWith("~") || l === "" ? `${PERIOD_PREFIX}${l}` : l;
-  };
-  block.rows[0].push(...labels.map((l) => textCell(header(l))));
-  // A profile value may be a number, true/false or text, so true/false is written in its json: form (see isFreeTyped).
-  const cellOf = (v: Json) => (typeof v === "boolean" ? writeJson(v, blobs) : writeValue(v, blobs));
-  rows.forEach((r, i) => block.rows[i + 1].push(...labels.map((l) => (Object.hasOwn(r.values, l) ? cellOf(r.values[l]) : null))));
+  block.rows[0].push(...labels.map((l) => textCell(periodHeader(l, isOpColumn))));
+  // A profile value may be a number, true/false or text.
+  rows.forEach((r, i) => block.rows[i + 1].push(...labels.map((l) => (Object.hasOwn(r.values, l) ? writeFreeValue(r.values[l], blobs) : null))));
   return block;
 }
 
-/** The visible sheets and what `_cascade` keeps besides the residual. */
-function visibleSheets(bundle: ProjectBundle): { sheets: SheetModel[]; cascade: [string, string][] } {
-  const P = clone(bundle.project) as unknown as JsonObject;
-  const C = clone(bundle.config) as unknown as JsonObject;
+/** Each record of a child list (a Simulation's Parameters, an Event's operations) with its owner's id in `ownerKey`. */
+const childRows = (owners: readonly JsonObject[], field: string, ownerKey: string): JsonObject[] =>
+  owners.flatMap((o) => ((o[field] as JsonObject[] | undefined) ?? []).map((c) => ({ [ownerKey]: String(o.id), ...c })));
+
+/** The visible sheets and what `_cascade` keeps besides the residual; `bundle` is a copy, read only. */
+function visibleSheets(bundle: JsonObject): { sheets: SheetModel[]; cascade: [string, string][] } {
+  const P = bundle.project as JsonObject;
+  const C = bundle.config as JsonObject;
   const blobs = new Blobs();
   const sheets: SheetModel[] = [{ name: SHEETS.readme, rows: README_LINES.map((l) => [textCell(l)]) }];
 
@@ -208,49 +222,40 @@ function visibleSheets(bundle: ProjectBundle): { sheets: SheetModel[]; cascade: 
   sheets.push(writeTable({
     ...SPEC.operations,
     derived: [{ key: "~event_label", after: "event", value: (o) => String(events.find((e) => e.id === o.event)?.label ?? "") || undefined }, { key: "~element_label", after: "element", value: elementLabel }],
-  }, events.flatMap((e) => ((e.attribute_operations as JsonObject[]) ?? []).map((op) => ({ event: String(e.id), ...op }))), blobs));
+  }, childRows(events, "attribute_operations", "event"), blobs));
   sheets.push(writeTable(SPEC.graphTypes, (C.graph_types as JsonObject[]) ?? [], blobs));
   sheets.push(writeTable(SPEC.templates, Object.entries((C.node_defaults as Record<string, JsonObject>) ?? {}).map(([name, t]) => ({ name, ...t })), blobs));
 
   const sims = (P.temporal_simulations as JsonObject[] | undefined) ?? [];
   sheets.push(writeTable(SPEC.simulations, sims.map((s) => ({ ...without(s, ["profile", "metrics", "parameters"]), timeline: without(s.timeline as JsonObject, ["steps"]) })), blobs));
   sheets.push(writeTable(SPEC.steps, sims.flatMap((s) => stepRows(String(s.id), ((s.timeline as JsonObject).steps as Json[]) ?? [])), blobs));
-  sheets.push(writeTable(SPEC.parameters, sims.flatMap((s) => ((s.parameters as JsonObject[]) ?? []).map((p) => ({ simulation: String(s.id), ...p }))), blobs));
+  sheets.push(writeTable(SPEC.parameters, childRows(sims, "parameters", "simulation"), blobs));
   sheets.push(profileSheet(sims, blobs));
-  sheets.push(writeTable(SPEC.metrics, sims.flatMap((s) => ((s.metrics as JsonObject[]) ?? []).map((m) => ({ simulation: String(s.id), ...m }))), blobs));
+  sheets.push(writeTable(SPEC.metrics, childRows(sims, "metrics", "simulation"), blobs));
 
-  // Series: an index, then one sheet each, elements down and period labels across.
+  // Series and custom sheets: an index sheet naming each one's own sheet, then those sheets.
   const taken = new Set(RESERVED);
-  const series = (P.series as JsonObject[] | undefined) ?? [];
-  const seriesSheets = series.map((x) => {
-    const title = freshTitle(`${SERIES_PREFIX}${String(x.name)}`, taken);
+  const indexed = (spec: TableSpec, list: JsonObject[] | undefined, title: (x: JsonObject) => string, rows: (x: JsonObject) => SheetModel["rows"]) => {
+    const items = (list ?? []).map((x) => ({ index: { ...without(x, ["rows"]), sheet: freshTitle(title(x), taken) }, x }));
+    sheets.push(writeTable(spec, items.map((i) => i.index), blobs), ...items.map((i) => ({ name: String(i.index.sheet), rows: rows(i.x) })));
+  };
+  // A Series: elements down, period labels across.
+  indexed(SPEC.seriesIndex, P.series as JsonObject[] | undefined, (x) => `${SERIES_PREFIX}${String(x.name)}`, (x) => {
     const rows = x.rows as Record<string, Record<string, Json>>;
-    const labels = [...new Set(Object.values(rows).flatMap((r) => Object.keys(r)))];
-    const sheet: SheetModel = {
-      name: title,
-      rows: [
-        [textCell("element"), textCell("~label"), ...labels.map((l) => textCell(l === "" || l.startsWith("~") || l === "element" || l.startsWith(PERIOD_PREFIX) ? `${PERIOD_PREFIX}${l}` : l))],
-        ...Object.entries(rows).map(([key, r]) => [
-          textCell(key),
-          textCell(key === "*" ? "(every Element without its own row)" : label(key) ?? edgeLabel(key) ?? ""),
-          ...labels.map((l) => (Object.hasOwn(r, l) ? writeValue(r[l], blobs) : null)),
-        ]),
-      ],
-    };
-    return { index: { ...without(x, ["rows"]), sheet: title }, sheet };
+    const labels = seriesLabels({ rows });
+    return [
+      [textCell("element"), textCell("~label"), ...labels.map((l) => textCell(periodHeader(l, (h) => h === "element")))],
+      ...Object.entries(rows).map(([key, r]) => [
+        textCell(key),
+        textCell(key === "*" ? "(every Element without its own row)" : label(key) ?? edgeLabel(key) ?? ""),
+        ...labels.map((l) => (Object.hasOwn(r, l) ? writeValue(r[l], blobs) : null)),
+      ]),
+    ];
   });
-  sheets.push(writeTable(SPEC.seriesIndex, seriesSheets.map((s) => s.index), blobs), ...seriesSheets.map((s) => s.sheet));
-
-  // Custom sheets: an index, then each as it is, values and formulas.
-  const custom = (P.sheets as JsonObject[] | undefined) ?? [];
-  const customSheets = custom.map((x) => {
-    const title = freshTitle(String(x.name), taken);
-    // A formula is written without its value, as the file holds it: the app computes it on opening, and the
-    // residual keeps the last value only until then.
-    const rows = (x.rows as (JsonObject | null)[][]).map((r) => r.map((c): Cell | null => (c === null ? null : c.f !== undefined ? { v: null, f: String(c.f) } : { v: (c.v ?? null) as Cell["v"] })));
-    return { index: { ...without(x, ["rows"]), sheet: title }, sheet: { name: title, rows } };
-  });
-  sheets.push(writeTable(SPEC.sheetsIndex, customSheets.map((s) => s.index), blobs), ...customSheets.map((s) => s.sheet));
+  // A custom sheet as it is. A formula is written without its value, as the file holds it: the app computes it
+  // on opening, and the residual keeps the last value only until then.
+  indexed(SPEC.sheetsIndex, P.sheets as JsonObject[] | undefined, (x) => String(x.name), (x) =>
+    (x.rows as (JsonObject | null)[][]).map((r) => r.map((c): Cell | null => (c === null ? null : c.f !== undefined ? { v: null, f: String(c.f) } : { v: (c.v ?? null) as Cell["v"] }))));
 
   const cascade: [string, string][] = [["format", WORKBOOK_FORMAT]];
   if (P.update_history !== undefined) cascade.push(["project.update_history", JSON.stringify(P.update_history)]);
@@ -261,6 +266,7 @@ function visibleSheets(bundle: ProjectBundle): { sheets: SheetModel[]; cascade: 
 
 /** A project that a Workbook cannot hold without loss; the path names what (a codec defect, to report). */
 class WorkbookLossError extends Error {
+  override name = "WorkbookLossError";
   constructor(readonly path: string[]) {
     super(`This project cannot be written as a workbook without loss at ${path.join(" › ") || "(root)"}; save it as JSON.`);
   }
@@ -269,17 +275,16 @@ class WorkbookLossError extends Error {
 /** The bundle as a Workbook model; throws WorkbookLossError rather than lose anything. */
 export function encodeWorkbook(bundle: ProjectBundle): WorkbookModel {
   const original = clone(bundle) as unknown as JsonObject;
-  const { sheets, cascade } = visibleSheets(bundle);
-  const draft: WorkbookModel = { sheets: [...sheets, writeCascadeSheet(cascade)] };
-  const derived = decodeWorkbook(draft).raw;
+  const { sheets, cascade } = visibleSheets(original);
+  const derived = decodeWorkbook({ sheets: [...sheets, writeCascadeSheet(cascade)] }).raw;
   const entries = residual(derived, original);
-  const model: WorkbookModel = { sheets: [...sheets, writeCascadeSheet([...cascade, ...(entries.length ? [["residual", JSON.stringify(entries)] as [string, string]] : [])])] };
-  const back = decodeWorkbook(model).raw;
-  if (!jsonEqual(back, original)) {
-    const first = residual(back, original)[0];
-    throw new WorkbookLossError(first?.p ?? []);
-  }
-  return model;
+  const cascadeSheet = writeCascadeSheet([...cascade, ...(entries.length ? [["residual", JSON.stringify(entries)] as [string, string]] : [])]);
+  // The model differs from the one just read only by the residual in `_cascade`: read it back from that sheet
+  // and check it restores the project.
+  const text = readCascadeSheet(cascadeSheet).get("residual");
+  if (text !== undefined) applyResidual(derived, JSON.parse(text) as ResidualEntry[]);
+  if (!deepEqual(derived, original)) throw new WorkbookLossError(residual(derived, original)[0]?.p ?? []);
+  return { sheets: [...sheets, cascadeSheet] };
 }
 
 // ---------------------------------------------------------------------------
@@ -298,13 +303,53 @@ export interface Decoded {
 /** Register a read record's fields: its row at `base`, each field at its column. */
 function note(locate: Locator, base: string[], r: ReadRecord, sheet: string) {
   locate.set(pathKey(base), { sheet, row: r.row, col: 0 });
-  for (const [key, col] of r.cols) {
-    const path = parseKey(key);
-    if (path) locate.set(pathKey([...base, ...path]), { sheet, row: r.row, col });
+  for (const c of r.columns) {
+    if (r.cols.has(c.key)) locate.set(pathKey([...base, ...c.path]), { sheet, row: r.row, col: c.col });
   }
 }
 
 const str = (v: Json | undefined) => (typeof v === "string" ? v : v === undefined || v === null ? undefined : String(v));
+
+/** What every part of decoding reads and writes. */
+interface DecodeContext {
+  byName: Map<string, SheetModel>;
+  blobs: readonly string[];
+  /** A record sheet's rows, or none when the sheet is absent. */
+  table: (name: string) => ReadRecord[];
+  locate: Locator;
+  problems: Problem[];
+}
+
+/** The owner of a child list's rows: its sheet, the id column, and each id's position. */
+interface Owners {
+  sheet: string;
+  key: string;
+  noun: string;
+  index: Map<string, number>;
+}
+
+/** The position of the owner whose id a row names in `owners.key` (taken off the record), or null, reported. */
+function ownerOf(ctx: DecodeContext, owners: Owners, r: ReadRecord, sheet: string): number | null {
+  const id = str(r.record[owners.key]);
+  const i = id === undefined ? undefined : owners.index.get(id);
+  if (i === undefined) {
+    ctx.problems.push({ severity: "error", at: { sheet, row: r.row, col: r.cols.get(owners.key) ?? 0 }, message: id === undefined ? `a row without a ${owners.key} id` : `no ${owners.noun} "${id}" in ${owners.sheet}` });
+    return null;
+  }
+  delete r.record[owners.key];
+  return i;
+}
+
+/** A child list sheet's rows (Parameters, Metrics, Event operations) appended to their owner's list. */
+function attachChildren(ctx: DecodeContext, sheet: string, owners: Owners, list: (i: number) => Json[], base: (i: number) => string[]) {
+  for (const r of ctx.table(sheet)) {
+    const i = ownerOf(ctx, owners, r, sheet);
+    if (i === null) continue;
+    const items = list(i);
+    note(ctx.locate, [...base(i), String(items.length)], r, sheet);
+    items.push(r.record);
+  }
+}
 
 /** A model (written by CASCADE or edited by a person) as the raw bundle, with every value's cell. */
 export function decodeWorkbook(model: WorkbookModel): Decoded {
@@ -321,6 +366,7 @@ export function decodeWorkbook(model: WorkbookModel): Decoded {
     return sheet ? readTable(sheet, blobs, problems) : [];
   };
   const err = (sheet: string, row: number, col: number, message: string) => problems.push({ severity: "error", at: { sheet, row, col }, message });
+  const ctx: DecodeContext = { byName, blobs, table, locate, problems };
 
   // Project: key | value.
   const raw: JsonObject = { project: {}, config: {} };
@@ -380,16 +426,8 @@ export function decodeWorkbook(model: WorkbookModel): Decoded {
   C.functionality_scale = list(SHEETS.scale, "functionality_scale");
   C.level_scale = list(SHEETS.levels, "level_scale");
   const events = list(SHEETS.events, "events");
-  const eventIndex = new Map(events.map((e, i) => [String(e.id), i]));
-  for (const r of table(SHEETS.operations)) {
-    const id = str(r.record.event);
-    const i = id === undefined ? undefined : eventIndex.get(id);
-    if (i === undefined) { err(SHEETS.operations, r.row, r.cols.get("event") ?? 0, id === undefined ? "a row without an event id" : `no Event "${id}" in Events`); continue; }
-    const ops = (events[i].attribute_operations ??= []) as Json[];
-    note(locate, ["config", "events", String(i), "attribute_operations", String(ops.length)], r, SHEETS.operations);
-    delete r.record.event;
-    ops.push(r.record);
-  }
+  const eventOwners: Owners = { sheet: SHEETS.events, key: "event", noun: "Event", index: new Map(events.map((e, i) => [String(e.id), i])) };
+  attachChildren(ctx, SHEETS.operations, eventOwners, (i) => (events[i].attribute_operations ??= []) as Json[], (i) => ["config", "events", String(i), "attribute_operations"]);
   C.events = events;
   C.graph_types = list(SHEETS.graphTypes, "graph_types");
   const templates: JsonObject = {};
@@ -402,9 +440,11 @@ export function decodeWorkbook(model: WorkbookModel): Decoded {
   }
   C.node_defaults = templates;
 
-  decodeSimulations(byName, blobs, table, locate, problems, P);
-  decodeSeries(byName, blobs, table, locate, problems, P);
-  decodeCustomSheets(byName, table, locate, problems, P);
+  decodeSimulations(ctx, P);
+  decodeIndexed(ctx, P, "series", SHEETS.series, (sheet, i) => seriesRows(ctx, sheet, i));
+  // A custom sheet as it is: values and formulas, an error value as no value.
+  decodeIndexed(ctx, P, "sheets", SHEETS.sheets, (sheet) =>
+    sheet.rows.map((row) => row.map((c) => (c === null || (c.v === null && c.f === undefined) ? null : { v: c.error ? null : c.v, ...(c.f !== undefined ? { f: c.f } : {}) }))) as unknown as Json);
 
   for (const key of ["update_history", "scorecard"]) {
     const text = cascade.get(`project.${key}`);
@@ -420,10 +460,9 @@ export function decodeWorkbook(model: WorkbookModel): Decoded {
   return { raw, locate, problems, stale };
 }
 
-type TableReader = (name: string) => ReadRecord[];
-
-function decodeSimulations(byName: Map<string, SheetModel>, blobs: readonly string[], table: TableReader, locate: Locator, problems: Problem[], P: JsonObject) {
-  const sims = table(SHEETS.simulations).map((r) => r);
+function decodeSimulations(ctx: DecodeContext, P: JsonObject) {
+  const { byName, blobs, table, locate, problems } = ctx;
+  const sims = table(SHEETS.simulations);
   if (sims.length === 0 && !byName.has(SHEETS.simulations)) return;
   const index = new Map<string, number>();
   const docs: JsonObject[] = sims.map((r, i) => {
@@ -438,13 +477,8 @@ function decodeSimulations(byName: Map<string, SheetModel>, blobs: readonly stri
     doc.parameters = [];
     return doc;
   });
-  const owner = (r: ReadRecord, sheet: string): number | null => {
-    const id = str(r.record.simulation);
-    const i = id === undefined ? undefined : index.get(id);
-    if (i === undefined) { problems.push({ severity: "error", at: { sheet, row: r.row, col: r.cols.get("simulation") ?? 0 }, message: id === undefined ? "a row without a simulation id" : `no Temporal Simulation "${id}" in Simulations` }); return null; }
-    delete r.record.simulation;
-    return i;
-  };
+  const owners: Owners = { sheet: SHEETS.simulations, key: "simulation", noun: "Temporal Simulation", index };
+  const owner = (r: ReadRecord, sheet: string) => ownerOf(ctx, owners, r, sheet);
 
   // Steps: one row per Phase; the Step's own fields come from its first row.
   for (const r of table(SHEETS.steps)) {
@@ -477,31 +511,15 @@ function decodeSimulations(byName: Map<string, SheetModel>, blobs: readonly stri
     (doc.timeline as JsonObject).steps = steps.filter((s) => s !== undefined).map((s) => ({ ...(s as JsonObject), phases: ((s as JsonObject).phases as Json[]).filter((p) => p !== undefined) }));
   }
 
-  for (const r of table(SHEETS.parameters)) {
-    const i = owner(r, SHEETS.parameters);
-    if (i === null) continue;
-    const params = docs[i].parameters as Json[];
-    note(locate, ["project", "temporal_simulations", String(i), "parameters", String(params.length)], r, SHEETS.parameters);
-    params.push(r.record);
-  }
-  for (const r of table(SHEETS.metrics)) {
-    const i = owner(r, SHEETS.metrics);
-    if (i === null) continue;
-    const metrics = docs[i].metrics as Json[];
-    note(locate, ["project", "temporal_simulations", String(i), "metrics", String(metrics.length)], r, SHEETS.metrics);
-    metrics.push(r.record);
+  for (const field of ["parameters", "metrics"] as const) {
+    attachChildren(ctx, field === "parameters" ? SHEETS.parameters : SHEETS.metrics, owners, (i) => docs[i][field] as Json[], (i) => ["project", "temporal_simulations", String(i), field]);
   }
 
   // Profile: the operation block, then one column per period label.
   const sheet = byName.get(SHEETS.profile);
   if (sheet) {
-    const isOpColumn = (text: string) => {
-      if (text.startsWith(PERIOD_PREFIX)) return false;
-      const top = parseKey(text.endsWith("[]") ? text.slice(0, -2) : text)?.[0];
-      return top !== undefined && OP_TOPS.has(top);
-    };
-    const { other } = readHeader(sheet, [], isOpColumn);
-    const periods = other.map(({ col, text }) => ({ col, label: text.startsWith(PERIOD_PREFIX) ? text.slice(PERIOD_PREFIX.length) : text }));
+    const { other } = readHeader(sheet, [], (text) => !text.startsWith(PERIOD_PREFIX) && isOpColumn(text));
+    const periods = other.map(({ col, text }) => ({ col, label: periodLabel(text) }));
     const opSheet: SheetModel = { name: sheet.name, rows: sheet.rows.map((row, k) => (k === 0 ? row.map((c, col) => (periods.some((p) => p.col === col) ? null : c)) : row)) };
     const rowsBySim = new Map<number, ProfileRow[]>();
     for (const r of readTable(opSheet, blobs, problems)) {
@@ -528,61 +546,45 @@ function decodeSimulations(byName: Map<string, SheetModel>, blobs: readonly stri
   P.temporal_simulations = docs;
 }
 
-function decodeSeries(byName: Map<string, SheetModel>, blobs: readonly string[], table: TableReader, locate: Locator, problems: Problem[], P: JsonObject) {
-  if (!byName.has(SHEETS.series)) return;
-  P.series = table(SHEETS.series).map((r, i) => {
-    note(locate, ["project", "series", String(i)], r, SHEETS.series);
+/** An index sheet (Series, Sheets) and the sheet each row names: `P[field]`, each record with the rows `read` gives. */
+function decodeIndexed(ctx: DecodeContext, P: JsonObject, field: "series" | "sheets", indexSheet: string, read: (sheet: SheetModel, i: number) => Json) {
+  if (!ctx.byName.has(indexSheet)) return;
+  P[field] = ctx.table(indexSheet).map((r, i) => {
+    note(ctx.locate, ["project", field, String(i)], r, indexSheet);
     const title = str(r.record.sheet);
     delete r.record.sheet;
-    const rows: JsonObject = {};
-    const sheet = title === undefined ? undefined : byName.get(title);
-    if (!sheet) { problems.push({ severity: "error", at: { sheet: SHEETS.series, row: r.row, col: r.cols.get("sheet") ?? 0 }, message: `no sheet "${title ?? ""}" for this Series` }); }
-    else {
-      const header = sheet.rows[0] ?? [];
-      const labels = header.map((c, col) => {
-        if (col < 2 || !c || c.v === null) return null;
-        const text = typeof c.v === "string" ? c.v : c.date && c.w ? c.w : String(c.v);
-        return text.startsWith(PERIOD_PREFIX) ? text.slice(PERIOD_PREFIX.length) : text;
-      });
-      sheet.rows.slice(1).forEach((row, k) => {
-        const key = row[0]?.v;
-        if (key === null || key === undefined || key === "") return;
-        const id = typeof key === "string" ? key : row[0]?.w ?? String(key);
-        if (Object.hasOwn(rows, id)) { problems.push({ severity: "error", at: { sheet: sheet.name, row: k + 1, col: 0 }, message: `the element "${id}" has two rows` }); return; }
-        const values: JsonObject = {};
-        labels.forEach((label, col) => {
-          if (label === null) return;
-          const read = readValue(row[col], blobs);
-          if ("absent" in read) return;
-          if ("error" in read) { problems.push({ severity: "error", at: { sheet: sheet.name, row: k + 1, col }, message: read.error }); return; }
-          values[label] = read.value;
-          locate.set(pathKey(["project", "series", String(i), "rows", id, label]), { sheet: sheet.name, row: k + 1, col });
-        });
-        rows[id] = values;
-      });
-    }
-    return { ...r.record, rows };
+    const sheet = title === undefined ? undefined : ctx.byName.get(title);
+    if (!sheet) ctx.problems.push({ severity: "error", at: { sheet: indexSheet, row: r.row, col: r.cols.get("sheet") ?? 0 }, message: `no sheet "${title ?? ""}"` });
+    return { ...r.record, rows: sheet ? read(sheet, i) : field === "series" ? {} : [] };
   });
 }
 
-function decodeCustomSheets(byName: Map<string, SheetModel>, table: TableReader, locate: Locator, problems: Problem[], P: JsonObject) {
-  if (!byName.has(SHEETS.sheets)) return;
-  P.sheets = table(SHEETS.sheets).map((r, i) => {
-    note(locate, ["project", "sheets", String(i)], r, SHEETS.sheets);
-    const title = str(r.record.sheet);
-    delete r.record.sheet;
-    const sheet = title === undefined ? undefined : byName.get(title);
-    if (!sheet) problems.push({ severity: "error", at: { sheet: SHEETS.sheets, row: r.row, col: r.cols.get("sheet") ?? 0 }, message: `no sheet "${title ?? ""}"` });
-    const rows = (sheet?.rows ?? []).map((row) => row.map((c) => (c === null || (c.v === null && c.f === undefined) ? null : { v: c.error ? null : c.v, ...(c.f !== undefined ? { f: c.f } : {}) })));
-    return { ...r.record, rows: rows as unknown as Json };
+/** A Series sheet's rows: element id → period label → value. */
+function seriesRows(ctx: DecodeContext, sheet: SheetModel, i: number): JsonObject {
+  const rows: JsonObject = {};
+  const labels = (sheet.rows[0] ?? []).map((c, col) => (col < 2 || !c || c.v === null ? null : periodLabel(cellText(c))));
+  sheet.rows.slice(1).forEach((row, k) => {
+    const key = row[0]?.v;
+    if (key === null || key === undefined || key === "") return;
+    const id = typeof key === "string" ? key : row[0]?.w ?? String(key);
+    if (Object.hasOwn(rows, id)) { ctx.problems.push({ severity: "error", at: { sheet: sheet.name, row: k + 1, col: 0 }, message: `the element "${id}" has two rows` }); return; }
+    const values: JsonObject = {};
+    labels.forEach((label, col) => {
+      if (label === null) return;
+      const read = readValue(row[col], ctx.blobs);
+      if ("absent" in read) return;
+      if ("error" in read) { ctx.problems.push({ severity: "error", at: { sheet: sheet.name, row: k + 1, col }, message: read.error }); return; }
+      values[label] = read.value;
+      ctx.locate.set(pathKey(["project", "series", String(i), "rows", id, label]), { sheet: sheet.name, row: k + 1, col });
+    });
+    rows[id] = values;
   });
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
 // Validate, repairing what spreadsheets do to values
 // ---------------------------------------------------------------------------
-
-const cellAt = (model: WorkbookModel, ref: CellRef) => model.sheets.find((s) => s.name === ref.sheet)?.rows[ref.row]?.[ref.col] ?? null;
 
 /** The cell nearest to a path: its own, or the closest record or sheet above it. */
 function nearest(locate: Locator, path: readonly (string | number)[]): CellRef | undefined {
@@ -604,7 +606,8 @@ function repair(c: Cell | null, expected: string): { value: Json; note: string; 
   if (expected === "number" && typeof c.v === "string") {
     const t = c.v.trim();
     if (/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(t)) return { value: Number(t), note: `read the text "${t}" as a number` };
-    if (/^[+-]?\d+,\d+$/.test(t)) return { value: Number(t.replace(",", ".")), note: `read "${t}" as a number with a decimal comma` };
+    const point = withDecimalPoint(t);
+    if (point !== t) return { value: Number(point), note: `read "${t}" as a number with a decimal comma` };
     return null;
   }
   if (expected === "boolean") {
@@ -626,6 +629,8 @@ export interface Parsed {
 export function parseDecoded(decoded: Decoded, model: WorkbookModel): Parsed {
   const problems = [...decoded.problems];
   const raw = decoded.raw;
+  const byName = new Map(model.sheets.map((s) => [s.name, s]));
+  const cellAt = (ref: CellRef) => byName.get(ref.sheet)?.rows[ref.row]?.[ref.col] ?? null;
   for (let round = 0; round < 6; round++) {
     const project = ProjectSchema.safeParse(raw.project);
     const config = ModelConfigurationSchema.safeParse(raw.config);
@@ -633,7 +638,7 @@ export function parseDecoded(decoded: Decoded, model: WorkbookModel): Parsed {
       ...(project.success ? [] : project.error.issues.map((i) => ({ ...i, path: ["project", ...i.path.map(String)] }))),
       ...(config.success ? [] : config.error.issues.map((i) => ({ ...i, path: ["config", ...i.path.map(String)] }))),
     ];
-    if (issues.length === 0 && project.success && config.success) {
+    if (project.success && config.success) {
       return { bundle: problems.some((p) => p.severity === "error") ? null : { project: project.data, config: config.data }, problems };
     }
     let fixed = 0;
@@ -641,7 +646,7 @@ export function parseDecoded(decoded: Decoded, model: WorkbookModel): Parsed {
       if (issue.code !== "invalid_type") continue;
       const ref = decoded.locate.get(pathKey(issue.path));
       if (!ref) continue;
-      const fix = repair(cellAt(model, ref), String((issue as { expected?: unknown }).expected));
+      const fix = repair(cellAt(ref), String((issue as { expected?: unknown }).expected));
       if (!fix || getIn(raw, issue.path) === fix.value) continue;
       setIn(raw, issue.path, fix.value);
       problems.push({ severity: fix.quiet ? "note" : "warning", at: ref, message: fix.note });

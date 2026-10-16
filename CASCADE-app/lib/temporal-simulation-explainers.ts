@@ -11,7 +11,7 @@ import type { Statistic } from "@/lib/temporal-comparison";
 import type { PlannedPeriod, TimelinePlan } from "@/lib/timeline-plan";
 import { filterConditions, type FilterableModel } from "@/lib/element-filter";
 import type { CalendarUnit, Metric, StandardMetric } from "@/lib/schemas/temporal-simulation";
-import type { AttributeOperation, ElementFilter } from "@/lib/schemas/attribute-operation";
+import { hasFactors, type AttributeOperation, type ElementFilter } from "@/lib/schemas/attribute-operation";
 
 export interface Explanation {
   title: string;
@@ -282,7 +282,7 @@ export function explainProfileRow(row: Omit<AttributeOperation, "value">, matche
   return {
     title: "Profile row",
     lines: [
-      `One operation: ${describeOp(row.op)} at ${row.path.join(" › ") || "(path)"} on ${describeTarget(row, matches)}, at the start of each period whose cell holds a value (${periods} now)${row.of || row.parameter || row.series ? `; the operand is ${factors}` : ""}.`,
+      `One operation: ${describeOp(row.op)} at ${row.path.join(" › ") || "(path)"} on ${describeTarget(row, matches)}, at the start of each period whose cell holds a value (${periods} now)${hasFactors(row) ? `; the operand is ${factors}` : ""}.`,
       row.op === "set"
         ? "A written value stays until a later cell, an Event or another row changes it; an empty cell shows the value carried into it in grey."
         : "An empty cell applies nothing. → on a filled cell repeats its value into the following empty cells, so a monthly mul 1.02 compounds.",

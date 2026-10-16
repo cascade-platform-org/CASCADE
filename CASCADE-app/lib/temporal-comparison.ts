@@ -50,9 +50,7 @@ export function compareRuns(runs: readonly ComparedRun[]): Comparison {
   const columns: string[] = [];
   const rows = runs.map((run): ComparisonRow => {
     const row: ComparisonRow = {
-      id: run.id, name: run.name, warnings: run.warnings, periods: [], values: {}, stats: {},
-      ...(run.error ? { error: run.error } : {}),
-      ...(run.sweep ? { sweep: run.sweep } : {}),
+      id: run.id, name: run.name, warnings: run.warnings, periods: [], values: {}, stats: {}, error: run.error, sweep: run.sweep,
     };
     if (!run.table) return row;
     row.periods = run.table.rows.map((r) => r.label);

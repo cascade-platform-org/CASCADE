@@ -7,6 +7,7 @@
 
 import { create } from "zustand";
 import { SeriesSchema, type Series } from "@/lib/schemas/series";
+import { freshOperandName } from "@/lib/schemas/operand";
 import type { CustomSheet } from "@/lib/schemas/custom-sheet";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 
@@ -38,10 +39,7 @@ export const useProjectDataStore = create<ProjectDataState>()((set, get) => ({
   loadFromProject: (series, sheets) => set({ series: series ?? [], sheets: sheets ?? [] }),
   addSeries: () => {
     if (locked()) return null;
-    const taken = new Set(get().series.map((x) => x.name));
-    let k = 1;
-    while (taken.has(`series_${k}`)) k++;
-    const name = `series_${k}`;
+    const name = freshOperandName("series", get().series.map((x) => x.name));
     set({ series: [...get().series, { name, rows: {} }] });
     return name;
   },

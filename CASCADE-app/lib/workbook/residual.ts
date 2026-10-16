@@ -10,12 +10,14 @@
  * give that same value, so an edit a person made in the sheet always wins.
  *
  * `_cascade` rows are `key | part | text`; a text longer than a cell is split
- * into parts, never inside a surrogate pair.
+ * into parts, never inside a surrogate pair, each written as `cells.ts` writes
+ * text (`json:` when a spreadsheet would change it).
  */
 
-import { CELL_LIMIT } from "./cells";
+import { deepEqual } from "@/lib/graph-diff";
+import { CELL_LIMIT, readText, writeText } from "./cells";
 import { type Cell, type SheetModel, textCell } from "./model";
-import { getIn, hashOf, isObject, jsonEqual, own, setIn, type Json, type JsonObject } from "./paths";
+import { getIn, hashOf, isObject, own, setIn, type Json, type JsonObject } from "./paths";
 
 export const CASCADE_SHEET = "_cascade";
 export const WORKBOOK_FORMAT = "cascade.workbook/v1";
@@ -32,6 +34,7 @@ export interface ResidualEntry {
 
 /** Every difference between what the sheets give (`derived`) and the project (`original`), at the shallowest path. */
 export function residual(derived: unknown, original: unknown, path: string[] = []): ResidualEntry[] {
+  if (deepEqual(derived, original)) return [];
   if (isObject(derived) && isObject(original)) {
     const out: ResidualEntry[] = [];
     for (const k of new Set([...Object.keys(derived), ...Object.keys(original)])) {
@@ -42,10 +45,9 @@ export function residual(derived: unknown, original: unknown, path: string[] = [
   if (Array.isArray(derived) && Array.isArray(original) && derived.length === original.length) {
     // The same items in another order is one entry for the whole list, not one per position.
     const sorted = (a: unknown[]) => a.map(hashOf).sort().join(",");
-    if (!jsonEqual(derived, original) && sorted(derived) === sorted(original)) return [{ p: path, h: hashOf(derived), v: original as Json }];
+    if (sorted(derived) === sorted(original)) return [{ p: path, h: hashOf(derived), v: original as Json }];
     return derived.flatMap((x, i) => residual(x, original[i], [...path, String(i)]));
   }
-  if (hashOf(derived) === hashOf(original)) return [];
   return [{ p: path, h: hashOf(derived), ...(original === undefined ? { d: true as const } : { v: original as Json }) }];
 }
 
@@ -60,25 +62,29 @@ export function applyResidual(root: JsonObject, entries: readonly ResidualEntry[
   return stale;
 }
 
-/** Split text into parts that fit a cell, never between the halves of a surrogate pair. */
-function parts(text: string): string[] {
+/** Split text into parts whose cells fit, never between the halves of a surrogate pair. */
+function parts(text: string, limit = CELL_LIMIT): string[] {
   const out: string[] = [];
   let i = 0;
   while (i < text.length) {
-    let end = Math.min(i + CELL_LIMIT, text.length);
+    let end = Math.min(i + limit, text.length);
     const code = text.charCodeAt(end - 1);
     if (end < text.length && code >= 0xd800 && code <= 0xdbff) end--;
-    out.push(text.slice(i, end));
+    const part = text.slice(i, end);
+    // A part written in its json: form grows (a control character is six), so it is split smaller.
+    const cell = writeText(part);
+    if (String(cell.v).length > CELL_LIMIT && limit > 1) out.push(...parts(part, Math.ceil(limit / 6)));
+    else out.push(part);
     i = end;
   }
   return out.length ? out : [""];
 }
 
-/** The `_cascade` sheet holding these texts by key. */
+/** The `_cascade` sheet holding these texts by key; each part is a cell as `cells.ts` writes text. */
 export function writeCascadeSheet(entries: readonly [key: string, text: string][]): SheetModel {
   const rows: (Cell | null)[][] = [[textCell("key"), textCell("part"), textCell("text")]];
   for (const [key, text] of entries) {
-    parts(text).forEach((t, i) => rows.push([textCell(key), { v: i + 1 }, textCell(t === "" ? "​" : t)]));
+    parts(text).forEach((t, i) => rows.push([textCell(key), { v: i + 1 }, writeText(t)]));
   }
   return { name: CASCADE_SHEET, rows, hidden: true };
 }
@@ -89,10 +95,9 @@ export function readCascadeSheet(sheet: SheetModel | undefined): Map<string, str
   for (const row of sheet?.rows.slice(1) ?? []) {
     const key = row[0]?.v;
     const part = row[1]?.v;
-    const text = row[2]?.v;
     if (typeof key !== "string") continue;
     const list = byKey.get(key) ?? [];
-    list.push([typeof part === "number" ? part : list.length + 1, typeof text === "string" ? (text === "​" ? "" : text) : text === undefined || text === null ? "" : String(text)]);
+    list.push([typeof part === "number" ? part : list.length + 1, readText(row[2])]);
     byKey.set(key, list);
   }
   return new Map([...byKey].map(([k, ps]) => [k, ps.sort((a, b) => a[0] - b[0]).map(([, t]) => t).join("")]));

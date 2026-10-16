@@ -63,19 +63,19 @@ export function AttributeOperationsEditor({
   onChange,
   parameterDefaults,
   onChangeDefaults,
-  handFireable,
+  temporalSimulationOnly,
 }: {
   operations: AttributeOperation[];
   onChange: (next: AttributeOperation[]) => void;
   parameterDefaults: Record<string, number> | undefined;
   onChangeDefaults: (next: Record<string, number> | undefined) => void;
-  /** False for a Temporal-Simulation-only Event, which is never fired by hand. */
-  handFireable: boolean;
+  /** A Temporal-Simulation-only Event, which is never fired by hand. */
+  temporalSimulationOnly: boolean | undefined;
 }) {
   const parameterNames = useTemporalSimulationStore((s) => s.simulations).flatMap((x) => x.parameters.map((p) => p.name));
   const seriesNames = useProjectDataStore((s) => s.series).map((x) => x.name);
   const used = [...new Set(operations.map((op) => op.parameter).filter((n): n is string => !!n))];
-  const notes = handFiringNotes({ attribute_operations: operations, parameter_defaults: parameterDefaults, temporal_simulation_only: !handFireable });
+  const notes = handFiringNotes({ attribute_operations: operations, parameter_defaults: parameterDefaults, temporal_simulation_only: temporalSimulationOnly });
   // The text inputs keep their own text, keyed by row position; a move or a removal
   // shifts positions, so it bumps the epoch and the inputs reload from the operations.
   const [epoch, setEpoch] = useState(0);

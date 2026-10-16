@@ -41,9 +41,12 @@ export const OperationKindSchema = z.enum(["set", "add", "mul", "at_most", "at_l
 export const valueFitsOp = (op: z.infer<typeof OperationKindSchema>, value: unknown): boolean =>
   op === "set" || typeof value === "number";
 
+/** The operand's optional factors beyond `value` (revised 2026-10-12): the fields that name what it reads. */
+export const OPERAND_FACTORS = ["of", "parameter", "series"] as const;
+
 /** True when the operation reads a factor beyond `value`, which then must be a number. */
-export const hasFactors = (o: { of?: unknown; parameter?: unknown; series?: unknown }): boolean =>
-  o.of !== undefined || o.parameter !== undefined || o.series !== undefined;
+export const hasFactors = (o: { [K in (typeof OPERAND_FACTORS)[number]]?: unknown }): boolean =>
+  OPERAND_FACTORS.some((k) => o[k] !== undefined);
 
 /**
  * ADR-0021: one operation, on one Element (`element`) or on every match of

@@ -173,6 +173,30 @@ const W = 600;
 const H = 160;
 const PAD = 4;
 
+/** The y of a value on a chart from `lo` to `hi`; a flat range draws mid-height. */
+const yScale = (lo: number, hi: number) => (v: number) => (hi === lo ? H / 2 : H - PAD - ((v - lo) / (hi - lo)) * (H - 2 * PAD));
+
+/** A chart's frame: the caption, the y range on the left, the plot, and the x ends below. */
+function ChartFrame({ caption, lo, hi, from, to, children, footer }: { caption: React.ReactNode; lo: number; hi: number; from: React.ReactNode; to: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) {
+  return (
+    <figure className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
+      <figcaption className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">{caption}</figcaption>
+      <div className="flex gap-2">
+        <div className="flex w-16 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums text-zinc-400">
+          <span>{formatMetric(hi)}</span>
+          <span>{formatMetric(lo)}</span>
+        </div>
+        {children}
+      </div>
+      <div className="ml-[4.5rem] flex justify-between text-[10px] tabular-nums text-zinc-400">
+        <span>{from}</span>
+        <span>{to}</span>
+      </div>
+      {footer}
+    </figure>
+  );
+}
+
 /** One Metric over time, a line per Temporal Simulation, on a shared scale. */
 function ComparisonChart({ comparison, metric }: { comparison: Comparison; metric: string }) {
   const lines = comparison.rows.map((row, i) => ({ key: `${i}-${row.id}`, row, color: colorOf(i), values: row.values[metric] ?? [] }));
@@ -180,23 +204,29 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
   if (all.length === 0) return null;
   const lo = Math.min(...all);
   const hi = Math.max(...all);
-  // A flat Metric draws mid-height.
-  const span = hi - lo || 1;
-  const flat = hi === lo;
   const longest = Math.max(...lines.map((l) => l.values.length));
   const x = (i: number) => (longest > 1 ? (i / (longest - 1)) * W : W / 2);
-  const y = (v: number) => (flat ? H / 2 : H - PAD - ((v - lo) / span) * (H - 2 * PAD));
+  const y = yScale(lo, hi);
   const periods = lines.find((l) => l.values.length === longest)?.row.periods ?? [];
   const zero = lo < 0 && hi > 0 ? y(0) : null;
 
   return (
-    <figure className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
-      <figcaption className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">{metric}</figcaption>
-      <div className="flex gap-2">
-        <div className="flex w-16 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums text-zinc-400">
-          <span>{formatMetric(hi)}</span>
-          <span>{formatMetric(lo)}</span>
+    <ChartFrame
+      caption={metric}
+      lo={lo}
+      hi={hi}
+      from={periods[0]}
+      to={periods[periods.length - 1]}
+      footer={
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          {lines.map(({ key, row, color }) => (
+            <span key={key} className="flex items-center gap-1 text-[10px] text-zinc-500">
+              <span className="h-0.5 w-3" style={{ backgroundColor: color }} />{row.name}
+            </span>
+          ))}
         </div>
+      }
+    >
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-40 w-full" role="img" aria-label={`${metric} over time, one line per Temporal Simulation`}>
           {zero !== null && <line x1={0} x2={W} y1={zero} y2={zero} stroke={brandColor("neutral", 300)} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />}
           {lines.map(({ key, color, values }) => {
@@ -212,19 +242,7 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
             ));
           })}
         </svg>
-      </div>
-      <div className="ml-[4.5rem] flex justify-between text-[10px] text-zinc-400">
-        <span>{periods[0]}</span>
-        <span>{periods[periods.length - 1]}</span>
-      </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-        {lines.map(({ key, row, color }) => (
-          <span key={key} className="flex items-center gap-1 text-[10px] text-zinc-500">
-            <span className="h-0.5 w-3" style={{ backgroundColor: color }} />{row.name}
-          </span>
-        ))}
-      </div>
-    </figure>
+    </ChartFrame>
   );
 }
 
@@ -249,7 +267,7 @@ function SweepRow({
     return <p className="text-[11px] text-zinc-400">To sweep a Parameter, declare one in a Temporal Simulation (Timeline tab → Parameters).</p>;
   }
   const chosen = withParameters.find((x) => x.id === sweep?.simulationId);
-  const reads = chosen && sweep ? parameterReads(chosen, sweep.parameter, (id) => events.find((e) => e.id === id)?.attribute_operations ?? []) : null;
+  const reads = chosen && sweep ? parameterReads(Object.values(chosen.profile).flat(), chosen.timeline.steps, sweep.parameter, (id) => events.find((e) => e.id === id)?.attribute_operations ?? []) : null;
   const pick = (simulationId: string) => {
     const x = withParameters.find((y) => y.id === simulationId);
     onChange(x ? { simulationId, parameter: x.parameters[0].name, text: sweep?.text ?? "" } : null);
@@ -295,16 +313,10 @@ function SweepChart({ comparison, metric, statistic }: { comparison: Comparison;
   const ys = points.map((p) => p.y);
   const [yl, yh] = [Math.min(...ys), Math.max(...ys)];
   const px = (v: number) => (xh === xl ? W / 2 : ((v - xl) / (xh - xl)) * (W - 2 * PAD) + PAD);
-  const py = (v: number) => (yh === yl ? H / 2 : H - PAD - ((v - yl) / (yh - yl)) * (H - 2 * PAD));
+  const py = yScale(yl, yh);
   const color = brandColor("accent", 600);
   return (
-    <figure className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
-      <figcaption className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">{metric} — {STATISTIC_LABEL[statistic].toLowerCase()} of the run, against {parameter}</figcaption>
-      <div className="flex gap-2">
-        <div className="flex w-16 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums text-zinc-400">
-          <span>{formatMetric(yh)}</span>
-          <span>{formatMetric(yl)}</span>
-        </div>
+    <ChartFrame caption={`${metric} — ${STATISTIC_LABEL[statistic].toLowerCase()} of the run, against ${parameter}`} lo={yl} hi={yh} from={`${parameter} = ${xl}`} to={xh}>
         <div className="relative h-40 w-full">
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`${metric} against ${parameter}`}>
             <polyline points={points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
@@ -319,11 +331,6 @@ function SweepChart({ comparison, metric, statistic }: { comparison: Comparison;
             />
           ))}
         </div>
-      </div>
-      <div className="ml-[4.5rem] flex justify-between text-[10px] tabular-nums text-zinc-400">
-        <span>{parameter} = {xl}</span>
-        <span>{xh}</span>
-      </div>
-    </figure>
+    </ChartFrame>
   );
 }

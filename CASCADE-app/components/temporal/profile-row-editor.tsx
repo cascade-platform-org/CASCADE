@@ -13,7 +13,7 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useProjectDataStore } from "@/store/project-data-store";
 import { explainProfileWrite } from "@/lib/temporal-simulation-explainers";
 import { firesEvery } from "@/lib/timeline-plan";
-import { hasFactors, valueFitsOp } from "@/lib/schemas/attribute-operation";
+import { OPERAND_FACTORS, hasFactors, valueFitsOp } from "@/lib/schemas/attribute-operation";
 import type { ProfileRow } from "@/lib/temporal-simulation-text";
 import { NumberInput } from "@/components/ui/number-input";
 import { OpSelect, TargetModeToggle, TargetPicker } from "./operation-target";
@@ -28,7 +28,7 @@ export function ProfileRowEditor({ row, onClose, onSelect }: { row: ProfileRow; 
     updateRow(row.id, (r) => {
       Object.assign(r, patch);
       // An emptied factor leaves the row, so the document holds no `undefined` key.
-      for (const key of ["of", "parameter", "series"] as const) if (key in patch && patch[key] === undefined) delete r[key];
+      for (const key of OPERAND_FACTORS) if (key in patch && patch[key] === undefined) delete r[key];
     });
     describeRow({ ...row, ...patch });
   }

@@ -9,8 +9,8 @@
  * with more than MAX_FAMILY leaves across the records, is one JSON column.
  */
 
-import { Blobs, readValue, writeJson, writeValue } from "./cells";
-import { type Cell, type CellRef, type Problem, type SheetModel, textCell } from "./model";
+import { Blobs, readValue, writeFreeValue, writeJson, writeValue } from "./cells";
+import { type Cell, type CellRef, type Problem, type SheetModel, cellText, textCell } from "./model";
 import { formatKey, isObject, own, parseKey, type Json, type JsonObject } from "./paths";
 
 /** More leaf columns than this under one field and the field is written as one JSON column. */
@@ -18,6 +18,8 @@ const MAX_FAMILY = 200;
 
 interface Leaf {
   path: string[];
+  /** The path as a column key. */
+  key: string;
   value: Json;
   list: boolean;
 }
@@ -27,10 +29,11 @@ export function leaves(rec: JsonObject, opaque: ReadonlySet<string> = new Set(),
   for (const [k, v] of Object.entries(rec)) {
     if (v === undefined) continue;
     const path = [...prefix, k];
-    if (opaque.has(formatKey(path))) out.push({ path, value: v, list: false });
-    else if (Array.isArray(v)) out.push({ path, value: v, list: v.every((x) => typeof x === "string") });
+    const key = formatKey(path);
+    if (opaque.has(key)) out.push({ path, key, value: v, list: false });
+    else if (Array.isArray(v)) out.push({ path, key, value: v, list: v.every((x) => typeof x === "string") });
     else if (isObject(v) && Object.keys(v).length > 0) out.push(...leaves(v, opaque, path));
-    else out.push({ path, value: v, list: false });
+    else out.push({ path, key, value: v, list: false });
   }
   return out;
 }
@@ -45,30 +48,29 @@ export interface TableSpec {
   derived?: { key: string; after: string; value: (rec: JsonObject) => string | undefined }[];
 }
 
-/**
- * A field that may hold a number, true/false or text: its true/false is written in its `json:` form,
- * because LibreOffice saves a true/false cell as 1/0 and there the schema cannot tell which was meant.
- */
+/** A field that may hold a number, true/false or text: written with `writeFreeValue`. */
 const isFreeTyped = (path: readonly string[]) => path[0] === "properties" || (path.length === 1 && path[0] === "value");
 
 /** The records as a sheet. */
 export function writeTable(spec: TableSpec, records: readonly JsonObject[], blobs: Blobs): SheetModel {
   const opaque = new Set(spec.opaque ?? []);
   // A field with too many leaves (a properties map of hundreds of keys) is one JSON column.
+  let perRecord = records.map((rec) => leaves(rec, opaque));
   const family = new Map<string, Set<string>>();
-  for (const rec of records) for (const l of leaves(rec, opaque)) {
+  for (const ls of perRecord) for (const l of ls) {
     const top = formatKey(l.path.slice(0, 1));
     if (!family.has(top)) family.set(top, new Set());
-    family.get(top)!.add(formatKey(l.path));
+    family.get(top)!.add(l.key);
   }
-  for (const [top, keys] of family) if (keys.size > MAX_FAMILY) opaque.add(top);
+  const wide = [...family].filter(([, keys]) => keys.size > MAX_FAMILY).map(([top]) => top);
+  if (wide.length > 0) {
+    wide.forEach((top) => opaque.add(top));
+    perRecord = records.map((rec) => leaves(rec, opaque));
+  }
 
-  const perRecord = records.map((rec) => leaves(rec, opaque));
-  const columns = new Map<string, { path: string[]; list: boolean }>();
+  const columns = new Map<string, { list: boolean }>();
   for (const ls of perRecord) for (const l of ls) {
-    const key = formatKey(l.path);
-    const seen = columns.get(key);
-    columns.set(key, { path: l.path, list: (seen?.list ?? true) && l.list });
+    columns.set(l.key, { list: (columns.get(l.key)?.list ?? true) && l.list });
   }
   const first = (spec.first ?? []).filter((k) => columns.has(k));
   const rest = [...columns.keys()].filter((k) => !first.includes(k)).sort();
@@ -80,7 +82,7 @@ export function writeTable(spec: TableSpec, records: readonly JsonObject[], blob
 
   const rows: (Cell | null)[][] = [ordered.map((c) => textCell(c.header))];
   records.forEach((rec, i) => {
-    const byKey = new Map(perRecord[i].map((l) => [formatKey(l.path), l]));
+    const byKey = new Map(perRecord[i].map((l) => [l.key, l]));
     rows.push(ordered.map((c) => {
       if (c.derived) {
         const text = c.derived(rec);
@@ -91,25 +93,28 @@ export function writeTable(spec: TableSpec, records: readonly JsonObject[], blob
       const list = columns.get(c.key!)!.list;
       // A list column reads a plain text as a list, so anything else in it is written in its JSON form.
       if (list && !Array.isArray(leaf.value)) return writeJson(leaf.value, blobs);
-      if (typeof leaf.value === "boolean" && isFreeTyped(leaf.path)) return writeJson(leaf.value, blobs);
-      return writeValue(leaf.value, blobs, list);
+      return !list && isFreeTyped(leaf.path) ? writeFreeValue(leaf.value, blobs) : writeValue(leaf.value, blobs, list);
     }));
   });
   return { name: spec.name, rows };
+}
+
+export interface HeaderColumn {
+  col: number;
+  path: string[];
+  /** The path as a column key. */
+  key: string;
+  list: boolean;
 }
 
 /** A record read from a row: its fields, the row, and where each field path came from. */
 export interface ReadRecord {
   record: JsonObject;
   row: number;
-  /** Field key → column. */
+  /** Field key → column, for the fields this row fills. */
   cols: Map<string, number>;
-}
-
-export interface HeaderColumn {
-  col: number;
-  path: string[];
-  list: boolean;
+  /** The sheet's data columns (shared by its rows). */
+  columns: readonly HeaderColumn[];
 }
 
 /** The header row: data columns by key; a `~` column is skipped, an unreadable one reported. */
@@ -119,7 +124,7 @@ export function readHeader(sheet: SheetModel, problems: Problem[], fixed?: (text
   const other: { col: number; text: string }[] = [];
   const seen = new Set<string>();
   header.forEach((c, col) => {
-    const text = c?.v === null || c?.v === undefined ? "" : typeof c.v === "string" ? c.v : c.date && c.w ? c.w : String(c.v);
+    const text = cellText(c);
     if (text === "" || text.startsWith("~")) return;
     if (fixed && !fixed(text)) { other.push({ col, text }); return; }
     const list = text.endsWith("[]");
@@ -129,7 +134,7 @@ export function readHeader(sheet: SheetModel, problems: Problem[], fixed?: (text
     const key = formatKey(path);
     if (seen.has(key)) { problems.push({ severity: "error", at, message: `column "${text}" appears twice` }); return; }
     seen.add(key);
-    columns.push({ col, path, list });
+    columns.push({ col, path, key, list });
   });
   return { columns, other };
 }
@@ -169,9 +174,9 @@ export function readTable(sheet: SheetModel, blobs: readonly string[], problems:
       if ("error" in read) { problems.push({ severity: "error", at, message: read.error }); continue; }
       const why = place(record, c.path, read.value);
       if (why) { problems.push({ severity: "error", at, message: why }); continue; }
-      cols.set(formatKey(c.path), c.col);
+      cols.set(c.key, c.col);
     }
-    out.push({ record, row, cols });
+    out.push({ record, row, cols, columns });
   }
   return out;
 }

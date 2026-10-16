@@ -1,6 +1,6 @@
 # ADR-0023 — The Workbook: a second, lossless form of the project file; edits come back as a checked change set
 
-**Status:** proposed (2026-10-12). Builds on ADR-0019 (Temporal Simulation), ADR-0021 (Attribute
+**Status:** accepted (2026-10-12); Open and Save built, Import changes (§3) in progress. Builds on ADR-0019 (Temporal Simulation), ADR-0021 (Attribute
 Operations) and ADR-0022 (LLM Design), each revised the same day for Parameters, Series and
 spreadsheet provenance.
 
@@ -28,8 +28,8 @@ otherwise the save is refused and names the JSON pointer that would be lost.
 ### 2. Layout (`cascade.workbook/v1`)
 
 - **One sheet per kind of record, one row per record, row order = list order.** One header row
-  of machine keys, explained by a generated `README` sheet. Sheets: `Project` (key and value,
-  with the format), `Canvases`, `Nodes`, `Edges`, `Categories`, `Functionality scale`,
+  of machine keys, explained by a generated `README` sheet. Sheets: `Project` (key and
+  value), `Canvases`, `Nodes`, `Edges`, `Categories`, `Functionality scale`,
   `Level scale`, `Events`, `Event operations`, `Graph types`, `Node templates`, `Simulations`,
   `Steps` (one row per Phase), `Parameters`, `Profile`, `Metrics`, `Series` (the index) and one
   `S·<name>` sheet per Series.
@@ -52,10 +52,9 @@ otherwise the save is refused and names the JSON pointer that would be lost.
   one per line; anything that would read back differently is written as `json:` followed by
   JSON. Small opaque parts (a Canvas's map anchor, heuristic parameters, responsibility shares)
   are JSON cells.
-- **`_cascade`**, a hidden sheet (`key | part | text`), holds what has no table: `update_history`,
+- **`_cascade`**, a hidden sheet (`key | part | text`), holds what has no table: the format (`cascade.workbook/v1`), `update_history`,
   the Scorecard, an imported Canvas's EPANET text, any cell over 32,000 characters (split into
-  parts, under the 32,767-character limit), a fingerprint of the project it was written from,
-  and the **residual**: every remaining difference between what the visible sheets read back as
+  parts, under the 32,767-character limit), and the **residual**: every remaining difference between what the visible sheets read back as
   and the bundle (an empty list, the exact order of a Canvas's members), each with a hash of what
   the sheets gave when written. On read, a residual entry is applied only while that hash still
   matches, so an edit a person made on a visible sheet always wins.

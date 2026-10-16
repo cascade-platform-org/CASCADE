@@ -247,7 +247,9 @@ export function FileIoPanel() {
       markSaved();
     } catch (err) {
       console.error("[CASCADE] Save failed:", err);
-      pushToast({ message: err instanceof Error && err.name !== "Error" ? "Save failed." : `Save failed: ${err instanceof Error ? err.message : String(err)}`, variant: "error", durationMs: 6000 });
+      // A plain Error or a workbook that would lose data says why; a browser's own error (a DOMException) does not.
+      const says = !(err instanceof Error) || err.name === "Error" || err.name === "WorkbookLossError";
+      pushToast({ message: says ? `Save failed: ${err instanceof Error ? err.message : String(err)}` : "Save failed.", variant: "error", durationMs: 6000 });
     }
   }
 

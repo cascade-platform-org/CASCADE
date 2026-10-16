@@ -9,12 +9,13 @@
 
 import type { ZodError } from "zod";
 import { AggregateSchema, CalendarUnitSchema, ComparisonSchema, STANDARD_METRICS, SimulationScopeSchema, TEMPORAL_SIMULATION_FORMAT, TemporalSimulationSchema, type Metric, type Parameter, type SimulationScope, type StandardMetric, type TemporalSimulation, type Timeline } from "@/lib/schemas/temporal-simulation";
-import { OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
+import { OPERAND_FACTORS, OperationKindSchema, type AttributeOperation } from "@/lib/schemas/attribute-operation";
 import { filterMisuse, matchElements, type FilterableModel } from "@/lib/element-filter";
 import { planTimeline } from "@/lib/timeline-plan";
 import { dryRunProblems } from "@/lib/temporal-dry-run";
 import type { EventDefinition, ModelConfiguration } from "@/lib/schemas/config";
 import type { Series } from "@/lib/schemas/series";
+import { seriesLabels } from "@/lib/series-edit";
 import type { CapacityValue } from "@/lib/schemas/network";
 
 /**
@@ -47,15 +48,9 @@ export interface SimulationDraft {
 /** The operation a row applies in one period. */
 export function rowOperation(row: ProfileRow, value: AttributeOperation["value"]): AttributeOperation {
   const target = row.where !== undefined ? { where: row.where } : { element: row.element };
-  return {
-    ...target,
-    path: row.path,
-    op: row.op,
-    value,
-    ...(row.of ? { of: row.of } : {}),
-    ...(row.parameter ? { parameter: row.parameter } : {}),
-    ...(row.series ? { series: row.series } : {}),
-  };
+  const op: AttributeOperation = { ...target, path: row.path, op: row.op, value };
+  for (const k of OPERAND_FACTORS) if (row[k]) Object.assign(op, { [k]: row[k] });
+  return op;
 }
 
 /** Rows → `{label: [operations]}`: a period's operations follow row order; labels in Timeline order, unknown ones after. */
@@ -80,7 +75,7 @@ export function profileToRows(profile: Record<string, AttributeOperation[]>, new
   for (const [label, ops] of Object.entries(profile)) {
     let previous = -1;
     for (const { value, ...op } of ops) {
-      const key = JSON.stringify([op.element, op.where, op.path, op.op, op.of, op.parameter, op.series]);
+      const key = JSON.stringify([op.element, op.where, op.path, op.op, ...OPERAND_FACTORS.map((k) => op[k])]);
       let i = keys.findIndex((k, j) => j > previous && k === key && !(label in rows[j].values));
       if (i < 0) {
         i = rows.push({ ...op, id: newId(), values: {} }) - 1;
@@ -482,7 +477,7 @@ export function llmContext(
     "Series (name — unit — rows — period labels):",
     ...(series.length
       ? series.map((x) => {
-          const labels = [...new Set(Object.values(x.rows).flatMap((r) => Object.keys(r)))].sort();
+          const labels = seriesLabels(x).sort();
           const rows = Object.keys(x.rows);
           return `- ${x.name} — ${x.unit ?? "no unit"} — ${rows.length} row${rows.length === 1 ? "" : "s"}${rows.includes("*") ? " (with a * row for every other Element)" : ""} — ${labels.length ? `${labels[0]} … ${labels[labels.length - 1]} (${labels.length})` : "no values"}${x.description ? ` — ${x.description}` : ""}`;
         })

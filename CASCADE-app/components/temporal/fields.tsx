@@ -17,6 +17,7 @@ import { countTargets } from "@/lib/element-filter";
 import { rowOperation, type ProfileRow } from "@/lib/temporal-simulation-text";
 import { explainProfileCarry, explainProfileOp, explainProfileRow } from "@/lib/temporal-simulation-explainers";
 import type { EventDefinition } from "@/lib/schemas/config";
+import { withDecimalPoint } from "@/lib/decimal-comma";
 
 export const inputCls =
   "w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
@@ -114,7 +115,7 @@ export const parsePath = (text: string): string[] => text.split(",").map((p) => 
  * else stays a string. "1,5" (a decimal comma, typed or pasted) reads as 1.5.
  */
 export function parseValue(text: string): number | boolean | string {
-  const t = text.trim().replace(/^(-?\d+),(\d+)$/, "$1.$2");
+  const t = withDecimalPoint(text);
   if (t !== "" && !Number.isNaN(Number(t))) return Number(t);
   if (t === "true" || t === "false") return t === "true";
   return text;

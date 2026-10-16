@@ -15,9 +15,8 @@ import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { elementLabel } from "@/lib/coalition";
-import { orphanRows, parseBlock, seriesGaps, seriesReaders, withoutRows, writeBlock } from "@/lib/series-edit";
+import { orphanRows, parseBlock, seriesGaps, seriesLabels, seriesReaders, withoutRows, writeBlock } from "@/lib/series-edit";
 import { ALL_ELEMENTS, type Series } from "@/lib/schemas/series";
-import { OPERAND_NAME_PATTERN } from "@/lib/schemas/operand";
 import { EXPLAIN_TAB } from "@/lib/temporal-simulation-explainers";
 import { cn } from "@/lib/utils";
 import { Field, Notices, SmallButton, TextBackedInput, inputCls, usePlan } from "./fields";
@@ -30,6 +29,7 @@ export function SeriesTab() {
   const [chosen, setChosen] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const selected = series.find((x) => x.name === chosen) ?? series[0] ?? null;
+  const readers = useMemo(() => (selected ? seriesReaders(selected.name, simulations, events) : null), [selected, simulations, events]);
 
   return (
     <div className="space-y-3" onFocus={() => useTemporalSimulationStore.getState().explain(EXPLAIN_TAB.series)}>
@@ -52,7 +52,7 @@ export function SeriesTab() {
         )}
       </div>
       <Notices tone="error" items={problem ? [problem] : []} />
-      {selected && <SeriesEditor key={selected.name} series={selected} readers={seriesReaders(selected.name, simulations, events)} onProblem={setProblem} onRenamed={setChosen} />}
+      {selected && readers && <SeriesEditor key={selected.name} series={selected} readers={readers} onProblem={setProblem} onRenamed={setChosen} />}
     </div>
   );
 }
@@ -75,13 +75,13 @@ function SeriesEditor({
   const [adding, setAdding] = useState("");
 
   const planLabels = useMemo(() => plan.periods.map((p) => p.label), [plan]);
-  const labels = useMemo(() => {
-    const own = [...new Set(Object.values(series.rows).flatMap((r) => Object.keys(r)))].filter((l) => !planLabels.includes(l)).sort();
-    return [...planLabels, ...own];
-  }, [series, planLabels]);
+  const inPlan = useMemo(() => new Set(planLabels), [planLabels]);
+  const labels = useMemo(() => [...planLabels, ...seriesLabels(series).filter((l) => !inPlan.has(l)).sort()], [series, planLabels, inPlan]);
   const rowKeys = Object.keys(series.rows);
-  const gaps = useMemo(() => seriesGaps(series, planLabels), [series, planLabels]);
-  const orphans = orphanRows(series, (id) => id in nodes || id in edges);
+  // Row key → the labels a run would read but the row has no value for.
+  const gaps = useMemo(() => new Map([...seriesGaps(series, planLabels)].map(([k, ls]) => [k, new Set(ls)])), [series, planLabels]);
+  const orphans = useMemo(() => orphanRows(series, (id) => id in nodes || id in edges), [series, nodes, edges]);
+  const orphanSet = useMemo(() => new Set(orphans), [orphans]);
   const name = (key: string) => (key === ALL_ELEMENTS ? "* (every other Element)" : elementLabel({ nodes, edges }, key));
   const save = (next: Series) => onProblem(setSeries(series.name, next));
 
@@ -91,7 +91,7 @@ function SeriesEditor({
     save(writeBlock(series, rowKeys.slice(rowIndex), labels.slice(labelIndex), block.cells));
   };
 
-  const candidates = [...Object.values(nodes).map((n) => n.id), ...Object.values(edges).map((e) => e.id)].filter((id) => !(id in series.rows));
+  const candidates = useMemo(() => [...Object.keys(nodes), ...Object.keys(edges)].filter((id) => !(id in series.rows)), [nodes, edges, series]);
   const readBy = [
     ...readers.simulations.map(([n, k]) => `${n} (${k} operation${k === 1 ? "" : "s"})`),
     ...readers.events.map(([n, k]) => `Event ${n} (${k})`),
@@ -106,7 +106,6 @@ function SeriesEditor({
             className={cn(inputCls, "font-mono")}
             onCommit={(t) => {
               const next = t.trim();
-              if (!OPERAND_NAME_PATTERN.test(next)) return onProblem("A Series name is letters, digits and _, not starting with a digit.");
               const why = renameSeries(series.name, next);
               onProblem(why);
               if (!why) onRenamed(next);
@@ -139,7 +138,7 @@ function SeriesEditor({
             <tr className="text-left text-[10px] text-zinc-400">
               <th className="sticky left-0 z-10 bg-white px-2 py-1 font-semibold dark:bg-zinc-900">Element</th>
               {labels.map((l) => (
-                <th key={l} className={cn("px-1 py-1 font-medium", !planLabels.includes(l) && "italic text-zinc-300")} title={planLabels.includes(l) ? "A period of this Simulation" : "Not a period of this Simulation"}>
+                <th key={l} className={cn("px-1 py-1 font-medium", !inPlan.has(l) && "italic text-zinc-300")} title={inPlan.has(l) ? "A period of this Simulation" : "Not a period of this Simulation"}>
                   {l}
                 </th>
               ))}
@@ -148,13 +147,13 @@ function SeriesEditor({
           <tbody>
             {rowKeys.map((key, ri) => (
               <tr key={key} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className={cn("sticky left-0 z-10 max-w-[12rem] truncate bg-white px-2 dark:bg-zinc-900", orphans.includes(key) && "text-amber-600")} title={key}>
+                <td className={cn("sticky left-0 z-10 max-w-[12rem] truncate bg-white px-2 dark:bg-zinc-900", orphanSet.has(key) && "text-amber-600")} title={key}>
                   {name(key)}
                   <button type="button" title="Remove row" className="ml-1 text-zinc-300 hover:text-red-600" onClick={() => save(withoutRows(series, [key]))}>×</button>
                 </td>
                 {labels.map((l, li) => {
                   const value = series.rows[key][l];
-                  const gap = value === undefined && gaps.get(key)?.includes(l);
+                  const gap = value === undefined && gaps.get(key)?.has(l);
                   return (
                     <td key={l} className="p-px">
                       <input

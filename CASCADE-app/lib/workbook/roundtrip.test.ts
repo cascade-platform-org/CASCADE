@@ -1,9 +1,9 @@
+import { deepEqual } from "@/lib/graph-diff";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseBundle } from "@/lib/file-io";
 import { decodeWorkbook, encodeWorkbook, parseDecoded } from "./codec";
 import { readCascadeSheet, CASCADE_SHEET, type ResidualEntry } from "./residual";
-import { jsonEqual } from "./paths";
 
 const dirs = ["samples/public", "samples/private"].filter(existsSync);
 const samples = dirs.flatMap((d) => readdirSync(d).filter((f) => f.endsWith(".json") && f !== "manifest.json" && !f.startsWith("cascade-recovery")).map((f) => `${d}/${f}`));
@@ -16,7 +16,7 @@ describe.each(samples)("the sample %s as a Workbook", (file) => {
     const decoded = decodeWorkbook(model);
     const parsed = parseDecoded(decoded, model);
     expect(parsed.problems.filter((p) => p.severity === "error")).toEqual([]);
-    expect(jsonEqual(JSON.parse(JSON.stringify(parsed.bundle)), JSON.parse(JSON.stringify(bundle)))).toBe(true);
+    expect(deepEqual(JSON.parse(JSON.stringify(parsed.bundle)), JSON.parse(JSON.stringify(bundle)))).toBe(true);
     const entries = JSON.parse(readCascadeSheet(model.sheets.find((s) => s.name === CASCADE_SHEET)).get("residual") ?? "[]") as ResidualEntry[];
     for (const e of entries) {
       const v = e.v;
