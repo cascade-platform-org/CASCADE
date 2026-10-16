@@ -3192,6 +3192,24 @@ export const USER_MANUAL: ManualDoc = {
                 [
                   {
                     "kind": "strong",
+                    "text": "Series."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " Tables of numbers by element and period that belong to the project, so every Temporal Simulation reads them: hours worked per activity per month, a demand forecast. The Series tab shows one at a time, elements down and the selected Temporal Simulation's periods across; a "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "*"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " row serves every element without its own. Paste a block copied from a spreadsheet into a cell to fill the rows below and the periods after it. A cell a run would read but that is empty is marked. Renaming a Series renames it in every Temporal Simulation; Events that read it are listed for you to rename in Config → Events."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
                     "text": "Metrics."
                   },
                   {

@@ -851,6 +851,7 @@ export const useCanvasStore = create<CanvasStore>()(
       useHistoryStore.getState().reset();
       useScorecardStore.getState().reset();
       useTemporalSimulationStore.getState().loadFromProject(undefined);
+      useProjectDataStore.getState().loadFromProject(undefined, undefined);
     },
   })),
 );

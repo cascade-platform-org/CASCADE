@@ -301,7 +301,7 @@ const identity = (x: unknown): string | undefined =>
 const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
 /** The subject kind of a list's records, by the list's key. */
-const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas" };
+const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", sheets: "sheet" };
 
 /** Leaf-level changes between two JSON values; lists of records with ids (or names) are matched by them. */
 function jsonChanges(before: unknown, after: unknown, where: string, out: PreviewLine[], subject?: string, key?: string): void {

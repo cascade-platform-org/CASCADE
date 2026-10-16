@@ -55,3 +55,29 @@ describe("the project's creation time", () => {
     expect(again.meta.updated_at).not.toBe("2024-05-01T10:00:00.000Z");
   });
 });
+
+describe("editing Series", () => {
+  const data = () => useProjectDataStore.getState();
+  it("adds, validates, and renames a Series with every Simulation's operations that read it", () => {
+    const name = data().addSeries()!;
+    expect(name).toBe("series_1");
+    expect(data().setSeries(name, { name, rows: { a: { "2024-01": Number.NaN } } })).toMatch(/./);
+    expect(data().setSeries(name, { name, rows: { a: { "2024-01": 5 } } })).toBeNull();
+    useTemporalSimulationStore.getState().updateProfile((rows) => {
+      rows.push({ id: "r", element: "a", path: ["p"], op: "add", series: name, values: { "2023-01": 1 } });
+    });
+    expect(data().renameSeries(name, "worked_h")).toBeNull();
+    expect(data().series.map((x) => x.name)).toEqual(["worked_h"]);
+    expect(useTemporalSimulationStore.getState().simulations[0].profile["2023-01"][0].series).toBe("worked_h");
+    expect(useTemporalSimulationStore.getState().profile[0].series).toBe("worked_h");
+    data().addSeries();
+    expect(data().renameSeries("series_1", "worked_h")).toMatch(/exists/);
+  });
+
+  it("refuses edits while a run is shown", () => {
+    useTemporalSimulationStore.setState({ running: true });
+    expect(data().addSeries()).toBeNull();
+    expect(data().removeSeries("x")).toMatch(/End run/);
+    useTemporalSimulationStore.setState({ running: false });
+  });
+});

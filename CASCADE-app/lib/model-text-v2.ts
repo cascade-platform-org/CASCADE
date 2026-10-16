@@ -44,8 +44,10 @@ const VERBS = ["set", "scale", "increase", "cap", "floor"] as const;
 type Verb = (typeof VERBS)[number];
 const OP_OF: Record<Verb, AttributeOperation["op"]> = { set: "set", scale: "mul", increase: "add", cap: "at_most", floor: "at_least" };
 
-const KINDS = ["node", "edge", "event", "category", "canvas", "simulation"] as const;
+const KINDS = ["node", "edge", "event", "category", "canvas", "simulation", "series"] as const;
 type Kind = (typeof KINDS)[number];
+/** The field that identifies a thing: a Category and a Series by name, the rest by id. */
+const idField = (kind: Kind): "name" | "id" => (kind === "category" || kind === "series" ? "name" : "id");
 
 const Text = z.string().min(1).refine(isSafeKey, { message: "__proto__, constructor and prototype are not allowed" });
 const Why = { why: z.string().optional() };
@@ -236,6 +238,7 @@ const LISTS: Record<Exclude<Kind, "node" | "edge">, { pointer: string; read: (b:
   category: { pointer: "/config/categories", read: (b) => b.config.categories as unknown as Rec[], id: (x) => x.name },
   canvas: { pointer: "/project/canvases", read: (b) => b.project.canvases as unknown as Rec[], id: (x) => x.id, name: (x) => x.label },
   simulation: { pointer: "/project/temporal_simulations", read: (b) => (b.project.temporal_simulations ?? []) as unknown as Rec[], id: (x) => x.id, name: (x) => (x.timeline as Rec | undefined)?.name },
+  series: { pointer: "/project/series", read: (b) => (b.project.series ?? []) as unknown as Rec[], id: (x) => x.name },
 };
 
 /** A listed thing's position, by its id or (Canvases, Simulations) its name; -1 when absent. */
@@ -270,7 +273,7 @@ function headline(change: Change): string {
       const { verb, field } = verbOf(change.c);
       return describe(verb, field, change.c);
     }
-    case "add": return `add ${change.c.add} ${JSON.stringify(change.c.value[change.c.add === "category" ? "name" : "id"] ?? "")}`;
+    case "add": return `add ${change.c.add} ${JSON.stringify(change.c.value[idField(change.c.add)] ?? "")}`;
     case "update": return `update ${change.c.update} "${change.c.id}"`;
     case "delete": return `delete ${change.c.delete} ${change.c.id !== undefined ? `"${change.c.id}"` : "by filter"}`;
     case "connect": return `connect ${change.c.connect.from} → ${change.c.connect.to}`;
@@ -395,8 +398,8 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
       group.title = `${describe(verb, field, c)} — ${changed} changed${group.skipped.length ? `, ${group.skipped.length} skipped` : ""} of ${targets.length} matched`;
     } else if (change.type === "add") {
       const { add: kind, value } = change.c;
-      const id = kind === "category" ? value.name : value.id;
-      if (typeof id !== "string" || !id) errors.push(`${at}: a new ${kind} needs ${kind === "category" ? '"name"' : '"id"'}`);
+      const id = value[idField(kind)];
+      if (typeof id !== "string" || !id) errors.push(`${at}: a new ${kind} needs "${idField(kind)}"`);
       else if (kind === "node" || kind === "edge") {
         const registry = kind === "node" ? draft.project.nodes : draft.project.edges;
         if (id in registry) errors.push(`${at}: ${kind} "${id}" already exists; use "update"`);
@@ -422,6 +425,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
         else {
           const record = kind === "canvas" ? { graph: { graph_type: "generic", node_ids: [], edge_ids: [] }, ...value } : value;
           if (kind === "simulation" && draft.project.temporal_simulations === undefined) emit(at, [{ op: "add", path: "/project/temporal_simulations", value: [] }]);
+          if (kind === "series" && draft.project.series === undefined) emit(at, [{ op: "add", path: "/project/series", value: [] }]);
           emit(at, [{ op: "add", path: `${list.pointer}/-`, value: record }]);
           group.subjects.push(`${kind}:${id}`);
         }
@@ -441,7 +445,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
       if (current === undefined || pointer === undefined) errors.push(`${at}: no ${kind} "${id}"`);
       else {
         const merged = mergePatch(current, value) as Rec;
-        const idKey = kind === "category" ? "name" : "id";
+        const idKey = idField(kind);
         if (merged[idKey] !== (current as Rec)[idKey]) errors.push(`${at}: the ${idKey} of a ${kind} cannot change; add a new one and delete this one`);
         else {
           emit(at, [{ op: "replace", path: pointer, value: merged }]);
@@ -553,7 +557,8 @@ Change a value on Elements — a verb naming a field, then "to" or "by", then "i
   refuses the whole set and names it; add "skip_unfit": true to leave such Elements out instead.
 
 Add, update, delete things by id (never by position):
-  { "add": "node"|"edge"|"event"|"category"|"canvas"|"simulation", "value": { …the whole thing… } }
+  { "add": "node"|"edge"|"event"|"category"|"canvas"|"simulation"|"series", "value": { …the whole thing… } }
+      a series is { "name", "unit"?, "description"?, "rows": { "<element id or *>": { "<period label>": number } } }
       a node also takes "canvas": "<id or label>" (needed when there are several); functionality defaults to N;
       without "position" it is placed on a grid below its Canvas's nodes
   { "update": KIND, "id": "<id>", "value": { …only the fields to change… } }   null removes a field
@@ -562,7 +567,7 @@ Add, update, delete things by id (never by position):
       vulnerability levels: never edit those yourself
   { "connect": { "from": "<node>", "to": "<node>", "capacity": 4 } }      a new edge, on the Canvases of its ends
   { "disconnect": { "from": "<node>", "to": "<node>" } }
-  (A category's id is its "name"; a simulation's or canvas's id may also be given as its name/label.)
+  (A category's and a series' id is its "name"; a simulation's or canvas's id may also be given as its name/label.)
 
 Nothing changes until the person reads the preview and confirms; a version of the project is kept first.`;
 

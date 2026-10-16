@@ -59,6 +59,15 @@ export const EXPLAIN_TAB: Record<string, Explanation> = {
     ],
     refs: ["ADR-0019 §4"],
   },
+  series: {
+    title: "Series",
+    lines: [
+      "A Series is a table of numbers by Element and period label, kept by the project: data such as hours worked per activity per month, which every Temporal Simulation reads.",
+      "An operation reads it as a factor (× Series): the value of the Element's own row, or of the * row when it has none, at the label of the period being run. A missing value refuses that write, never 0, and Check lists the gaps before a run.",
+      "Paste a block from a spreadsheet into a cell to fill the rows below and the periods after it. While a run is shown, Series are read-only, like the model.",
+    ],
+    refs: ["ADR-0019"],
+  },
   metrics: {
     title: "Metrics",
     lines: [

@@ -31,8 +31,9 @@ import { periodState, walkPeriods, type RunRecord } from "@/lib/step-operator";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { ComparedRun } from "@/lib/temporal-comparison";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
+import { renameSeriesIn } from "@/lib/series-edit";
 
-export type SimTab = "timeline" | "run" | "compare" | "metrics" | "text";
+export type SimTab = "timeline" | "run" | "compare" | "metrics" | "series" | "text";
 
 interface TemporalSimulationState {
   open: boolean;
@@ -106,6 +107,8 @@ interface TemporalSimulationState {
   updateParameters: (fn: (parameters: Parameter[]) => void) => void;
   /** Rename a Parameter, and every profile row of this Simulation that reads it. Events keep their own names. */
   renameParameter: (from: string, to: string) => void;
+  /** A Series was renamed: every Simulation's profile operations, and the draft's rows, follow. */
+  renameSeriesReferences: (from: string, to: string) => void;
   /** Show or hide one standard Metric. */
   showStandardMetric: (metric: StandardMetric, shown: boolean) => void;
   /** Replace the whole draft — the Text tab's Apply. */
@@ -283,6 +286,10 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
     })),
     updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
     updateParameters: (fn) => set(editing((s) => fn(s.parameters))),
+    renameSeriesReferences: (from, to) => set((s) => {
+      s.simulations = renameSeriesIn(current(s).simulations, from, to);
+      for (const row of s.profile) if (row.series === from) row.series = to;
+    }),
     renameParameter: (from, to) => set(editing((s) => {
       for (const p of s.parameters) if (p.name === from) p.name = to;
       for (const row of s.profile) if (row.parameter === from) row.parameter = to;

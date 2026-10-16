@@ -488,6 +488,15 @@ on the active canvas, and saves it with the Temporal Simulation.
   read at the period being run) and *× of*. A factor with no value (an
   undeclared Parameter, a Series with no value at that period) refuses the
   write for that element, and Check lists it before the run.
+- **Series.** Tables of numbers by element and period that belong to the
+  project, so every Temporal Simulation reads them: hours worked per activity
+  per month, a demand forecast. The Series tab shows one at a time, elements
+  down and the selected Temporal Simulation's periods across; a `*` row serves
+  every element without its own. Paste a block copied from a spreadsheet into
+  a cell to fill the rows below and the periods after it. A cell a run would
+  read but that is empty is marked. Renaming a Series renames it in every
+  Temporal Simulation; Events that read it are listed for you to rename in
+  Config → Events.
 - **Metrics.** Your own read-outs, computed per period (§9.4).
 - **Text.** The whole definition as JSON, to edit in bulk or hand to an LLM:
   *Copy with context for an LLM* adds a primer, the format and this project's

@@ -218,3 +218,17 @@ describe("any plain change", () => {
     );
   });
 });
+
+describe("a Series through plain changes", () => {
+  it("is added, updated by name and deleted, and two with one name are refused", () => {
+    const added = run(bundle(), [{ add: "series", value: { name: "worked_h", unit: "h", rows: { c: { "2024-01": 5 } } }, why: "monthly hours" }]);
+    expect(added.errors).toBeUndefined();
+    expect(added.after!.project.series).toEqual([{ name: "worked_h", unit: "h", rows: { c: { "2024-01": 5 } } }]);
+    expect(added.groups![0].title).toBe('add series "worked_h"');
+
+    const updated = run(added.after!, [{ update: "series", id: "worked_h", value: { rows: { c: { "2024-01": 5, "2024-02": 6 } } } }]);
+    expect(updated.after!.project.series![0].rows.c).toEqual({ "2024-01": 5, "2024-02": 6 });
+    expect(run(updated.after!, [{ delete: "series", id: "worked_h" }]).after!.project.series).toEqual([]);
+    expect(run(added.after!, [{ add: "series", value: { name: "worked_h", rows: {} } }]).errors?.join(" ")).toMatch(/already exists/);
+  });
+});
