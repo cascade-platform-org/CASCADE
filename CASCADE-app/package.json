@@ -15,6 +15,7 @@
     "audit:deadcode": "knip",
     "audit:circular": "madge --circular --extensions ts,tsx --ts-config tsconfig.json .",
     "audit:deps": "npm audit --omit=dev",
+    "audit:sheetjs": "node scripts/check-sheetjs.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "harness:shapley": "vitest run --config vitest.harness.config.mts",
@@ -39,6 +40,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "tailwind-merge": "^3.6.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },

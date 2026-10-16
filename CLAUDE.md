@@ -154,6 +154,7 @@ means adding it to the other in the same session.
 | Frontend | `npm test` | vitest — unit tests for the pure `lib/` modules |
 | Frontend | `npm run audit:deadcode` | knip (unused exports/deps/files) |
 | Frontend | `npm run audit:circular` | madge (circular imports) |
+| Frontend | `npm run audit:sheetjs` | SheetJS CE is installed from cdn.sheetjs.com, which Dependabot does not watch: fails when a newer release is out |
 | Both | `git ls-files \| xargs detect-secrets scan --baseline .secrets.baseline` | secrets in tracked files |
 
 `import-linter`'s one contract (`CASCADE-backend/pyproject.toml → [tool.importlinter]`) is the CLAUDE.md §7 engine boundary made mechanically enforced instead of just documented — it fails the build if anything outside `services/propagation_service.py` (or the `scripts/benchmark_engine.py` ops exception) imports `engine.*`. `benchmark_engine.py` keeps its carve-out because it is run INSIDE the deployed container to recalibrate entitlements on the real VM (deployment.md; migration 003 says to re-run it there), so it is shipped code and has to stay in the backend. The paper's `validate_faithfulness.py` had the same carve-out and lost it by moving to `experiments/aqueducts/` — a harness that never runs in production does not belong in the image or in this contract, which is the better answer whenever it is available. Prefer consuming a product artifact over gaining a carve-out: `scripts/paper_shapley_vs_centrality.py` gave its up by reading the Analysis page's exported Shapley result instead of re-implementing the estimator.

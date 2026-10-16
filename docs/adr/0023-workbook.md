@@ -124,7 +124,21 @@ module that touches the file format (`lib/workbook/sheetjs-adapter.ts`, loaded o
 codec itself (`lib/workbook/`) works on a library-free model of sheets and cells, so its tests
 need no file. The current release is installed from the vendor's server; the copy on the npm
 registry is stale and carries known vulnerabilities. Dependabot does not watch that source, so
-its updates are checked by hand (deployment.md).
+CI's `audit:sheetjs` fails when the vendor publishes a newer release.
+
+**What SheetJS does, measured** (0.20.3, `lib/workbook/sheetjs-capabilities.test.ts`, and
+LibreOffice 24 headless): text, true/false, doubles, comments, 32,000-character cells and
+same-sheet formulas with their stored values survive both formats; `_xHHHH_` in text is
+decoded, so the codec escapes it; xlsx refuses a cell over 32,767 characters. Three gaps, each
+handled by the codec:
+- **A hidden sheet stays hidden in xlsx and not in ods**: the ods `content.xml` is marked
+  directly. Sheet protection is not written in either, so `_cascade` relies on its hash check.
+- **A stored formula value is never recalculated on opening** (LibreOffice kept a stale value
+  even with `fullCalcOnLoad`), while a formula written without a value is computed. Custom
+  sheets are therefore written with formulas and no stored values; the app computes them on
+  opening, and a file never opened by one is refused at those cells on import.
+- **ods formulas that reference another sheet are converted wrongly** in both directions, so for
+  `.ods` the codec reads and writes `table:formula` (OpenFormula) itself.
 
 ## Considered
 
