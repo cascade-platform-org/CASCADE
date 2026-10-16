@@ -11,3 +11,6 @@
 *.spl
 *.synctex.gz
 *.pdf
+# make_submission.py output
+submission/
+submission.zip
