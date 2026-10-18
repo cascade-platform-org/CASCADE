@@ -1,16 +1,17 @@
 /**
- * provenance.ts — mark what LLM Design adds (ADR-0022). Pure.
+ * provenance.ts — mark what LLM Design or a Workbook import adds (ADR-0022,
+ * ADR-0023). Pure.
  *
  * A node, edge or Event that an edit adds carries `provenance`: where it came
- * from, why (the change's `why`), and whether a person has confirmed it. The
- * mark is stamped on the checked result, so it applies to sections and Bulk
- * operations alike, and it overrides whatever the text said: a reply cannot
- * mark its own additions confirmed.
+ * from (LLM Design with the change's `why`, or a spreadsheet with its file,
+ * sheet and row), and whether a person has confirmed it. The mark is stamped
+ * on the checked result, so it overrides whatever the text or the sheet said:
+ * neither can mark its own additions confirmed.
  */
 
 import { deepEqual } from "@/lib/graph-diff";
 import type { Provenance } from "@/lib/schemas/provenance";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 /** True for an Element or Event LLM Design added that no person has confirmed yet. */
 export const isUnconfirmed = (x: { provenance?: Provenance }): boolean => x.provenance !== undefined && !x.provenance.confirmed;
@@ -26,17 +27,25 @@ function withMark<T extends { provenance?: Provenance }>(x: T, provenance: Prove
   return rest;
 }
 
+/** Where a mark says its thing came from, in words: "LLM Design", "Coop.xlsx › Nodes, row 7". */
+export function originText(p: Provenance): string {
+  if (p.origin === "llm_design") return "LLM Design";
+  return p.source ? `${p.source.file} › ${p.source.sheet}, row ${p.source.row}` : "a spreadsheet";
+}
+
+/** LLM Design's mark: unconfirmed, with the why of the change that added it (keyed `node:<id>`, `edge:<id>`, `event:<id>`). */
+export const llmDesignMark = (rationale: ReadonlyMap<string, string> = new Map()) => (key: string): Provenance => {
+  const why = rationale.get(key);
+  return { origin: "llm_design", ...(why ? { rationale: why } : {}), confirmed: false };
+};
+
 /**
- * `after` with every node, edge and Event absent from `before` marked as
- * added by LLM Design, unconfirmed, and every other one keeping the mark it
- * had in `before`: a text neither confirms nor removes a mark. `rationale`
- * gives the why of each addition, keyed `node:<id>`, `edge:<id>`, `event:<id>`.
+ * `after` with every node, edge and Event absent from `before` carrying
+ * `mark(key)` (keyed `node:<id>`, `edge:<id>`, `event:<id>`), and every other
+ * one keeping the mark it had in `before`: an edit neither confirms nor
+ * removes a mark.
  */
-export function markAdded(before: ProjectBundle, after: ProjectBundle, rationale: ReadonlyMap<string, string> = new Map()): ProjectBundle {
-  const mark = (key: string): Provenance => {
-    const why = rationale.get(key);
-    return { origin: "llm_design", ...(why ? { rationale: why } : {}), confirmed: false };
-  };
+export function markAdded(before: ProjectBundle, after: ProjectBundle, mark: (key: string) => Provenance = llmDesignMark()): ProjectBundle {
   const settle = <T extends { provenance?: Provenance }>(x: T, was: T | undefined, key: string): T => {
     const target = was ? was.provenance : mark(key);
     return deepEqual(x.provenance, target) ? x : withMark(x, target);

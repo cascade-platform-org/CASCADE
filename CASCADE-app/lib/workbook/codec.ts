@@ -587,7 +587,7 @@ function seriesRows(ctx: DecodeContext, sheet: SheetModel, i: number): JsonObjec
 // ---------------------------------------------------------------------------
 
 /** The cell nearest to a path: its own, or the closest record or sheet above it. */
-function nearest(locate: Locator, path: readonly (string | number)[]): CellRef | undefined {
+export function nearest(locate: Locator, path: readonly (string | number)[]): CellRef | undefined {
   for (let k = path.length; k > 0; k--) {
     const ref = locate.get(pathKey(path.slice(0, k)));
     if (ref) return ref;

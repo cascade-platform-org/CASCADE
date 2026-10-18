@@ -38,7 +38,7 @@ import { canvasesById } from "@/lib/element-filter";
 import { deepEqual, diffGraph } from "@/lib/graph-diff";
 import { validateBundle } from "@/lib/project-validation";
 import { ELEMENT_PATHS, MODEL_PRIMER, SIMULATION_REFERENCE, extractJson } from "@/lib/temporal-simulation-text";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 export const MODEL_TEXT_FORMAT = "cascade.model-change/v1";
 
@@ -200,26 +200,46 @@ export function readPointer(bundle: ProjectBundle, path: string): unknown {
 // 5–7. Dry run and check
 // ---------------------------------------------------------------------------
 
+/** A problem the check found, with where in the bundle when it is known (a Workbook names its cell from it). */
+export interface CheckIssue {
+  message: string;
+  /** The path from the bundle's root: `["project", "nodes", "p1"]`. */
+  path?: string[];
+}
+
 export type CheckedChange =
   | { ok: true; after: ProjectBundle; preview: Preview; warnings: string[] }
-  | { ok: false; errors: string[] };
+  | { ok: false; errors: string[]; issues?: CheckIssue[] };
 
 /** Ids the reference checks of `validateBundle` do not cover. */
-function idProblems(bundle: ProjectBundle): string[] {
-  const out: string[] = [];
+function idProblems(bundle: ProjectBundle): CheckIssue[] {
+  const out: CheckIssue[] = [];
   for (const [kind, registry] of [["node", bundle.project.nodes], ["edge", bundle.project.edges]] as const) {
-    for (const [key, el] of Object.entries(registry)) if (el.id !== key) out.push(`project.${kind}s["${key}"] has id "${el.id}"; the key and the id must match`);
+    for (const [key, el] of Object.entries(registry)) if (el.id !== key) out.push({ message: `project.${kind}s["${key}"] has id "${el.id}"; the key and the id must match`, path: ["project", `${kind}s`, key] });
   }
-  const twice = (ids: string[]) => ids.filter((id, i) => ids.indexOf(id) !== i);
-  for (const id of new Set(twice(bundle.config.events.map((e) => e.id)))) out.push(`config.events: the id "${id}" is used twice`);
-  for (const id of new Set(twice((bundle.project.temporal_simulations ?? []).map((s) => s.id)))) out.push(`project.temporal_simulations: the id "${id}" is used twice`);
-  for (const id of new Set(twice(bundle.project.canvases.map((c) => c.id)))) out.push(`project.canvases: the id "${id}" is used twice`);
+  const twice = (ids: string[], field: string, at: string[]) =>
+    ids.forEach((id, i) => { if (ids.indexOf(id) !== i) out.push({ message: `${at.join(".")}: the ${field} "${id}" is used twice`, path: [...at, String(i)] }); });
+  twice(bundle.config.events.map((e) => e.id), "id", ["config", "events"]);
+  twice((bundle.project.temporal_simulations ?? []).map((s) => s.id), "id", ["project", "temporal_simulations"]);
+  twice(bundle.project.canvases.map((c) => c.id), "id", ["project", "canvases"]);
   return out;
 }
+
+const zodIssues = (err: z.ZodError, root: "project" | "config"): CheckIssue[] =>
+  err.issues.map((i) => ({ message: `${root}.${i.path.length ? i.path.join(".") : "(root)"}: ${i.message}`, path: [root, ...i.path.map(String)] }));
 
 const UNKNOWN_EVENT = new Set(["NODE_UNKNOWN_EVENT", "EDGE_UNKNOWN_EVENT"]);
 
 const issueKey = (i: { code: string; message: string }) => `${i.code}\n${i.message}`;
+
+const refusedBy = (issues: CheckIssue[]): CheckedChange => ({ ok: false, errors: issues.map((i) => i.message), issues });
+
+/** The schemas' problems with a draft, or none. */
+function schemaIssues(draft: { project: unknown; config: unknown }): CheckIssue[] {
+  const project = ProjectSchema.safeParse(draft.project);
+  const config = ModelConfigurationSchema.safeParse(draft.config);
+  return [...(project.success ? [] : zodIssues(project.error, "project")), ...(config.success ? [] : zodIssues(config.error, "config"))];
+}
 
 /**
  * Stages 5–7: the bundle `change` would produce, with its preview, or every
@@ -235,11 +255,8 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
   if (errors.length > 0) return { ok: false, errors };
 
   // The schemas first: the operations below read nodes, edges and the scale.
-  const project = ProjectSchema.safeParse(draft.project);
-  const config = ModelConfigurationSchema.safeParse(draft.config);
-  if (!project.success) errors.push(...issues(project.error, "project."));
-  if (!config.success) errors.push(...issues(config.error, "config."));
-  if (errors.length > 0) return { ok: false, errors };
+  const shape = schemaIssues(draft as { project: unknown; config: unknown });
+  if (shape.length > 0) return refusedBy(shape);
 
   // The text's own values are what is kept; the schema's output would add defaults the preview would then report.
   const after = draft as unknown as ProjectBundle;
@@ -256,14 +273,30 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
       else registry[id] = result.element as unknown as Node & Edge;
     }
   });
+  if (errors.length > 0) return { ok: false, errors };
+  return checkReferences(before, after);
+}
 
-  errors.push(...idProblems(after));
+/**
+ * Stages 6–7 on a whole bundle (a Workbook import's): the schemas, then the
+ * references, against `before`; with the preview when it passes.
+ */
+export function checkBundle(before: ProjectBundle, after: ProjectBundle): CheckedChange {
+  const shape = schemaIssues(after);
+  return shape.length > 0 ? refusedBy(shape) : checkReferences(before, after);
+}
+
+/** Stage 7: ids, and the problems `validateBundle` finds in `after` that `before` did not have. */
+function checkReferences(before: ProjectBundle, after: ProjectBundle): CheckedChange {
+  const problems = idProblems(after);
   const known = new Set(validateBundle(before).map(issueKey));
   const found = validateBundle(after).filter((i) => !known.has(issueKey(i)));
   // A file load only warns about a vulnerability to an unknown Event; an edit that introduces one made a mistake.
   const refused = (i: (typeof found)[number]) => i.severity === "error" || UNKNOWN_EVENT.has(i.code);
-  errors.push(...found.filter(refused).map((i) => i.message));
-  if (errors.length > 0) return { ok: false, errors };
+  const at = (id: string | undefined): string[] | undefined =>
+    id === undefined ? undefined : Object.hasOwn(after.project.nodes, id) ? ["project", "nodes", id] : Object.hasOwn(after.project.edges, id) ? ["project", "edges", id] : undefined;
+  problems.push(...found.filter(refused).map((i) => ({ message: i.message, path: at(i.elementId) })));
+  if (problems.length > 0) return refusedBy(problems);
   return { ok: true, after, preview: previewChange(before, after), warnings: found.filter((i) => !refused(i)).map((i) => i.message) };
 }
 
@@ -301,15 +334,25 @@ const identity = (x: unknown): string | undefined =>
 const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
 /** The subject kind of a list's records, by the list's key. */
-const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", sheets: "sheet" };
+const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", sheets: "sheet" };
+/** The subject kind of a record's entries, by the record's key: each Node template is one. */
+const ENTRY_SUBJECT_OF: Record<string, string> = { node_defaults: "template" };
+/** The subject of a top-level field no list or record subject claims. */
+const FIELD_SUBJECT: Record<string, string> = { functionality_scale: "scale:functionality", level_scale: "scale:level" };
 
 /** Leaf-level changes between two JSON values; lists of records with ids (or names) are matched by them. */
 function jsonChanges(before: unknown, after: unknown, where: string, out: PreviewLine[], subject?: string, key?: string): void {
+  // A list of records one side lacks is an empty one: each record it gains or loses is its own line, under its own subject.
+  if (key && SUBJECT_OF[key]) {
+    if (before === undefined && Array.isArray(after)) before = [];
+    if (after === undefined && Array.isArray(before)) after = [];
+  }
   if (deepEqual(before, after)) return;
   if (before === undefined) { out.push({ kind: "add", where, after: shortValue(after), subject }); return; }
   if (after === undefined) { out.push({ kind: "remove", where, before: shortValue(before), subject }); return; }
   if (isPlain(before) && isPlain(after)) {
-    for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) jsonChanges(before[k], after[k], `${where} › ${k}`, out, subject, k);
+    const entry = key ? ENTRY_SUBJECT_OF[key] : undefined;
+    for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) jsonChanges(before[k], after[k], `${where} › ${k}`, out, entry ? `${entry}:${k}` : subject, k);
     return;
   }
   if (Array.isArray(before) && Array.isArray(after) && hasIds(before) && hasIds(after)) {
@@ -343,7 +386,8 @@ const present = (v: unknown) => (v === DIFF_ABSENT ? undefined : v);
 const elementName = (kind: string, id: string, record: { label?: string } | undefined) =>
   `${kind} ${record?.label ? `"${record.label}" (${id})` : id}`;
 
-function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
+/** Every difference between two bundles as preview lines, each under its subject (`node:p1`, `settings:config`). */
+export function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
   const lines: PreviewLine[] = [];
   const snap = (p: Project) => ({ nodes: p.nodes, edges: p.edges, canvases: p.canvases });
   const diff = diffGraph(snap(before.project), snap(after.project));
@@ -362,10 +406,14 @@ function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
       else for (const f of r.fields) jsonChanges(present(f.before), present(f.after), `${name} › ${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(" › ")}`, lines, subject);
     }
   }
-  if (diff.canvas_order) lines.push({ kind: "change", where: "Canvas order", before: shortValue(diff.canvas_order_before), after: shortValue(diff.canvas_order) });
-  const rest = (p: Project) => { const { nodes: _n, edges: _e, canvases: _c, update_history: _h, ...r } = p; return r; };
-  jsonChanges(rest(before.project), rest(after.project), "project", lines);
-  jsonChanges(before.config, after.config, "config", lines);
+  if (diff.canvas_order) lines.push({ kind: "change", where: "Canvas order", before: shortValue(diff.canvas_order_before), after: shortValue(diff.canvas_order), subject: "order:canvases" });
+  const rest = (p: Project): Record<string, unknown> => { const { nodes: _n, edges: _e, canvases: _c, update_history: _h, ...r } = p; return r; };
+  // Each top-level field under its own subject; a field no list claims is a setting of the project or the configuration.
+  const fields = (root: "project" | "config", b: Record<string, unknown>, a: Record<string, unknown>) => {
+    for (const k of new Set([...Object.keys(b), ...Object.keys(a)])) jsonChanges(b[k], a[k], `${root} › ${k}`, lines, FIELD_SUBJECT[k] ?? `settings:${root}`, k);
+  };
+  fields("project", rest(before.project), rest(after.project));
+  fields("config", before.config as unknown as Record<string, unknown>, after.config as unknown as Record<string, unknown>);
   const counts = { add: 0, remove: 0, change: 0 };
   for (const l of lines) counts[l.kind]++;
   return { counts, lines };

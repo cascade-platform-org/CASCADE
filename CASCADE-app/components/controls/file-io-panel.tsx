@@ -23,6 +23,7 @@ import {
   Trash2,
   HardDrive,
   FilePlus2,
+  FileSpreadsheet,
   Import,
 } from "lucide-react";
 import { useUiStore } from "@/store/ui-store";
@@ -136,6 +137,8 @@ export function FileIoPanel() {
   const loadConfig = useConfigStore((s) => s.loadConfig);
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const openWorkbookImport = useUiStore((s) => s.openWorkbookImport);
   // Guards the backdrop-click-to-close: a text-selection drag that starts
   // inside a form field but ends past the panel edge fires a click whose
   // target is the backdrop, closing the panel unintentionally. Only close
@@ -332,6 +335,21 @@ export function FileIoPanel() {
       }
     } finally {
       setSyncBusyId(null);
+    }
+  }
+
+  // ---- Import changes from an edited Workbook (ADR-0023 §3) ----
+
+  async function handleImportChanges(file: File) {
+    setLoadError(null);
+    if (!(await isWorkbookFile(file))) { setLoadError(`"${file.name}" is not a workbook: Import changes reads an .xlsx or .ods file.`); return; }
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const { readWorkbookImport } = await import("@/lib/workbook");
+      openWorkbookImport({ bytes, read: await readWorkbookImport(bytes, currentBundle(), file.name) });
+      closeFileIoPanel();
+    } catch (e) {
+      setLoadError(`"${file.name}" is not a workbook CASCADE can read (${e instanceof Error ? e.message : String(e)}).`);
     }
   }
 
@@ -568,6 +586,21 @@ export function FileIoPanel() {
                 </button>
                 <input ref={uploadInputRef} type="file" accept=".json,.xlsx,.ods" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); e.target.value = ""; }} />
+              </div>
+
+              <div>
+                <Label>Import changes from a workbook</Label>
+                <button
+                  onClick={() => importInputRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs text-zinc-600 hover:border-blue-400 hover:bg-blue-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-blue-900/20"
+                >
+                  <FileSpreadsheet size={14} className="text-zinc-400" /> Choose an edited .xlsx or .ods file
+                </button>
+                <input ref={importInputRef} type="file" accept=".xlsx,.ods" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleImportChanges(f); e.target.value = ""; }} />
+                <p className="mt-1.5 text-[11px] text-zinc-400">
+                  Open replaces the project with the file. Import changes keeps this project and previews what the file changes in it, record by record, before anything is applied.
+                </p>
               </div>
 
               <div>

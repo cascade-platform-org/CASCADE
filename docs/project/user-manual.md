@@ -381,7 +381,7 @@ The **File** button in the Topbar opens four tabs.
 
 | Tab              | What it does                                                                                                                                         |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**  | Save to your computer as `.json`, or as a workbook (`.xlsx`, `.ods`); open any of the three; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
+| **Local**  | Save to your computer as `.json`, or as a workbook (`.xlsx`, `.ods`); open any of the three, or import the changes an edited workbook makes; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
 | **Cloud**  | Save to your account and open it on any device. Last 10 kept. Needs sign-in with Sync.                                                                |
 | **Import** | Build a project from an EPANET `.inp` file.                                                                                                           |
 | **New**    | Start a fresh project. The current one stays open until the setup is finished, so Cancel costs nothing.                                               |
@@ -396,6 +396,25 @@ explains the rest; leave the hidden `_cascade` sheet as it is. Opening a
 workbook replaces the open project, as a `.json` does; a value a spreadsheet
 changed (a number typed as text, `1,5`) is read back with a warning naming its
 cell, and one that cannot be read stops the opening, naming the cell too.
+
+**Import changes** brings an edited workbook into the open project instead of
+replacing it. Choose the file under *Import changes from a workbook*; a window
+lists every change it makes, one per record or setting (a node renamed, an edge
+deleted, an Event's frequency), each with a tick to leave it out. A row missing
+from a sheet deletes its record; a sheet missing from the file changes nothing.
+A new row becomes a record: where its cells are empty it gets an id from its
+label, the top Functionality level, the only Canvas and a place on the grid. A
+reference to a record that is gone, or anything else the project cannot hold, is
+refused with the cell it is in. **Apply** keeps a version of the project first;
+**Undo this import** puts it back (Ctrl+Z does not). What the import adds is
+marked unconfirmed in the Inspector, with the file, sheet and row it came from,
+until you confirm it.
+
+A sheet of your own can write the model: list it in the `Sheets` sheet with the
+model sheet it writes (`Nodes`, `Events`, `Parameters`, `S·<series>`…), give it
+that sheet's key column (`id`, `name`, …) and the columns it sets, and compute
+them with formulas. Import changes writes its values over the model sheet's;
+a row or column it lacks changes nothing.
 
 Local and cloud saves are independent: clearing the browser does not touch the
 cloud saves, and deleting a cloud save does not touch the computer.

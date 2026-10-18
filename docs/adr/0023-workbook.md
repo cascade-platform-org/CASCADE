@@ -1,6 +1,6 @@
 # ADR-0023 — The Workbook: a second, lossless form of the project file; edits come back as a checked change set
 
-**Status:** accepted (2026-10-12); Open and Save built, Import changes (§3) in progress. Builds on ADR-0019 (Temporal Simulation), ADR-0021 (Attribute
+**Status:** accepted (2026-10-12); built (Open, Save and Import changes). Builds on ADR-0019 (Temporal Simulation), ADR-0021 (Attribute
 Operations) and ADR-0022 (LLM Design), each revised the same day for Parameters, Series and
 spreadsheet provenance.
 
@@ -77,7 +77,8 @@ true/false as 1/0, so a 0 or 1 where the schema wants a boolean is read back wit
 in a field that may hold a number, true/false or text (an operation's or profile's `value`,
 `properties`), true/false is therefore written in its `json:` form. LibreOffice also rounds a
 number to 15 significant digits when it saves `.xlsx` (a canvas position's last digits), so
-Import changes compares numbers to 15 significant digits. XLOOKUP needs LibreOffice 24.8 or
+Import changes reads a number equal to the project's to 15 significant digits (a relative
+difference below 1e-14) as no change. XLOOKUP needs LibreOffice 24.8 or
 later; VLOOKUP and INDEX/MATCH work everywhere.
 
 ### 4. Two actions: Open, and Import changes
@@ -85,15 +86,19 @@ later; VLOOKUP and INDEX/MATCH work everywhere.
 - **Open** replaces the project, exactly like opening a `.json`. Provenance is kept as written.
 - **Import changes from a Workbook** compares the file with the open project and turns the
   difference into a change set, previewed and applied through LLM Design's gate (ADR-0022). One
-  change per record (a node, an edge, an Event with its operations, a Category, a Temporal
-  Simulation with its Steps, Parameters, profile and Metrics, a Series), plus one per setting and
-  per list order; a node's or edge's Canvas membership belongs to its own change. Each change
-  can be left out; the result is built from each record's new or old version and checked as a
-  whole (the schemas, `validateBundle`, unique ids, a Temporal Simulation's warnings).
+  change per record (a node, an edge, a Canvas, an Event with its operations, a Category, a Graph
+  type, a Node template, a Temporal Simulation with its Steps, Parameters, profile and Metrics, a
+  Series, a custom sheet), plus the Functionality and Level scales, the project's and the
+  configuration's other settings, and the Canvas order; a node's or edge's Canvas membership
+  belongs to its own change. Each change can be left out; the result is built from each record's
+  new or old version and checked as a whole (the schemas, `validateBundle`, unique ids), each
+  problem at its cell. Apply reads the file again against the project as it is then.
 - **A missing sheet changes nothing; a missing row is a deletion**, listed in the preview and
   open to leaving out. A reference to a deleted record is refused at its cell; nothing is
   repaired, because the sheet is what the person wrote. Deleting more than half the Elements
-  needs an extra tick, and a file written from another project says so before the preview.
+  needs an extra tick. A cell the person did not edit gives back what the project holds now,
+  even when the file was written from an older version of it: the project's own residual is read
+  before the file's.
 - **A new row creates a record.** Where its cells are empty: an id from its label, the top
   Functionality level, a place on the grid below its Canvas's nodes, and the only Canvas when
   there is one.
@@ -102,7 +107,7 @@ later; VLOOKUP and INDEX/MATCH work everywhere.
   it; a changed record keeps its mark. A file neither confirms nor removes a mark.
 - **Undo** is LLM Design's: the project is kept as a Local version before applying, and the
   window offers **Undo this import**. The undo history is not written, so Ctrl+Z does not undo
-  an import; the window says so.
+  an import.
 - `update_history`, the Scorecard and the timestamps are never imported as changes.
 
 ### 4a. Custom sheets: a person's own analysis, kept and able to write the model
@@ -116,21 +121,24 @@ policy's numbers worked out with formulas. They are part of the project.
   Workbook, a custom sheet has its formulas back.
 - **The spreadsheet app computes; CASCADE never evaluates a formula.** It keeps each formula's
   last value, so every function of the person's spreadsheet works and no second engine holds
-  logic. The Workbook asks the app to recalculate on opening, so formulas that look values up in
-  the model's sheets (by id, e.g. with XLOOKUP) see the model as CASCADE wrote it. In CASCADE a
-  custom sheet is shown read-only with its last values and when they were computed.
+  logic. A formula is written without a stored value, so the app computes it on opening (a
+  stored value is never recomputed by LibreOffice) and formulas that look values up in the
+  model's sheets (by id, e.g. with XLOOKUP) see the model as CASCADE wrote it; the project keeps
+  the last value until then. A viewer of custom sheets inside CASCADE is deferred.
 - **What a custom sheet writes is declared**, in the `Sheets` index (`name | writes`): the name
-  of a model sheet (`Nodes`, `Edges`, `Canvases`, `Events`, `Event operations`, `Categories`,
-  `Functionality scale`, `Level scale`, `Simulations`, `Steps`, `Parameters`, `Profile`,
-  `Metrics`, a Series `S·<name>`, `Project`), so anything the platform edits, the Model
-  Configuration included. It then uses that sheet's identity column and column keys, any subset
-  of them. A sheet with no `writes` is analysis only, kept and never applied.
+  of a model sheet whose rows have a key (`Project` by `key`, `Canvases`, `Nodes`, `Edges`,
+  `Events`, `Simulations` by `id`, `Categories`, `Graph types`, `Node templates` by `name`,
+  `Functionality scale` by `level`, `Level scale` by `label`, `Parameters` and `Metrics` by
+  `simulation` and `name`, a Series `S·<name>` by `element`), so the Model Configuration too.
+  `Event operations`, `Steps` and `Profile` have no key a row is found by and are not written.
+  It then uses that sheet's key and column keys, any subset of them. A sheet with no `writes` is
+  analysis only, kept and never applied.
 - **Its values reach the model through Import changes**, in the same preview as edits to the
-  model's sheets, record by record and open to leaving out; opening a Workbook applies them as
-  part of the project it describes. A custom sheet writes the cells it has: a missing row or
-  column changes nothing (only a model sheet's missing row is a deletion), and a new identity
-  creates a record as a new row does. A field that a model sheet and a custom sheet, or two
-  custom sheets, set to different values is refused at every cell involved.
+  model's sheets, record by record and open to leaving out; Open keeps the file's model sheets as
+  they are. A custom sheet writes the cells it has, over the model sheet's: a missing row or
+  column changes nothing (only a model sheet's missing row is a deletion), and a key the model
+  sheet lacks changes nothing, with a warning. A field two custom sheets set to different values
+  is refused at both cells.
 - **A formula without a stored value**, in any sheet, is refused at its cell: the file was not
   saved by a spreadsheet app, which computes it.
 
@@ -180,16 +188,17 @@ handled by the codec:
 
 - `toProject` keeps `meta.created_at` (it used to stamp it on every save), so a project's creation
   time survives any round trip.
-- The check behind LLM Design returns structured issues (`message`, a JSON pointer, the Element,
-  a code) alongside its messages, and `validateBundle` issues carry a pointer, so an import can
-  name the cell.
+- The check behind LLM Design (`checkBundle`, split from `checkChange`) returns structured issues
+  (`message` and the path in the bundle, from the schema's path or the Element a `validateBundle`
+  issue names) alongside its messages, so an import names the cell.
 - Tests: generated bundles (fast-check) with hostile strings, keys and numbers; every public
-  sample in both formats; encoding twice gives identical cells; the residual holds only empty
-  containers, empty labels and orders; a Workbook edited in Excel and one edited in LibreOffice
-  are committed as fixtures.
+  sample in both formats, and through LibreOffice re-saving them; Import changes on edited
+  models (an edited cell, a missing row or sheet, a new row, every subset left out, custom-sheet
+  writes and their conflicts, a file older than the project, LibreOffice's rounding).
 - History, autosave and recovery stay JSON.
 - `Project.sheets` is client data: the Propagation request leaves it out, and Pydantic declares it
   so Server Sync keeps it. Its size counts toward the project file, so a very large analysis
   belongs in its own spreadsheet with only its results in a custom sheet.
 - Deferred (requirements §16): an undo history entry for a whole-project edit (shared with LLM
-  Design), saved Parameter Sweeps, Series resampled across calendar units.
+  Design), saved Parameter Sweeps, Series resampled across calendar units, a viewer of custom
+  sheets inside CASCADE, the empty-Workbook template.

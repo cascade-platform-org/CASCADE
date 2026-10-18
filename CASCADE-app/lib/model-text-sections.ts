@@ -21,7 +21,7 @@
 
 import { deepEqual } from "@/lib/graph-diff";
 import { encodePointerKey as enc, isPlain as isRecord, readPointer, type PatchOp } from "@/lib/model-text";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 export interface Section {
   /** Unique in the tree. */

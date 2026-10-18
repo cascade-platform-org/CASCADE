@@ -10,6 +10,7 @@ import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useNetworkStore } from "@/store/network-store";
 import type { Focus, RecipeId } from "@/lib/llm-recipes";
+import type { ReadImport } from "@/lib/workbook/import-changes";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,6 +90,10 @@ export interface UiState {
   llmDesignOpen: boolean;
   /** The latest request to open it somewhere; cleared by its Topbar button. */
   llmDesignRequest: LlmDesignRequest | null;
+
+  // --- Import changes (ADR-0023 §3) ---
+  /** The Workbook file being imported, as read against the project; null when the window is closed. */
+  workbookImport: { bytes: Uint8Array; read: ReadImport } | null;
 
   /**
    * Set by the File panel's "New Project" button; cleared by `app/page.tsx`
@@ -258,6 +263,10 @@ export interface UiActions {
   toggleLlmDesign: () => void;
   closeLlmDesign: () => void;
 
+  // --- Import changes ---
+  openWorkbookImport: (file: { bytes: Uint8Array; read: ReadImport }) => void;
+  closeWorkbookImport: () => void;
+
   // --- File I/O panel ---
   toggleFileIoPanel: () => void;
   closeFileIoPanel: () => void;
@@ -370,6 +379,7 @@ const initialState: UiState = {
   fileIoPanelOpen: false,
   llmDesignOpen: false,
   llmDesignRequest: null,
+  workbookImport: null,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
@@ -497,6 +507,14 @@ export const useUiStore = create<UiStore>()(
 
     closeLlmDesign() {
       set((state) => { state.llmDesignOpen = false; });
+    },
+
+    openWorkbookImport(file) {
+      set((state) => { state.workbookImport = file; });
+    },
+
+    closeWorkbookImport() {
+      set((state) => { state.workbookImport = null; });
     },
 
     // -------------------------------------------------------------------------

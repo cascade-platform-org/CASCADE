@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * ProvenanceBanner — what LLM Design added, in the Inspector (ADR-0022).
+ * ProvenanceBanner — what LLM Design or a Workbook import added, in the
+ * Inspector (ADR-0022, ADR-0023).
  *
- * One Element: "Added through LLM Design", its why, and Confirm while it is
- * unconfirmed. A selection: how many of it are unconfirmed, confirmed at once.
- * Confirming is an undoable edit like any other.
+ * One Element: where it came from ("Added through LLM Design", or "Added from
+ * Coop.xlsx › Nodes, row 7"), its why, and Confirm while it is unconfirmed. A
+ * selection: how many of it are unconfirmed, confirmed at once. Confirming is
+ * an undoable edit like any other.
  */
 
 import { CheckCheck, Sparkles } from "lucide-react";
@@ -13,7 +15,7 @@ import { cn } from "@/lib/utils";
 import type { Provenance } from "@/lib/schemas/provenance";
 import { useCanvasStore } from "@/store/canvas-store";
 import { runWithHistory } from "@/lib/run-with-history";
-import { confirmed, isUnconfirmed } from "@/lib/provenance";
+import { confirmed, isUnconfirmed, originText } from "@/lib/provenance";
 
 export function ProvenanceBanner({ nodeIds, edgeIds }: { nodeIds: readonly string[]; edgeIds: readonly string[] }) {
   const nodes = useCanvasStore((s) => s.nodes);
@@ -32,7 +34,7 @@ export function ProvenanceBanner({ nodeIds, edgeIds }: { nodeIds: readonly strin
         if (kind === "node") s.updateNode(el.id, { provenance: confirmed(el.provenance) });
         else s.updateEdge(el.id, { provenance: confirmed(el.provenance) });
       }
-    }, open.length === 1 ? "Confirm an Element LLM Design added" : `Confirm ${open.length} Elements LLM Design added`, { updateType: "graph_update" });
+    }, open.length === 1 ? "Confirm an added Element" : `Confirm ${open.length} added Elements`, { updateType: "graph_update" });
   }
 
   if (items.length === 1) {
@@ -42,7 +44,7 @@ export function ProvenanceBanner({ nodeIds, edgeIds }: { nodeIds: readonly strin
   if (open.length === 0) return null;
   return (
     <p className="flex items-center gap-1 border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-[11px] text-amber-900 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
-      <Sparkles size={11} /> {open.length} of the selected {open.length === 1 ? "was" : "were"} added through LLM Design, unconfirmed.
+      <Sparkles size={11} /> {open.length} of the selected {open.length === 1 ? "was" : "were"} added through LLM Design or a Workbook import, unconfirmed.
       <button type="button" onClick={confirmAll} className="ml-auto flex items-center gap-0.5 rounded bg-white/70 px-1.5 py-0.5 hover:bg-white dark:bg-zinc-800 dark:hover:bg-zinc-700">
         <CheckCheck size={11} /> Confirm all
       </button>
@@ -51,7 +53,7 @@ export function ProvenanceBanner({ nodeIds, edgeIds }: { nodeIds: readonly strin
 }
 
 /**
- * One thing's mark: "Added through LLM Design", its why, and Confirm while it
+ * One thing's mark: where it came from, its why, and Confirm while it
  * is unconfirmed. Shared by the Inspector and the Events tab; `unconfirmedNote`
  * says what is still an estimate.
  */
@@ -71,7 +73,7 @@ export function ProvenanceNote({ provenance: p, onConfirm, unconfirmedNote, clas
     )}
     >
       <p className="flex items-center gap-1 font-medium">
-        <Sparkles size={11} /> Added through LLM Design{p.confirmed ? "" : `, unconfirmed${unconfirmedNote ? `: ${unconfirmedNote}` : ""}`}
+        <Sparkles size={11} /> {p.origin === "llm_design" ? "Added through LLM Design" : `Added from ${originText(p)}`}{p.confirmed ? "" : `, unconfirmed${unconfirmedNote ? `: ${unconfirmedNote}` : ""}`}
         {!p.confirmed && (
           <button type="button" onClick={onConfirm} className="ml-auto flex items-center gap-0.5 rounded bg-white/70 px-1.5 py-0.5 hover:bg-white dark:bg-zinc-800 dark:hover:bg-zinc-700">
             <CheckCheck size={11} /> Confirm

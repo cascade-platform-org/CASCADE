@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { Topbar } from "./topbar";
 import { ActionBar } from "./action-bar";
 import { StatusBar } from "./status-bar";
@@ -38,10 +39,15 @@ import { GuidedTour } from "@/components/onboarding/guided-tour";
 import { TourPrompt } from "@/components/onboarding/tour-prompt";
 import { useFirstRun } from "@/hooks/useFirstRun";
 
+// Loaded when a Workbook is imported: it brings the Workbook codec, which the first load does not need.
+const ImportChangesWindow = dynamic(() => import("@/components/workbook/import-changes-window"), { ssr: false });
+
 export function EditorShell() {
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
   const configModalOpen = useUiStore((s) => s.configModalOpen);
   const fileIoPanelOpen = useUiStore((s) => s.fileIoPanelOpen);
+  const workbookImport = useUiStore((s) => s.workbookImport);
+  const closeWorkbookImport = useUiStore((s) => s.closeWorkbookImport);
   const activeRulesPanelOpen = useUiStore((s) => s.activeRulesPanelOpen);
   const rulesManualPanelOpen = useUiStore((s) => s.rulesManualPanelOpen);
   const userManualPanelOpen = useUiStore((s) => s.userManualPanelOpen);
@@ -154,6 +160,7 @@ export function EditorShell() {
       {/* Overlays */}
       {configModalOpen && <ConfigModal />}
       {fileIoPanelOpen && <FileIoPanel />}
+      {workbookImport && <ImportChangesWindow bytes={workbookImport.bytes} read={workbookImport.read} onClose={closeWorkbookImport} />}
       {activeRulesPanelOpen && <ActiveRulesPanel />}
       {rulesManualPanelOpen && <RulesManualPanel />}
       {userManualPanelOpen && <UserManualPanel />}

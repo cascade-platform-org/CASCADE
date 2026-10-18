@@ -16,7 +16,7 @@ import { modelLists } from "@/lib/model-text";
 import { bulkContext } from "@/lib/model-text-v2";
 import { deriveSituation, situationEventIds } from "@/lib/situation";
 import type { AnalysisResult } from "@/lib/topological-analysis";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 export type RecipeId = "describe" | "import" | "red-team" | "explain";
 

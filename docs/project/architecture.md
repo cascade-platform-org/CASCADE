@@ -98,7 +98,11 @@ library-free model of sheets and cells and back, and is pure, so its tests need 
 cell. `sheetjs-adapter.ts` is the only module that imports SheetJS, by dynamic import, and fixes
 what it gets wrong (formulas written without stored values, `.ods` formulas and hidden sheets
 through `content.xml`, with `formula.ts` translating to OpenFormula). `index.ts` joins them for
-`lib/file-io.ts`. The workbook never imports a store.
+`lib/file-io.ts`. `import-changes.ts` reads an edited Workbook against the open project (custom
+sheets' writes, missing sheets taken from the project, new rows filled in) and composes the
+result per subject for LLM Design's check (`checkBundle` in `lib/model-text.ts`); the Import
+changes window (`components/workbook/`, loaded on demand) applies it through
+`lib/model-text-apply.ts`. The workbook never imports a store.
 
 ### Event Application
 

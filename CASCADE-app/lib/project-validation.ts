@@ -8,7 +8,7 @@
  * All checks are read-only and produce a list of ValidationIssues ranked
  * by severity (errors first). The caller decides how to surface them.
  */
-import type { ProjectBundle } from "./file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 // ---------------------------------------------------------------------------
 // Public types

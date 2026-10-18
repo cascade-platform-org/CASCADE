@@ -6,6 +6,7 @@
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 import { decodeWorkbook, describeProblem, encodeWorkbook, parseDecoded } from "./codec";
 import { readBytes, writeBytes, type WorkbookKind } from "./sheetjs-adapter";
+import { readImport, type ReadImport } from "./import-changes";
 
 export type { WorkbookKind };
 
@@ -32,4 +33,9 @@ export async function workbookToBundle(bytes: Uint8Array): Promise<OpenedWorkboo
   const notes = of("note");
   if (decoded.stale > 0) notes.push(`${decoded.stale} place${decoded.stale === 1 ? "" : "s"} edited in the spreadsheet replaced what CASCADE had kept there.`);
   return { bundle, errors: of("error"), warnings: of("warning"), notes };
+}
+
+/** An edited Workbook file read against the open project, for Import changes (ADR-0023 §3). */
+export async function readWorkbookImport(bytes: Uint8Array, open: ProjectBundle, file: string): Promise<ReadImport> {
+  return readImport(open, await readBytes(bytes), file);
 }

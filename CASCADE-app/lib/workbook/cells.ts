@@ -56,6 +56,12 @@ const textOrBlob = (s: string, blobs: Blobs): Cell => ({ v: s.length > CELL_LIMI
 const isPlainList = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x !== "" && x.trim() === x && !x.includes(";") && !x.includes("\n") && !needsJson(x));
 
+/** A cell's blob reference moved by `offset` (blobs of another workbook appended after this one's); other cells as they are. */
+export function shiftBlob(c: Cell | null, offset: number): Cell | null {
+  if (!c || typeof c.v !== "string" || !c.v.startsWith(BLOB_PREFIX)) return c;
+  return { ...c, v: `${BLOB_PREFIX}${Number(c.v.slice(BLOB_PREFIX.length)) + offset}` };
+}
+
 /** A value as its JSON form, `json:` and the JSON. */
 export const writeJson = (v: Json, blobs: Blobs): Cell => textOrBlob(JSON_PREFIX + safeJson(v), blobs);
 

@@ -36,7 +36,7 @@ import {
   type ProjectVersionDetail,
   type WorkingCopyDetail,
 } from "@/lib/schemas/api";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 import {
   MeResponseSchema,
   AuthConfigSchema,

@@ -24,7 +24,7 @@ import { canvasesById } from "@/lib/element-filter";
 import { deepEqual } from "@/lib/graph-diff";
 import { eventFollowUps, registryFollowUps } from "@/lib/model-text-sections";
 import { MODEL_TEXT_FORMAT, applyPatchOps, encodePointerKey as enc, isPlain as isRec, checkChange, modelTextContext, parseChangeValue, parseJsonText, type ChangeSet, type CheckedChange, type PatchOp, type Preview, type PreviewLine } from "@/lib/model-text";
-import type { ProjectBundle } from "@/lib/file-io";
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 export const PLAIN_FORMAT = "cascade.model-change/v2";
 
@@ -284,6 +284,17 @@ function headline(change: Change): string {
 /** Columns of the grid a node added without a position is placed on, and its spacing. */
 const GRID = { columns: 6, dx: 200, dy: 140, gap: 160 };
 
+/** Positions on a grid below the nodes `placed` (a Canvas's positions), the next one on each call. */
+export function gridPlacer(placed: readonly { x: number; y: number }[]): () => { x: number; y: number } {
+  const start = placed.length ? { x: Math.min(...placed.map((p) => p.x)), y: Math.max(...placed.map((p) => p.y)) + GRID.gap } : { x: 0, y: 0 };
+  let k = 0;
+  return () => {
+    const position = { x: start.x + (k % GRID.columns) * GRID.dx, y: start.y + Math.floor(k / GRID.columns) * GRID.dy };
+    k++;
+    return position;
+  };
+}
+
 /**
  * Plain changes as the patch they amount to, applied in order on a copy so
  * each change sees the ones before it. Errors name the change and the Element.
@@ -305,19 +316,14 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
     patch.push(...ops);
   };
   // Nodes added without a position go on a grid below their Canvas's nodes.
-  const grid = new Map<number, { x: number; y: number; k: number }>();
+  const grid = new Map<number, () => { x: number; y: number }>();
   const nextPosition = (ci: number) => {
-    let g = grid.get(ci);
-    if (!g) {
-      const placed = draft.project.canvases[ci].graph.node_ids.flatMap((id) => draft.project.nodes[id]?.position ?? []);
-      g = placed.length
-        ? { x: Math.min(...placed.map((p) => p.x)), y: Math.max(...placed.map((p) => p.y)) + GRID.gap, k: 0 }
-        : { x: 0, y: 0, k: 0 };
-      grid.set(ci, g);
+    let place = grid.get(ci);
+    if (!place) {
+      place = gridPlacer(draft.project.canvases[ci].graph.node_ids.flatMap((id) => draft.project.nodes[id]?.position ?? []));
+      grid.set(ci, place);
     }
-    const position = { x: g.x + (g.k % GRID.columns) * GRID.dx, y: g.y + Math.floor(g.k / GRID.columns) * GRID.dy };
-    g.k++;
-    return position;
+    return place();
   };
   const targetsOf = (selector: { element?: string; where?: ValueChange["where"] }) =>
     operationTargets(selector, { nodes: draft.project.nodes, edges: draft.project.edges, canvases: canvasesById(draft.project.canvases) });

@@ -36,95 +36,25 @@ import { useScorecardStore } from "@/store/scorecard-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useUiStore, type LlmDesignRequest } from "@/store/ui-store";
-import { modelTextContext, type Preview } from "@/lib/model-text";
-import { PLAIN_REFERENCE, bulkContext, repairContext, starterPlain, type BulkResult, type PreviewGroup } from "@/lib/model-text-v2";
+import { modelTextContext } from "@/lib/model-text";
+import { PLAIN_REFERENCE, bulkContext, repairContext, starterPlain, type BulkResult } from "@/lib/model-text-v2";
 import { BULK_KEY, findSection, flattenSections, sectionAncestors, sectionTree, sectionValue, type Section } from "@/lib/model-text-sections";
 import { checkDesignText } from "@/lib/llm-design-check";
 import { RECIPES, findRecipe, focusContext, recipeContext, type Focus, type RecipeId } from "@/lib/llm-recipes";
 import { copyText as copyPlain, useLlmCopy } from "./llm-copy";
+import { PreviewList, type Shown } from "./preview-list";
 import { applyModelBundle, currentBundle, restoreModelBundle } from "@/lib/model-text-apply";
-import type { ProjectBundle } from "@/lib/file-io";
-
-/** A checked change's preview, grouped by change for Bulk operations, with the LLM's notes. */
-type Shown = { preview: Preview; groups?: PreviewGroup[]; notes?: string };
+import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 type Result =
   | { kind: "errors"; errors: string[] }
   | ({ kind: "preview"; warnings: string[] } & Shown)
   | ({ kind: "applied"; before: ProjectBundle } & Shown);
 
-const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
-
-/** Lines shown before "… N more": a preview of thousands of rows helps nobody read it. */
-const PREVIEW_LINES = 400;
 /** Tree rows shown per list before "… N more" (the filter finds the rest). */
 const TREE_ROWS = 200;
 /** A section this long is slow to edit in a text box; say so and suggest a smaller one. */
 const LARGE_CHARS = 300_000;
-
-const TONE = {
-  add: "text-green-700 dark:text-green-400",
-  remove: "text-red-700 dark:text-red-400",
-  change: "text-zinc-700 dark:text-zinc-300",
-} as const;
-const MARK = { add: "+", remove: "−", change: "~" } as const;
-
-function Lines({ lines }: { lines: Preview["lines"] }) {
-  return (
-    <>
-      {lines.slice(0, PREVIEW_LINES).map((l, i) => (
-        <p key={i} className={cn("break-all", TONE[l.kind])}>
-          {MARK[l.kind]} {l.where}
-          {l.kind === "change" && <span className="text-zinc-500">: {l.before} → {l.after}</span>}
-          {l.kind !== "change" && (l.after ?? l.before) !== undefined && <span className="text-zinc-500">: {l.after ?? l.before}</span>}
-        </p>
-      ))}
-      {lines.length > PREVIEW_LINES && <p className="text-zinc-400">… {lines.length - PREVIEW_LINES} more</p>}
-    </>
-  );
-}
-
-/**
- * Every change as before → after; for Bulk operations, under the change that
- * made it, with what it skipped, and a tick to leave the change out.
- */
-function PreviewList({ preview, groups, notes, leaveOut, onToggle }: Shown & { leaveOut?: ReadonlySet<number>; onToggle?: (index: number) => void }) {
-  const { counts } = preview;
-  return (
-    <div className="max-h-64 overflow-y-auto rounded-md border border-zinc-200 p-2 font-mono text-[11px] leading-4 dark:border-zinc-700">
-      {notes && <p className="mb-1 font-sans italic text-zinc-600 dark:text-zinc-300">“{notes}”</p>}
-      <p className="mb-1 font-sans font-medium text-zinc-700 dark:text-zinc-200">
-        {counts.add} added · {counts.change} changed · {counts.remove} removed
-      </p>
-      {groups
-        ? groups.map((g, i) => (
-          <div key={i} className="mb-1.5">
-            <p className={cn("font-sans font-medium", g.left_out ? "text-zinc-400 line-through" : "text-zinc-800 dark:text-zinc-100")}>
-              {onToggle && g.index !== undefined && (
-                <input
-                  type="checkbox"
-                  aria-label={`Include: ${g.title}`}
-                  checked={!leaveOut?.has(g.index)}
-                  onChange={() => onToggle(g.index!)}
-                  className="mr-1 align-middle"
-                />
-              )}
-              {g.subjects.length || g.lines.length ? (CIRCLED[i] ?? `${i + 1}.`) : "·"} {g.title}
-              {g.why && <span className="font-normal text-zinc-500"> — {g.why}</span>}
-              {g.left_out && <span className="ml-1 font-normal no-underline"> (left out)</span>}
-            </p>
-            {g.skipped.length > 0 && (
-              <p className="font-sans text-amber-800 dark:text-amber-300">
-                Skipped: {g.skipped.slice(0, 8).map((x) => `${x.id} (${x.reason})`).join("; ")}{g.skipped.length > 8 ? ` … ${g.skipped.length - 8} more` : ""}
-              </p>
-            )}
-            <div className="pl-3"><Lines lines={g.lines} /></div>
-          </div>
-        ))
-        : <Lines lines={preview.lines} />}
-    </div>
-  );
-}
 
 /** The bundle as the stores hold it now; rebuilt when any saved part changes. */
 function useBundle(): ProjectBundle {

@@ -2618,7 +2618,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": "); open any of the three; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab."
+                  "text": "); open any of the three, or import the changes an edited workbook makes; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab."
                 }
               ]
             ],
@@ -2736,6 +2736,108 @@ export const USER_MANUAL: ManualDoc = {
             {
               "kind": "text",
               "text": ") is read back with a warning naming its cell, and one that cannot be read stops the opening, naming the cell too."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "kind": "strong",
+              "text": "Import changes"
+            },
+            {
+              "kind": "text",
+              "text": " brings an edited workbook into the open project instead of replacing it. Choose the file under "
+            },
+            {
+              "kind": "em",
+              "text": "Import changes from a workbook"
+            },
+            {
+              "kind": "text",
+              "text": "; a window lists every change it makes, one per record or setting (a node renamed, an edge deleted, an Event's frequency), each with a tick to leave it out. A row missing from a sheet deletes its record; a sheet missing from the file changes nothing. A new row becomes a record: where its cells are empty it gets an id from its label, the top Functionality level, the only Canvas and a place on the grid. A reference to a record that is gone, or anything else the project cannot hold, is refused with the cell it is in. "
+            },
+            {
+              "kind": "strong",
+              "text": "Apply"
+            },
+            {
+              "kind": "text",
+              "text": " keeps a version of the project first; "
+            },
+            {
+              "kind": "strong",
+              "text": "Undo this import"
+            },
+            {
+              "kind": "text",
+              "text": " puts it back (Ctrl+Z does not). What the import adds is marked unconfirmed in the Inspector, with the file, sheet and row it came from, until you confirm it."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "kind": "text",
+              "text": "A sheet of your own can write the model: list it in the "
+            },
+            {
+              "kind": "code",
+              "text": "Sheets"
+            },
+            {
+              "kind": "text",
+              "text": " sheet with the model sheet it writes ("
+            },
+            {
+              "kind": "code",
+              "text": "Nodes"
+            },
+            {
+              "kind": "text",
+              "text": ", "
+            },
+            {
+              "kind": "code",
+              "text": "Events"
+            },
+            {
+              "kind": "text",
+              "text": ", "
+            },
+            {
+              "kind": "code",
+              "text": "Parameters"
+            },
+            {
+              "kind": "text",
+              "text": ", "
+            },
+            {
+              "kind": "code",
+              "text": "S·<series>"
+            },
+            {
+              "kind": "text",
+              "text": "…), give it that sheet's key column ("
+            },
+            {
+              "kind": "code",
+              "text": "id"
+            },
+            {
+              "kind": "text",
+              "text": ", "
+            },
+            {
+              "kind": "code",
+              "text": "name"
+            },
+            {
+              "kind": "text",
+              "text": ", …) and the columns it sets, and compute them with formulas. Import changes writes its values over the model sheet's; a row or column it lacks changes nothing."
             }
           ]
         },
