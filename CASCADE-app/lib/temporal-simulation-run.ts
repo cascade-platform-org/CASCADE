@@ -2,26 +2,28 @@
  * temporal-simulation-run.ts — start, cancel and end a Temporal Simulation run
  * from the window (ADR-0019 §2–§3, §5).
  *
- * The store-facing side of `lib/step-operator.ts`, which stays pure. A run reads
- * the model once, Resets a copy of it, and hands the copy to the step operator
- * with the ordinary Propagation call (`propagateSnapshot`: the Propagate
- * button's payload, one metered Engine Evaluation each, no store written), at
- * the scope Propagate, Simulate and Analyse share, fixed when the run starts
- * and saved into the Simulation then. The model is never written: canvas-store refuses model writes while
- * `running`, and the Run View paints the run record's periods instead.
+ * The store-facing side of `lib/step-operator.ts`, which stays pure. Run and
+ * Compare read their input once, when they start (`captureRunInput`): a Reset
+ * copy of the model, the Model Configuration's Events and scale, the Series,
+ * and the Propagation Context every engine call of the run uses
+ * (lib/propagation-call.ts) — the scope Propagate, Simulate and Analyse share,
+ * fixed then and saved into the Simulation Run starts. Nothing a person edits
+ * afterwards reaches a run already computing. The model is never written: the
+ * model writers refuse while `running` (lib/model-lock.ts), and the Run View
+ * paints the run record's periods instead.
  */
 
 import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore, selectN } from "@/store/config-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useProjectDataStore } from "@/store/project-data-store";
 import { parameterValues } from "@/lib/schemas/temporal-simulation";
-import { propagateSnapshot } from "@/lib/ephemeral-propagation";
+import { propagateSnapshot, propagationContext } from "@/lib/propagation-call";
 import { resetSnapshot } from "@/lib/scenario-baseline";
-import { planTimeline } from "@/lib/timeline-plan";
+import { planTimeline, type TimelinePlan } from "@/lib/timeline-plan";
 import { checkDoc, draftToDoc } from "@/lib/temporal-simulation-text";
-import { RunStopped, runTimeline } from "@/lib/step-operator";
+import type { TemporalSimulation } from "@/lib/schemas/temporal-simulation";
+import { RunStopped, runTimeline, type RunRecord } from "@/lib/step-operator";
 import { runTable, runTableCsv, type RunTable } from "@/lib/temporal-metrics";
 import { comparisonCsv, type ComparedRun, type Comparison } from "@/lib/temporal-comparison";
 import type { CompareRequest } from "@/lib/temporal-sweep";
@@ -34,49 +36,79 @@ import { nanoid } from "nanoid";
 let controller: AbortController | null = null;
 let comparing: AbortController | null = null;
 
+/** What a run reads from the app, captured once when Run or Compare starts. */
+function captureRunInput() {
+  const ctx = propagationContext();
+  const n = ctx.config.functionality_scale.length;
+  return {
+    ctx,
+    n,
+    events: ctx.config.events,
+    series: useProjectDataStore.getState().series,
+    start: resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n),
+  };
+}
+
+/**
+ * One Timeline run on the captured input. `stopped` is asked before every
+ * engine call; once it says yes, the run ends at that period as Cancelled.
+ */
+function runOn(
+  input: ReturnType<typeof captureRunInput>,
+  doc: TemporalSimulation,
+  plan: TimelinePlan,
+  parameters: Record<string, number>,
+  run: { signal: AbortSignal; stopped: () => boolean; onProgress: (done: number, label: string) => void },
+): Promise<RunRecord> {
+  return runTimeline({
+    start: input.start,
+    plan,
+    profile: doc.profile,
+    events: input.events,
+    n: input.n,
+    parameters,
+    series: input.series,
+    propagate: (snapshot) => (run.stopped() ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, input.ctx)),
+    signal: run.signal,
+    onProgress: run.onProgress,
+  });
+}
+
+/** A stopped run in words, naming the period when the step operator knows it. */
+function stoppedMessage(e: unknown): string {
+  if (!(e instanceof RunStopped)) return `Stopped: ${e instanceof Error ? e.message : String(e)}`;
+  return `${e.message === "Cancelled" ? "Cancelled" : `Stopped: ${e.message}`} — in period ${e.period}`;
+}
+
 /**
  * Run the window's definition. Returns when the run is shown or has stopped;
  * a stop is reported through the store's `runError`, naming the period.
  */
 export async function startTemporalSimulationRun(): Promise<void> {
   if (useTemporalSimulationStore.getState().running) return;
+  const input = captureRunInput();
   // The shared scope, fixed for the run and recorded in the Simulation it runs.
-  const { activeCanvasId } = useCanvasStore.getState();
-  const shared = useUiStore.getState().propagationScope;
-  const want = shared === "local" && activeCanvasId ? { scope: "local" as const, canvas: activeCanvasId } : { scope: "global" as const, canvas: undefined };
-  const had = useTemporalSimulationStore.getState();
   // Only a change is written, so a Run alone does not mark the project unsaved.
-  if (had.scope !== want.scope || had.canvas !== want.canvas) had.setScope(want.scope, want.canvas);
+  const scope = input.ctx.scope;
+  const canvas = scope === "local" ? input.ctx.canvasId ?? undefined : undefined;
+  const had = useTemporalSimulationStore.getState();
+  if (had.scope !== scope || had.canvas !== canvas) had.setScope(scope, canvas);
   const sim = useTemporalSimulationStore.getState();
   const checked = checkDoc(draftToDoc(sim));
   if (!checked.ok) return;
   const plan = planTimeline(checked.doc.timeline);
   if (plan.errors.length > 0 || plan.periods.length === 0) return;
 
-  const fixed = { scope: checked.doc.scope, canvasId: checked.doc.canvas ?? activeCanvasId };
-
-  const config = useConfigStore.getState();
-  const n = selectN(config);
-  const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
-
   // This run's own controller: End run, Reset or a newer run aborts it, and a
   // project load ends the run in the store; either way its result is dropped.
   const mine = new AbortController();
   controller = mine;
   const superseded = () => controller !== mine || !useTemporalSimulationStore.getState().running;
-  const ended = () => mine.signal.aborted || superseded();
   sim.beginRun(plan.engineCalls);
   try {
-    const record = await runTimeline({
-      start,
-      plan,
-      profile: checked.doc.profile,
-      events: config.config.events,
-      n,
-      parameters: parameterValues(checked.doc),
-      series: useProjectDataStore.getState().series,
-      propagate: (snapshot) => (ended() ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
+    const record = await runOn(input, checked.doc, plan, parameterValues(checked.doc), {
       signal: mine.signal,
+      stopped: () => mine.signal.aborted || superseded(),
       onProgress: (done, label) => useTemporalSimulationStore.getState().setRunProgress(done, label),
     });
     // Ended (End run, Reset, project load, a newer run) while the last call was in flight.
@@ -84,10 +116,7 @@ export async function startTemporalSimulationRun(): Promise<void> {
     useTemporalSimulationStore.getState().finishRun(record);
   } catch (e) {
     if (superseded()) return;
-    const message = e instanceof RunStopped
-      ? `${e.message === "Cancelled" ? "Cancelled" : `Stopped: ${e.message}`} — in period ${e.period}. Nothing was kept; the model is unchanged.`
-      : `Stopped: ${e instanceof Error ? e.message : String(e)}. The model is unchanged.`;
-    useTemporalSimulationStore.getState().failRun(message);
+    useTemporalSimulationStore.getState().failRun(`${stoppedMessage(e)}. Nothing was kept; the model is unchanged.`);
   } finally {
     if (controller === mine) controller = null;
   }
@@ -157,15 +186,10 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
   });
   if (chosen.length === 0) return;
 
-  const { activeCanvasId } = useCanvasStore.getState();
-  const shared = useUiStore.getState().propagationScope;
-  const fixed = shared === "local" && activeCanvasId ? { scope: "local" as const, canvasId: activeCanvasId } : { scope: "global" as const, canvasId: activeCanvasId };
-  const config = useConfigStore.getState();
-  const n = selectN(config);
-  const start = resetSnapshot(useCanvasStore.getState().toGraphSnapshot(), useHistoryStore.getState().scenarioBaseline(), n);
+  const input = captureRunInput();
 
   // A sweep runs one Simulation many times: it is checked and planned once.
-  const checkedById = new Map<string, { checked: ReturnType<typeof checkDoc>; plan: ReturnType<typeof planTimeline> | null }>();
+  const checkedById = new Map<string, { checked: ReturnType<typeof checkDoc>; plan: TimelinePlan | null }>();
   const prepared = chosen.map(({ request, doc: { id, ...doc } }) => {
     let entry = checkedById.get(id);
     if (!entry) {
@@ -191,23 +215,16 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
     }
     const before = done;
     try {
-      const record = await runTimeline({
-        start,
-        plan,
-        profile: checked.doc.profile,
-        events: config.config.events,
-        n,
-        parameters: parameterValues(checked.doc, sweep ? { [sweep.parameter]: sweep.value } : {}),
-        series: useProjectDataStore.getState().series,
-        propagate: (snapshot) => (mine.signal.aborted ? Promise.reject(new Error("Cancelled")) : propagateSnapshot(snapshot, fixed)),
+      const parameters = parameterValues(checked.doc, sweep ? { [sweep.parameter]: sweep.value } : {});
+      const record = await runOn(input, checked.doc, plan, parameters, {
         signal: mine.signal,
+        stopped: () => mine.signal.aborted,
         onProgress: (k, label) => useTemporalSimulationStore.getState().setCompareProgress(before + k, `${name} · ${label}`),
       });
-      runs.push({ id, name, table: runTable(record, checked.doc.metrics, n, checked.doc.standard_metrics), warnings: record.warnings, sweep });
+      runs.push({ id, name, table: runTable(record, checked.doc.metrics, input.n, checked.doc.standard_metrics), warnings: record.warnings, sweep });
     } catch (e) {
       if (mine.signal.aborted) break;
-      const message = e instanceof RunStopped ? `Stopped: ${e.message} — in period ${e.period}` : `Stopped: ${e instanceof Error ? e.message : String(e)}`;
-      runs.push({ id, name, table: null, warnings: [], error: message, sweep });
+      runs.push({ id, name, table: null, warnings: [], error: stoppedMessage(e), sweep });
     }
     done = before + plan.engineCalls;
   }

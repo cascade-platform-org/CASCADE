@@ -35,7 +35,8 @@ import {
   type UnsavedRun,
   type UncoveredEvent,
 } from "@/lib/scorecard-utils";
-import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { propagateSnapshot } from "@/lib/propagation-call";
+import { usePropagationGate } from "@/hooks/usePropagate";
 import { resetFunctionality } from "@/lib/network-utils";
 import { endTemporalSimulationRun } from "@/lib/temporal-simulation-run";
 import { STANDARD_COLUMNS, formatMetric } from "@/lib/temporal-metrics";
@@ -61,7 +62,7 @@ export function ScorecardPanel() {
   const config = useConfigStore((s) => s.config);
   const updateHistory = useHistoryStore((s) => s.updateHistory);
   const pushToast = useUiStore((s) => s.pushToast);
-  const serverReachable = useUiStore((s) => s.serverReachable);
+  const blocked = usePropagationGate();
   // Operativity weighting — shared app-wide with the model-based analysis so a
   // single choice drives every Operativity Score in the app.
   const oiWeightAttr = useAnalysisStore((s) => s.oiWeightAttr);
@@ -190,7 +191,7 @@ export function ScorecardPanel() {
               incompleteEntries={incompleteEntries}
               uncoveredEvents={uncoveredEvents}
               loading={computingGaps}
-              serverReachable={serverReachable}
+              blocked={blocked}
               onSaveRun={(run) => openSaveDialog({
                 beforeSnapshot: run.beforeSnapshot,
                 afterSnapshot: run.afterSnapshot,
@@ -198,9 +199,9 @@ export function ScorecardPanel() {
                 eventIds: run.eventIds,
               })}
               onComputeEntry={async (entry: PropagationScorecardEntry) => {
-                if (!serverReachable) return;
+                if (blocked) return;
                 try {
-                  const after = await runEphemeralPropagation(entry.before_propagation);
+                  const after = (await propagateSnapshot(entry.before_propagation)).snapshot;
                   updateScorecardEntry(entry.id, { after_propagation: after });
                   pushToast({ message: `"${entry.label}" updated with propagation result.`, variant: "success", durationMs: 3000 });
                 } catch (err) {
@@ -311,7 +312,8 @@ interface GapsSectionProps {
   incompleteEntries: PropagationScorecardEntry[];
   uncoveredEvents: UncoveredEvent[];
   loading: boolean;
-  serverReachable: boolean;
+  /** Why the engine cannot be called now (usePropagationGate), or null. */
+  blocked: string | null;
   onSaveRun: (run: UnsavedRun) => void;
   onComputeEntry: (entry: PropagationScorecardEntry) => Promise<void>;
   onRunEvent: (ev: UncoveredEvent) => void;
@@ -322,7 +324,7 @@ function GapsSection({
   incompleteEntries,
   uncoveredEvents,
   loading,
-  serverReachable,
+  blocked,
   onSaveRun,
   onComputeEntry,
   onRunEvent,
@@ -419,8 +421,8 @@ function GapsSection({
                     <span className="truncate text-xs text-zinc-700 dark:text-zinc-300">{entry.label}</span>
                     <button
                       onClick={() => handleCompute(entry)}
-                      disabled={!serverReachable || computingIds.has(entry.id)}
-                      title={!serverReachable ? "Server unreachable" : "Run ephemeral propagation"}
+                      disabled={blocked !== null || computingIds.has(entry.id)}
+                      title={blocked ?? "Run ephemeral propagation"}
                       className="flex shrink-0 items-center gap-1 rounded-md border border-zinc-300 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
                       {computingIds.has(entry.id)

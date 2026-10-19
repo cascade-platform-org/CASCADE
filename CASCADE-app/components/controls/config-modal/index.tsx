@@ -88,7 +88,8 @@ export function ConfigModal() {
       setSaveTried(true);
       return;
     }
-    commitDraft();
+    // Refused while a Temporal Simulation run is shown: the modal stays open on the draft.
+    if (!commitDraft()) return;
     // The new Event may have been deleted before Save; report only a saved one.
     const id = newEventId.current;
     if (id && useConfigStore.getState().config.events.some((e) => e.id === id)) {

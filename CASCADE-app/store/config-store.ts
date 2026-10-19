@@ -27,6 +27,7 @@ import type { EngineAlgorithms } from "@/lib/schemas/api";
 import { brandColor } from "@/lib/brand";
 import { isScenarioEvent } from "@/lib/event-application";
 import { DEFAULT_LEVEL_SCALE, type LevelBand } from "@/lib/schemas/config";
+import { modelLocked } from "@/lib/model-lock";
 
 // ---------------------------------------------------------------------------
 // Default configuration — N=3, no categories, no events
@@ -79,8 +80,12 @@ interface ConfigActions {
   // --- Draft lifecycle ---
   /** Reset draft to a fresh clone of the committed config (call when modal opens). */
   openDraft: () => void;
-  /** Commit draft → config, clear dirty flag. */
-  commitDraft: () => void;
+  /**
+   * Commit draft → config, clear dirty flag. Refused while a Temporal
+   * Simulation run is shown (lib/model-lock.ts): returns false and keeps the
+   * draft, so the person loses nothing and can Save after End run.
+   */
+  commitDraft: () => boolean;
   /** Discard draft, reset to committed config, clear dirty flag. */
   discardDraft: () => void;
 
@@ -231,10 +236,12 @@ export const useConfigStore = create<ConfigStore>()(
     },
 
     commitDraft() {
+      if (modelLocked()) return false;
       set((state) => {
         state.config = deepClone(state.draft);
         state.isDirty = false;
       });
+      return true;
     },
 
     discardDraft() {
@@ -257,6 +264,7 @@ export const useConfigStore = create<ConfigStore>()(
     },
 
     mergeConfig(incoming) {
+      if (modelLocked()) throw new Error("End the Temporal Simulation run before importing into the model.");
       const summary: MergeConfigSummary = {
         addedCategories: [], skippedCategories: [],
         addedGraphTypes: [], skippedGraphTypes: [],

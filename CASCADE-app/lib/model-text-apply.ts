@@ -9,7 +9,8 @@
  * Refused while a Temporal Simulation run is shown, like every model edit.
  */
 
-import { modelLocked, useCanvasStore } from "@/store/canvas-store";
+import { useCanvasStore } from "@/store/canvas-store";
+import { modelLocked } from "@/lib/model-lock";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { pushAutoSnapshot, type ProjectBundle } from "@/lib/file-io";

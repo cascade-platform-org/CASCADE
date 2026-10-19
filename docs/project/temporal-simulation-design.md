@@ -918,9 +918,9 @@ the run and names the period. The Run View paints the reconstructed period throu
 Mode's display path; the store refuses definition edits until End run or Reset. Tests: the
 same IJDRR Timeline gives the same diffs twice; a reconstructed period equals the running
 state; cancel leaves the model untouched. Built as: `lib/step-operator.ts` (pure; the engine
-call is passed in), `lib/temporal-simulation-run.ts` (Reset copy, `runEphemeralPropagation`
-with the Propagate scope, one abort controller per run), canvas-store's `modelLocked()` on
-every model writer, and `hooks/useShownElements.ts` for the canvas views and the Inspector.
+call is passed in), `lib/temporal-simulation-run.ts` (Reset copy, `propagateSnapshot` on a
+Propagation Context captured at the start, one abort controller per run), `lib/model-lock.ts`'s
+`modelLocked()` on every model writer, the Config modal's Save included, and `hooks/useShownElements.ts` for the canvas views and the Inspector.
 Building it corrected ADR-0019 §2: a Phase's Events resolve against the imposed layer, since
 read against a shortage they could leave no record and their damage would vanish.
 

@@ -6,7 +6,7 @@
  * - canvas-store.applyPropagationResult mutates immer drafts in place
  *   (assignElementUpdate) so immer records only the 2–6 fields the engine
  *   actually changed instead of finalising a full spread-copy per element;
- * - runEphemeralPropagation merges onto plain snapshots without touching any
+ * - propagateSnapshot (lib/propagation-call.ts) merges onto plain snapshots without touching any
  *   store (mergeUpdatesIntoSnapshot).
  * A new engine output field only has to be handled in assignElementUpdate.
  */

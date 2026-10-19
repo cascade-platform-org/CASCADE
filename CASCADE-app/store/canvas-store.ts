@@ -40,6 +40,7 @@ import { useProjectDataStore } from "@/store/project-data-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { migrateProjectSimulations } from "@/lib/schemas/temporal-simulation";
 import { useNetworkStore } from "@/store/network-store";
+import { modelLocked } from "@/lib/model-lock";
 import { useUiStore } from "@/store/ui-store";
 
 /**
@@ -62,31 +63,6 @@ function withHistory<T>(
     label,
     opts,
   );
-}
-
-let lockToastAt = 0;
-
-/**
- * True while a Temporal Simulation run is computing or shown: the model is then
- * read-only (ADR-0019 §1), so every model writer below refuses. The run read the
- * model once and the Run View paints its own copy; an edit now would be invisible
- * and would make End run show a model the run never saw. Says so in a toast, at
- * most every few seconds, and makes End run pulse. Canvas metadata (label, colour, map viewport) and the
- * active Canvas stay writable: they are not the model the run computed on.
- */
-export function modelLocked(): boolean {
-  if (!useTemporalSimulationStore.getState().running) return false;
-  useTemporalSimulationStore.getState().cueEndRun();
-  const now = Date.now();
-  if (now - lockToastAt > 3000) {
-    lockToastAt = now;
-    useUiStore.getState().pushToast({
-      message: "A Temporal Simulation run is shown, so the model is read-only. End run or Reset to edit it.",
-      variant: "info",
-      durationMs: 3500,
-    });
-  }
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -706,6 +682,7 @@ export const useCanvasStore = create<CanvasStore>()(
         if (meta.name !== undefined) state.projectMeta.name = meta.name;
         if (meta.description !== undefined) state.projectMeta.description = meta.description;
       });
+      if (modelLocked()) return;
     },
 
     setGlobalGraphType(graphType) {

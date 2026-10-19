@@ -12,7 +12,8 @@ import { ResultsList } from "./results-list";
 import { HeatmapControls } from "./heatmap-controls";
 import { applyCoalition, elementLabel } from "@/lib/coalition";
 import { buildScopedGraph } from "@/lib/analysis-utils";
-import { runEphemeralPropagation, runEphemeralPropagationBatch } from "@/lib/ephemeral-propagation";
+import { usePropagationGate } from "@/hooks/usePropagate";
+import { propagateBatch, propagateSnapshot, propagationContext, type PropagationContext } from "@/lib/propagation-call";
 import {
   makePrefetchedEvaluator,
   prefetchCoalitionScores,
@@ -74,12 +75,13 @@ const MODEL_METRICS = [
  */
 function makeCoalitionEvaluator(
   baseline: GraphSnapshot,
+  ctx: PropagationContext,
   weightAttr: string,
   n: number,
   outcomes: Record<string, EvaluationOutcome>,
 ) {
   return async (failed: ReadonlySet<string>): Promise<number> => {
-    const after = await runEphemeralPropagation(applyCoalition(baseline, failed));
+    const after = (await propagateSnapshot(applyCoalition(baseline, failed), ctx)).snapshot;
     outcomes[coalitionKey(failed)] = captureOutcome(baseline, after);
     return computeOperativityScore(after, n, weightAttr) / 100;
   };
@@ -95,12 +97,13 @@ function makeCoalitionEvaluator(
  */
 function makeChunkScorer(
   baseline: GraphSnapshot,
+  ctx: PropagationContext,
   weightAttr: string,
   n: number,
   outcomes: Record<string, EvaluationOutcome>,
 ): ChunkScorer {
   return async (coalitions) => {
-    const propagated = await runEphemeralPropagationBatch(baseline, coalitions);
+    const propagated = await propagateBatch(baseline, coalitions, ctx);
     return propagated.map((after, i) => {
       outcomes[coalitionKey(coalitions[i])] = captureOutcome(baseline, after);
       return computeOperativityScore(after, n, weightAttr) / 100;
@@ -112,6 +115,7 @@ function makeChunkScorer(
 async function saveWorstCoalitions(
   worstCoalitions: Record<number, WorstCoalition>,
   baseline: GraphSnapshot,
+  ctx: PropagationContext,
 ) {
   const labels: Record<number, string> = {
     1: "Neuralgic single",
@@ -127,7 +131,7 @@ async function saveWorstCoalitions(
     const beforeSnap = applyCoalition(baseline, worst.ids);
     let afterSnap: GraphSnapshot | undefined;
     try {
-      afterSnap = await runEphemeralPropagation(beforeSnap);
+      afterSnap = (await propagateSnapshot(beforeSnap, ctx)).snapshot;
     } catch {
       /* the entry is still worth saving without its propagated half */
     }
@@ -204,7 +208,7 @@ export function SectionModelBased() {
   const reweightBasis = useAnalysisStore((s) => s.reweightBasis);
   const setReweightBasis = useAnalysisStore((s) => s.setReweightBasis);
   const scope = useAnalysisStore((s) => s.scope);
-  const serverReachable = useUiStore((s) => s.serverReachable);
+  const blocked = usePropagationGate();
   const pushToast = useUiStore((s) => s.pushToast);
   const n = useConfigStore(selectN);
 
@@ -225,6 +229,8 @@ export function SectionModelBased() {
   async function runVitality() {
     const { nodes, edges } = getElements();
     const baseline = useCanvasStore.getState().toGraphSnapshot();
+    // Captured once: an edit made while the run computes cannot change its later calls.
+    const ctx = propagationContext();
     const weightAttr = useAnalysisStore.getState().oiWeightAttr;
     const baselineScore = computeOperativityScore(baseline, n, weightAttr) / 100;
 
@@ -253,7 +259,7 @@ export function SectionModelBased() {
           const { [id]: _removed, ...rest } = snap.edges;
           snap.edges = rest;
         }
-        const after = await runEphemeralPropagation(snap);
+        const after = (await propagateSnapshot(snap, ctx)).snapshot;
         outcomes[id] = captureOutcome(baseline, after);
         return computeOperativityScore(after, n, weightAttr) / 100;
       },
@@ -302,6 +308,8 @@ export function SectionModelBased() {
     setWallSecs(null);
 
     const baseline = useCanvasStore.getState().toGraphSnapshot();
+    // Captured once: an edit made while the run computes cannot change its later calls.
+    const ctx = propagationContext();
     const weightAttr = useAnalysisStore.getState().oiWeightAttr;
 
     // The seed is chosen HERE rather than inside the estimator, because the
@@ -329,7 +337,7 @@ export function SectionModelBased() {
     const { scores } = await prefetchCoalitionScores(
       elements,
       { ...estimatorOptions, chunkSize: MAX_COALITIONS_PER_BATCH },
-      makeChunkScorer(baseline, weightAttr, n, outcomes),
+      makeChunkScorer(baseline, ctx, weightAttr, n, outcomes),
       {
         isCancelled: () => cancelRef.current,
         onScored: (count, elapsedMs) => {
@@ -343,7 +351,7 @@ export function SectionModelBased() {
 
     const shapleyResult = await estimateShapley(
       elements,
-      makePrefetchedEvaluator(scores, makeCoalitionEvaluator(baseline, weightAttr, n, outcomes)),
+      makePrefetchedEvaluator(scores, makeCoalitionEvaluator(baseline, ctx, weightAttr, n, outcomes)),
       estimatorOptions,
       {
         isCancelled: () => cancelRef.current,
@@ -392,7 +400,7 @@ export function SectionModelBased() {
     );
 
     if (shapleyParams.saveWorstToScorecard) {
-      await saveWorstCoalitions(worstCoalitions, baseline);
+      await saveWorstCoalitions(worstCoalitions, baseline, ctx);
     }
 
     setProgress(null);
@@ -634,12 +642,12 @@ export function SectionModelBased() {
       )}
 
       {/* Cost warning */}
-      {!serverReachable && (
+      {blocked && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-400">
-          Server unreachable — model-based analysis requires the propagation engine.
+          Model-based analysis requires the propagation engine. {blocked}
         </div>
       )}
-      {serverReachable && !isRunning && (
+      {!blocked && !isRunning && (
         <p className="text-[10px] text-zinc-400">
           Will make ~{totalCalls} engine calls.
         </p>
@@ -649,7 +657,7 @@ export function SectionModelBased() {
       {!isRunning ? (
         <button
           onClick={handleCompute}
-          disabled={!serverReachable}
+          disabled={blocked !== null}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           <Zap size={13} />

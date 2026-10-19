@@ -11,7 +11,7 @@
  * prose is to describe a coalition or a ranked analysis result, and that had
  * four copies of its own.
  *
- * Pure — no store, no network. `runEphemeralPropagation` is what turns the
+ * Pure — no store, no network. `propagateSnapshot` (lib/propagation-call.ts) is what turns the
  * Scenario these functions build into a propagated one.
  */
 

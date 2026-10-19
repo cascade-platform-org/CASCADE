@@ -62,7 +62,7 @@ beforeEach(() => {
   });
 });
 
-/** What `usePropagate` does once a PropagationResult comes back (lib/run-with-history.ts seam). */
+/** What `commitPropagation` (lib/propagation-call.ts) does once a PropagationResult comes back. */
 function propagate(updates: ElementUpdate[]): void {
   runWithHistory(
     () =>

@@ -3657,7 +3657,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " shows it. Pick a period in the Run tab, or step through them in the strip under the Action Bar: the canvas and the Inspector show that period's end. Your model and your Temporal Simulations are read-only while a run is shown; using a blocked control makes "
+                  "text": " shows it. Pick a period in the Run tab, or step through them in the strip under the Action Bar: the canvas and the Inspector show that period's end. Your model, its configuration and your Temporal Simulations are read-only while a run is shown: the Config window's "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Save"
+                },
+                {
+                  "kind": "text",
+                  "text": " waits, keeping your changes, until you end the run. Using a blocked control makes "
                 },
                 {
                   "kind": "strong",
@@ -3665,7 +3673,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " pulse. "
+                  "text": " pulse. A run reads everything it needs when you press "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Run"
+                },
+                {
+                  "kind": "text",
+                  "text": ", so nothing changed afterwards reaches it. "
                 },
                 {
                   "kind": "strong",

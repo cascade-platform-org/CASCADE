@@ -26,12 +26,12 @@ import {
   selectActionBarEvents,
   selectOverflowEvents,
 } from "@/store/config-store";
-import { modelLocked, useCanvasStore } from "@/store/canvas-store";
+import { useCanvasStore } from "@/store/canvas-store";
+import { modelLocked } from "@/lib/model-lock";
 import { countChangedElements } from "@/lib/graph-diff";
 import { extendRun, nextJumpHours, remainingJumpHours, revertRun } from "@/lib/temporal-jump-run";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
-import { usePropagate } from "@/hooks/usePropagate";
-import { useAuthStore } from "@/store/auth-store";
+import { usePropagate, usePropagationGate } from "@/hooks/usePropagate";
 import { resetFunctionality } from "@/lib/network-utils";
 import { ACTION_TONE, GroupButton, ScopePicker } from "./scope-picker";
 
@@ -55,8 +55,8 @@ export function ActionBar() {
   const overflowEvents = useConfigStore(useShallow(selectOverflowEvents));
 
   const { undo, redo, canUndo, canRedo } = useNetworkHistory();
-  const { propagate, isPropagating, serverReachable } = usePropagate();
-  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
+  const { propagate, isPropagating } = usePropagate();
+  const propagateBlocked = usePropagationGate();
   // A Temporal Simulation run shows its own copy; the model is read-only until it ends.
   const simulationRunning = useTemporalSimulationStore((s) => s.running);
 
@@ -102,9 +102,9 @@ export function ActionBar() {
             dataTour="propagate"
             icon={<Play size={12} className={cn(isPropagating && "animate-pulse")} />}
             label={isPropagating ? "Running…" : "Propagate"}
-            title={!serverReachable ? "Server unreachable — your data is safe locally" : `Run ${scope} propagation (Ctrl+Enter)`}
+            title={propagateBlocked ?? `Run ${scope} propagation (Ctrl+Enter)`}
             onClick={propagate}
-            disabled={!serverReachable || isPropagating || !canPropagate || simulationRunning}
+            disabled={propagateBlocked !== null || isPropagating || simulationRunning}
           />
         </span>
         {/* Temporal Simulation window (ADR-0019) */}

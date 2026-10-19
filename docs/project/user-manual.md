@@ -592,8 +592,11 @@ where a Phase lets hours pass (the clock field in its row).
 
 When the run ends, the **Run View** shows it. Pick a period in the Run tab, or
 step through them in the strip under the Action Bar: the canvas and the
-Inspector show that period's end. Your model and your Temporal Simulations are
-read-only while a run is shown; using a blocked control makes **End run** pulse.
+Inspector show that period's end. Your model, its configuration and your
+Temporal Simulations are read-only while a run is shown: the Config window's
+**Save** waits, keeping your changes, until you end the run. Using a blocked
+control makes **End run** pulse. A run reads everything it needs when you press
+**Run**, so nothing changed afterwards reaches it.
 **End run** or **Reset** returns the model exactly as it was. The run itself is not
 saved.
 

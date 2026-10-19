@@ -86,6 +86,10 @@ _Avoid_: Simulation
 Integer hours on an Element signalling pending timed degradation: > 0 means functional now, drops to 1 when the countdown (advanced only by Temporal Jumps, not wall-clock) reaches zero. Set by the engine (backup exhaustion) or manually as a what-if.
 _Avoid_: Time warning, countdown, timer
 
+**Propagation Context**:
+Everything a **Propagation** reads besides the Scenario's Elements: the project's Canvases, the Model Configuration, the scope and the Canvas a local scope trims to. Read from the app once and passed to every engine call, so a caller that propagates many times (a Temporal Simulation run, Compare, a model-based Analysis) captures it at its start and no edit made meanwhile reaches it. Local scope needs a Canvas to trim to; with none, the scope is global. `lib/propagation-call.ts`.
+_Avoid_: "propagation config" (the Model Configuration is one part of it), "engine settings"
+
 **Temporal Jump**:
 Simulated time advancing by N hours: subtracts N from every positive Functionality Time, clamps expiries to 0 with Functionality 1 (`passTime`). Not an Event kind (since 2026-10-08): fired by hand from the Time control, a Propagation follows, and it is recorded as an Event (a `tj-` id) with full Event semantics (history entry, undo, Scorecard trigger, and **Clear Event** — Ctrl+R on the newest jump reverts that jump and the cascade, like any other Event). A run also keeps state outside the graph — the pre-jump snapshot the `−Xh` control restores, and the hours elapsed — which **Reset** ends along with the scenario, so the control cannot rewind into a scenario that is over. Auto-advance fires jumps to the minimum remaining Functionality Time until none remain.
 _Avoid_: Temporal Propagation Sequence (retired), time step, clock tick

@@ -4,7 +4,7 @@
  * It had no test at all, and it is on the path every Propagation result takes:
  * `assignElementUpdate` is what canvas-store writes into an immer draft, and
  * `mergeUpdatesIntoSnapshot` is what the Analysis and Shapley paths merge onto
- * a plain snapshot (`lib/ephemeral-propagation.ts`).
+ * a plain snapshot (`lib/propagation-call.ts`).
  *
  * Two properties are worth pinning. The module's own docstring promises that
  * "a new engine output field only has to be handled in assignElementUpdate" —

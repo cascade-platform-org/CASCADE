@@ -30,7 +30,7 @@ import {
   operativityColor,
   hashSnapshot,
 } from "@/lib/scorecard-utils";
-import { runEphemeralPropagation } from "@/lib/ephemeral-propagation";
+import { propagateSnapshot } from "@/lib/propagation-call";
 import { passTime, temporalJumpId } from "@/lib/event-application";
 import { deriveSituation, situationSnapshots, situationEventIds } from "@/lib/situation";
 import type { GraphSnapshot, PropagationScorecardEntry } from "@/lib/schemas/network";
@@ -138,7 +138,7 @@ export function SaveScorecardDialog({
     setEphemeralPropagating(true);
     setEphemeralError(undefined);
     try {
-      const result = await runEphemeralPropagation(before);
+      const result = (await propagateSnapshot(before)).snapshot;
       setAfter(result);
     } catch (err) {
       setEphemeralError(err instanceof Error ? err.message : "Propagation failed.");

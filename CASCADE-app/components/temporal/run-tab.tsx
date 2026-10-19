@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Play, RotateCcw, Save, Download, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { useAuthStore } from "@/store/auth-store";
+import { usePropagationGate } from "@/hooks/usePropagate";
 import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { brandColor } from "@/lib/brand";
@@ -36,8 +36,7 @@ export function RunTab() {
   const { cued: endRunCued, ref: endRunRef } = useEndRunCue<HTMLSpanElement>();
   // The Run View: a finished run is shown, and its periods can be selected.
   const hasRun = useTemporalSimulationStore((s) => s.runRecord !== null);
-  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
-  const serverReachable = useUiStore((s) => s.serverReachable);
+  const blocked = usePropagationGate();
   const selected = useTemporalSimulationStore((s) => s.selectedPeriod);
   const display = useTemporalSimulationStore((s) => s.display);
   const reading = useTemporalSimulationStore((s) => s.levelReading);
@@ -69,8 +68,8 @@ export function RunTab() {
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={running || comparing || plan.periods.length === 0 || errors.length > 0 || !canPropagate || !serverReachable}
-          title={!canPropagate ? "Running needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : comparing ? "A comparison is computing (Compare tab)" : undefined}
+          disabled={running || comparing || plan.periods.length === 0 || errors.length > 0 || blocked !== null}
+          title={blocked ?? (comparing ? "A comparison is computing (Compare tab)" : undefined)}
           onClick={() => {
             explain(explainRun(plan, eventLabel));
             void startTemporalSimulationRun();

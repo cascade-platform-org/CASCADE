@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import { Download, GitCompare, Square } from "lucide-react";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { useAuthStore } from "@/store/auth-store";
-import { useUiStore } from "@/store/ui-store";
+import { usePropagationGate } from "@/hooks/usePropagate";
 import { brandColor } from "@/lib/brand";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { formatMetric } from "@/lib/temporal-metrics";
@@ -36,8 +35,7 @@ export function CompareTab() {
   const progress = useTemporalSimulationStore((s) => s.compareProgress);
   const runBusy = useTemporalSimulationStore((s) => s.runProgress !== null);
   const result = useTemporalSimulationStore((s) => s.comparison);
-  const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
-  const serverReachable = useUiStore((s) => s.serverReachable);
+  const blocked = usePropagationGate();
   const { explain } = useTemporalSimulationStore.getState();
 
   // Unticked Simulations; every saved one starts ticked.
@@ -84,8 +82,8 @@ export function CompareTab() {
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
           tone="accent"
-          disabled={requests.length < 2 || progress !== null || runBusy || !canPropagate || !serverReachable}
-          title={!canPropagate ? "Comparing needs an account allowed to Propagate" : !serverReachable ? "Server unreachable" : requests.length < 2 ? "Tick at least two, or sweep a Parameter" : undefined}
+          disabled={requests.length < 2 || progress !== null || runBusy || blocked !== null}
+          title={blocked ?? (requests.length < 2 ? "Tick at least two, or sweep a Parameter" : undefined)}
           onClick={() => { explain(EXPLAIN_COMPARE); void startComparison(requests); }}
         >
           <GitCompare size={11} /> Compare {requests.length}
