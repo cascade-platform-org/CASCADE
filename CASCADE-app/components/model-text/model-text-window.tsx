@@ -43,7 +43,8 @@ import { checkDesignText } from "@/lib/llm-design-check";
 import { RECIPES, findRecipe, focusContext, recipeContext, type Focus, type RecipeId } from "@/lib/llm-recipes";
 import { copyText as copyPlain, useLlmCopy } from "./llm-copy";
 import { PreviewList, type Shown } from "./preview-list";
-import { applyModelBundle, currentBundle, restoreModelBundle } from "@/lib/model-text-apply";
+import { applyModelBundle, restoreModelBundle } from "@/lib/model-text-apply";
+import { currentBundle } from "@/lib/project-bundle";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 type Result =

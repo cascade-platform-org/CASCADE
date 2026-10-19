@@ -7,8 +7,7 @@ import { ErrorBoundary } from "@/components/canvas/error-boundary";
 import { AuthGate } from "@/components/auth/auth-gate";
 import { getBeforeUnloadSave, clearBeforeUnloadSave, loadAutosave, clearAutosave, type BeforeUnloadSave } from "@/lib/file-io";
 import { loadRecoveryDir } from "@/lib/recovery-dir";
-import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore } from "@/store/config-store";
+import { openBundle } from "@/lib/project-bundle";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 
@@ -96,8 +95,7 @@ export default function Home() {
 
   function handleRestore() {
     if (!pendingSave) return;
-    useCanvasStore.getState().fromProject(pendingSave.bundle.project);
-    useConfigStore.getState().loadConfig(pendingSave.bundle.config);
+    openBundle(pendingSave.bundle);
     clearBeforeUnloadSave();
     clearAutosave();
     setAppState("editor");

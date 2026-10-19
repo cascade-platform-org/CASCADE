@@ -43,13 +43,14 @@ import {
   loadProjectFile,
   loadConfigFile,
   loadBundleFile,
+  parseBundle,
   formatBytes,
   historyStorageBytes,
   getStorageEstimate,
-  type ProjectBundle,
   type StorageEstimate,
 } from "@/lib/file-io";
-import { validateBundle, type ValidationIssue } from "@/lib/project-validation";
+import type { ValidationIssue } from "@/lib/project-validation";
+import { currentBundle, openBundle } from "@/lib/project-bundle";
 import { ImportInpSection } from "./import-inp-section";
 import { loadRecoveryDir, saveRecoveryDir, clearRecoveryDir } from "@/lib/recovery-dir";
 import {
@@ -132,9 +133,7 @@ export function FileIoPanel() {
   const hasUnsavedChanges = useUiStore((s) => s.hasUnsavedChanges);
 
   const toProject = useCanvasStore((s) => s.toProject);
-  const loadProject = useCanvasStore((s) => s.loadProject);
   const config = useConfigStore((s) => s.config);
-  const loadConfig = useConfigStore((s) => s.loadConfig);
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -217,10 +216,6 @@ export function FileIoPanel() {
     return () => clearInterval(interval);
   }, [refreshHistory, reloadSyncVersions]);
 
-  function currentBundle(): ProjectBundle {
-    return { project: toProject(), config };
-  }
-
   // ---- Local ----
 
   async function handleSave() {
@@ -260,8 +255,13 @@ export function FileIoPanel() {
     const entry = history[idx];
     if (!entry) return;
     if (!window.confirm("Restore this local save? Unsaved changes will be lost.")) return;
-    loadProject(entry.bundle.project);
-    loadConfig(entry.bundle.config);
+    // localStorage is outside the app: what it holds is checked like a file.
+    const bundle = parseBundle(entry.bundle);
+    if (!bundle) {
+      pushToast({ message: "This save no longer matches the project format, so it was not restored.", variant: "error", durationMs: 5000 });
+      return;
+    }
+    openBundle(bundle);
     pushToast({ message: "Restored.", variant: "success", durationMs: 3000 });
     closeFileIoPanel();
   }
@@ -287,8 +287,7 @@ export function FileIoPanel() {
     setSyncBusyId(version.id);
     try {
       const detail = await syncLoadProject(version.id);
-      loadProject(detail.data.project);
-      loadConfig(detail.data.config);
+      openBundle(detail.data);
       pushToast({ message: "Loaded from cloud.", variant: "success", durationMs: 4000 });
       closeFileIoPanel();
     } catch (err) {
@@ -317,8 +316,7 @@ export function FileIoPanel() {
   async function handleLoadWorkingCopy() {
     if (!workingCopy) return;
     if (!window.confirm("Restore the auto-saved copy? Unsaved changes will be lost.")) return;
-    loadProject(workingCopy.data.project);
-    loadConfig(workingCopy.data.config);
+    openBundle(workingCopy.data);
     pushToast({ message: "Restored.", variant: "success", durationMs: 4000 });
     closeFileIoPanel();
   }
@@ -355,16 +353,28 @@ export function FileIoPanel() {
 
   // ---- Load a file (auto-detect) ----
 
+  /** Say what opening a `.json` found: close on a clean open, list the problems otherwise. */
+  function reportOpened(what: string, issues: ValidationIssue[]) {
+    if (issues.length === 0) {
+      pushToast({ message: `Loaded ${what}.`, variant: "success", durationMs: 4000 });
+      closeFileIoPanel();
+      return;
+    }
+    const errCount = issues.filter((i) => i.severity === "error").length;
+    const warnCount = issues.filter((i) => i.severity === "warning").length;
+    const summary = [errCount && `${errCount} error${errCount > 1 ? "s" : ""}`, warnCount && `${warnCount} warning${warnCount > 1 ? "s" : ""}`].filter(Boolean).join(", ");
+    pushToast({ message: `Loaded ${what} — ${summary} found.`, variant: "error", durationMs: 6000 });
+    setValidationIssues(issues);
+  }
+
   async function handleFileSelected(file: File) {
     setLoadError(null);
     setValidationIssues([]);
     if (await isWorkbookFile(file)) {
       const { result, warnings, notes } = await loadWorkbookFile(file);
       if (!result.ok) { setLoadError(result.error); return; }
-      loadProject(result.data.project);
-      loadConfig(result.data.config);
       const issues: ValidationIssue[] = [
-        ...validateBundle(result.data),
+        ...openBundle(result.data),
         ...warnings.map((message) => ({ severity: "warning" as const, code: "WORKBOOK", message })),
       ];
       if (issues.length === 0) {
@@ -395,37 +405,21 @@ export function FileIoPanel() {
     // Try bundle first (has both project + config keys)
     const bundleResult = await loadBundleFile(new File([text], file.name, { type: "application/json" }));
     if (bundleResult.ok) {
-      loadProject(bundleResult.data.project);
-      loadConfig(bundleResult.data.config);
-      const issues = validateBundle(bundleResult.data);
-      if (issues.length === 0) {
-        pushToast({ message: `Loaded "${file.name}".`, variant: "success", durationMs: 4000 });
-        closeFileIoPanel();
-      } else {
-        const errCount = issues.filter((i) => i.severity === "error").length;
-        const warnCount = issues.filter((i) => i.severity === "warning").length;
-        const summary = [errCount && `${errCount} error${errCount > 1 ? "s" : ""}`, warnCount && `${warnCount} warning${warnCount > 1 ? "s" : ""}`].filter(Boolean).join(", ");
-        pushToast({ message: `Loaded "${file.name}" — ${summary} found.`, variant: "error", durationMs: 6000 });
-        setValidationIssues(issues);
-      }
+      reportOpened(`"${file.name}"`, openBundle(bundleResult.data));
       return;
     }
 
-    // Try project
+    // Try project: the open configuration stays.
     const projectResult = await loadProjectFile(new File([text], file.name, { type: "application/json" }));
     if (projectResult.ok) {
-      loadProject(projectResult.data);
-      pushToast({ message: `Loaded "${file.name}".`, variant: "success", durationMs: 4000 });
-      closeFileIoPanel();
+      reportOpened(`"${file.name}"`, openBundle({ project: projectResult.data }));
       return;
     }
 
-    // Try config
+    // Try config: the open project stays, and is checked against the new configuration.
     const configResult = await loadConfigFile(new File([text], file.name, { type: "application/json" }));
     if (configResult.ok) {
-      loadConfig(configResult.data);
-      pushToast({ message: `Loaded config from "${file.name}".`, variant: "success", durationMs: 4000 });
-      closeFileIoPanel();
+      reportOpened(`config from "${file.name}"`, openBundle({ config: configResult.data }));
       return;
     }
 

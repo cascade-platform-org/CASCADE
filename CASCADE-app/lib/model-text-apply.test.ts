@@ -10,7 +10,8 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { MODEL_TEXT_FORMAT, checkChange, parseChangeText } from "./model-text";
-import { applyModelBundle, currentBundle, restoreModelBundle } from "./model-text-apply";
+import { applyModelBundle, restoreModelBundle } from "./model-text-apply";
+import { currentBundle } from "@/lib/project-bundle";
 import type { ProjectBundle } from "./file-io";
 
 /** The bundle without what toProject stamps afresh on every call. */

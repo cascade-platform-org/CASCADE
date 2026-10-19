@@ -38,10 +38,9 @@ import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useProjectDataStore } from "@/store/project-data-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
-import { migrateProjectSimulations } from "@/lib/schemas/temporal-simulation";
 import { useNetworkStore } from "@/store/network-store";
-import { modelLocked } from "@/lib/model-lock";
 import { useUiStore } from "@/store/ui-store";
+import { modelLocked } from "@/lib/model-lock";
 
 /**
  * Run a mutation and record it, using this store's own snapshots.
@@ -196,8 +195,6 @@ export interface CanvasActions {
   toGraphSnapshot: () => GraphSnapshot;
   toProject: () => Project;
   fromProject: (project: Project) => void;
-  /** Alias for fromProject — used by File I/O panel. */
-  loadProject: (project: Project) => void;
   /**
    * Merge a project bundle's single canvas + its nodes/edges INTO the current
    * project as an extra canvas, instead of replacing everything (used by the
@@ -682,10 +679,10 @@ export const useCanvasStore = create<CanvasStore>()(
         if (meta.name !== undefined) state.projectMeta.name = meta.name;
         if (meta.description !== undefined) state.projectMeta.description = meta.description;
       });
-      if (modelLocked()) return;
     },
 
     setGlobalGraphType(graphType) {
+      if (modelLocked()) return;
       set((state) => {
         state.projectMeta.global_graph_type = graphType ?? undefined;
       });
@@ -752,12 +749,9 @@ export const useCanvasStore = create<CanvasStore>()(
       useProjectDataStore.getState().loadFromProject(project.series, project.sheets);
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
       useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
-      // A working copy saved before the list existed reaches here unparsed.
-      useTemporalSimulationStore.getState().loadFromProject((migrateProjectSimulations(project) as Project).temporal_simulations);
-    },
-
-    loadProject(project) {
-      get().fromProject(project);
+      // Every source is parsed before it opens (lib/project-bundle.ts), and
+      // ProjectSchema's preprocessor already migrated a single `temporal_simulation`.
+      useTemporalSimulationStore.getState().loadFromProject(project.temporal_simulations);
     },
 
     mergeImportedProject(project) {

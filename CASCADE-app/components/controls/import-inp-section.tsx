@@ -35,6 +35,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useAuthStore } from "@/store/auth-store";
 import { importInp } from "@/lib/api-client";
 import { remapConfigEventIds } from "@/lib/merge-import";
+import { openBundle } from "@/lib/project-bundle";
 import { cn } from "@/lib/utils";
 
 type ImportMode = "replace" | "merge";
@@ -43,9 +44,7 @@ export function ImportInpSection() {
   const pushToast = useUiStore((s) => s.pushToast);
   const serverReachable = useUiStore((s) => s.serverReachable);
   const closeFileIoPanel = useUiStore((s) => s.closeFileIoPanel);
-  const loadProject = useCanvasStore((s) => s.loadProject);
   const mergeImportedProject = useCanvasStore((s) => s.mergeImportedProject);
-  const loadConfig = useConfigStore((s) => s.loadConfig);
   const mergeConfig = useConfigStore((s) => s.mergeConfig);
   const currentNLevels = useConfigStore((s) => s.config.functionality_scale.length);
   const authEnabled = useAuthStore((s) => s.authEnabled);
@@ -133,8 +132,7 @@ export function ImportInpSection() {
       };
 
       if (mode === "replace") {
-        loadProject(projectWithSource);
-        loadConfig(result.bundle.config);
+        openBundle({ project: projectWithSource, config: result.bundle.config });
         pushToast({
           message: `Imported "${file.name}"${reduced}.`,
           variant: "success",

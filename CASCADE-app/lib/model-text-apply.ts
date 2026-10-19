@@ -2,30 +2,21 @@
  * model-text-apply.ts — the store-facing side of the LLM Design (ADR-0022).
  *
  * `lib/model-text.ts` checks a change set (or a Workbook import, ADR-0023)
- * against a copy and previews it; this file reads the current bundle and, once the person confirms, writes the
- * checked result through the same loaders a project file uses. Before writing,
+ * against a copy and previews it; once the person confirms, this file writes the
+ * checked result through `openBundle`, the way every project file is opened. Before writing,
  * the whole current bundle is kept as a version ("Before LLM Design edit") and
  * handed back, so the window can offer Undo this edit and Versions keeps it.
  * Refused while a Temporal Simulation run is shown, like every model edit.
  */
 
-import { useCanvasStore } from "@/store/canvas-store";
 import { modelLocked } from "@/lib/model-lock";
-import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { pushAutoSnapshot, type ProjectBundle } from "@/lib/file-io";
+import { currentBundle, openBundle } from "@/lib/project-bundle";
 
-/** What the project file and the configuration file would hold now. */
-export function currentBundle(): ProjectBundle {
-  return { project: useCanvasStore.getState().toProject(), config: useConfigStore.getState().config };
-}
-
-/** Load a bundle into the stores, keeping the active Canvas when it still exists. */
+/** Open an edited bundle in place: the active Canvas kept, the project unsaved. */
 function load(bundle: ProjectBundle): void {
-  const active = useCanvasStore.getState().activeCanvasId;
-  useCanvasStore.getState().loadProject(bundle.project);
-  useConfigStore.getState().loadConfig(bundle.config);
-  if (active && active in useCanvasStore.getState().canvases) useCanvasStore.setState({ activeCanvasId: active });
+  openBundle(bundle, { keepActiveCanvas: true });
   useUiStore.getState().markDirty();
 }
 

@@ -49,10 +49,10 @@ import {
 import { cn } from "@/lib/utils";
 import { isWorkbookFile, loadBundleFile, loadProjectFile, loadWorkbookFile } from "@/lib/file-io";
 import { loadSampleManifest, loadSampleBundle, type SampleManifestEntry } from "@/lib/samples";
-import { useCanvasStore } from "@/store/canvas-store";
+import { openBundle } from "@/lib/project-bundle";
 import { startTour } from "@/lib/tour/start-tour";
 import { TOURS, TOUR_IDS, type TourId } from "@/lib/tour/registry";
-import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
+import { DEFAULT_CONFIG } from "@/store/config-store";
 import { createEmptyProject } from "@/lib/new-project";
 
 // ---------------------------------------------------------------------------
@@ -91,9 +91,6 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
   const [data, setData] = useState<WizardData>(INITIAL_DATA);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadConfig = useConfigStore((s) => s.loadConfig);
-  const fromProject = useCanvasStore((s) => s.fromProject);
-
   function patch(partial: Partial<WizardData>) {
     setData((d) => ({ ...d, ...partial }));
   }
@@ -104,23 +101,20 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
     if (await isWorkbookFile(file)) {
       const { result } = await loadWorkbookFile(file);
       if (!result.ok) { setLoadError(result.error); return; }
-      fromProject(result.data.project);
-      loadConfig(result.data.config);
+      openBundle(result.data);
       onComplete();
       return;
     }
     // Try bundle first (project + config), then project-only
     const bundleResult = await loadBundleFile(file);
     if (bundleResult.ok) {
-      fromProject(bundleResult.data.project);
-      loadConfig(bundleResult.data.config);
+      openBundle(bundleResult.data);
       onComplete();
       return;
     }
     const projectResult = await loadProjectFile(file);
     if (projectResult.ok) {
-      fromProject(projectResult.data);
-      loadConfig(DEFAULT_CONFIG);
+      openBundle({ project: projectResult.data, config: DEFAULT_CONFIG });
       onComplete();
       return;
     }
@@ -135,8 +129,7 @@ export function NewProjectWizard({ onComplete, onCancel }: NewProjectWizardProps
       setLoadError(`Could not load sample "${sample.label}".`);
       return;
     }
-    fromProject(bundle.project);
-    loadConfig(bundle.config);
+    openBundle(bundle);
     onComplete();
   }
 

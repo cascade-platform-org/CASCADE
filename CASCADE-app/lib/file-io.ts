@@ -262,12 +262,19 @@ export function saveBeforeUnload(
   }
 }
 
-/** Returns the beforeunload save if it exists and is newer than the last manual save. */
+/**
+ * Returns the beforeunload save if it exists and its bundle still matches the
+ * schemas: localStorage is outside the app, so what it holds is checked like a
+ * file (an older build's save, or an edited one, would otherwise reach the
+ * stores unchecked).
+ */
 export function getBeforeUnloadSave(): BeforeUnloadSave | null {
   try {
     const raw = localStorage.getItem(BEFOREUNLOAD_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as BeforeUnloadSave;
+    const entry = JSON.parse(raw) as Partial<BeforeUnloadSave>;
+    const bundle = parseBundle(entry.bundle);
+    return bundle && typeof entry.saved_at === "string" ? { ...entry, saved_at: entry.saved_at, bundle } : null;
   } catch {
     return null;
   }

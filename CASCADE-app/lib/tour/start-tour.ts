@@ -10,11 +10,10 @@
  * imports.
  */
 
-import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { loadSampleBundle } from "@/lib/samples";
 import { createEmptyProject } from "@/lib/new-project";
+import { openBundle } from "@/lib/project-bundle";
 import { TOURS, type TourId } from "@/lib/tour/registry";
 import { markTourOffered } from "@/hooks/useFirstRun";
 
@@ -38,10 +37,7 @@ export async function startTour(id: TourId, projectName?: string): Promise<void>
     createEmptyProject(projectName);
   } else {
     const bundle = await loadSampleBundle(start.sample);
-    if (bundle) {
-      useCanvasStore.getState().fromProject(bundle.project);
-      useConfigStore.getState().loadConfig(bundle.config);
-    }
+    if (bundle) openBundle(bundle);
   }
 
   // However the user got here, they have now been offered a tour — the

@@ -11,8 +11,8 @@
  */
 
 import { nanoid } from "nanoid";
-import { useCanvasStore } from "@/store/canvas-store";
-import { useConfigStore, DEFAULT_CONFIG } from "@/store/config-store";
+import { DEFAULT_CONFIG } from "@/store/config-store";
+import { openBundle } from "@/lib/project-bundle";
 import { CANVAS_PALETTE } from "@/lib/colors";
 import type { Canvas } from "@/lib/schemas/network";
 
@@ -25,11 +25,6 @@ const FIRST_CANVAS_LABEL = "Main Network";
 
 /** Discard the open project and start an empty one with the default config. */
 export function createEmptyProject(name?: string, description?: string): void {
-  const { loadConfig } = useConfigStore.getState();
-  const { fromProject } = useCanvasStore.getState();
-
-  loadConfig(DEFAULT_CONFIG);
-
   const canvas: Canvas = {
     id: `canvas-${nanoid(8)}`,
     label: FIRST_CANVAS_LABEL,
@@ -42,16 +37,19 @@ export function createEmptyProject(name?: string, description?: string): void {
     },
   };
 
-  fromProject({
-    version: "2.0",
-    meta: {
-      name: name?.trim() || "Untitled project",
-      description: description?.trim() || undefined,
+  openBundle({
+    config: DEFAULT_CONFIG,
+    project: {
+      version: "2.0",
+      meta: {
+        name: name?.trim() || "Untitled project",
+        description: description?.trim() || undefined,
+      },
+      nodes: {},
+      edges: {},
+      canvases: [canvas],
+      update_history: [],
+      scorecard: [],
     },
-    nodes: {},
-    edges: {},
-    canvases: [canvas],
-    update_history: [],
-    scorecard: [],
   });
 }

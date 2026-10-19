@@ -13,7 +13,7 @@ import { SectionStructural } from "./section-structural";
 import { SectionModelBased } from "./section-model-based";
 import { buildAnalysisEntry } from "@/lib/analysis-entry";
 import { recipeContext } from "@/lib/llm-recipes";
-import { currentBundle } from "@/lib/model-text-apply";
+import { currentBundle } from "@/lib/project-bundle";
 import { useLlmCopy } from "@/components/model-text/llm-copy";
 import { cn } from "@/lib/utils";
 import type { AnalysisSection } from "@/store/analysis-store";
