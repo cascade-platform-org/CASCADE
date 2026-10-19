@@ -231,7 +231,7 @@ A Graph modification that does NOT change Functionality (topology, attributes). 
 _Avoid_: Graph Update, structural update (in domain conversation)
 
 **Any Graph Update**:
-Superset: Model Graph Updates plus Functionality-changing operations. The undo (CTRL+Z) history operates on these; each entry holds a **Graph Diff** of what it changed.
+Superset: Model Graph Updates plus Functionality-changing operations. The undo (CTRL+Z) history operates on these; each entry holds a **Graph Diff** of what it changed. A run of hand edits to the same fields of one Element (typing a label) is one Update.
 _Avoid_: Any Update, change (when the undo-history meaning is intended)
 
 **Responsibility Share**:

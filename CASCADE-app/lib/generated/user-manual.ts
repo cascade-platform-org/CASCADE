@@ -3976,7 +3976,7 @@ export const USER_MANUAL: ManualDoc = {
                   [
                     {
                       "kind": "text",
-                      "text": "Undo the last change to the network."
+                      "text": "Undo the last change to the network. Typing into one Inspector field is one change, however many letters."
                     }
                   ]
                 ],

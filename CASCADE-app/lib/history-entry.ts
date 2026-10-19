@@ -14,7 +14,7 @@
  */
 import { nanoid } from "nanoid";
 import { useHistoryStore } from "@/store/history-store";
-import { diffGraph, isEmptyDiff } from "@/lib/graph-diff";
+import { applyGraphDiff, diffGraph, isEmptyDiff } from "@/lib/graph-diff";
 import type { AnyUpdateEntry, GraphSnapshot } from "@/lib/schemas/network";
 
 export interface HistoryEntryOptions {
@@ -39,6 +39,14 @@ export interface HistoryEntryOptions {
   extra?: Partial<
     Pick<AnyUpdateEntry, "mutation_reversal" | "propagation_meta" | "temporal_jump_hours">
   >;
+  /**
+   * A run of edits to one thing (typing a label, dragging a slider) is one
+   * entry: an Update with the same key folds into the entry the previous one
+   * recorded, while that entry is still the newest: anything else recorded in
+   * between ends the run, and so does an undo until a redo brings the entry
+   * back. A run that ends where it began leaves no entry.
+   */
+  coalesce?: string;
 }
 
 /**
@@ -50,6 +58,9 @@ export interface HistoryEntryOptions {
  * would be invisible to both.
  */
 const ALWAYS_RECORD = new Set<AnyUpdateEntry["update_type"]>(["event_applied", "event_cleared"]);
+
+/** The entry the last coalescing Update recorded, and its key. In memory only: a reload ends every run. */
+let lastRun: { key: string; entryId: string } | null = null;
 
 /**
  * Diff `before` → `after` and push one entry. Returns false when the update
@@ -68,15 +79,28 @@ function pushGraphUpdate(
   label: string,
   opts: HistoryEntryOptions & { activeCanvasId?: string | null } = {},
 ): boolean {
-  const diff = diffGraph(before, after);
+  const history = useHistoryStore.getState();
+  const top = history.updateHistory[0];
+  const continues = opts.coalesce !== undefined && lastRun?.key === opts.coalesce && top?.id === lastRun.entryId && top.diff !== undefined;
+  // The run's own start: the newest entry applied backwards, then diffed afresh
+  // by the one differ — no second way of combining two diffs.
+  const start = continues && top?.diff ? applyGraphDiff(before, top.diff, "backward") : before;
+  const diff = diffGraph(start, after);
   const updateType = opts.updateType ?? "manual_functionality_update";
-  if (isEmptyDiff(diff) && !ALWAYS_RECORD.has(updateType)) return false;
+  if (continues) history.popUpdateEntry();
+  if (isEmptyDiff(diff) && !ALWAYS_RECORD.has(updateType)) {
+    // Only a continued run forgets itself here; a no-op elsewhere must not end one.
+    if (continues) lastRun = null;
+    return false;
+  }
 
   const canvas_id =
     opts.canvasId === null ? undefined : opts.canvasId ?? opts.activeCanvasId ?? undefined;
 
+  const id = nanoid();
+  lastRun = opts.coalesce !== undefined ? { key: opts.coalesce, entryId: id } : null;
   useHistoryStore.getState().pushUpdateEntry({
-    id: nanoid(),
+    id,
     timestamp: new Date().toISOString(),
     update_type: updateType,
     label,

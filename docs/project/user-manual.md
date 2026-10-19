@@ -669,7 +669,7 @@ text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.
 
 | Key                            | Does                                                                |
 | ------------------------------ | ------------------------------------------------------------------- |
-| `Ctrl+Z`                     | Undo the last change to the network.                                |
+| `Ctrl+Z`                     | Undo the last change to the network. Typing into one Inspector field is one change, however many letters. |
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo.                                                               |
 | `Ctrl+A`                     | Select every element on the current Canvas, and open the Inspector. |
 | `Ctrl+C` / `Ctrl+V`        | Copy the selection, and paste it onto the active Canvas.            |

@@ -339,7 +339,7 @@ The engine records for each degraded Element which upstream Elements or Events a
 
 - Add / edit / remove nodes (with all attributes, per-category blocks, vulnerability levels).
 - Add / edit / remove edges (direction, capacity, vulnerability levels).
-- Undo/redo stack.
+- Undo/redo stack. Every hand edit of an Element is undoable: each Inspector field (node and edge), its Rules editor, and every Active Rules panel action. A run of edits to the same fields of one Element (typing a label, dragging the Functionality slider) is one undo step; a click such as toggling or deleting a Rule is a step of its own (`lib/element-edit.ts`).
 
 ### 8.1a Navigating the canvas *(implemented)*
 

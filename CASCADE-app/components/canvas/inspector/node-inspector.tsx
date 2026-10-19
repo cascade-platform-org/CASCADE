@@ -15,7 +15,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
-import { useHistoryAction } from "@/hooks/useHistoryAction";
+import { editElement } from "@/lib/element-edit";
 import type { CapacityValue, Edge, Node } from "@/lib/schemas/network";
 import { undeclaredCapacities } from "@/lib/stock-checks";
 import { capacityNumber, isStorage } from "@/lib/stock-math";
@@ -280,7 +280,6 @@ function CategoriesEditor({
 // ---------------------------------------------------------------------------
 
 export function NodeInspector({ node }: { node: Node }) {
-  const updateNode = useCanvasStore((s) => s.updateNode);
   const allNodes = useCanvasStore((s) => s.nodes);
   const allEdges = useCanvasStore((s) => s.edges);
   const n = useConfigStore(selectN);
@@ -288,7 +287,6 @@ export function NodeInspector({ node }: { node: Node }) {
   const categories = useConfigStore(useShallow((s) => s.config.categories));
   const events = useConfigStore(useShallow((s) => s.config.events.filter(isVulnerabilityEvent)));
   const openConfigModal = useUiStore((s) => s.openConfigModal);
-  const historyAction = useHistoryAction();
 
   const ownCategories = new Set(node.node_categories ?? []);
   const inboundCategories = new Set<string>();
@@ -322,16 +320,17 @@ export function NodeInspector({ node }: { node: Node }) {
     return supplies.length > 0 ? Math.max(...supplies) : null;
   }
 
+  // Every edit is undoable; a run of edits to one field is one undo step (lib/element-edit.ts).
   const patch = useCallback(
-    (partial: Partial<Node>) => updateNode(node.id, partial),
-    [node.id, updateNode],
+    (partial: Partial<Node>) => editElement("node", node.id, partial),
+    [node.id],
   );
 
-  const patchWithHistory = useCallback(
-    (partial: Partial<Node>, label: string) => {
-      historyAction(() => updateNode(node.id, partial), label);
-    },
-    [node.id, updateNode, historyAction],
+  /** An edit of the node's condition (Functionality, its time, damage, repair time). */
+  const patchCondition = useCallback(
+    (partial: Partial<Node>, label?: string) =>
+      editElement("node", node.id, partial, { label, updateType: "manual_functionality_update" }),
+    [node.id],
   );
 
   const nodeTypes = ["Source", "Infrastructure", "Service", "Personnel"];
@@ -386,7 +385,7 @@ export function NodeInspector({ node }: { node: Node }) {
               max={n}
               value={node.functionality}
               onChange={(e) =>
-                patchWithHistory(
+                patchCondition(
                   { functionality: Number(e.target.value) },
                   "Manual functionality edit",
                 )
@@ -412,14 +411,14 @@ export function NodeInspector({ node }: { node: Node }) {
             value={node.functionality_time}
             min={0}
             onChange={(v) =>
-              patchWithHistory({ functionality_time: v }, "Manual functionality_time edit")
+              patchCondition({ functionality_time: v }, "Manual functionality_time edit")
             }
           />
         </Field>
         <div className="mb-2">
           <Toggle
             value={node.direct_damage ?? false}
-            onChange={(v) => patch({ direct_damage: v })}
+            onChange={(v) => patchCondition({ direct_damage: v })}
             label="Direct damage (physical breakage)"
           />
         </div>
@@ -428,7 +427,7 @@ export function NodeInspector({ node }: { node: Node }) {
             <NumberInput
               value={node.expected_repair_time}
               min={0}
-              onChange={(v) => patch({ expected_repair_time: v })}
+              onChange={(v) => patchCondition({ expected_repair_time: v })}
             />
           </Field>
         )}
@@ -661,7 +660,10 @@ export function NodeInspector({ node }: { node: Node }) {
 
       {/* 7. Rules */}
       <Section title="Rules">
-        <RulesEditor rules={node.rules ?? []} onChange={(rules) => patch({ rules })} />
+        <RulesEditor
+          rules={node.rules ?? []}
+          onChange={(rules, step) => editElement("node", node.id, { rules }, step ? { label: step, coalesce: false } : {})}
+        />
       </Section>
 
       {/* 8. Properties */}

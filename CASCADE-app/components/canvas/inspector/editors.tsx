@@ -32,12 +32,13 @@ export function RulesEditor({
   onChange,
 }: {
   rules: string[];
-  onChange: (rules: string[]) => void;
+  /** `step` names a click (a toggle, a delete), an undo step of its own; typing passes none, and a run of it is one step. */
+  onChange: (rules: string[], step?: string) => void;
 }) {
   function toggleRule(i: number) {
     const next = [...rules];
     next[i] = toggleRuleDisabled(next[i]);
-    onChange(next);
+    onChange(next, "Toggle rule");
   }
 
   function updateText(i: number, text: string) {
@@ -87,7 +88,7 @@ export function RulesEditor({
             />
 
             <button
-              onClick={() => onChange(rules.filter((_, j) => j !== i))}
+              onClick={() => onChange(rules.filter((_, j) => j !== i), "Delete rule")}
               className="mt-1 text-zinc-300 hover:text-red-500"
             >
               <Trash2 size={12} />

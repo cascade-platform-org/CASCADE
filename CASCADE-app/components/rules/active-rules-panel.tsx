@@ -31,6 +31,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { BookOpen, Plus, Trash2, ScrollText } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+import { editElement } from "@/lib/element-edit";
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
@@ -261,9 +262,7 @@ export function ActiveRulesPanel() {
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
   const functionalityN = useConfigStore(selectN);
 
-  const updateNode = useCanvasStore((s) => s.updateNode);
   const setActiveCanvas = useCanvasStore((s) => s.setActiveCanvas);
-  const updateEdge = useCanvasStore((s) => s.updateEdge);
   const selectNode = useNetworkStore((s) => s.selectNode);
   const selectEdge = useNetworkStore((s) => s.selectEdge);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
@@ -469,16 +468,18 @@ export function ActiveRulesPanel() {
     return allEdgesMap[id]?.rules ?? [];
   }
 
-  function writeRules(id: string, kind: "node" | "edge", rules: string[]) {
-    if (kind === "node") updateNode(id, { rules });
-    else updateEdge(id, { rules });
+  /** Each action is one undo step of its own, never merged with the next. */
+  function writeRules(id: string, kind: "node" | "edge", rules: string[], label: string) {
+    const opts = { label, coalesce: false };
+    if (kind === "node") editElement("node", id, { rules }, opts);
+    else editElement("edge", id, { rules }, opts);
   }
 
   function toggleRule(entry: RuleEntry) {
     const current = getRules(entry.elementId, entry.elementType);
     const next = [...current];
     next[entry.index] = toggleRuleDisabled(next[entry.index]);
-    writeRules(entry.elementId, entry.elementType, next);
+    writeRules(entry.elementId, entry.elementType, next, "Toggle rule");
   }
 
   function deleteRule(entry: RuleEntry) {
@@ -487,6 +488,7 @@ export function ActiveRulesPanel() {
       entry.elementId,
       entry.elementType,
       current.filter((_, j) => j !== entry.index),
+      "Delete rule",
     );
     if (editingKey === `${entry.elementId}-${entry.index}`) setEditingKey(null);
   }
@@ -500,7 +502,7 @@ export function ActiveRulesPanel() {
     const current = getRules(entry.elementId, entry.elementType);
     const next = [...current];
     next[entry.index] = setRuleBody(next[entry.index], editText);
-    writeRules(entry.elementId, entry.elementType, next);
+    writeRules(entry.elementId, entry.elementType, next, "Edit rule");
     setEditingKey(null);
   }
 
@@ -509,7 +511,7 @@ export function ActiveRulesPanel() {
     const opt = elementOptions.find((o) => o.id === targetId);
     if (!opt) return;
     const current = getRules(targetId, opt.kind);
-    writeRules(targetId, opt.kind, [...current, newRuleText.trim()]);
+    writeRules(targetId, opt.kind, [...current, newRuleText.trim()], "Add rule");
     setAddingRule(false);
     setNewRuleText("");
     setTargetId("");

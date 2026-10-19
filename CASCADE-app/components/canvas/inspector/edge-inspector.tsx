@@ -13,7 +13,7 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore, selectN, selectScaleLevels } from "@/store/config-store";
 import { isVulnerabilityEvent } from "@/lib/event-application";
 import { useShallow } from "zustand/react/shallow";
-import { useHistoryAction } from "@/hooks/useHistoryAction";
+import { editElement } from "@/lib/element-edit";
 import type { Edge } from "@/lib/schemas/network";
 import { Section, Field, NumberInput, Toggle, vulnHint } from "./primitives";
 import { CauseBanner } from "./cause-banner";
@@ -22,23 +22,22 @@ import { RulesEditor, PropertiesEditor } from "./editors";
 import { brandColor } from "@/lib/brand";
 
 export function EdgeInspector({ edge }: { edge: Edge }) {
-  const updateEdge = useCanvasStore((s) => s.updateEdge);
   const allNodes = useCanvasStore((s) => s.nodes);
   const n = useConfigStore(selectN);
   const scaleLevels = useConfigStore(useShallow(selectScaleLevels));
   const events = useConfigStore(useShallow((s) => s.config.events.filter(isVulnerabilityEvent)));
-  const historyAction = useHistoryAction();
 
+  // Every edit is undoable; a run of edits to one field is one undo step (lib/element-edit.ts).
   const patch = useCallback(
-    (partial: Partial<Edge>) => updateEdge(edge.id, partial),
-    [edge.id, updateEdge],
+    (partial: Partial<Edge>) => editElement("edge", edge.id, partial),
+    [edge.id],
   );
 
-  const patchWithHistory = useCallback(
-    (partial: Partial<Edge>, label: string) => {
-      historyAction(() => updateEdge(edge.id, partial), label);
-    },
-    [edge.id, updateEdge, historyAction],
+  /** An edit of the edge's condition (Functionality, its time, damage, repair time). */
+  const patchCondition = useCallback(
+    (partial: Partial<Edge>, label?: string) =>
+      editElement("edge", edge.id, partial, { label, updateType: "manual_functionality_update" }),
+    [edge.id],
   );
 
   const srcLabel = allNodes[edge.source]?.label ?? edge.source;
@@ -65,7 +64,7 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
               max={n}
               value={edge.functionality}
               onChange={(e) =>
-                patchWithHistory(
+                patchCondition(
                   { functionality: Number(e.target.value) },
                   "Manual edge functionality edit",
                 )
@@ -88,14 +87,14 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
             value={edge.functionality_time}
             min={0}
             onChange={(v) =>
-              patchWithHistory({ functionality_time: v }, "Manual edge functionality_time edit")
+              patchCondition({ functionality_time: v }, "Manual edge functionality_time edit")
             }
           />
         </Field>
         <div className="mb-2">
           <Toggle
             value={edge.direct_damage ?? false}
-            onChange={(v) => patch({ direct_damage: v })}
+            onChange={(v) => patchCondition({ direct_damage: v })}
             label="Direct damage"
           />
         </div>
@@ -104,7 +103,7 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
             <NumberInput
               value={edge.expected_repair_time}
               min={0}
-              onChange={(v) => patch({ expected_repair_time: v })}
+              onChange={(v) => patchCondition({ expected_repair_time: v })}
             />
           </Field>
         )}
@@ -169,7 +168,10 @@ export function EdgeInspector({ edge }: { edge: Edge }) {
       )}
 
       <Section title="Rules">
-        <RulesEditor rules={edge.rules ?? []} onChange={(rules) => patch({ rules })} />
+        <RulesEditor
+          rules={edge.rules ?? []}
+          onChange={(rules, step) => editElement("edge", edge.id, { rules }, step ? { label: step, coalesce: false } : {})}
+        />
       </Section>
 
       <Section title="Properties">
