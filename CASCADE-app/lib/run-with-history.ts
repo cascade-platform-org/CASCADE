@@ -26,6 +26,8 @@ export function runWithHistory<T>(
   return runWithSnapshots(
     {
       snapshot: () => useCanvasStore.getState().toGraphSnapshot(),
+      // The parts beyond the graph too: an update that also changes the configuration or a Simulation is one step.
+      model: () => useCanvasStore.getState().toModelSnapshot(),
       activeCanvasId: () => useCanvasStore.getState().activeCanvasId,
     },
     updateFn,

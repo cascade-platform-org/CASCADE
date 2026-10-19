@@ -120,7 +120,7 @@ function isPlainObject(v: unknown): v is Record_ {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function diffRegistry(
+export function diffRegistry(
   before: Readonly<Record<string, Record_>>,
   after: Readonly<Record<string, Record_>>,
 ): RecordDiff[] {
@@ -260,7 +260,7 @@ function applyFields(record: Record_, fields: readonly FieldChange[], dir: DiffD
   return out;
 }
 
-function applyToRegistry(
+export function applyToRegistry(
   registry: Readonly<Record<string, Record_>>,
   diffs: readonly RecordDiff[],
   dir: DiffDirection,

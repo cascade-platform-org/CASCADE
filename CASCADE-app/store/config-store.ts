@@ -28,6 +28,7 @@ import { brandColor } from "@/lib/brand";
 import { isScenarioEvent } from "@/lib/event-application";
 import { DEFAULT_LEVEL_SCALE, type LevelBand } from "@/lib/schemas/config";
 import { modelLocked } from "@/lib/model-lock";
+import { runWithSnapshots } from "@/lib/history-entry";
 
 // ---------------------------------------------------------------------------
 // Default configuration — N=3, no categories, no events
@@ -237,10 +238,11 @@ export const useConfigStore = create<ConfigStore>()(
 
     commitDraft() {
       if (modelLocked()) return false;
-      set((state) => {
+      // Applying the Config window's edits is one undo step (ADR-0017, revised 2026-10-19).
+      runWithSnapshots({ model: () => ({ config: get().config }) }, () => set((state) => {
         state.config = deepClone(state.draft);
         state.isDirty = false;
-      });
+      }), "Configuration change", { updateType: "model_update" });
       return true;
     },
 

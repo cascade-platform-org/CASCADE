@@ -319,6 +319,8 @@ export const AnyUpdateTypeSchema = z.enum([
   // Temporal Jumps undone — the graph is back to its pre-jump state, so the
   // Situation is the one that was live before those jumps (see lib/situation.ts).
   "temporal_jump_revert",
+  // What the project saves beyond the graph: Temporal Simulations, Series, custom sheets, the configuration, its settings.
+  "model_update",
 ]);
 
 /**
@@ -379,6 +381,26 @@ export const GraphDiffSchema = z.object({
   canvas_order_before: z.array(z.string()).optional(),
 });
 
+/** A list's order of record ids on each side of a Model Diff; set only when it changed. */
+export const ListOrderSchema = z.object({
+  /** The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types. */
+  key: z.string(),
+  before: z.array(z.string()),
+  after: z.array(z.string()),
+});
+
+/**
+ * What one Any Update changed beyond the graph, field by field (ADR-0017,
+ * revised 2026-10-19): the project's other parts as records keyed by subject
+ * (`simulation:<id>`, `series:<name>`, `event:<id>`, `scale:level`,
+ * `settings:config`…), each change a Record Diff as the Graph Diff writes one,
+ * and a list's order when it changed. Built and applied by `lib/model-diff.ts`.
+ */
+export const ModelDiffSchema = z.object({
+  records: z.array(RecordDiffSchema).default([]),
+  orders: z.array(ListOrderSchema).default([]),
+});
+
 export const AnyUpdateEntrySchema = z.object({
   id: z.string(),
   timestamp: z.string(),
@@ -408,6 +430,8 @@ export const AnyUpdateEntrySchema = z.object({
    * Exactly one of the two is present on any entry this app writes.
    */
   diff: GraphDiffSchema.optional(),
+  /** What it changed beyond the graph; absent when nothing. */
+  model_diff: ModelDiffSchema.optional(),
   /** Legacy (pre-ADR-0017) whole-Scenario snapshots. Read, never written. */
   before: GraphSnapshotSchema.optional(),
   after: GraphSnapshotSchema.optional(),
@@ -650,6 +674,7 @@ export type GraphSnapshot = z.infer<typeof GraphSnapshotSchema>;
 export type AnyUpdateType = z.infer<typeof AnyUpdateTypeSchema>;
 export type AnyUpdateEntry = z.infer<typeof AnyUpdateEntrySchema>;
 export type GraphDiff = z.infer<typeof GraphDiffSchema>;
+export type ModelDiff = z.infer<typeof ModelDiffSchema>;
 export type RecordDiff = z.infer<typeof RecordDiffSchema>;
 export type FieldChange = z.infer<typeof FieldChangeSchema>;
 export type PropagationScorecardEntry = z.infer<typeof PropagationScorecardEntrySchema>;

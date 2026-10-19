@@ -13,6 +13,7 @@ import { modelLocked } from "@/lib/model-lock";
 import { useUiStore } from "@/store/ui-store";
 import { pushAutoSnapshot, type ProjectBundle } from "@/lib/file-io";
 import { currentBundle, openBundle } from "@/lib/project-bundle";
+import { runWithHistory } from "@/lib/run-with-history";
 
 /** Open an edited bundle in place: the active Canvas kept, the project unsaved. */
 function load(bundle: ProjectBundle): void {
@@ -21,16 +22,18 @@ function load(bundle: ProjectBundle): void {
 }
 
 /**
- * Write a checked bundle. Returns the bundle it replaced (for Undo this edit),
- * or null when a shown run keeps the model read-only. `label` names the
- * version kept first ("Before LLM Design edit", "Before importing Coop.xlsx").
+ * Write a checked bundle as one undo step named `label` ("LLM Design edit",
+ * "Import changes from Coop.xlsx"). Returns the bundle it replaced (for Undo
+ * this edit), or null when a shown run keeps the model read-only. A version
+ * of the project before it is kept first.
  */
-export function applyModelBundle(after: ProjectBundle, label = "Before LLM Design edit"): ProjectBundle | null {
+export function applyModelBundle(after: ProjectBundle, label = "LLM Design edit"): ProjectBundle | null {
   if (modelLocked()) return null;
   const before = currentBundle();
-  pushAutoSnapshot(before, `${label} — ${before.project.meta.name}`);
-  // The history is the app's record and the text cannot change it; keep the live one.
-  load({ ...after, project: { ...after.project, update_history: before.project.update_history } });
+  pushAutoSnapshot(before, `Before ${label} — ${before.project.meta.name}`);
+  // The history is the app's record and the text cannot change it; keep the live one. The step is
+  // recorded on it, graph and model alike, so Ctrl+Z undoes the whole edit.
+  runWithHistory(() => load({ ...after, project: { ...after.project, update_history: before.project.update_history } }), label, { updateType: "model_update", canvasId: null });
   return before;
 }
 

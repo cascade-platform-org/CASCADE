@@ -506,7 +506,29 @@ AnyUpdateType = Literal[
     "graph_update",                # Structural change (topology / non-functionality attributes)
     "scenario_reset",              # Reset button — Functionality restored to N; ends the current Situation
     "temporal_jump_revert",        # Temporal Jumps undone — the Scenario is back to its pre-jump state
+    "model_update",                # What the project saves beyond the graph: Temporal Simulations, Series, the configuration…
 ]
+
+
+class ListOrder(BaseModel):
+    """A list's order of record ids on each side of a Model Diff; set only when it changed."""
+    key: str = Field(description="The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types.")
+    before: list[str]
+    after: list[str]
+
+
+class ModelDiff(BaseModel):
+    """What one Any Update changed beyond the graph, field by field (ADR-0017, revised 2026-10-19).
+
+    The project's other parts as records keyed by subject — `simulation:<id>`,
+    `series:<name>`, `sheet:<name>`, `event:<id>`, `category:<name>`,
+    `graph_type:<name>`, `template:<name>`, `scale:functionality`,
+    `scale:level`, `settings:project`, `settings:config` — each change a
+    RecordDiff as the Graph Diff writes one, so it applies forwards (redo) and
+    backwards (undo) the same way. `orders` keeps a list's order when it changed.
+    """
+    records: list[RecordDiff] = Field(default_factory=list)
+    orders: list[ListOrder] = Field(default_factory=list)
 
 
 class AnyUpdateEntry(BaseModel):
@@ -554,6 +576,13 @@ class AnyUpdateEntry(BaseModel):
         description=(
             "What this update changed, field by field, in both directions "
             "(ADR-0017). Absent only on legacy entries, which carry before/after."
+        ),
+    )
+    model_diff: Optional[ModelDiff] = Field(
+        default=None,
+        description=(
+            "What this update changed beyond the graph (Temporal Simulations, Series, "
+            "custom sheets, the configuration, the project's settings); absent when nothing."
         ),
     )
     before: Optional[GraphSnapshot] = Field(

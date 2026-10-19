@@ -2772,7 +2772,15 @@ export const USER_MANUAL: ManualDoc = {
             },
             {
               "kind": "text",
-              "text": " puts it back (Ctrl+Z does not). What the import adds is marked unconfirmed in the Inspector, with the file, sheet and row it came from, until you confirm it."
+              "text": " puts it back, and so does "
+            },
+            {
+              "kind": "code",
+              "text": "Ctrl+Z"
+            },
+            {
+              "kind": "text",
+              "text": ", as one step. What the import adds is marked unconfirmed in the Inspector, with the file, sheet and row it came from, until you confirm it."
             }
           ]
         },
@@ -2974,7 +2982,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " puts it back."
+                  "text": " puts it back; so does "
+                },
+                {
+                  "kind": "code",
+                  "text": "Ctrl+Z"
+                },
+                {
+                  "kind": "text",
+                  "text": ", as one step."
                 }
               ]
             },
@@ -3976,7 +3992,7 @@ export const USER_MANUAL: ManualDoc = {
                   [
                     {
                       "kind": "text",
-                      "text": "Undo the last change to the network. Typing into one Inspector field is one change, however many letters."
+                      "text": "Undo the last change to the project: an Element, a Temporal Simulation, a Series, the Config window's Apply, an LLM Design edit or a workbook import. Typing into one field is one change, however many letters."
                     }
                   ]
                 ],

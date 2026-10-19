@@ -406,7 +406,7 @@ A new row becomes a record: where its cells are empty it gets an id from its
 label, the top Functionality level, the only Canvas and a place on the grid. A
 reference to a record that is gone, or anything else the project cannot hold, is
 refused with the cell it is in. **Apply** keeps a version of the project first;
-**Undo this import** puts it back (Ctrl+Z does not). What the import adds is
+**Undo this import** puts it back, and so does `Ctrl+Z`, as one step. What the import adds is
 marked unconfirmed in the Inspector, with the file, sheet and row it came from,
 until you confirm it.
 
@@ -449,7 +449,7 @@ before → after, or every problem is listed, and **Copy the problems for the
 LLM** hands them back to it to fix. In Bulk operations each change has a tick:
 untick the ones you don't want. Nothing changes until you press **Apply**. The
 project as it was is kept in Recent saves first, and **Undo this edit** puts it
-back.
+back; so does `Ctrl+Z`, as one step.
 
 **Recipes** do a whole job for you, even if you don't know CASCADE yet. Pick one, type
 or paste what it asks for, **Copy for the LLM**, and paste its reply into Bulk operations:
@@ -669,7 +669,7 @@ text field, so they never fight the Inspector. `Ctrl` is `⌘` on macOS.
 
 | Key                            | Does                                                                |
 | ------------------------------ | ------------------------------------------------------------------- |
-| `Ctrl+Z`                     | Undo the last change to the network. Typing into one Inspector field is one change, however many letters. |
+| `Ctrl+Z`                     | Undo the last change to the project: an Element, a Temporal Simulation, a Series, the Config window's Apply, an LLM Design edit or a workbook import. Typing into one field is one change, however many letters. |
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo.                                                               |
 | `Ctrl+A`                     | Select every element on the current Canvas, and open the Inspector. |
 | `Ctrl+C` / `Ctrl+V`        | Copy the selection, and paste it onto the active Canvas.            |

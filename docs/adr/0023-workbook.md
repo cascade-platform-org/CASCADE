@@ -106,8 +106,8 @@ later; VLOOKUP and INDEX/MATCH work everywhere.
   `origin: "spreadsheet"` with `source {file, sheet, row}`, unconfirmed until a person confirms
   it; a changed record keeps its mark. A file neither confirms nor removes a mark.
 - **Undo** is LLM Design's: the project is kept as a Local version before applying, and the
-  window offers **Undo this import**. The undo history is not written, so Ctrl+Z does not undo
-  an import.
+  window offers **Undo this import**. The import is also one undo step, so Ctrl+Z undoes it
+  (ADR-0017 §1a).
 - `update_history`, the Scorecard and the timestamps are never imported as changes.
 
 ### 4a. Custom sheets: a person's own analysis, kept and able to write the model
@@ -199,6 +199,5 @@ handled by the codec:
 - `Project.sheets` is client data: the Propagation request leaves it out, and Pydantic declares it
   so Server Sync keeps it. Its size counts toward the project file, so a very large analysis
   belongs in its own spreadsheet with only its results in a custom sheet.
-- Deferred (requirements §16): an undo history entry for a whole-project edit (shared with LLM
-  Design), saved Parameter Sweeps, Series resampled across calendar units, a viewer of custom
+- Deferred (requirements §16): saved Parameter Sweeps, Series resampled across calendar units, a viewer of custom
   sheets inside CASCADE, the empty-Workbook template.

@@ -142,13 +142,14 @@ function evict(state: HistoryState): void {
     const dropped = state.updateHistory.pop();
     if (dropped) retire(dropped);
   }
-  let bytes = state.updateHistory.reduce((n, e) => n + (e.diff ? diffByteSize(e.diff) : 0), 0);
+  const size = (e: AnyUpdateEntry) => (e.diff ? diffByteSize(e.diff) : 0) + (e.model_diff ? JSON.stringify(e.model_diff).length : 0);
+  let bytes = state.updateHistory.reduce((n, e) => n + size(e), 0);
   // Always keep at least one entry: an undo stack of zero after a single huge
   // edit would be worse than briefly exceeding the budget.
   while (bytes > HISTORY_BYTE_BUDGET && state.updateHistory.length > 1) {
     const dropped = state.updateHistory.pop();
     if (dropped) {
-      bytes -= dropped.diff ? diffByteSize(dropped.diff) : 0;
+      bytes -= size(dropped);
       retire(dropped);
     }
   }

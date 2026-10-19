@@ -339,7 +339,7 @@ The engine records for each degraded Element which upstream Elements or Events a
 
 - Add / edit / remove nodes (with all attributes, per-category blocks, vulnerability levels).
 - Add / edit / remove edges (direction, capacity, vulnerability levels).
-- Undo/redo stack. Every hand edit of an Element is undoable: each Inspector field (node and edge), its Rules editor, and every Active Rules panel action. A run of edits to the same fields of one Element (typing a label, dragging the Functionality slider) is one undo step; a click such as toggling or deleting a Rule is a step of its own (`lib/element-edit.ts`).
+- Undo/redo stack. Every hand edit of an Element is undoable: each Inspector field (node and edge), its Rules editor, and every Active Rules panel action. A run of edits to the same fields of one Element (typing a label, dragging the Functionality slider) is one undo step; a click such as toggling or deleting a Rule is a step of its own (`lib/element-edit.ts`). The same history holds what the project saves beyond the graph (ADR-0017 §1a): every Temporal Simulation edit (typing in one field is one step; adding, duplicating or deleting one is a step), every Series edit (a rename with the references that follow it is one step), the Config window's Apply, and an LLM Design edit or a Workbook import, each one step.
 
 ### 8.1a Navigating the canvas *(implemented)*
 
@@ -1000,7 +1000,7 @@ without a separate validation script — the same comparison
 | Detailed recovery mechanics for `direct_damage` nodes | Deferred. The Temporal Simulation (§9.6) repairs only through an Event; automatic repair stays open |
 | Temporal Simulation (release v1.1): a saved, re-runnable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Implemented** — §9.6; ADR-0019/0020/0021; design `temporal-simulation-design.md`. Exposing `served_ratio` and storage's `stored` amends ADR-0003; `utilisation` (per source) and source-side fairness between ordinary sources are deferred. Open: backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
-| Workbook follow-ups (ADR-0023) | Deferred: an empty-Workbook template (a blank project's sheets have no columns to show), a viewer of custom sheets inside CASCADE, an undo history entry for a whole-project edit (shared with LLM Design), saved Parameter Sweeps, Series resampled across calendar units |
+| Workbook follow-ups (ADR-0023) | Deferred: an empty-Workbook template (a blank project's sheets have no columns to show), a viewer of custom sheets inside CASCADE, saved Parameter Sweeps, Series resampled across calendar units |
 
 ---
 

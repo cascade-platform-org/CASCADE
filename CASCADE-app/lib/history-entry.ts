@@ -15,7 +15,8 @@
 import { nanoid } from "nanoid";
 import { useHistoryStore } from "@/store/history-store";
 import { applyGraphDiff, diffGraph, isEmptyDiff } from "@/lib/graph-diff";
-import type { AnyUpdateEntry, GraphSnapshot } from "@/lib/schemas/network";
+import { applyModelDiff, diffModel, isEmptyModelDiff, type ModelSnapshot } from "@/lib/model-diff";
+import type { AnyUpdateEntry, GraphDiff, GraphSnapshot, ModelDiff } from "@/lib/schemas/network";
 
 export interface HistoryEntryOptions {
   /** Defaults to "manual_functionality_update" (matches useHistoryAction). */
@@ -44,7 +45,10 @@ export interface HistoryEntryOptions {
    * entry: an Update with the same key folds into the entry the previous one
    * recorded, while that entry is still the newest: anything else recorded in
    * between ends the run, and so does an undo until a redo brings the entry
-   * back. A run that ends where it began leaves no entry.
+   * back. A run that ends where it began leaves no entry. `"auto"` keys the
+   * run by the fields the edit changed, for writers that cannot name them (a
+   * Temporal Simulation edit): typing in one field folds, the next field starts
+   * a step of its own.
    */
   coalesce?: string;
 }
@@ -62,6 +66,27 @@ const ALWAYS_RECORD = new Set<AnyUpdateEntry["update_type"]>(["event_applied", "
 /** The entry the last coalescing Update recorded, and its key. In memory only: a reload ends every run. */
 let lastRun: { key: string; entryId: string } | null = null;
 
+/** What an entry is diffed between: the graph, the parts beyond it, or both, as the writer can reach them. */
+interface Sides {
+  graph?: GraphSnapshot;
+  model?: ModelSnapshot;
+}
+
+const EMPTY_GRAPH_DIFF: GraphDiff = { nodes: [], edges: [], canvases: [] };
+
+/** The fields a step changed, as a coalescing key: each record and each field path, sorted. */
+function changedFields(graph: GraphDiff | undefined, model: ModelDiff | undefined): string {
+  const keys: string[] = [];
+  const add = (prefix: string, r: GraphDiff["nodes"][number]) =>
+    r.op === "update" ? r.fields.forEach((f) => keys.push(`${prefix}${r.id}|${[f.field, ...(f.path ?? (f.key ? [f.key] : []))].join(".")}`)) : keys.push(`${prefix}${r.id}|${r.op}`);
+  if (graph) for (const kind of ["nodes", "edges", "canvases"] as const) graph[kind].forEach((r) => add(`${kind}:`, r));
+  if (model) {
+    model.records.forEach((r) => add("", r));
+    model.orders.forEach((o) => keys.push(`order:${o.key}`));
+  }
+  return keys.sort().join("\n");
+}
+
 /**
  * Diff `before` → `after` and push one entry. Returns false when the update
  * changed nothing and was therefore not recorded.
@@ -73,22 +98,28 @@ let lastRun: { key: string; entryId: string } | null = null;
  * A no-op edit used to cost a ~100 KB entry (ADR-0017 measured one in the
  * shipped Palmanova sample) and an undo step that visibly does nothing.
  */
-function pushGraphUpdate(
-  before: GraphSnapshot,
-  after: GraphSnapshot,
+function pushUpdate(
+  before: Sides,
+  after: Sides,
   label: string,
   opts: HistoryEntryOptions & { activeCanvasId?: string | null } = {},
 ): boolean {
   const history = useHistoryStore.getState();
   const top = history.updateHistory[0];
-  const continues = opts.coalesce !== undefined && lastRun?.key === opts.coalesce && top?.id === lastRun.entryId && top.diff !== undefined;
+  const key = opts.coalesce === "auto"
+    ? changedFields(before.graph && after.graph ? diffGraph(before.graph, after.graph) : undefined, before.model && after.model ? diffModel(before.model, after.model) : undefined) || undefined
+    : opts.coalesce;
+  const continues = key !== undefined && lastRun?.key === key && top?.id === lastRun.entryId && top.diff !== undefined;
   // The run's own start: the newest entry applied backwards, then diffed afresh
   // by the one differ — no second way of combining two diffs.
-  const start = continues && top?.diff ? applyGraphDiff(before, top.diff, "backward") : before;
-  const diff = diffGraph(start, after);
+  const startGraph = continues && before.graph && top?.diff ? applyGraphDiff(before.graph, top.diff, "backward") : before.graph;
+  const startModel = continues && before.model && top?.model_diff ? applyModelDiff(before.model, top.model_diff, "backward") : before.model;
+  const diff = startGraph && after.graph ? diffGraph(startGraph, after.graph) : EMPTY_GRAPH_DIFF;
+  const modelDiff = startModel && after.model ? diffModel(startModel, after.model) : undefined;
+  const changesModel = modelDiff !== undefined && !isEmptyModelDiff(modelDiff);
   const updateType = opts.updateType ?? "manual_functionality_update";
   if (continues) history.popUpdateEntry();
-  if (isEmptyDiff(diff) && !ALWAYS_RECORD.has(updateType)) {
+  if (isEmptyDiff(diff) && !changesModel && !ALWAYS_RECORD.has(updateType)) {
     // Only a continued run forgets itself here; a no-op elsewhere must not end one.
     if (continues) lastRun = null;
     return false;
@@ -98,7 +129,7 @@ function pushGraphUpdate(
     opts.canvasId === null ? undefined : opts.canvasId ?? opts.activeCanvasId ?? undefined;
 
   const id = nanoid();
-  lastRun = opts.coalesce !== undefined ? { key: opts.coalesce, entryId: id } : null;
+  lastRun = key !== undefined ? { key, entryId: id } : null;
   useHistoryStore.getState().pushUpdateEntry({
     id,
     timestamp: new Date().toISOString(),
@@ -110,10 +141,13 @@ function pushGraphUpdate(
     ...(opts.revertsToEntryId ? { reverts_to_entry_id: opts.revertsToEntryId } : {}),
     ...(opts.extra ?? {}),
     diff,
+    ...(changesModel ? { model_diff: modelDiff } : {}),
   });
   return true;
 }
 
+/** True while an update is being recorded: an update inside it is part of its entry, never one of its own. */
+let recording = false;
 
 /**
  * Snapshot the graph around a mutation and record one entry for it.
@@ -126,16 +160,31 @@ function pushGraphUpdate(
  * sequence that could get the ordering wrong.
  */
 export function runWithSnapshots<T>(
-  source: { snapshot: () => GraphSnapshot; activeCanvasId: () => string | null | undefined },
+  source: {
+    /** The graph, for an update that may change it. */
+    snapshot?: () => GraphSnapshot;
+    /** The parts beyond the graph this writer can change (ADR-0017, revised 2026-10-19). */
+    model?: () => ModelSnapshot;
+    activeCanvasId?: () => string | null | undefined;
+  },
   updateFn: () => T,
   label: string,
   opts: HistoryEntryOptions = {},
 ): T {
-  const before = source.snapshot();
-  const activeCanvasId = source.activeCanvasId();
-  const result = updateFn();
+  // An update made while another is recorded is part of that one's entry: the outer snapshots hold it.
+  if (recording) return updateFn();
+  const read = (): Sides => ({ graph: source.snapshot?.(), model: source.model?.() });
+  const before = read();
+  const activeCanvasId = source.activeCanvasId?.();
+  let result: T;
+  recording = true;
+  try {
+    result = updateFn();
+  } finally {
+    recording = false;
+  }
   // Re-read through the source so `after` reflects the committed state, not the
   // state captured before updateFn ran.
-  pushGraphUpdate(before, source.snapshot(), label, { ...opts, activeCanvasId });
+  pushUpdate(before, read(), label, { ...opts, activeCanvasId });
   return result;
 }

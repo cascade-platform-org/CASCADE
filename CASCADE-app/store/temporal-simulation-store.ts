@@ -32,6 +32,7 @@ import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { ComparedRun } from "@/lib/temporal-comparison";
 import { EXPLAIN_INTRO, type Explanation } from "@/lib/temporal-simulation-explainers";
 import { renameSeriesIn } from "@/lib/series-edit";
+import { runWithSnapshots } from "@/lib/history-entry";
 
 export type SimTab = "timeline" | "run" | "compare" | "metrics" | "series" | "text";
 
@@ -85,6 +86,8 @@ interface TemporalSimulationState {
   closeWindow: () => void;
   /** The project's Simulations, selecting the first; the starter when it has none (project load, new project). */
   loadFromProject: (simulations: StoredTemporalSimulation[] | undefined) => void;
+  /** The saved list as an undo or a redo gives it back; the window shows the selected one from it. */
+  restoreSimulations: (simulations: StoredTemporalSimulation[]) => void;
   /** Edit another Simulation; a draft that never passed the schema is dropped. */
   selectSimulation: (id: string) => void;
   /** A new starter Simulation, saved and selected. */
@@ -212,7 +215,16 @@ const listing = (fn: (s: State) => void) => (s: State) => {
 };
 
 export const useTemporalSimulationStore = create<TemporalSimulationState>()(
-  immer((set, get) => ({
+  immer((set, get) => {
+  /**
+   * A change to the saved Temporal Simulations as one undo step (ADR-0017, revised 2026-10-19): typing in one
+   * field folds into one step, a list change (add, duplicate, delete) is a step of its own. An edit the schema
+   * refuses changes no saved Simulation, so it records nothing.
+   */
+  const recorded = (label: string, write: () => void, coalesce: "auto" | undefined = "auto") =>
+    runWithSnapshots({ model: () => ({ temporal_simulations: get().simulations }) }, write, label, { updateType: "model_update", ...(coalesce ? { coalesce } : {}) });
+  const edit = () => `Edit Temporal Simulation "${get().timeline.name || get().selectedId}"`;
+  return {
     open: false,
     tab: "timeline",
     ...starterDraft(),
@@ -234,6 +246,13 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
 
     openWindow: () => set((s) => { s.open = true; s.explanation = EXPLAIN_INTRO; }),
     closeWindow: () => set((s) => { s.open = false; }),
+    restoreSimulations: (simulations) => set((s) => {
+      s.simulations = simulations;
+      // The window shows the selected Simulation as the list now holds it, or the first.
+      const doc = simulations.find((x) => x.id === s.selectedId) ?? simulations[0];
+      if (doc) showSaved(s, doc);
+      else showDraft(s, FIRST_SIMULATION_ID, starterDraft());
+    }),
     loadFromProject: (simulations) => set((s) => {
       s.simulations = simulations ?? [];
       if (s.simulations.length > 0) showSaved(s, s.simulations[0]);
@@ -246,18 +265,18 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       const doc = s.simulations.find((x) => x.id === id);
       if (doc) showSaved(s, doc);
     })),
-    addSimulation: () => set(listing((s) => {
+    addSimulation: () => recorded("Add a Temporal Simulation", () => set(listing((s) => {
       showDraft(s, newSimulationId(), { ...starterDraft(), timeline: { ...structuredClone(STARTER_TIMELINE), name: "New Temporal Simulation" } });
       save(s);
-    })),
-    duplicateSimulation: () => set(listing((s) => {
+    })), undefined),
+    duplicateSimulation: () => recorded(`Duplicate ${edit().slice("Edit ".length)}`, () => set(listing((s) => {
       const doc = s.simulations.find((x) => x.id === s.selectedId);
       if (!doc) return;
       const copy = structuredClone(current(doc));
       showSaved(s, { ...copy, id: newSimulationId(), timeline: { ...copy.timeline, name: `${copy.timeline.name} (copy)` } });
       save(s);
-    })),
-    deleteSimulation: (id) => set(listing((s) => {
+    })), undefined),
+    deleteSimulation: (id) => recorded(`Delete Temporal Simulation "${get().simulations.find((x) => x.id === id)?.timeline.name ?? id}"`, () => set(listing((s) => {
       const i = s.simulations.findIndex((x) => x.id === id);
       if (i < 0) return;
       s.simulations.splice(i, 1);
@@ -265,40 +284,40 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       const next = s.simulations[Math.min(i, s.simulations.length - 1)];
       if (next) showSaved(s, next);
       else showDraft(s, newSimulationId(), starterDraft());
-    })),
-    setScope: (scope, canvas) => set(editing((s) => {
+    })), undefined),
+    setScope: (scope, canvas) => recorded(edit(), () => set(editing((s) => {
       s.scope = scope;
       if (scope === "local" && canvas !== undefined) s.canvas = canvas;
       if (scope === "global") delete s.canvas;
-    })),
+    }))),
     setTab: (tab) => set((s) => { s.tab = tab; }),
     explain: (e) => set((s) => { s.explanation = e; }),
     // Definition writers.
-    updateTimeline: (fn) => set(editing((s) => fn(s.timeline))),
-    updateProfile: (fn) => set(editing((s) => fn(s.profile))),
-    updateRow: (id, fn) => set(editing((s) => {
+    updateTimeline: (fn) => recorded(edit(), () => set(editing((s) => fn(s.timeline)))),
+    updateProfile: (fn) => recorded(edit(), () => set(editing((s) => fn(s.profile)))),
+    updateRow: (id, fn) => recorded(edit(), () => set(editing((s) => {
       const row = s.profile.find((r) => r.id === id);
       if (row) fn(row);
-    })),
-    writeCells: (id, cells) => set(editing((s) => {
+    }))),
+    writeCells: (id, cells) => recorded(edit(), () => set(editing((s) => {
       const row = s.profile.find((r) => r.id === id);
       if (row) for (const [label, value] of cells) { if (value === undefined) delete row.values[label]; else row.values[label] = value; }
-    })),
-    updateMetrics: (fn) => set(editing((s) => fn(s.metrics))),
-    updateParameters: (fn) => set(editing((s) => fn(s.parameters))),
+    }))),
+    updateMetrics: (fn) => recorded(edit(), () => set(editing((s) => fn(s.metrics)))),
+    updateParameters: (fn) => recorded(edit(), () => set(editing((s) => fn(s.parameters)))),
     renameSeriesReferences: (from, to) => set((s) => {
       s.simulations = renameSeriesIn(current(s).simulations, from, to);
       for (const row of s.profile) if (row.series === from) row.series = to;
     }),
-    renameParameter: (from, to) => set(editing((s) => {
+    renameParameter: (from, to) => recorded(edit(), () => set(editing((s) => {
       for (const p of s.parameters) if (p.name === from) p.name = to;
       for (const row of s.profile) if (row.parameter === from) row.parameter = to;
-    })),
-    showStandardMetric: (metric, shown) => set(editing((s) => {
+    }))),
+    showStandardMetric: (metric, shown) => recorded(edit(), () => set(editing((s) => {
       // Kept in the standard order, so the table's columns never move.
       s.standardMetrics = STANDARD_METRICS.filter((m) => (m === metric ? shown : s.standardMetrics.includes(m)));
-    })),
-    replaceDraft: (d) => set(editing((s) => {
+    }))),
+    replaceDraft: (d) => recorded(edit(), () => set(editing((s) => {
       s.timeline = d.timeline;
       s.profile = d.profile;
       s.metrics = d.metrics;
@@ -307,7 +326,7 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       if (d.canvas === undefined) delete s.canvas;
       else s.canvas = d.canvas;
       s.parameters = d.parameters;
-    })),
+    }))),
     beginRun: (total) => set((s) => {
       leaveRun(s);
       s.running = true;
@@ -339,7 +358,8 @@ export const useTemporalSimulationStore = create<TemporalSimulationState>()(
       s.compareProgress = null;
       s.comparison = { runs, from };
     }),
-  })),
+  };
+  }),
 );
 
 // The project has unsaved changes whenever its Simulations change, as for an

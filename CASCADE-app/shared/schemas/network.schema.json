@@ -1193,6 +1193,58 @@
       "title": "GraphDiff",
       "type": "object"
     },
+    "ListOrder": {
+      "description": "A list's order of record ids on each side of a Model Diff; set only when it changed.",
+      "properties": {
+        "key": {
+          "description": "The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types.",
+          "title": "Key",
+          "type": "string"
+        },
+        "before": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Before",
+          "type": "array"
+        },
+        "after": {
+          "items": {
+            "type": "string"
+          },
+          "title": "After",
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "before",
+        "after"
+      ],
+      "title": "ListOrder",
+      "type": "object"
+    },
+    "ModelDiff": {
+      "description": "What one Any Update changed beyond the graph, field by field (ADR-0017, revised 2026-10-19).\n\nThe project's other parts as records keyed by subject \u2014 `simulation:<id>`,\n`series:<name>`, `sheet:<name>`, `event:<id>`, `category:<name>`,\n`graph_type:<name>`, `template:<name>`, `scale:functionality`,\n`scale:level`, `settings:project`, `settings:config` \u2014 each change a\nRecordDiff as the Graph Diff writes one, so it applies forwards (redo) and\nbackwards (undo) the same way. `orders` keeps a list's order when it changed.",
+      "properties": {
+        "records": {
+          "items": {
+            "$ref": "#/$defs/RecordDiff"
+          },
+          "title": "Records",
+          "type": "array"
+        },
+        "orders": {
+          "items": {
+            "$ref": "#/$defs/ListOrder"
+          },
+          "title": "Orders",
+          "type": "array"
+        }
+      },
+      "title": "ModelDiff",
+      "type": "object"
+    },
     "PropagationMeta": {
       "description": "Metadata from a Propagation run, stored alongside an AnyUpdateEntry.\nLighter than PropagationResult \u2014 no per-element updates, just run stats.",
       "properties": {
@@ -1248,7 +1300,8 @@
             "manual_functionality_update",
             "graph_update",
             "scenario_reset",
-            "temporal_jump_revert"
+            "temporal_jump_revert",
+            "model_update"
           ],
           "title": "Update Type",
           "type": "string"
@@ -1335,6 +1388,18 @@
           ],
           "default": null,
           "description": "What this update changed, field by field, in both directions (ADR-0017). Absent only on legacy entries, which carry before/after."
+        },
+        "model_diff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelDiff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What this update changed beyond the graph (Temporal Simulations, Series, custom sheets, the configuration, the project's settings); absent when nothing."
         },
         "before": {
           "anyOf": [

@@ -96,7 +96,7 @@ function ImportChangesPanel({ bytes, initial }: { bytes: Uint8Array; initial: Re
       }
       const result = composeImport(now, leaveOut);
       if (!result.checked.ok) { setRead(now); return; }
-      const before = applyModelBundle(result.checked.after, `Before importing ${read.file}`);
+      const before = applyModelBundle(result.checked.after, `Import changes from ${read.file}`);
       if (!before) return;
       setApplied({ before, preview: result.checked.preview, groups: result.groups });
       pushToast({ message: `Imported ${result.checked.preview.lines.length} change${result.checked.preview.lines.length === 1 ? "" : "s"} from ${read.file}. A version was kept; Undo this import puts it back.`, variant: "success", durationMs: 5000 });
@@ -118,7 +118,7 @@ function ImportChangesPanel({ bytes, initial }: { bytes: Uint8Array; initial: Re
     return (
       <div className="flex h-full flex-col gap-2 p-3">
         <div className="flex items-center gap-2 text-[11px] text-green-700 dark:text-green-400">
-          <Check size={12} /> Imported {applied.preview.lines.length} change{applied.preview.lines.length === 1 ? "" : "s"} from {read.file}. The version before it is kept in File → Local → Recent saves; Ctrl+Z does not undo an import.
+          <Check size={12} /> Imported {applied.preview.lines.length} change{applied.preview.lines.length === 1 ? "" : "s"} from {read.file}. The version before it is kept in File → Local → Recent saves; Ctrl+Z also undoes the import.
           <span className="flex-1" />
           <SmallButton onClick={undo}><RotateCcw size={11} /> Undo this import</SmallButton>
         </div>

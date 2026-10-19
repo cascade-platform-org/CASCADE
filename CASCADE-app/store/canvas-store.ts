@@ -32,6 +32,8 @@ import { pickHandles } from "@/lib/edge-routing";
 import { nanoid } from "nanoid";
 import { applyEventToSnapshot, passTime, temporalJumpId } from "@/lib/event-application";
 import { applyGraphDiff } from "@/lib/graph-diff";
+import { applyModelDiff, type ModelSnapshot } from "@/lib/model-diff";
+import { useConfigStore } from "@/store/config-store";
 import { clearEventReversal } from "@/lib/scenario-baseline";
 import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry";
 import { useHistoryStore } from "@/store/history-store";
@@ -123,6 +125,14 @@ export interface CanvasActions {
   // --- Snapshot restore (used by undo/redo) ---
   /** Restore a GraphSnapshot. Touches only nodes/edges/canvases. */
   restoreSnapshot: (snapshot: GraphSnapshot) => void;
+  /**
+   * The project's parts beyond the graph as their stores hold them now: its
+   * settings, Temporal Simulations, Series, custom sheets and configuration
+   * (ADR-0017, revised 2026-10-19). References, never copies: cheap to take.
+   */
+  toModelSnapshot: () => ModelSnapshot;
+  /** Write those parts back to their stores (undo/redo of a model change). */
+  restoreModel: (snapshot: ModelSnapshot) => void;
 
   // --- Undo / Redo (coordinate registry + history-store) ---
   /**
@@ -476,6 +486,7 @@ export const useCanvasStore = create<CanvasStore>()(
       if (!entry) return false;
       if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "backward"));
       else if (entry.before) get().restoreSnapshot(entry.before);
+      if (entry.model_diff) get().restoreModel(applyModelDiff(get().toModelSnapshot(), entry.model_diff, "backward"));
       return true;
     },
 
@@ -485,7 +496,35 @@ export const useCanvasStore = create<CanvasStore>()(
       if (!entry) return false;
       if (entry.diff) get().restoreSnapshot(applyGraphDiff(get().toGraphSnapshot(), entry.diff, "forward"));
       else if (entry.after) get().restoreSnapshot(entry.after);
+      if (entry.model_diff) get().restoreModel(applyModelDiff(get().toModelSnapshot(), entry.model_diff, "forward"));
       return true;
+    },
+
+    toModelSnapshot() {
+      const { name, description, global_graph_type } = get().projectMeta;
+      const { series, sheets } = useProjectDataStore.getState();
+      return {
+        settings: { name, ...(description !== undefined ? { description } : {}), ...(global_graph_type !== undefined ? { global_graph_type } : {}) },
+        temporal_simulations: useTemporalSimulationStore.getState().simulations,
+        series,
+        sheets,
+        config: useConfigStore.getState().config,
+      };
+    },
+
+    restoreModel(m) {
+      if (m.settings) {
+        const { name, description, global_graph_type } = m.settings;
+        set((state) => {
+          state.projectMeta = { ...(state.projectMeta.created_at ? { created_at: state.projectMeta.created_at } : {}), name, ...(description !== undefined ? { description } : {}), ...(global_graph_type !== undefined ? { global_graph_type } : {}) };
+        });
+      }
+      if (m.temporal_simulations) useTemporalSimulationStore.getState().restoreSimulations(m.temporal_simulations);
+      if (m.series || m.sheets) {
+        const data = useProjectDataStore.getState();
+        data.loadFromProject(m.series ?? data.series, m.sheets ?? data.sheets);
+      }
+      if (m.config) useConfigStore.getState().loadConfig(m.config);
     },
 
     // -------------------------------------------------------------------------

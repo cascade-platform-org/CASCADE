@@ -10,6 +10,7 @@ import { SeriesSchema, type Series } from "@/lib/schemas/series";
 import { freshOperandName } from "@/lib/schemas/operand";
 import type { CustomSheet } from "@/lib/schemas/custom-sheet";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
+import { runWithSnapshots } from "@/lib/history-entry";
 
 interface ProjectDataState {
   series: Series[];
@@ -33,17 +34,26 @@ function locked(): string | null {
   return "A Temporal Simulation run is shown: End run to edit Series.";
 }
 
-export const useProjectDataStore = create<ProjectDataState>()((set, get) => ({
+export const useProjectDataStore = create<ProjectDataState>()((set, get) => {
+/** A Series edit as one undo step (ADR-0017, revised 2026-10-19); a rename's references in the Temporal Simulations are in it. */
+const recorded = <T>(label: string, write: () => T, coalesce?: "auto"): T =>
+  runWithSnapshots(
+    { model: () => ({ series: get().series, sheets: get().sheets, temporal_simulations: useTemporalSimulationStore.getState().simulations }) },
+    write,
+    label,
+    { updateType: "model_update", ...(coalesce ? { coalesce } : {}) },
+  );
+return {
   series: [],
   sheets: [],
   loadFromProject: (series, sheets) => set({ series: series ?? [], sheets: sheets ?? [] }),
-  addSeries: () => {
+  addSeries: () => recorded("Add a Series", () => {
     if (locked()) return null;
     const name = freshOperandName("series", get().series.map((x) => x.name));
     set({ series: [...get().series, { name, rows: {} }] });
     return name;
-  },
-  setSeries: (name, next) => {
+  }),
+  setSeries: (name, next) => recorded(`Edit Series ${name}`, () => {
     const why = locked();
     if (why) return why;
     const parsed = SeriesSchema.safeParse(next);
@@ -51,8 +61,8 @@ export const useProjectDataStore = create<ProjectDataState>()((set, get) => ({
     if (next.name !== name && get().series.some((x) => x.name === next.name)) return `a Series named ${next.name} exists`;
     set({ series: get().series.map((x) => (x.name === name ? parsed.data : x)) });
     return null;
-  },
-  renameSeries: (from, to) => {
+  }, "auto"),
+  renameSeries: (from, to) => recorded(`Rename Series ${from} to ${to}`, () => {
     const current = get().series.find((x) => x.name === from);
     if (!current) return `no Series ${from}`;
     if (from === to) return null;
@@ -60,14 +70,15 @@ export const useProjectDataStore = create<ProjectDataState>()((set, get) => ({
     if (why) return why;
     useTemporalSimulationStore.getState().renameSeriesReferences(from, to);
     return null;
-  },
-  removeSeries: (name) => {
+  }),
+  removeSeries: (name) => recorded(`Delete Series ${name}`, () => {
     const why = locked();
     if (why) return why;
     set({ series: get().series.filter((x) => x.name !== name) });
     return null;
-  },
-}));
+  }),
+};
+});
 
 // The project has unsaved changes whenever its Series or sheets change, as for an
 // Element edit (canvas-store). Deferred import: ui-store is not needed at load.
