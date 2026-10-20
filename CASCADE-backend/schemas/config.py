@@ -177,7 +177,7 @@ class EventDefinition(BaseModel):
             "Inside a Temporal Simulation run, the Simulation's value wins. Client-side only."
         ),
     )
-    provenance: Optional[Provenance] = None  # set by LLM Design or a Workbook import (ADR-0022, ADR-0023)
+    provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022)
 
     @model_validator(mode="before")
     @classmethod
