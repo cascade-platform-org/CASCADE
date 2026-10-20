@@ -292,13 +292,10 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design or a Workbook import added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "enum": [
-            "llm_design",
-            "spreadsheet"
-          ],
+          "const": "llm_design",
           "title": "Origin",
           "type": "string"
         },
@@ -320,54 +317,12 @@
           "description": "True once a person has confirmed it.",
           "title": "Confirmed",
           "type": "boolean"
-        },
-        "source": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SourceLocator"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "For a spreadsheet: the file, sheet and row."
         }
       },
       "required": [
         "origin"
       ],
       "title": "Provenance",
-      "type": "object"
-    },
-    "SourceLocator": {
-      "additionalProperties": false,
-      "description": "The Workbook row a record came from.",
-      "properties": {
-        "file": {
-          "maxLength": 255,
-          "minLength": 1,
-          "title": "File",
-          "type": "string"
-        },
-        "sheet": {
-          "maxLength": 255,
-          "minLength": 1,
-          "title": "Sheet",
-          "type": "string"
-        },
-        "row": {
-          "minimum": 1,
-          "title": "Row",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "file",
-        "sheet",
-        "row"
-      ],
-      "title": "SourceLocator",
       "type": "object"
     },
     "EventDefinition": {

@@ -1,6 +1,6 @@
 /**
  * bundle.ts — a project file: the Project and its Model Configuration together,
- * as a `.json` holds them and a Workbook holds them (ADR-0023).
+ * as a `.json` holds them.
  */
 
 import type { ModelConfiguration } from "./config";

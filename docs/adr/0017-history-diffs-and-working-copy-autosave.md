@@ -105,17 +105,17 @@ files, including every git-tracked sample, keep undoing correctly.
 ### 1a. A Model Diff beside the Graph Diff (2026-10-19)
 
 An entry also carries `model_diff` when the update changed the project beyond the
-graph: its Temporal Simulations, Series, custom sheets, Model Configuration or
+graph: its Temporal Simulations, Series, Model Configuration or
 settings (name, description, the Global view's graph type). Those parts are laid
 out as records keyed by subject (`simulation:<id>`, `series:<name>`,
-`sheet:<name>`, `event:<id>`, `category:<name>`, `graph_type:<name>`,
+`event:<id>`, `category:<name>`, `graph_type:<name>`,
 `template:<name>`, `scale:functionality`, `scale:level`, `settings:project`,
-`settings:config`), the keys LLM Design's preview and Import changes use, and
+`settings:config`), the keys LLM Design's preview uses, and
 diffed and applied by the Graph Diff's own `diffRegistry` and `applyToRegistry`
 (`lib/model-diff.ts`), plus each list's order when it changed. So Ctrl+Z walks one
 order through every edit: an Element's, a Temporal Simulation's (each field's
 typing folds into one step), a Series's, the Config window's Apply, and a whole LLM
-Design edit or Workbook import as one step (type `model_update`). A writer records
+Design edit as one step (type `model_update`). A writer records
 the parts it can reach (`runWithSnapshots` takes a graph snapshot, a model
 snapshot, or both); an update made while another is recorded is part of that one's
 entry. Undo writes each part back to its store (`restoreModel`). The Scenario

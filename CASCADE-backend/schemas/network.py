@@ -6,7 +6,6 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_valida
 
 from schemas.field_path import SafeKey
 from schemas.provenance import Provenance
-from schemas.custom_sheet import CustomSheet
 from schemas.operand import duplicate_names
 from schemas.series import Series
 from schemas.temporal_simulation import FIRST_SIMULATION_ID, StoredTemporalSimulation
@@ -512,7 +511,7 @@ AnyUpdateType = Literal[
 
 class ListOrder(BaseModel):
     """A list's order of record ids on each side of a Model Diff; set only when it changed."""
-    key: str = Field(description="The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types.")
+    key: str = Field(description="The list's key in the bundle: temporal_simulations, series, events, categories, graph_types.")
     before: list[str]
     after: list[str]
 
@@ -582,7 +581,7 @@ class AnyUpdateEntry(BaseModel):
         default=None,
         description=(
             "What this update changed beyond the graph (Temporal Simulations, Series, "
-            "custom sheets, the configuration, the project's settings); absent when nothing."
+            "the configuration, the project's settings); absent when nothing."
         ),
     )
     before: Optional[GraphSnapshot] = Field(
@@ -857,18 +856,10 @@ class Project(BaseModel):
             "read (ADR-0019, revised 2026-10-12). Client data; the engine never reads them."
         ),
     )
-    sheets: list[CustomSheet] = Field(
-        default_factory=list,
-        description=(
-            "A person's own Workbook sheets, values and formulas, computed by the spreadsheet "
-            "app (ADR-0023 §4a). Client data; the engine never reads them."
-        ),
-    )
 
     @model_validator(mode="after")
-    def _unique_series_and_sheet_names(self) -> "Project":
-        for kind, names in (("series", [x.name for x in self.series]), ("sheets", [x.name for x in self.sheets])):
-            repeated = duplicate_names(names)
-            if repeated:
-                raise ValueError(f"{kind}: the name '{repeated[0]}' is used twice")
+    def _unique_series_names(self) -> "Project":
+        repeated = duplicate_names([x.name for x in self.series])
+        if repeated:
+            raise ValueError(f"series: the name '{repeated[0]}' is used twice")
         return self

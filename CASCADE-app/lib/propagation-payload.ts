@@ -31,11 +31,11 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
 }
 
 /**
- * The project without what only the client reads: Temporal Simulations, Series and custom sheets
- * (ADR-0019, ADR-0023) left out, update history and Scorecard emptied (the schema requires them).
+ * The project without what only the client reads: Temporal Simulations and Series
+ * (ADR-0019) left out, update history and Scorecard emptied (the schema requires them).
  */
 function withoutClientData(project: Project): Project {
-  const { temporal_simulations: _simulations, series: _series, sheets: _sheets, ...rest } = project;
+  const { temporal_simulations: _simulations, series: _series, ...rest } = project;
   return { ...rest, update_history: [], scorecard: [] };
 }
 

@@ -199,7 +199,7 @@
             }
           ],
           "default": null,
-          "description": "What this update changed beyond the graph (Temporal Simulations, Series, custom sheets, the configuration, the project's settings); absent when nothing."
+          "description": "What this update changed beyond the graph (Temporal Simulations, Series, the configuration, the project's settings); absent when nothing."
         },
         "before": {
           "anyOf": [
@@ -668,68 +668,6 @@
         "name"
       ],
       "title": "ConfigMeta",
-      "type": "object"
-    },
-    "CustomSheet": {
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "maxLength": 31,
-          "minLength": 1,
-          "pattern": "^[^\\[\\]:*?/\\\\']([^\\[\\]:*?/\\\\]*[^\\[\\]:*?/\\\\'])?$",
-          "title": "Name",
-          "type": "string"
-        },
-        "writes": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The model sheet whose columns this sheet uses and whose records it writes (e.g. 'Nodes', 'S\u00b7demand'); None = analysis only.",
-          "title": "Writes"
-        },
-        "computed_at": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "When the spreadsheet app last computed it (ISO 8601), if known.",
-          "title": "Computed At"
-        },
-        "rows": {
-          "description": "Row by row from A1; None = an empty cell.",
-          "items": {
-            "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/SheetCell"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "array"
-          },
-          "title": "Rows",
-          "type": "array"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "title": "CustomSheet",
       "type": "object"
     },
     "DirectDamageEffect": {
@@ -1645,7 +1583,7 @@
       "description": "A list's order of record ids on each side of a Model Diff; set only when it changed.",
       "properties": {
         "key": {
-          "description": "The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types.",
+          "description": "The list's key in the bundle: temporal_simulations, series, events, categories, graph_types.",
           "title": "Key",
           "type": "string"
         },
@@ -2334,14 +2272,6 @@
           },
           "title": "Series",
           "type": "array"
-        },
-        "sheets": {
-          "description": "A person's own Workbook sheets, values and formulas, computed by the spreadsheet app (ADR-0023 \u00a74a). Client data; the engine never reads them.",
-          "items": {
-            "$ref": "#/$defs/CustomSheet"
-          },
-          "title": "Sheets",
-          "type": "array"
         }
       },
       "required": [
@@ -2628,13 +2558,10 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design or a Workbook import added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "enum": [
-            "llm_design",
-            "spreadsheet"
-          ],
+          "const": "llm_design",
           "title": "Origin",
           "type": "string"
         },
@@ -2656,18 +2583,6 @@
           "description": "True once a person has confirmed it.",
           "title": "Confirmed",
           "type": "boolean"
-        },
-        "source": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SourceLocator"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "For a spreadsheet: the file, sheet and row."
         }
       },
       "required": [
@@ -2769,47 +2684,6 @@
       "title": "Series",
       "type": "object"
     },
-    "SheetCell": {
-      "additionalProperties": false,
-      "description": "One cell: its value as the spreadsheet stored it, and its formula if any.",
-      "properties": {
-        "v": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The value (the formula's last result); None = empty.",
-          "title": "V"
-        },
-        "f": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The formula, in A1 syntax without the leading '='.",
-          "title": "F"
-        }
-      },
-      "title": "SheetCell",
-      "type": "object"
-    },
     "SimulationPeriod": {
       "description": "One period of a saved Temporal Simulation run: its end state as a Graph\nDiff from the entry's `start`, its table row, and each Stock's change over it.",
       "properties": {
@@ -2861,36 +2735,6 @@
         "diff"
       ],
       "title": "SimulationPeriod",
-      "type": "object"
-    },
-    "SourceLocator": {
-      "additionalProperties": false,
-      "description": "The Workbook row a record came from.",
-      "properties": {
-        "file": {
-          "maxLength": 255,
-          "minLength": 1,
-          "title": "File",
-          "type": "string"
-        },
-        "sheet": {
-          "maxLength": 255,
-          "minLength": 1,
-          "title": "Sheet",
-          "type": "string"
-        },
-        "row": {
-          "minimum": 1,
-          "title": "Row",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "file",
-        "sheet",
-        "row"
-      ],
-      "title": "SourceLocator",
       "type": "object"
     },
     "Step": {

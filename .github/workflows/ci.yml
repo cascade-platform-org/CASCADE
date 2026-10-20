@@ -119,9 +119,6 @@ jobs:
       - name: Circular imports (madge)
         run: npm run audit:circular
 
-      - name: SheetJS CE release (not watched by Dependabot)
-        run: npm run audit:sheetjs
-
       - name: Build (static export)
         run: npm run build
 

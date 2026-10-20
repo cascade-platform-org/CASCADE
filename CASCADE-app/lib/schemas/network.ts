@@ -16,7 +16,6 @@ import { z } from "zod";
 import { UNSAFE_KEY_MESSAGE, isSafeKey } from "./field-path";
 import { ProvenanceSchema } from "./provenance";
 import { SeriesSchema } from "./series";
-import { CustomSheetSchema } from "./custom-sheet";
 import { duplicateNames } from "./operand";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
 import { StoredTemporalSimulationSchema, migrateProjectSimulations } from "./temporal-simulation";
@@ -319,7 +318,7 @@ export const AnyUpdateTypeSchema = z.enum([
   // Temporal Jumps undone — the graph is back to its pre-jump state, so the
   // Situation is the one that was live before those jumps (see lib/situation.ts).
   "temporal_jump_revert",
-  // What the project saves beyond the graph: Temporal Simulations, Series, custom sheets, the configuration, its settings.
+  // What the project saves beyond the graph: Temporal Simulations, Series, the configuration, its settings.
   "model_update",
 ]);
 
@@ -383,7 +382,7 @@ export const GraphDiffSchema = z.object({
 
 /** A list's order of record ids on each side of a Model Diff; set only when it changed. */
 export const ListOrderSchema = z.object({
-  /** The list's key in the bundle: temporal_simulations, series, sheets, events, categories, graph_types. */
+  /** The list's key in the bundle: temporal_simulations, series, events, categories, graph_types. */
   key: z.string(),
   before: z.array(z.string()),
   after: z.array(z.string()),
@@ -637,20 +636,16 @@ export const ProjectFieldsSchema = z.object({
   temporal_simulations: z.array(StoredTemporalSimulationSchema).optional(),
   /** Project-wide numbers by Element and period label that Attribute Operations read (ADR-0019). Client data. */
   series: z.array(SeriesSchema).optional(),
-  /** A person's own Workbook sheets, values and formulas, computed by the spreadsheet app (ADR-0023 §4a). Client data. */
-  sheets: z.array(CustomSheetSchema).optional(),
 });
 
-/** Series and custom sheet names are unique. */
-function uniqueSeriesAndSheetNames(p: { series?: { name: string }[]; sheets?: { name: string }[] }, ctx: z.RefinementCtx) {
-  for (const kind of ["series", "sheets"] as const) {
-    const repeated = duplicateNames((p[kind] ?? []).map((x) => x.name));
-    if (repeated.length > 0) ctx.addIssue({ code: "custom", path: [kind], message: `${kind}: the name '${repeated[0]}' is used twice` });
-  }
+/** Series names are unique. */
+function uniqueSeriesNames(p: { series?: { name: string }[] }, ctx: z.RefinementCtx) {
+  const repeated = duplicateNames((p.series ?? []).map((x) => x.name));
+  if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["series"], message: `series: the name '${repeated[0]}' is used twice` });
 }
 
 /** A project file, migrated (`migrateProjectSimulations`) and validated. */
-export const ProjectSchema = z.preprocess(migrateProjectSimulations, ProjectFieldsSchema.superRefine(uniqueSeriesAndSheetNames));
+export const ProjectSchema = z.preprocess(migrateProjectSimulations, ProjectFieldsSchema.superRefine(uniqueSeriesNames));
 
 // ---------------------------------------------------------------------------
 // Inferred TypeScript types

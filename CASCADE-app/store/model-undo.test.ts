@@ -1,7 +1,7 @@
 /**
  * model-undo — Ctrl+Z reaches what the project saves beyond the graph (ADR-0017,
  * revised 2026-10-19): Temporal Simulation edits, Series, the configuration,
- * and a whole LLM Design edit or Workbook import, in one history with the
+ * and a whole LLM Design edit, in one history with the
  * graph's edits.
  */
 
@@ -24,7 +24,7 @@ beforeEach(() => {
   canvas().reset();
   canvas().addCanvas({ id: "c1", label: "Main", graph: { graph_type: "generic", node_ids: [], edge_ids: [] } });
   canvas().upsertNode({ id: "a", label: "A", functionality: 4 });
-  useProjectDataStore.getState().loadFromProject([], []);
+  useProjectDataStore.getState().loadFromProject([]);
   useHistoryStore.getState().loadHistory([]);
 });
 
@@ -94,15 +94,15 @@ describe("one history for the graph and the model", () => {
     expect(config().config.events.map((e) => e.label)).toContain("Flood");
   });
 
-  it("undoes a whole LLM Design edit or import, graph and model, in one step", () => {
+  it("undoes a whole LLM Design edit, graph and model, in one step", () => {
     const b = currentBundle();
     const after = {
       ...b,
       project: { ...b.project, meta: { ...b.project.meta, name: "Renamed" }, nodes: { ...b.project.nodes, a: { ...b.project.nodes.a, label: "Imported" } } },
       config: { ...b.config, events: [...b.config.events, { id: "x", label: "X", type: "hazard" as const, frequency_per_10y: 1 }] },
     };
-    expect(applyModelBundle(after, "Import changes from x.xlsx")).not.toBeNull();
-    expect(history()[0]).toMatchObject({ update_type: "model_update", label: "Import changes from x.xlsx" });
+    expect(applyModelBundle(after, "LLM Design edit")).not.toBeNull();
+    expect(history()[0]).toMatchObject({ update_type: "model_update", label: "LLM Design edit" });
     canvas().undo();
     expect(canvas().nodes.a.label).toBe("A");
     expect(canvas().projectMeta.name).toBe(b.project.meta.name);

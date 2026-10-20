@@ -326,8 +326,7 @@ The Coop Noncello simulations (seven policies, two stress tests, four spike scen
 two habits a spreadsheet user brings that the definition had no home for. A policy's numbers
 (the 50% of Art. 8, a 0.20 threshold) were repeated in every operation that used them, so
 changing one meant editing many; and the monthly data (hours worked per activity) were spread
-over some 800 literal profile operations. ADR-0023 makes the spreadsheet a form of the project
-file; these two concepts give its sheets something to map onto.
+over some 800 literal profile operations.
 
 - **Parameters.** A Temporal Simulation declares `parameters: [{name, value, description?}]`,
   names unique. An Attribute Operation reads one through `parameter` (ADR-0021, revised). An

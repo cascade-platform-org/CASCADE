@@ -1,5 +1,4 @@
-"""Parameters, Series, custom sheets, the operand's factors and spreadsheet
-provenance (ADR-0019/0021/0022 revised 2026-10-12, ADR-0023)."""
+"""Parameters, Series and the operand's factors (ADR-0019/0021 revised 2026-10-12)."""
 from __future__ import annotations
 
 import pytest
@@ -7,7 +6,6 @@ from pydantic import ValidationError
 
 from schemas.config import AttributeOperation, EventDefinition
 from schemas.network import Project
-from schemas.provenance import Provenance
 from schemas.results import PropagationRequest
 from schemas.temporal_simulation import TemporalSimulation
 
@@ -51,38 +49,22 @@ def test_a_simulation_declares_uniquely_named_parameters() -> None:
         TemporalSimulation.model_validate({**doc, "parameters": [{"name": "a", "value": float("nan")}]})
 
 
-def test_a_project_keeps_series_and_custom_sheets_through_a_dump() -> None:
-    project = _project(
-        series=[{"name": "worked_h", "unit": "h", "rows": {"act-pul": {"2023-01": 21555.0}, "*": {"2023-01": 0}}}],
-        sheets=[{"name": "Forecast", "writes": "S·worked_h", "rows": [[{"v": "element"}, {"v": "2023-01"}], [{"v": "act-pul"}, {"v": 1, "f": "Nodes!B2*2"}, None]]}],
-    )
+def test_a_project_keeps_series_through_a_dump() -> None:
+    project = _project(series=[{"name": "worked_h", "unit": "h", "rows": {"act-pul": {"2023-01": 21555.0}, "*": {"2023-01": 0}}}])
     again = Project.model_validate_json(project.model_dump_json())
-    assert again.series == project.series and again.sheets == project.sheets
-    assert again.sheets[0].rows[1][2] is None
+    assert again.series == project.series
 
 
 @pytest.mark.parametrize(
     "bad",
     [
         {"series": [{"name": "a"}, {"name": "a"}]},
-        {"sheets": [{"name": "Mine"}, {"name": "Mine"}]},
-        {"sheets": [{"name": "no:colon"}]},
-        {"sheets": [{"name": "'quoted'"}]},
-        {"sheets": [{"name": "x" * 32}]},
         {"series": [{"name": "s", "rows": {"e": {"2023-01": float("inf")}}}]},
-        {"sheets": [{"name": "s", "rows": [[{"v": 1, "extra": 2}]]}]},
     ],
 )
-def test_a_project_refuses_bad_series_and_sheets(bad: dict[str, object]) -> None:
+def test_a_project_refuses_bad_series(bad: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         _project(**bad)
-
-
-def test_provenance_from_a_spreadsheet_names_its_row() -> None:
-    mark = Provenance(origin="spreadsheet", source={"file": "costs.xlsx", "sheet": "Nodes", "row": 14})
-    assert mark.source is not None and mark.source.row == 14 and mark.confirmed is False
-    with pytest.raises(ValidationError, match="only for origin"):
-        Provenance(origin="llm_design", source={"file": "f", "sheet": "s", "row": 1})
 
 
 def test_a_propagation_request_accepts_events_reading_parameters_and_series() -> None:

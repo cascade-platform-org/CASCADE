@@ -35,7 +35,7 @@ A field-level, invertible description of what changed between two Scenarios — 
 _Avoid_: "patch", "delta", "changeset"; and Mutation Reversal (one Event's inverse) or Scenario Baseline (one scenario's) — a Graph Diff is one Update's, and carries both directions
 
 **Model Diff**:
-The same, for what an Update changed beyond the graph: the project's Temporal Simulations, Series, custom sheets, Model Configuration and settings, as records keyed by subject (`simulation:<id>`, `event:<id>`, `settings:config`…). An entry carries one beside its **Graph Diff**, so Ctrl+Z undoes a Temporal Simulation edit, a Config Apply or a whole Workbook import in the same order as Element edits. Mechanics in ADR-0017 §1a.
+The same, for what an Update changed beyond the graph: the project's Temporal Simulations, Series, Model Configuration and settings, as records keyed by subject (`simulation:<id>`, `event:<id>`, `settings:config`…). An entry carries one beside its **Graph Diff**, so Ctrl+Z undoes a Temporal Simulation edit, a Config Apply or a whole LLM Design edit in the same order as Element edits. Mechanics in ADR-0017 §1a.
 
 **Event**:
 Any applied change to Elements — parent concept of Hazard, Disservice, Restorative Event and Temporal Jump. A Hazard or Disservice affects an implicit set: every Element whose own `vulnerability_levels[event.id] > 0` (the levels live on Elements, keyed by EventId — not on the Event). The Event definition carries `direct_damage_effects` (per-Element `expected_repair_time` overrides, Hazards only) and `attribute_operations` (**Attribute Operations**, applied last; an operation's `of` makes its operand `value` × another field of the same Element). An Event marked `temporal_simulation_only` is used only inside a **Temporal Simulation** and is hidden from the Action Bar and the Scorecard's uncovered-Event list. The typed repair signal and the operations are complementary.
@@ -110,16 +110,8 @@ One job LLM Design copies for an LLM: its instructions, the model's context, and
 _Avoid_: "prompt template", "preset"
 
 **Provenance**:
-The mark on a node, edge or Event that LLM Design or a Workbook import added: `origin` (`llm_design` or `spreadsheet`), the `rationale` (the change's `why`), for a spreadsheet the `source` (file, sheet, row), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022, ADR-0023.
+The mark on a node, edge or Event that LLM Design added: `origin` (`llm_design`), the `rationale` (the change's `why`), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
 _Avoid_: "AI-generated" (the person may have written the change)
-
-**Workbook**:
-The project file as a spreadsheet (`.xlsx` or `.ods`): one sheet per kind of record, one row per record, ids as identity, per-period values across; what has no table sits in the hidden `_cascade` sheet. Lossless both ways with the `.json`. Opening one replaces the project; **Import changes** compares one with the open project and applies the difference through LLM Design's check and preview. ADR-0023.
-_Avoid_: "spreadsheet export" (it is a complete project file), "Excel file" (`.ods` too)
-
-**Custom sheet**:
-A sheet of a person's own inside a **Workbook**, kept in the project with its values and formulas; the spreadsheet app computes it, CASCADE never does. One that declares a model sheet it writes (`Nodes`, `Events`, `Parameters`, a Series…) sends its values to the model through Import changes; one that declares none is analysis only. ADR-0023 §4a.
-_Avoid_: "formula sheet", "macro"
 
 **Parameter**:
 A named number a Temporal Simulation declares (`art8_share = 0.5`), read by Attribute Operations of its profile and of the Events it fires; an Event declares defaults for when it is fired by hand. Changing it once changes every operation that reads it; a **Parameter Sweep** runs over several of its values. ADR-0019, ADR-0021.

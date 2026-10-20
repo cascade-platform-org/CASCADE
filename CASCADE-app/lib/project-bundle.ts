@@ -5,10 +5,10 @@
  * The app holds it across six stores. `currentBundle()` reads it back.
  * `openBundle()` is the one way a whole project, or one of its two parts,
  * reaches them:
- * - File → Open (`.json`, `.xlsx`, `.ods`), the New Project screen, a sample, a tour;
+ * - File → Open, the New Project screen, a sample, a tour;
  * - Recent saves, a cloud version, the Working Copy, the restore prompt;
  * - an EPANET import that replaces the project;
- * - LLM Design and Import changes.
+ * - LLM Design.
  * Before, each of those wired the loaders by hand, and they disagreed: some
  * ran the reference checks and some did not, and only one kept the active Canvas.
  *

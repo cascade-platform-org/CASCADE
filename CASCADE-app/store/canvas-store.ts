@@ -127,7 +127,7 @@ export interface CanvasActions {
   restoreSnapshot: (snapshot: GraphSnapshot) => void;
   /**
    * The project's parts beyond the graph as their stores hold them now: its
-   * settings, Temporal Simulations, Series, custom sheets and configuration
+   * settings, Temporal Simulations, Series and configuration
    * (ADR-0017, revised 2026-10-19). References, never copies: cheap to take.
    */
   toModelSnapshot: () => ModelSnapshot;
@@ -502,12 +502,11 @@ export const useCanvasStore = create<CanvasStore>()(
 
     toModelSnapshot() {
       const { name, description, global_graph_type } = get().projectMeta;
-      const { series, sheets } = useProjectDataStore.getState();
+      const { series } = useProjectDataStore.getState();
       return {
         settings: { name, ...(description !== undefined ? { description } : {}), ...(global_graph_type !== undefined ? { global_graph_type } : {}) },
         temporal_simulations: useTemporalSimulationStore.getState().simulations,
         series,
-        sheets,
         config: useConfigStore.getState().config,
       };
     },
@@ -520,10 +519,7 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       }
       if (m.temporal_simulations) useTemporalSimulationStore.getState().restoreSimulations(m.temporal_simulations);
-      if (m.series || m.sheets) {
-        const data = useProjectDataStore.getState();
-        data.loadFromProject(m.series ?? data.series, m.sheets ?? data.sheets);
-      }
+      if (m.series) useProjectDataStore.getState().loadFromProject(m.series);
       if (m.config) useConfigStore.getState().loadConfig(m.config);
     },
 
@@ -743,7 +739,7 @@ export const useCanvasStore = create<CanvasStore>()(
     toProject(): Project {
       const state = get();
       const { simulations } = useTemporalSimulationStore.getState();
-      const { series, sheets } = useProjectDataStore.getState();
+      const { series } = useProjectDataStore.getState();
       return {
         version: "2.0",
         meta: {
@@ -761,7 +757,6 @@ export const useCanvasStore = create<CanvasStore>()(
         // Left out while there is none, so a project that never used one keeps its file unchanged.
         temporal_simulations: simulations.length > 0 ? simulations : undefined,
         series: series.length > 0 ? series : undefined,
-        sheets: sheets.length > 0 ? sheets : undefined,
       };
     },
 
@@ -785,7 +780,7 @@ export const useCanvasStore = create<CanvasStore>()(
           created_at: project.meta.created_at ?? new Date().toISOString(),
         };
       });
-      useProjectDataStore.getState().loadFromProject(project.series, project.sheets);
+      useProjectDataStore.getState().loadFromProject(project.series);
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
       useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
       // Every source is parsed before it opens (lib/project-bundle.ts), and
@@ -861,7 +856,7 @@ export const useCanvasStore = create<CanvasStore>()(
       useHistoryStore.getState().reset();
       useScorecardStore.getState().reset();
       useTemporalSimulationStore.getState().loadFromProject(undefined);
-      useProjectDataStore.getState().loadFromProject(undefined, undefined);
+      useProjectDataStore.getState().loadFromProject(undefined);
     },
   })),
 );

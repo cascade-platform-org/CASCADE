@@ -285,7 +285,7 @@ function headline(change: Change): string {
 const GRID = { columns: 6, dx: 200, dy: 140, gap: 160 };
 
 /** Positions on a grid below the nodes `placed` (a Canvas's positions), the next one on each call. */
-export function gridPlacer(placed: readonly { x: number; y: number }[]): () => { x: number; y: number } {
+function gridPlacer(placed: readonly { x: number; y: number }[]): () => { x: number; y: number } {
   const start = placed.length ? { x: Math.min(...placed.map((p) => p.x)), y: Math.max(...placed.map((p) => p.y)) + GRID.gap } : { x: 0, y: 0 };
   let k = 0;
   return () => {

@@ -200,8 +200,8 @@ export function readPointer(bundle: ProjectBundle, path: string): unknown {
 // 5–7. Dry run and check
 // ---------------------------------------------------------------------------
 
-/** A problem the check found, with where in the bundle when it is known (a Workbook names its cell from it). */
-export interface CheckIssue {
+/** A problem the check found, with where in the bundle when it is known. */
+interface CheckIssue {
   message: string;
   /** The path from the bundle's root: `["project", "nodes", "p1"]`. */
   path?: string[];
@@ -277,15 +277,6 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
   return checkReferences(before, after);
 }
 
-/**
- * Stages 6–7 on a whole bundle (a Workbook import's): the schemas, then the
- * references, against `before`; with the preview when it passes.
- */
-export function checkBundle(before: ProjectBundle, after: ProjectBundle): CheckedChange {
-  const shape = schemaIssues(after);
-  return shape.length > 0 ? refusedBy(shape) : checkReferences(before, after);
-}
-
 /** Stage 7: ids, and the problems `validateBundle` finds in `after` that `before` did not have. */
 function checkReferences(before: ProjectBundle, after: ProjectBundle): CheckedChange {
   const problems = idProblems(after);
@@ -334,7 +325,7 @@ const identity = (x: unknown): string | undefined =>
 const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
 /** The subject kind of a list's records, by the list's key. */
-const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", sheets: "sheet" };
+const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series" };
 /** The subject kind of a record's entries, by the record's key: each Node template is one. */
 const ENTRY_SUBJECT_OF: Record<string, string> = { node_defaults: "template" };
 /** The subject of a top-level field no list or record subject claims. */
@@ -387,7 +378,7 @@ const elementName = (kind: string, id: string, record: { label?: string } | unde
   `${kind} ${record?.label ? `"${record.label}" (${id})` : id}`;
 
 /** Every difference between two bundles as preview lines, each under its subject (`node:p1`, `settings:config`). */
-export function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
+function previewChange(before: ProjectBundle, after: ProjectBundle): Preview {
   const lines: PreviewLine[] = [];
   const snap = (p: Project) => ({ nodes: p.nodes, edges: p.edges, canvases: p.canvases });
   const diff = diffGraph(snap(before.project), snap(after.project));

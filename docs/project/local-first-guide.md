@@ -247,27 +247,20 @@ Propagation request leaves them out. A file with the older single
 A project saves only a definition that passes the schema; while an edit in the
 window does not, the window says why and the file keeps the last valid one.
 
-#### Series (`series`) and custom sheets (`sheets`)
+#### Series (`series`)
 
-Optional, client data the Propagation request leaves out (ADR-0019, ADR-0023 §4a).
+Optional, client data the Propagation request leaves out (ADR-0019).
 
 ```json
 "series": [{
   "name": "worked_h", "unit": "h",
   "rows": { "act-pulizie": { "2023-01": 21555, "2023-02": 21890 }, "*": { "2023-01": 0 } }
-}],
-"sheets": [{
-  "name": "Forecast", "writes": "S·worked_h",
-  "rows": [[{ "v": "element" }, { "v": "2023-01" }], [{ "v": "act-pulizie" }, { "v": 21555, "f": "XLOOKUP(A2,Nodes!A:A,Nodes!F:F)*1.1" }]]
 }]
 ```
 
 | Field | Description |
 | --- | --- |
 | `series[].rows` | Row key (an Element id, or `*` for every Element without a row of its own) → period label → number. An operation reads the value at the exact label of the period being run; a missing one refuses the write. Names unique. |
-| `sheets[].rows` | Cells row by row from A1: `{v, f?}` (the value, and the formula in A1 syntax without `=`) or `null`. The spreadsheet app computes them; CASCADE never evaluates a formula. |
-| `sheets[].writes` | The model sheet whose columns the sheet uses and whose records it writes through Import changes (`Nodes`, `Events`, `Parameters`, `S·<series>`…); absent = analysis only. |
-| `sheets[].computed_at` | When the spreadsheet app last computed it, if known. |
 
 #### Node fields reference
 
@@ -288,7 +281,7 @@ Optional, client data the Propagation request leaves out (ADR-0019, ADR-0023 §4
 | `responsibility_share` | `{ [element_id \| event_id]: float }` | Set by engine after Propagation. Values in (0,1] summing to 1. |
 | `rules` | `string[]` | Rule strings — authored with client-side autocomplete, parsed and evaluated by the engine. |
 | `properties` | `object` | Free-form attributes; an Event's Attribute Operations may write here. |
-| `provenance` | `{ origin, rationale?, confirmed, source? }` | Set on what LLM Design (`origin: "llm_design"`, ADR-0022) or a Workbook import (`"spreadsheet"`, with `source: {file, sheet, row}`, ADR-0023) adds: why, and whether a person has confirmed it. Shown as *unconfirmed* until then. The engine never reads it. |
+| `provenance` | `{ origin, rationale?, confirmed }` | Set on what LLM Design adds (`origin: "llm_design"`, ADR-0022): why, and whether a person has confirmed it. Shown as *unconfirmed* until then. The engine never reads it. |
 
 #### Per-category dependency profile fields
 
@@ -409,7 +402,7 @@ The config file defines the functionality scale, categories, Events (Hazards and
 }
 ```
 
-An Event that LLM Design or a Workbook import adds carries `provenance` too (same
+An Event that LLM Design adds carries `provenance` too (same
 shape as on nodes): until `confirmed`, its `frequency_per_10y` is an estimate.
 An Event's `attribute_operations` take the same operand factors as a profile
 (`parameter`, `series`, `of`), and `parameter_defaults` (`{name: number}`) gives

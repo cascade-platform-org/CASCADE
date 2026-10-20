@@ -9,7 +9,6 @@ const base: ModelSnapshot = {
   settings: { name: bundle.project.meta.name },
   temporal_simulations: bundle.project.temporal_simulations ?? [],
   series: [{ name: "worked_h", rows: { "*": { "2024-01": 1 } } }],
-  sheets: [],
   config: bundle.config,
 };
 const copy = (m: ModelSnapshot): ModelSnapshot => JSON.parse(JSON.stringify(m));

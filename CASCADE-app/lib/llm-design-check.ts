@@ -10,7 +10,7 @@
 import { checkChange, parseJsonText } from "@/lib/model-text";
 import { asChangeSet, checkBulkText, type BulkResult } from "@/lib/model-text-v2";
 import { findSection, sectionPatch, sectionTree } from "@/lib/model-text-sections";
-import { llmDesignMark, markAdded } from "@/lib/provenance";
+import { markAdded } from "@/lib/provenance";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 /** What the text edits: Bulk operations (with the changes left out of it), or one section. */
@@ -29,7 +29,7 @@ export function checkDesignText(full: ProjectBundle, target: DesignTarget, text:
     const reason = g.why ?? result.notes;
     if (reason) for (const s of g.subjects) if (!why.has(s)) why.set(s, reason);
   }
-  return { ...result, checked: { ...r, after: markAdded(bundle, r.after, llmDesignMark(why)) } };
+  return { ...result, checked: { ...r, after: markAdded(bundle, r.after, why) } };
 }
 
 function checkSection(bundle: ProjectBundle, target: { sectionKey: string; label: string }, text: string): BulkResult {

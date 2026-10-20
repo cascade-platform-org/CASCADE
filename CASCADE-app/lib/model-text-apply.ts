@@ -1,8 +1,7 @@
 /**
  * model-text-apply.ts — the store-facing side of the LLM Design (ADR-0022).
  *
- * `lib/model-text.ts` checks a change set (or a Workbook import, ADR-0023)
- * against a copy and previews it; once the person confirms, this file writes the
+ * `lib/model-text.ts` checks a change set against a copy and previews it; once the person confirms, this file writes the
  * checked result through `openBundle`, the way every project file is opened. Before writing,
  * the whole current bundle is kept as a version ("Before LLM Design edit") and
  * handed back, so the window can offer Undo this edit and Versions keeps it.
@@ -22,8 +21,7 @@ function load(bundle: ProjectBundle): void {
 }
 
 /**
- * Write a checked bundle as one undo step named `label` ("LLM Design edit",
- * "Import changes from Coop.xlsx"). Returns the bundle it replaced (for Undo
+ * Write a checked bundle as one undo step named `label`. Returns the bundle it replaced (for Undo
  * this edit), or null when a shown run keeps the model read-only. A version
  * of the project before it is kept first.
  */

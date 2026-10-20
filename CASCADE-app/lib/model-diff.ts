@@ -3,7 +3,7 @@
  * (ADR-0017, revised 2026-10-19). Pure.
  *
  * The project's parts other than the graph (Temporal Simulations, Series,
- * custom sheets, the Model Configuration, the project's settings) are laid out
+ * the Model Configuration, the project's settings) are laid out
  * as one registry of records keyed by subject, the keys LLM Design's preview
  * and Import changes already use (`simulation:<id>`, `series:<name>`,
  * `event:<id>`, `scale:level`, `settings:config`…). The Graph Diff's own
@@ -17,7 +17,6 @@
 
 import { applyToRegistry, deepEqual, diffRegistry, type DiffDirection } from "@/lib/graph-diff";
 import type { ModelConfiguration } from "@/lib/schemas/config";
-import type { CustomSheet } from "@/lib/schemas/custom-sheet";
 import type { ModelDiff } from "@/lib/schemas/network";
 import type { Series } from "@/lib/schemas/series";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
@@ -34,7 +33,6 @@ export interface ModelSnapshot {
   settings?: ProjectSettings;
   temporal_simulations?: StoredTemporalSimulation[];
   series?: Series[];
-  sheets?: CustomSheet[];
   config?: ModelConfiguration;
 }
 
@@ -44,7 +42,6 @@ type Rec = Record<string, unknown>;
 const PROJECT_LISTS = [
   { part: "temporal_simulations", kind: "simulation", id: (x: Rec) => String(x.id) },
   { part: "series", kind: "series", id: (x: Rec) => String(x.name) },
-  { part: "sheets", kind: "sheet", id: (x: Rec) => String(x.name) },
 ] as const;
 const CONFIG_LISTS = [
   { key: "events", kind: "event", id: (x: Rec) => String(x.id) },

@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * PreviewList — a checked change as before → after lines (ADR-0022), shared by
- * the LLM Design window and the Import changes window (ADR-0023): grouped by
- * the change (or the record) that made them, each group with a tick to leave
- * it out when the caller allows it.
+ * PreviewList — a checked change as before → after lines (ADR-0022) in the
+ * LLM Design window: grouped by the change that made them, each group with a
+ * tick to leave it out when the caller allows it.
  */
 
 import { cn } from "@/lib/utils";
