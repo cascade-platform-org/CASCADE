@@ -591,7 +591,10 @@ Add, update, delete things by id (never by position):
           or "statistic": "end"|"mean"|"min"|"max"|"total", "cmp", "value": number, "tolerance"?: number }
       a node also takes "canvas": "<id or label>" (needed when there are several); functionality defaults to N;
       without "position" it is placed on a grid below its Canvas's nodes
-  { "update": KIND, "id": "<id>", "value": { …only the fields to change… } }   null removes a field
+  { "update": KIND, "id": "<id>", "value": { …only what changes… } }   null removes a field
+      "value" is merged into the stored one key by key, at any depth: to give a node one more Category
+      dependency, send only that one, { "category_dependency_profiles": { "staff": { "dependency_level": 3 } } };
+      the others stay as they are. Never restate what you do not change.
   { "delete": KIND, "id": "<id>" }   or for nodes/edges { "delete": "node", "where": { … } }
       deleting a node takes its edges and its Canvas places along, an edge its Canvas places, an Event its
       vulnerability levels: never edit those yourself

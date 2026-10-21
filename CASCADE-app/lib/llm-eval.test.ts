@@ -178,6 +178,8 @@ interface RecipeTask {
   recipe: RecipeId;
   bundle: () => ProjectBundle;
   input: string;
+  /** A first reply of plain-text questions is a fair answer; it is scored on its questions instead. */
+  mayAsk?: true;
   expect: (before: ProjectBundle, after: ProjectBundle, groups: { why?: string }[]) => string[];
 }
 
@@ -253,6 +255,52 @@ const RECIPE_TASKS: RecipeTask[] = [
       ];
     },
   },
+  {
+    id: "r4-calibrate",
+    recipe: "calibrate",
+    bundle: () => load("IJDRR_example.json"),
+    input:
+      "If the earthquake hits, the electric source goes down. The hospital has a generator that holds for 8 hours, after that it stops. " +
+      "The city must never be below 'operational' unless the earthquake has happened.",
+    mayAsk: true,
+    expect: (b, a) => {
+      const list = (a.project.expectations ?? []).filter((e) => !(b.project.expectations ?? []).some((x) => x.id === e.id));
+      return [
+        ...fail(list.length >= 2, `${list.length} Expectations added, expected one per fact`),
+        ...fail(list.every((e) => e.provenance && !e.provenance.confirmed), "an Expectation not marked unconfirmed"),
+        ...fail(list.every((e) => e.statement.length > 10), "a statement that is not the person's words"),
+      ];
+    },
+  },
+  {
+    id: "r5-vague-describe",
+    recipe: "describe",
+    bundle: emptyBundle,
+    input: "We run a bakery with two shops.",
+    mayAsk: true,
+    expect: (b, a) => fail(Object.keys(a.project.nodes).length > Object.keys(b.project.nodes).length, "no node added"),
+  },
+  {
+    id: "r6-add-one",
+    recipe: "describe",
+    bundle: () => load("Office_with_Heat.json"),
+    input: "Add my secretary. She handles my calendar, I cannot work without her, and she is available all the time.",
+    mayAsk: true,
+    expect: (b, a) => {
+      const secretary = labelled(a, /secretar/i);
+      return [
+        ...fail(!!secretary, "no secretary node"),
+        ...fail(!!secretary && Object.values(a.project.edges).some((e) => e.source === secretary.id), "the secretary feeds nothing"),
+        // The Office gains a dependency on her, and keeps every dependency it had.
+        ...fail(Object.entries(b.project.nodes).every(([id, n]) => {
+          const was = n.category_dependency_profiles ?? {};
+          const now = a.project.nodes[id]?.category_dependency_profiles ?? {};
+          return Object.keys(was).every((c) => deepEqual(was[c], now[c])) && deepEqual({ ...n, category_dependency_profiles: undefined }, { ...a.project.nodes[id], category_dependency_profiles: undefined });
+        }), "an existing node lost or altered something it had"),
+        ...fail(Object.values(a.project.edges).some((e) => e.source === secretary?.id) || Object.entries(a.project.nodes).some(([id, n]) => id in b.project.nodes && Object.keys(n.category_dependency_profiles ?? {}).some((c) => !(c in (b.project.nodes[id].category_dependency_profiles ?? {})))), "nothing depends on her"),
+      ];
+    },
+  },
 ];
 
 
@@ -305,7 +353,14 @@ describe.skipIf(!MODE)("llm eval", () => {
       const path = `${DIR}/${t.id}.recipe.reply.md`;
       if (!existsSync(path)) { rows.push(`| ${t.id} | no reply |`); continue; }
       const b = t.bundle();
-      const r = checkDesignText(b, { bulk: true }, readFileSync(path, "utf8"));
+      const reply = readFileSync(path, "utf8");
+      if (t.mayAsk && !/"format"\s*:/.test(reply)) {
+        const questions = reply.split("\n").filter((l) => l.includes("?")).length;
+        details.push(`### ${t.id}: asked ${questions} question line(s)\n${reply}`);
+        rows.push(`| ${t.id} | asked (${questions}) |`);
+        continue;
+      }
+      const r = checkDesignText(b, { bulk: true }, reply);
       if (!r.checked.ok) {
         details.push(`### ${t.id}: refused\n${r.checked.errors.slice(0, 8).map((e) => `- ${e}`).join("\n")}`);
         writeFileSync(`${DIR}/${t.id}.recipe.repair.context.md`, repairContext(b, readFileSync(path, "utf8"), r.checked.errors));
