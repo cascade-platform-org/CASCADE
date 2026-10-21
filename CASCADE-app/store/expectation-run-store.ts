@@ -11,7 +11,7 @@ import type { ExpectationResult } from "@/lib/expectations";
 
 interface ExpectationRunState {
   /** Expectation id → its latest result this session. */
-  results: Record<string, ExpectationResult & { at: string }>;
+  results: Record<string, ExpectationResult>;
   /** While checks compute: how many of how many are done. */
   progress: { done: number; total: number } | null;
   begin: (total: number) => void;
@@ -26,7 +26,7 @@ export const useExpectationRunStore = create<ExpectationRunState>()((set) => ({
   begin: (total) => set({ progress: { done: 0, total } }),
   record: (result) =>
     set((s) => ({
-      results: { ...s.results, [result.id]: { ...result, at: new Date().toISOString() } },
+      results: { ...s.results, [result.id]: result },
       progress: s.progress ? { ...s.progress, done: s.progress.done + 1 } : null,
     })),
   finish: () => set({ progress: null }),

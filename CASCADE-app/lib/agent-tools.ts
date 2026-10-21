@@ -26,10 +26,10 @@ import { playScenario, resultsText, runSimulationTable, type ExpectationEnv, typ
 import { runTableCsv } from "@/lib/temporal-metrics";
 import { computeOperativityScore } from "@/lib/scorecard-utils";
 import { canvasesById, filterLabel, matchElements } from "@/lib/element-filter";
+import { causesText, levelText, stateNamer } from "@/lib/state-text";
 import { ANALYSIS_METRICS, scoredMetricById } from "@/lib/analysis-metrics";
 import { ElementFilterSchema } from "@/lib/schemas/attribute-operation";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
-import type { Expectation } from "@/lib/schemas/expectation";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { Proposal } from "@/store/agent-store";
@@ -63,15 +63,13 @@ const MAX_LIST = 150;
 /** Elements below full Functionality, worst first, each with its causes by name. */
 function degradedText(snapshot: GraphSnapshot, config: ModelConfiguration): string {
   const n = config.functionality_scale.length;
-  const events = new Map(config.events.map((e) => [e.id, e.label]));
-  const name = (id: string) => events.get(id) ?? (id in snapshot.nodes || id in snapshot.edges ? filterLabel(id, snapshot) : id);
-  const level = (f: number) => `${f} (${config.functionality_scale[f - 1]?.label ?? "?"})`;
+  const name = stateNamer(snapshot, config);
   const all = [...Object.values(snapshot.nodes), ...Object.values(snapshot.edges)];
   const degraded = all.filter((el) => el.functionality < n).sort((a, b) => a.functionality - b.functionality);
   const holding = all.filter((el) => el.functionality === n && (el.functionality_time ?? 0) > 0);
   const lines = degraded.slice(0, MAX_LIST).map((el) => {
-    const causes = Object.entries(el.responsibility_share ?? {}).sort((a, b) => b[1] - a[1]).map(([id, s]) => `${name(id)} ${Math.round(s * 100)}%`);
-    return `- ${name(el.id)} (${el.id}): ${level(el.functionality)}${el.direct_damage ? ", physically damaged" : ""}${causes.length ? `; caused by ${causes.join(", ")}` : ""}`;
+    const causes = causesText(el.responsibility_share, name);
+    return `- ${name(el.id)} (${el.id}): ${levelText(el.functionality, config)}${el.direct_damage ? ", physically damaged" : ""}${causes ? `; caused by ${causes}` : ""}`;
   });
   return [
     `Operativity Score: ${computeOperativityScore(snapshot, n).toFixed(1)}%`,
@@ -80,7 +78,8 @@ function degradedText(snapshot: GraphSnapshot, config: ModelConfiguration): stri
   ].join("\n\n");
 }
 
-const REFERENCE_TOPICS = {
+/** The guides `get_reference` serves; the Agent Kit writes each as `reference/<topic>.md`. */
+export const REFERENCE_TOPICS = {
   modelling: () => MODELLING_GUIDE,
   changes: (b: ProjectBundle) => [PLAIN_REFERENCE, fieldCensus(b)].join("\n\n"),
   expectations: () => CALIBRATION_GUIDE,
@@ -91,6 +90,13 @@ type Topic = keyof typeof REFERENCE_TOPICS;
 
 const TOPICS = Object.keys(REFERENCE_TOPICS) as [Topic, ...Topic[]];
 
+/** The project by id and name, with its Expectations: `describe_model`, and the Agent Kit's context. */
+export const modelContext = (b: ProjectBundle): string => [`# ${b.project.meta.name}`, modelLists(b), expectationsContext(b)].join("\n\n");
+
+/** An agent's plain changes checked against `bundle`, its additions marked as the agent's. */
+export const checkProposal = (bundle: ProjectBundle, text: string, leaveOut?: ReadonlySet<number>) =>
+  checkDesignText(bundle, { bulk: true, ...(leaveOut ? { leaveOut } : {}) }, text, "agent");
+
 export const AGENT_TOOLS: readonly AgentTool[] = [
   tool({
     name: "describe_model",
@@ -98,8 +104,7 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
       "The open project: its Canvases, Nodes, Edges, Events, Categories, Functionality scale, Temporal Simulations, Expectations and pending Proposals, by id and name. Start here.",
     params: z.object({}).strict(),
     async run(_args, host) {
-      const b = host.bundle();
-      return [`# ${b.project.meta.name}`, modelLists(b), expectationsContext(b)].join("\n\n");
+      return modelContext(host.bundle());
     },
   }),
   tool({
@@ -137,7 +142,7 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
     async run({ changes, notes }, host) {
       const bundle = host.bundle();
       const text = JSON.stringify({ format: PLAIN_FORMAT, ...(notes ? { notes } : {}), changes }, null, 1);
-      const r = checkDesignText(bundle, { bulk: true }, text, "agent");
+      const r = checkProposal(bundle, text);
       if (!r.checked.ok) return `REFUSED: nothing was proposed.\n\n${repairContext(bundle, text, r.checked.errors)}`;
       const p = host.propose(text, notes);
       const lines = r.checked.preview.lines.length;
@@ -186,7 +191,7 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
       const list = host.bundle().project.expectations ?? [];
       if (list.length === 0) return "The project has no Expectations yet: propose some with propose_change ({ \"add\": \"expectation\" }).";
       const results = await host.runExpectations(ids);
-      return resultsText(list as Expectation[], results);
+      return resultsText(list, results);
     },
   }),
   tool({
@@ -238,9 +243,13 @@ export const AGENT_TOOLS: readonly AgentTool[] = [
 
 const BY_NAME = new Map(AGENT_TOOLS.map((t) => [t.name, t]));
 
-/** The tools as an MCP `tools/list` names them: name, description, JSON Schema of the arguments. */
-export function toolList(): { name: string; description: string; inputSchema: unknown }[] {
-  return AGENT_TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: z.toJSONSchema(t.params, { io: "input" }) }));
+type ToolEntry = { name: string; description: string; inputSchema: unknown };
+let listed: ToolEntry[] | null = null;
+
+/** The tools as an MCP `tools/list` names them: name, description, JSON Schema of the arguments. Built once. */
+export function toolList(): ToolEntry[] {
+  listed ??= AGENT_TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: z.toJSONSchema(t.params, { io: "input" }) }));
+  return listed;
 }
 
 export type ToolOutcome = { ok: true; text: string } | { ok: false; error: string };

@@ -23,7 +23,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "cascade", version: "1.3.0" };
+const SERVER_INFO = { name: "cascade", version: "1.2.0" };
 
 /** The bridge's address for a CASCADE origin: https → wss, at /api/agent/bridge/agent. */
 export function bridgeUrl(origin) {
@@ -49,7 +49,7 @@ export const STATUS_TEXT = {
  * fallback tool list. Returns the JSON-RPC response for one message, or null
  * for a notification.
  */
-export function createHandler({ relay, fallbackTools, status }) {
+export function createHandler({ relay, fallbackTools }) {
   return async function handle(msg) {
     const { id, method, params } = msg ?? {};
     const reply = (result) => ({ jsonrpc: "2.0", id, result });
@@ -71,8 +71,8 @@ export function createHandler({ relay, fallbackTools, status }) {
       }
       case "tools/call": {
         const r = await relay.request({ type: "call", tool: params?.name, args: params?.arguments ?? {} });
-        const text = r.ok ? r.text : `${r.error}${status() !== "paired" ? `\n(${STATUS_TEXT[status()] ?? status()})` : ""}`;
-        return reply({ content: [{ type: "text", text }], isError: !r.ok });
+        // A refusal already says what to do: the relay's, and this program's own (STATUS_TEXT).
+        return reply({ content: [{ type: "text", text: r.ok ? r.text : r.error }], isError: !r.ok });
       }
       default:
         return fail(-32601, `Method not found: ${method}`);
@@ -154,7 +154,7 @@ function main() {
 
   let clientName = "an agent";
   const relay = connectRelay(bridgeUrl(origin), token, () => clientName, log);
-  const handle = createHandler({ relay, fallbackTools, status: relay.status });
+  const handle = createHandler({ relay, fallbackTools });
   // Connect once the agent has said who it is (MCP initialize), so the person sees its name.
   let started = false;
 

@@ -866,15 +866,10 @@ class Project(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _unique_series_names(self) -> "Project":
-        repeated = duplicate_names([x.name for x in self.series])
-        if repeated:
-            raise ValueError(f"series: the name '{repeated[0]}' is used twice")
-        return self
-
-    @model_validator(mode="after")
-    def _unique_expectation_ids(self) -> "Project":
-        repeated = duplicate_names([x.id for x in self.expectations])
-        if repeated:
-            raise ValueError(f"expectations: the id '{repeated[0]}' is used twice")
+    def _unique_names(self) -> "Project":
+        # Series by name, Expectations by id.
+        for field, key, items in (("series", "name", self.series), ("expectations", "id", self.expectations)):
+            repeated = duplicate_names([getattr(x, key) for x in items])
+            if repeated:
+                raise ValueError(f"{field}: the {key} '{repeated[0]}' is used twice")
         return self

@@ -36,8 +36,8 @@ import { nanoid } from "nanoid";
 let controller: AbortController | null = null;
 let comparing: AbortController | null = null;
 
-/** What a run reads from the app, captured once when Run or Compare starts. */
-function captureRunInput() {
+/** What a run reads from the app, captured once when Run or Compare starts (and an Expectations run). */
+export function captureRunInput() {
   const ctx = propagationContext();
   const n = ctx.config.functionality_scale.length;
   return {

@@ -19,7 +19,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 
-from auth.dependencies import LOCAL_USER, require_permission, resolve_user
+from auth.dependencies import ACCESS_COOKIE, require_db_id, require_permission, resolve_agent_token, resolve_user
 from auth.rbac import has_permission
 from config import get_settings
 from db import agent_tokens as db_tokens
@@ -33,9 +33,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 PERMISSION = "can_propagate"
-_ACCESS_COOKIE = "cascade_access"
-# A WebSocket close code: the request broke the endpoint's policy.
+# WebSocket close codes: the request broke the endpoint's policy; and the tab's
+# refusals, 4000 + the HTTP status they stand for, each with its reason in words.
 _POLICY = 1008
+_NOT_SIGNED_IN = 4401
+_FORBIDDEN = 4403
 
 
 def bridge_key(user: AuthUser) -> str:
@@ -43,79 +45,64 @@ def bridge_key(user: AuthUser) -> str:
     return user.db_id or user.sub
 
 
-def _require_db_id(user: AuthUser) -> str:
-    if user.db_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Personal tokens need a database; in local-only mode an agent connects with the token 'local'.",
-        )
-    return user.db_id
+async def _token_owner(user: AuthUser = Depends(require_permission(PERMISSION))) -> str:
+    return require_db_id(user, "Personal tokens (in local-only mode an agent connects with the token 'local')")
 
 
 @router.post("/tokens", response_model=CreatedAgentToken, summary="Create a personal token for the Agent Bridge")
 async def create_token(
     body: CreateAgentTokenRequest,
     conn: DBConn = Depends(get_connection),
-    user: AuthUser = Depends(require_permission(PERMISSION)),
+    owner_id: str = Depends(_token_owner),
 ) -> CreatedAgentToken:
-    record, token = await db_tokens.create_token(conn, owner_id=_require_db_id(user), name=body.name)
+    record, token = await db_tokens.create_token(conn, owner_id=owner_id, name=body.name)
     return CreatedAgentToken(token=token, record=record)
 
 
 @router.get("/tokens", response_model=list[AgentToken], summary="List my personal tokens")
 async def list_tokens(
     conn: DBConn = Depends(get_connection),
-    user: AuthUser = Depends(require_permission(PERMISSION)),
+    owner_id: str = Depends(_token_owner),
 ) -> list[AgentToken]:
-    return await db_tokens.list_tokens(conn, owner_id=_require_db_id(user))
+    return await db_tokens.list_tokens(conn, owner_id=owner_id)
 
 
 @router.delete("/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Revoke a personal token")
 async def delete_token(
     token_id: str,
     conn: DBConn = Depends(get_connection),
-    user: AuthUser = Depends(require_permission(PERMISSION)),
+    owner_id: str = Depends(_token_owner),
 ) -> None:
-    if not await db_tokens.delete_token(conn, owner_id=_require_db_id(user), token_id=token_id):
+    if not await db_tokens.delete_token(conn, owner_id=owner_id, token_id=token_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No such token.")
 
 
-@router.websocket("/bridge/tab")
-async def tab_socket(ws: WebSocket) -> None:
+async def _tab_refusal(ws: WebSocket) -> tuple[int, str] | AuthUser:
+    """The tab's user, or the close code and reason it is refused with."""
     # A browser sends its cookies on a WebSocket from ANY page, so a hostile
     # site could otherwise open this socket as the user (cross-site WebSocket
     # hijacking). Only the app's own origins, the CORS list, may.
     if ws.headers.get("origin") not in get_settings().cors_origins_list:
-        await ws.close(code=_POLICY)
-        return
+        return _FORBIDDEN, "This page's address is not one CASCADE serves."
     try:
-        user = await resolve_user(ws.cookies.get(_ACCESS_COOKIE, ""))
+        user = await resolve_user(ws.cookies.get(ACCESS_COOKIE, ""))
     except HTTPException:
-        await ws.close(code=_POLICY)
-        return
+        return _NOT_SIGNED_IN, "Sign in to pair this tab."
     if not has_permission(user.roles, PERMISSION):
-        await ws.close(code=_POLICY)
-        return
+        return _FORBIDDEN, "Your account is not allowed to Propagate, which an agent's runs need."
+    return user
+
+
+@router.websocket("/bridge/tab")
+async def tab_socket(ws: WebSocket) -> None:
+    # Accepted first, so a refusal reaches the tab as a close code with its
+    # reason; nothing is sent or served before the checks pass.
     await ws.accept()
+    user = await _tab_refusal(ws)
+    if isinstance(user, tuple):
+        await ws.close(code=user[0], reason=user[1])
+        return
     await bridge.serve_tab(bridge_key(user), ws)
-
-
-async def _agent_owner(token: str) -> tuple[str, str] | None:
-    """The bridge key and token name a token opens, or None."""
-    settings = get_settings()
-    if not settings.auth_enabled:
-        return bridge_key(LOCAL_USER), "local"
-    from db import pool as db_pool
-    from db.users import get_user_by_id
-
-    async with db_pool.get_pool().acquire() as conn:
-        owner = await db_tokens.owner_of(conn, token)
-        if owner is None:
-            return None
-        db_user = await get_user_by_id(conn, owner[0])
-    if db_user is None or not has_permission([db_user.role_name], PERMISSION):
-        return None
-    return db_user.id, owner[1]
 
 
 @router.websocket("/bridge/agent")
@@ -127,10 +114,11 @@ async def agent_socket(ws: WebSocket) -> None:
         await ws.close(code=_POLICY)
         return
     token = first.get("token") if isinstance(first, dict) and first.get("type") == "auth" else None
-    owner = await _agent_owner(token) if isinstance(token, str) and token else None
-    if owner is None:
+    resolved = await resolve_agent_token(token) if isinstance(token, str) and token else None
+    if resolved is None or not has_permission(resolved[0].roles, PERMISSION):
         await ws.send_text(json.dumps({"type": "status", "state": "unauthorized"}))
         await ws.close(code=_POLICY)
         return
     name = first.get("name")
-    await bridge.serve_agent(owner[0], ws, name=name[:80] if isinstance(name, str) and name else "an agent", token_name=owner[1])
+    user, token_name = resolved
+    await bridge.serve_agent(bridge_key(user), ws, name=name[:80] if isinstance(name, str) and name else "an agent", token_name=token_name)

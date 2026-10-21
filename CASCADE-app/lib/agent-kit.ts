@@ -11,16 +11,11 @@
  * for the copy/paste route: the agent writes plain changes and the person
  * pastes them into LLM Design.
  *
- * Every text here is built from the ones the app already copies for an LLM
- * (the Recipes' guides, the plain-changes reference, the primers), so there is
- * one primer and the kit cannot drift from the tools.
+ * Every text here is the one the tools serve (`get_reference`'s topics,
+ * `describe_model`), so the kit cannot drift from the tools.
  */
 
-import { modelLists } from "@/lib/model-text";
-import { PLAIN_REFERENCE, fieldCensus } from "@/lib/model-text-v2";
-import { CALIBRATION_GUIDE, MODELLING_GUIDE, expectationsContext } from "@/lib/llm-recipes";
-import { ELEMENT_PATHS, MODEL_PRIMER, SIMULATION_REFERENCE } from "@/lib/temporal-simulation-text";
-import { AGENT_TOOLS, toolList } from "@/lib/agent-tools";
+import { AGENT_TOOLS, REFERENCE_TOPICS, modelContext, toolList } from "@/lib/agent-tools";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 /** Where the kit's program finds the app; the relay's address is derived from it. */
@@ -118,16 +113,11 @@ With a local deployment in local-only mode (no sign-in), no token is needed: set
 
 /** The kit's files, path → content. `program` is the text of cascade-mcp.mjs, fetched from the deployment. */
 export function agentKitFiles(bundle: ProjectBundle, target: KitTarget, program: string): Record<string, string> {
-  const name = bundle.project.meta.name;
   return {
     "AGENTS.md": AGENTS_MD,
     "SETUP.md": SETUP_MD(target),
-    "reference/modelling.md": MODELLING_GUIDE,
-    "reference/changes.md": [PLAIN_REFERENCE, fieldCensus(bundle)].join("\n\n"),
-    "reference/expectations.md": CALIBRATION_GUIDE,
-    "reference/propagation.md": MODEL_PRIMER,
-    "reference/simulation.md": [SIMULATION_REFERENCE, ELEMENT_PATHS].join("\n\n"),
-    "project/context.md": [`# ${name}`, "As it was when the kit was downloaded; with the bridge, `describe_model` reads it live.", modelLists(bundle), expectationsContext(bundle)].join("\n\n"),
+    ...Object.fromEntries(Object.entries(REFERENCE_TOPICS).map(([topic, text]) => [`reference/${topic}.md`, text(bundle)])),
+    "project/context.md": `${modelContext(bundle)}\n\n(As it was when the kit was downloaded; with the bridge, \`describe_model\` reads it live.)`,
     "mcp/cascade-mcp.mjs": program,
     "mcp/tools.json": JSON.stringify(toolList(), null, 1),
   };

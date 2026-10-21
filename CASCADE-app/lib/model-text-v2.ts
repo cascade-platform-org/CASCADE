@@ -22,6 +22,7 @@ import { FieldPathSchema, isSafeKey } from "@/lib/schemas/field-path";
 import { applyOperationTo, operationTargets } from "@/lib/attribute-operations";
 import { canvasesById } from "@/lib/element-filter";
 import { deepEqual } from "@/lib/graph-diff";
+import { LIST_KINDS, RECORD_LISTS, type ListKind } from "@/lib/record-lists";
 import { eventFollowUps, registryFollowUps } from "@/lib/model-text-sections";
 import { MODEL_TEXT_FORMAT, applyPatchOps, encodePointerKey as enc, isPlain as isRec, checkChange, modelTextContext, parseChangeValue, parseJsonText, type ChangeSet, type CheckedChange, type PatchOp, type Preview, type PreviewLine } from "@/lib/model-text";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
@@ -44,10 +45,10 @@ const VERBS = ["set", "scale", "increase", "cap", "floor"] as const;
 type Verb = (typeof VERBS)[number];
 const OP_OF: Record<Verb, AttributeOperation["op"]> = { set: "set", scale: "mul", increase: "add", cap: "at_most", floor: "at_least" };
 
-const KINDS = ["node", "edge", "event", "category", "canvas", "simulation", "series", "expectation"] as const;
-type Kind = (typeof KINDS)[number];
-/** The field that identifies a thing: a Category and a Series by name, the rest by id. */
-const idField = (kind: Kind): "name" | "id" => (kind === "category" || kind === "series" ? "name" : "id");
+const KINDS = ["node", "edge", ...LIST_KINDS] as ["node", "edge", ...ListKind[]];
+type Kind = "node" | "edge" | ListKind;
+/** The field that identifies a thing: a node and an edge by id, a listed thing by its list's (lib/record-lists.ts). */
+const idField = (kind: Kind): "name" | "id" => (kind === "node" || kind === "edge" ? "id" : RECORD_LISTS.find((l) => l.kind === kind)!.idField);
 
 const Text = z.string().min(1).refine(isSafeKey, { message: "__proto__, constructor and prototype are not allowed" });
 const Why = { why: z.string().optional() };
@@ -232,18 +233,34 @@ export interface ChangeGroup {
 
 export type Compiled = { ok: true; patch: PatchOp[]; groups: ChangeGroup[]; notes?: string } | { ok: false; errors: string[] };
 
-/** Where each kind of thing lives, and how it is found by id. */
-const LISTS: Record<Exclude<Kind, "node" | "edge">, { pointer: string; read: (b: ProjectBundle) => Rec[]; id: (x: Rec) => unknown; name?: (x: Rec) => unknown }> = {
-  event: { pointer: "/config/events", read: (b) => b.config.events as unknown as Rec[], id: (x) => x.id },
-  category: { pointer: "/config/categories", read: (b) => b.config.categories as unknown as Rec[], id: (x) => x.name },
-  canvas: { pointer: "/project/canvases", read: (b) => b.project.canvases as unknown as Rec[], id: (x) => x.id, name: (x) => x.label },
-  simulation: { pointer: "/project/temporal_simulations", read: (b) => (b.project.temporal_simulations ?? []) as unknown as Rec[], id: (x) => x.id, name: (x) => (x.timeline as Rec | undefined)?.name },
-  series: { pointer: "/project/series", read: (b) => (b.project.series ?? []) as unknown as Rec[], id: (x) => x.name },
-  expectation: { pointer: "/project/expectations", read: (b) => (b.project.expectations ?? []) as unknown as Rec[], id: (x) => x.id },
-};
+/** A listed thing's second name, by which it is found too: a Canvas's label, a Simulation's Timeline name. */
+const NAME_OF: Partial<Record<ListKind, (x: Rec) => unknown>> = { canvas: (x) => x.label, simulation: (x) => (x.timeline as Rec | undefined)?.name };
+
+interface ListPlace {
+  pointer: string;
+  read: (b: ProjectBundle) => Rec[];
+  id: (x: Rec) => unknown;
+  name?: (x: Rec) => unknown;
+  /** Absent from a project until its first item (lib/record-lists.ts). */
+  absent: (b: ProjectBundle) => boolean;
+}
+
+/** Where each kind of thing lives, and how it is found by id: from lib/record-lists.ts. */
+const LISTS = Object.fromEntries(
+  RECORD_LISTS.filter((l) => "changes" in l).map((l): [string, ListPlace] => {
+    const at = (b: ProjectBundle) => (b[l.at] as unknown as Rec)[l.key] as Rec[] | undefined;
+    return [l.kind, {
+      pointer: `/${l.at}/${l.key}`,
+      read: (b) => at(b) ?? [],
+      id: (x) => x[l.idField],
+      name: NAME_OF[l.kind as ListKind],
+      absent: (b) => "optional" in l && at(b) === undefined,
+    }];
+  }),
+) as Record<ListKind, ListPlace>;
 
 /** A listed thing's position, by its id or (Canvases, Simulations) its name; -1 when absent. */
-const findIn = (b: ProjectBundle, kind: Exclude<Kind, "node" | "edge">, ref: string) => {
+const findIn = (b: ProjectBundle, kind: ListKind, ref: string) => {
   const list = LISTS[kind];
   const items = list.read(b);
   const byId = items.findIndex((x) => list.id(x) === ref);
@@ -431,9 +448,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
         if (list.read(draft).some((x) => list.id(x) === id)) errors.push(`${at}: ${kind} "${id}" already exists; use "update"`);
         else {
           const record = kind === "canvas" ? { graph: { graph_type: "generic", node_ids: [], edge_ids: [] }, ...value } : value;
-          if (kind === "simulation" && draft.project.temporal_simulations === undefined) emit(at, [{ op: "add", path: "/project/temporal_simulations", value: [] }]);
-          if (kind === "series" && draft.project.series === undefined) emit(at, [{ op: "add", path: "/project/series", value: [] }]);
-          if (kind === "expectation" && draft.project.expectations === undefined) emit(at, [{ op: "add", path: "/project/expectations", value: [] }]);
+          if (list.absent(draft)) emit(at, [{ op: "add", path: list.pointer, value: [] }]);
           emit(at, [{ op: "add", path: `${list.pointer}/-`, value: record }]);
           group.subjects.push(`${kind}:${id}`);
         }

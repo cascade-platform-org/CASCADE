@@ -283,11 +283,11 @@ List my tokens (never their values), or revoke one (`204`; `404` when it is not 
 
 ### `WS /api/agent/bridge/tab`
 
-The user's open tab. Authenticated by the session cookie; refused (close `1008`) unless the `Origin` is one of `CORS_ORIGINS`, the user is signed in and has `can_propagate`. Server → tab: `agent_connected {agent, name, token_name}`, `agent_disconnected {agent}`, `call {agent, id, tool, args}`, `list {agent, id}`, `replaced` (a newer tab paired). Tab → server: `approve {agent}`, `deny {agent}`, `result {agent, id, ok, text | error | tools}`.
+The user's open tab. Authenticated by the session cookie. The socket is accepted, then closed with a code and a reason in words unless the checks pass: `4403` when the `Origin` is not one of `CORS_ORIGINS` or the user lacks `can_propagate`, `4401` when not signed in. A tab replaced by a newer one is closed with `4409`. Server → tab: `agent_connected {agent, name, token_name}`, `agent_disconnected {agent}`, `call {agent, id, tool, args}`, `list {agent, id}`. Tab → server: `approve {agent}`, `deny {agent}`, `result {agent, id, ok, text | error | tools}`.
 
 ### `WS /api/agent/bridge/agent`
 
-An agent (`cascade-mcp.mjs`). First message `{type: "auth", token, name}`; a bad token gets `status unauthorized` and close `1008`. Agent → server: `call {id, tool, args}`, `list {id}`. Server → agent: `status {state: no_tab | waiting_approval | paired | denied}`, `result {id, ok, …}` (from the tab, or at once with the reason when no tab is paired or the agent is not approved). Messages are routed by `agent` and `id` only, never stored or logged.
+An agent (`cascade-mcp.mjs`). First message `{type: "auth", token, name}`: a personal token, or `local` in local-only mode. A bad one gets `status unauthorized` and close `1008`. Agent → server: `call {id, tool, args}`, `list {id}`. Server → agent: `status {state: no_tab | waiting_approval | paired | denied}`, `result {id, ok, …}` (the tab's, passed through as it came, `agent` included; or at once with the reason when no tab is paired or the agent is not approved). Messages are routed by `agent` and `id` only, never stored or logged.
 
 ---
 

@@ -11,6 +11,7 @@
 import { deepEqual } from "@/lib/graph-diff";
 import { PROVENANCE_ORIGIN, type Provenance, type ProvenanceOrigin } from "@/lib/schemas/provenance";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
+import { RECORD_LISTS } from "@/lib/record-lists";
 
 /** True for an Element, Event or Expectation LLM Design or an agent added that no person has confirmed yet. */
 export const isUnconfirmed = (x: { provenance?: Provenance }): boolean => x.provenance !== undefined && !x.provenance.confirmed;
@@ -27,7 +28,8 @@ function withMark<T extends { provenance?: Provenance }>(x: T, provenance: Prove
 }
 
 /**
- * `after` with every node, edge, Event and Expectation absent from `before`
+ * `after` with every node, edge, and item of a list that carries Provenance
+ * (lib/record-lists.ts: Events, Expectations) absent from `before`
  * marked as added by `origin` (LLM Design unless an agent's Proposal), unconfirmed,
  * and every other one keeping the mark it had in `before`: a text neither
  * confirms nor removes a mark. `rationale` gives the why of each addition, keyed
@@ -57,18 +59,18 @@ export function markAdded(
     }
     return out;
   };
-  const events = new Map(before.config.events.map((e) => [e.id, e]));
-  const expectations = new Map((before.project.expectations ?? []).map((e) => [e.id, e]));
-  return {
-    ...after,
-    project: {
-      ...after.project,
-      nodes: registry(before.project.nodes, after.project.nodes, "node"),
-      edges: registry(before.project.edges, after.project.edges, "edge"),
-      ...(after.project.expectations
-        ? { expectations: after.project.expectations.map((e) => settle(e, expectations.get(e.id), `expectation:${e.id}`)) }
-        : {}),
-    },
-    config: { ...after.config, events: after.config.events.map((e) => settle(e, events.get(e.id), `event:${e.id}`)) },
+  type Marked = Record<string, unknown> & { provenance?: Provenance };
+  const out = {
+    project: { ...after.project, nodes: registry(before.project.nodes, after.project.nodes, "node"), edges: registry(before.project.edges, after.project.edges, "edge") },
+    config: { ...after.config },
   };
+  // Every list whose items carry Provenance (lib/record-lists.ts): Events and Expectations.
+  for (const l of RECORD_LISTS) {
+    if (!("provenance" in l)) continue;
+    const now = (after[l.at] as unknown as Record<string, Marked[] | undefined>)[l.key];
+    if (!now) continue;
+    const was = new Map(((before[l.at] as unknown as Record<string, Marked[] | undefined>)[l.key] ?? []).map((x) => [x[l.idField], x]));
+    (out[l.at] as unknown as Record<string, Marked[]>)[l.key] = now.map((x) => settle(x, was.get(x[l.idField]), `${l.kind}:${String(x[l.idField])}`));
+  }
+  return { ...after, ...out };
 }

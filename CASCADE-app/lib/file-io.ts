@@ -177,9 +177,10 @@ export interface FileKind {
 
 const JSON_FILE: FileKind = { mime: "application/json", description: "JSON file", extension: ".json" };
 export const CSV_FILE: FileKind = { mime: "text/csv", description: "CSV file", extension: ".csv" };
+export const ZIP_FILE: FileKind = { mime: "application/zip", description: "ZIP archive", extension: ".zip" };
 
-export async function saveAs(filename: string, content: string, kind: FileKind = JSON_FILE): Promise<void> {
-  const blob = new Blob([content], { type: kind.mime });
+export async function saveAs(filename: string, content: string | Blob, kind: FileKind = JSON_FILE): Promise<void> {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: kind.mime });
 
   // Modern path: shows the OS file picker so the user can choose folder + name
   if (typeof window !== "undefined" && "showSaveFilePicker" in window) {

@@ -17,6 +17,8 @@ import { bulkContext } from "@/lib/model-text-v2";
 import { deriveSituation, situationEventIds } from "@/lib/situation";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
+import { isUnconfirmed } from "@/lib/provenance";
+import { causesText, stateNamer } from "@/lib/state-text";
 
 export type RecipeId = "describe" | "import" | "red-team" | "calibrate" | "explain";
 
@@ -167,7 +169,7 @@ export function expectationsContext(bundle: ProjectBundle): string {
   if (list.length === 0) return "## The project's Expectations\n(none yet)";
   return [
     `## The project's Expectations (${list.length})`,
-    ...list.map((e) => `- ${e.id}${e.provenance && !e.provenance.confirmed ? " (unconfirmed)" : ""}: "${e.statement}"\n  check: ${JSON.stringify(e.check)}`),
+    ...list.map((e) => `- ${e.id}${isUnconfirmed(e) ? " (unconfirmed)" : ""}: "${e.statement}"\n  check: ${JSON.stringify(e.check)}`),
   ].join("\n");
 }
 
@@ -219,7 +221,7 @@ List the Events by how much they would matter. The app marks every Event you add
 export function stateContext(bundle: ProjectBundle, analysis: AnalysisResult | null): string {
   const { project, config } = bundle;
   const n = config.functionality_scale.length;
-  const name = (id: string) => project.nodes[id]?.label ?? config.events.find((e) => e.id === id)?.label ?? id;
+  const name = stateNamer(project, config);
   const situation = deriveSituation(project.update_history ?? []);
   const applied = situation ? situationEventIds(situation).map((id) => `- ${name(id)} (${id})`) : [];
   const degraded = [...Object.values(project.nodes), ...Object.values(project.edges)]
@@ -227,9 +229,8 @@ export function stateContext(bundle: ProjectBundle, analysis: AnalysisResult | n
     .sort((a, b) => a.functionality - b.functionality)
     .slice(0, 200)
     .map((el) => {
-      const label = "label" in el && el.label ? el.label : "source" in el ? `${name(el.source)} → ${name(el.target)}` : el.id;
-      const causes = Object.entries(el.responsibility_share ?? {}).sort((a, b) => b[1] - a[1]).map(([id, share]) => `${name(id)} ${Math.round(share * 100)}%`);
-      return `- ${label} (${el.id}): Functionality ${el.functionality}/${n}${causes.length ? `; caused by ${causes.join(", ")}` : ""}`;
+      const causes = causesText(el.responsibility_share, name);
+      return `- ${name(el.id)} (${el.id}): Functionality ${el.functionality}/${n}${causes ? `; caused by ${causes}` : ""}`;
     });
   return [
     `## Events applied now\n${applied.join("\n") || "(none: the state comes from manual edits or a fresh model)"}`,

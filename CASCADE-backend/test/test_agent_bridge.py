@@ -36,17 +36,22 @@ def send(ws, msg: dict) -> None:
 
 
 def test_a_tab_from_another_origin_is_refused(client):
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/api/agent/bridge/tab", headers={"origin": "https://evil.example"}) as ws:
-            ws.receive_text()
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/api/agent/bridge/tab") as ws:
-            ws.receive_text()
+    for headers in ({"origin": "https://evil.example"}, {}):
+        with pytest.raises(WebSocketDisconnect) as refused:
+            with client.websocket_connect("/api/agent/bridge/tab", headers=headers) as ws:
+                ws.receive_text()
+        assert refused.value.code == 4403 and "address" in (refused.value.reason or "")
 
 
 def test_an_agent_without_auth_is_refused(client):
     with client.websocket_connect("/api/agent/bridge/agent") as agent:
         send(agent, {"type": "call", "id": 1, "tool": "describe_model", "args": {}})
+        assert recv(agent) == {"type": "status", "state": "unauthorized"}
+
+
+def test_local_mode_opens_only_with_the_token_local(client):
+    with client.websocket_connect("/api/agent/bridge/agent") as agent:
+        send(agent, {"type": "auth", "token": "cas_guess"})
         assert recv(agent) == {"type": "status", "state": "unauthorized"}
 
 
@@ -76,7 +81,7 @@ def test_no_tab_then_approval_then_a_call_round_trip(client):
             call = recv(tab)
             assert call == {"type": "call", "id": 3, "tool": "describe_model", "args": {}, "agent": hello["agent"]}
             send(tab, {"type": "result", "agent": hello["agent"], "id": 3, "ok": True, "text": "# Harbour"})
-            assert recv(agent) == {"type": "result", "id": 3, "ok": True, "text": "# Harbour"}
+            assert recv(agent) == {"type": "result", "agent": hello["agent"], "id": 3, "ok": True, "text": "# Harbour"}
 
         # The tab closed: the approval ends with it.
         assert recv(agent) == {"type": "status", "state": "no_tab"}
@@ -95,7 +100,9 @@ def test_a_denied_agent_stays_out_and_a_new_tab_asks_again(client):
             assert recv(agent)["ok"] is False
 
             with client.websocket_connect("/api/agent/bridge/tab", headers={"origin": ORIGIN}) as newer:
-                assert recv(tab) == {"type": "replaced"}
+                with pytest.raises(WebSocketDisconnect) as replaced:
+                    tab.receive_text()
+                assert replaced.value.code == 4409
                 again = recv(newer)
                 assert again["type"] == "agent_connected" and again["agent"] == hello["agent"]
                 assert recv(agent)["state"] == "waiting_approval"

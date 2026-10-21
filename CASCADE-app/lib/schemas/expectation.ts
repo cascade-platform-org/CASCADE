@@ -90,4 +90,3 @@ export type ScenarioCheck = z.infer<typeof ScenarioCheckSchema>;
 export type SimulationCheck = z.infer<typeof SimulationCheckSchema>;
 export type ExpectationCheck = z.infer<typeof ExpectationCheckSchema>;
 export type Expectation = z.infer<typeof ExpectationSchema>;
-export type ExpectationStatistic = z.infer<typeof ExpectationStatisticSchema>;

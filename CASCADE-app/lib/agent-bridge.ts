@@ -5,52 +5,22 @@
  * agent that connects with the person's token is announced and waits until the
  * person approves it; then its tool calls arrive here, run through
  * `runAgentTool` on the live stores, and the answer goes back. Closing the tab,
- * Disconnect, or a newer tab pairing ends it, and with it every approval.
+ * Disconnect, or a newer tab pairing ends it, and with it every approval. The
+ * connection and the announced agents live in agent-store.
  */
 
-import { useAgentStore } from "@/store/agent-store";
+import { useAgentStore, type BridgeAgent } from "@/store/agent-store";
 import { agentBridgeTabUrl } from "@/lib/api-client";
 import { runAgentTool } from "@/lib/agent-host";
 import { toolList } from "@/lib/agent-tools";
 
-/** An agent the relay announced, waiting for the person or approved. */
-export interface BridgeAgent {
-  id: string;
-  name: string;
-  tokenName: string;
-  approved: boolean;
-}
-
 let socket: WebSocket | null = null;
-const agents = new Map<string, BridgeAgent>();
-const listeners = new Set<() => void>();
 
-/** A stable list between changes, as useSyncExternalStore requires. */
-let snapshot: BridgeAgent[] = [];
-const notify = () => {
-  snapshot = [...agents.values()];
-  listeners.forEach((l) => l());
-};
-
-/** The agents the relay has announced to this tab, for the window to list. */
-export const bridgeAgents = (): BridgeAgent[] => snapshot;
-export function onBridgeChange(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
+const store = () => useAgentStore.getState();
+const approved = (id: string): boolean => store().agents.some((a) => a.id === id && a.approved);
 
 function send(msg: Record<string, unknown>) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
-}
-
-function syncState() {
-  const approved = [...agents.values()].find((a) => a.approved);
-  const store = useAgentStore.getState();
-  if (!socket) store.setBridge({ status: "off" });
-  else if (socket.readyState === WebSocket.CONNECTING) store.setBridge({ status: "connecting" });
-  else if (approved) store.setBridge({ status: "paired", agent: approved.name, since: new Date().toISOString() });
-  else store.setBridge({ status: "open" });
-  notify();
 }
 
 async function onMessage(raw: string) {
@@ -58,23 +28,18 @@ async function onMessage(raw: string) {
   try { msg = JSON.parse(raw); } catch { return; }
   const agent = typeof msg.agent === "string" ? msg.agent : "";
   switch (msg.type) {
-    case "agent_connected":
-      agents.set(agent, { id: agent, name: String(msg.name ?? "an agent"), tokenName: String(msg.token_name ?? ""), approved: false });
-      useAgentStore.getState().log("bridge", `${String(msg.name ?? "an agent")} asks to connect`);
-      return syncState();
+    case "agent_connected": {
+      const announced: BridgeAgent = { id: agent, name: String(msg.name ?? "an agent"), tokenName: String(msg.token_name ?? ""), approved: false };
+      store().setAgents((as) => [...as.filter((a) => a.id !== agent), announced]);
+      return store().log("bridge", `${announced.name} asks to connect`);
+    }
     case "agent_disconnected":
-      agents.delete(agent);
-      return syncState();
-    case "replaced":
-      useAgentStore.getState().setBridge({ status: "error", message: "Another CASCADE tab was paired; this one is no longer." });
-      agents.clear();
-      socket = null;
-      return notify();
+      return store().setAgents((as) => as.filter((a) => a.id !== agent));
     case "list":
-      if (!agents.get(agent)?.approved) return;
+      if (!approved(agent)) return;
       return send({ type: "result", agent, id: msg.id, ok: true, tools: toolList() });
     case "call": {
-      if (!agents.get(agent)?.approved) return;
+      if (!approved(agent)) return;
       const outcome = await runAgentTool(String(msg.tool ?? ""), msg.args);
       return send({ type: "result", agent, id: msg.id, ...outcome });
     }
@@ -86,45 +51,33 @@ export function pairTab(): void {
   if (socket) return;
   const ws = new WebSocket(agentBridgeTabUrl());
   socket = ws;
-  let opened = false;
-  ws.addEventListener("open", () => { opened = true; syncState(); });
+  store().setBridge({ status: "connecting" });
+  ws.addEventListener("open", () => store().setBridge({ status: "open" }));
   ws.addEventListener("message", (ev) => void onMessage(String(ev.data)));
-  ws.addEventListener("close", () => {
+  ws.addEventListener("close", (ev) => {
     if (socket !== ws) return;
     socket = null;
-    agents.clear();
-    const store = useAgentStore.getState();
-    // Closed before it ever opened: the server refused the tab (signed out, no permission, wrong origin).
-    if (!opened) {
-      store.setBridge({ status: "error", message: "CASCADE refused to pair this tab: sign in with an account allowed to Propagate." });
-    } else store.setBridge({ status: "off" });
-    notify();
+    store().setAgents(() => []);
+    // The relay refuses or replaces a tab with a 4xxx code and its reason in words.
+    if (ev.code >= 4000) store().setBridge({ status: "error", message: ev.reason || "CASCADE refused to pair this tab." });
+    else if (ev.code === 1000) store().setBridge({ status: "off" });
+    else store().setBridge({ status: "error", message: "The connection to the Agent Bridge closed or could not be made." });
   });
-  syncState();
 }
 
 export function unpairTab(): void {
   const ws = socket;
   socket = null;
-  agents.clear();
+  store().setAgents(() => []);
+  store().setBridge({ status: "off" });
   ws?.close();
-  syncState();
 }
 
-export function approveAgent(id: string): void {
-  const a = agents.get(id);
+/** The person approves or declines an announced agent. */
+export function decideAgent(id: string, approve: boolean): void {
+  const a = store().agents.find((x) => x.id === id);
   if (!a) return;
-  agents.set(id, { ...a, approved: true });
-  send({ type: "approve", agent: id });
-  useAgentStore.getState().log("bridge", `approved ${a.name}`);
-  syncState();
-}
-
-export function denyAgent(id: string): void {
-  const a = agents.get(id);
-  if (!a) return;
-  agents.set(id, { ...a, approved: false });
-  send({ type: "deny", agent: id });
-  useAgentStore.getState().log("bridge", `declined ${a.name}`);
-  syncState();
+  store().setAgents((as) => as.map((x) => (x.id === id ? { ...x, approved: approve } : x)));
+  send({ type: approve ? "approve" : "deny", agent: id });
+  store().log("bridge", `${approve ? "approved" : "declined"} ${a.name}`);
 }

@@ -39,6 +39,7 @@ import { deepEqual, diffGraph } from "@/lib/graph-diff";
 import { validateBundle } from "@/lib/project-validation";
 import { ELEMENT_PATHS, MODEL_PRIMER, SIMULATION_REFERENCE, extractJson } from "@/lib/temporal-simulation-text";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
+import { SUBJECT_OF } from "@/lib/record-lists";
 
 export const MODEL_TEXT_FORMAT = "cascade.model-change/v1";
 
@@ -324,8 +325,6 @@ const identity = (x: unknown): string | undefined =>
   isPlain(x) ? (typeof x.id === "string" ? x.id : typeof x.name === "string" ? x.name : undefined) : undefined;
 const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
-/** The subject kind of a list's records, by the list's key. */
-const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", expectations: "expectation" };
 /** The subject kind of a record's entries, by the record's key: each Node template is one. */
 const ENTRY_SUBJECT_OF: Record<string, string> = { node_defaults: "template" };
 /** The subject of a top-level field no list or record subject claims. */

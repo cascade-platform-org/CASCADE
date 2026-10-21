@@ -24,7 +24,7 @@ beforeEach(() => {
   canvas().reset();
   canvas().addCanvas({ id: "c1", label: "Main", graph: { graph_type: "generic", node_ids: [], edge_ids: [] } });
   canvas().upsertNode({ id: "a", label: "A", functionality: 4 });
-  useProjectDataStore.getState().loadFromProject([]);
+  useProjectDataStore.getState().loadFromProject({});
   useHistoryStore.getState().loadHistory([]);
 });
 

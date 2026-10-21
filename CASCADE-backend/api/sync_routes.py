@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from auth.dependencies import require_permission
+from auth.dependencies import require_db_id, require_permission
 from db import projects as db_projects
 from db.pool import DBConn, get_connection
 from schemas.auth import AuthUser
@@ -35,16 +35,7 @@ from schemas.sync import (
 
 router = APIRouter(prefix="/api/projects", tags=["sync"])
 
-
-def _require_db_id(user: AuthUser) -> str:
-    """Local-only mode has no users table row to attach a save to — same
-    guard shape as api/audit_routes.py's can_sync path."""
-    if user.db_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Server Sync requires a database (not available in local-only mode).",
-        )
-    return user.db_id
+SYNC = "Server Sync"
 
 
 @router.post("", response_model=ProjectVersionSummary, summary="Save a new project version")
@@ -53,7 +44,7 @@ async def save_project(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> ProjectVersionSummary:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     return await db_projects.save_version(
         conn, owner_id=owner_id, name=body.name, description=body.description, data=body.data
     )
@@ -64,7 +55,7 @@ async def list_projects(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> list[ProjectVersionSummary]:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     return await db_projects.list_versions(conn, owner_id=owner_id)
 
 
@@ -90,7 +81,7 @@ async def put_working_copy(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> WorkingCopyDetail:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     return await db_projects.upsert_working_copy(
         conn, owner_id=owner_id, name=body.name, data=body.data
     )
@@ -110,7 +101,7 @@ async def read_working_copy(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> WorkingCopyDetail:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     copy = await db_projects.get_working_copy(conn, owner_id=owner_id, name=name)
     if copy is None:
         raise HTTPException(
@@ -130,7 +121,7 @@ async def remove_working_copy(
     """Opting a project out of auto-save removes the stored copy, rather than
     merely stopping the writes — otherwise "off" would leave the network on the
     server, which is the sentence ADR-0007 exists to keep true."""
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     await db_projects.delete_working_copy(conn, owner_id=owner_id, name=name)
 
 
@@ -149,7 +140,7 @@ async def get_project(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> ProjectVersionDetail:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     version = await db_projects.get_version(conn, owner_id=owner_id, version_id=version_id)
     if version is None:
         raise HTTPException(
@@ -166,7 +157,7 @@ async def delete_project(
     conn: DBConn = Depends(get_connection),
     user: AuthUser = Depends(require_permission("can_sync")),
 ) -> None:
-    owner_id = _require_db_id(user)
+    owner_id = require_db_id(user, SYNC)
     deleted = await db_projects.delete_version(conn, owner_id=owner_id, version_id=version_id)
     if not deleted:
         raise HTTPException(

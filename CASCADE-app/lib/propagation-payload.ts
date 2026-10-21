@@ -31,12 +31,14 @@ function stripUnusedInpContent(canvas: Canvas): Canvas {
 }
 
 /**
- * The project without what only the client reads: Temporal Simulations, Series
- * (ADR-0019) and Expectations (ADR-0023) left out, update history and Scorecard emptied (the schema requires them).
+ * The project as the engine reads it: the fields it uses, named one by one, so
+ * a list only the client reads (Temporal Simulations, Series, Expectations, any
+ * later one) never reaches the server (ADR-0007). Update history and Scorecard
+ * are emptied: the schema requires them.
  */
 function withoutClientData(project: Project): Project {
-  const { temporal_simulations: _simulations, series: _series, expectations: _expectations, ...rest } = project;
-  return { ...rest, update_history: [], scorecard: [] };
+  const { version, meta, global_graph_type, nodes, edges, canvases } = project;
+  return { version, meta, ...(global_graph_type !== undefined ? { global_graph_type } : {}), nodes, edges, canvases, update_history: [], scorecard: [] };
 }
 
 type StorageMarker = NonNullable<PropagationRequest["storage"]>;

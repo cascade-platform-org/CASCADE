@@ -170,6 +170,24 @@ describe("a simulation check", () => {
   it("is an error for a Simulation the project does not have", async () => {
     expect((await runExpectation(sim({ period: "d1", cmp: "==", value: 1 }), env())).status).toBe("error");
   });
+
+  it("runs once for every Expectation reading it in one run, charged to the first", async () => {
+    calls = 0;
+    const results = await runExpectations([sim({ period: "d1", cmp: "<", value: 100 }), sim({ statistic: "max", cmp: "<=", value: 100 })], env({ simulations: [simulation] }));
+    expect(results.map((r) => [r.status, r.engineCalls])).toEqual([["pass", 2], ["pass", 0]]);
+    expect(calls).toBe(2);
+  });
+});
+
+describe("one run of several Expectations", () => {
+  it("plays a scenario they share once, and a different one on its own", async () => {
+    calls = 0;
+    const on = (id: string, element: string, hours = 0) =>
+      expectation({ id, statement: id, check: { kind: "scenario", events: ["cut"], advance_hours: hours, assertions: [{ element, cmp: ">=", value: 1 }] } });
+    const results = await runExpectations([on("a", "clinic"), on("b", "hospital"), on("c", "hospital", 8)], env());
+    expect(results.map((r) => r.engineCalls)).toEqual([1, 0, 2]);
+    expect(calls).toBe(3);
+  });
 });
 
 describe("the schema", () => {

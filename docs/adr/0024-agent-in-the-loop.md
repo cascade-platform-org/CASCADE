@@ -1,6 +1,6 @@
 # ADR-0024 — An agent in the modelling loop: tools in the tab, Proposals, the Agent Bridge
 
-**Status:** accepted (2026-10-21, release v1.3). Built: `lib/agent-tools.ts` (the tools),
+**Status:** accepted (2026-10-21, release v1.2). Built: `lib/agent-tools.ts` (the tools),
 `lib/agent-host.ts` (the live tab), `store/agent-store.ts`, the Topbar's **Agent** window
 (`components/agent/`), `lib/agent-kit.ts` (the Agent Kit), `lib/agent-bridge.ts` (the tab's
 socket), `public/agent/cascade-mcp.mjs` (the agent's MCP server), and on the backend
@@ -13,7 +13,7 @@ pilot programme sells a half-day mapping session to SME directors, who think in 
 numbers and will never edit a `dependency_level`. LLM Design (ADR-0022) already lets an LLM
 write a model, but through copy and paste: the LLM cannot run what it wrote, cannot see that
 the model contradicts what the person said, and cannot iterate, and the person carries the
-text back and forth. Release v1.3 puts an agent in the loop: it interviews the person, writes
+text back and forth. Release v1.2 puts an agent in the loop: it interviews the person, writes
 Expectations (ADR-0023), models, runs, calibrates and explains. The person decides what
 becomes part of the model.
 
@@ -66,14 +66,16 @@ agent ─MCP stdio─ cascade-mcp.mjs ─WS + personal token─ relay ─WS + se
   last use, in the GDPR export and erased with the account. A token authenticates the agent
   socket and nothing else.
 - **The relay** (`services/agent_bridge.py`) is a per-user switchboard: one tab per user (a
-  newer one replaces the older), any number of agents. Each agent waits until the person
+  newer one replaces the older, which is closed with code `4409`), any number of agents. Each agent waits until the person
   presses **Approve** in the tab, and every approval ends with the tab. A call with no tab,
   or before approval, is answered at once with what to do. The relay reads only routing fields
   and never stores or logs a message. State is in memory, on the single backend instance
   ADR-0008 already assumes.
 - **Cross-site WebSocket hijacking** is closed by checking the tab socket's `Origin` against
   the CORS list. A browser attaches cookies to a WebSocket from any page, and this check is
-  what keeps another site from opening the tab end as the user.
+  what keeps another site from opening the tab end as the user. A refused tab is closed with
+  a code and the reason in words (`4401` not signed in, `4403` another origin or no
+  `can_propagate`), so the tab can say why.
 - Local-only mode (no OIDC) pairs with the token `local`: the deployment is single-user and
   already open.
 - Error reports never carry request bodies or stack-frame locals

@@ -28,7 +28,8 @@ _bearer = HTTPBearer(auto_error=False)
 
 # Name shared with api/auth_routes.py (defined there next to the set/clear
 # helpers); duplicated as a literal to avoid a routes->dependencies import cycle.
-_ACCESS_COOKIE = "cascade_access"
+# The Agent Bridge's tab socket reads it from here.
+ACCESS_COOKIE = "cascade_access"
 
 
 LOCAL_USER = AuthUser(
@@ -41,7 +42,7 @@ LOCAL_USER = AuthUser(
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
-    access_cookie: Annotated[str | None, Cookie(alias=_ACCESS_COOKIE)] = None,
+    access_cookie: Annotated[str | None, Cookie(alias=ACCESS_COOKIE)] = None,
 ) -> AuthUser:
     """Validate the Bearer token and resolve the caller's authorization.
 
@@ -136,6 +137,38 @@ async def resolve_user(token: str) -> AuthUser:
     )
 
 
+# The token an agent connects with in local-only mode (ADR-0024): the deployment is single-user and open.
+LOCAL_AGENT_TOKEN = "local"  # nosec B105 — a fixed word for local-only mode, not a secret
+
+
+async def resolve_agent_token(token: str) -> tuple[AuthUser, str] | None:
+    """The user a personal token belongs to, and the token's name; None when it is
+    unknown, expired or revoked. The Agent Bridge's agent socket (ADR-0024) signs in
+    with it, as the tab does with `resolve_user`; the role comes from our database."""
+    from config import get_settings
+
+    if not get_settings().auth_enabled:
+        return (LOCAL_USER, LOCAL_AGENT_TOKEN) if token == LOCAL_AGENT_TOKEN else None
+
+    from db import agent_tokens as db_tokens
+    from db import pool as db_pool
+    from db.users import get_user_by_id
+
+    async with db_pool.get_pool().acquire() as conn:
+        owner = await db_tokens.owner_of(conn, token)
+        db_user = await get_user_by_id(conn, owner[0]) if owner else None
+    if owner is None or db_user is None:
+        return None
+    user = AuthUser(
+        sub=db_user.external_id,
+        email=db_user.email or "",
+        display_name=db_user.name or db_user.email or "",
+        roles=[db_user.role_name],
+        db_id=db_user.id,
+    )
+    return user, owner[1]
+
+
 def require_permission(permission: str):
     """Return a FastAPI dependency that enforces a specific permission."""
 
@@ -148,3 +181,14 @@ def require_permission(permission: str):
         return user
 
     return _check
+
+
+def require_db_id(user: AuthUser, feature: str) -> str:
+    """The user's database id; local-only mode has no users table row to attach
+    `feature`'s data to, so it answers 501."""
+    if user.db_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=f"{feature} requires a database (not available in local-only mode).",
+        )
+    return user.db_id

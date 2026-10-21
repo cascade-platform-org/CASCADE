@@ -12,7 +12,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from auth.dependencies import require_permission
+from auth.dependencies import require_db_id, require_permission
 from db.pool import DBConn, get_connection
 from schemas.audit import ActivityLogUpload
 from schemas.auth import AuthUser
@@ -46,12 +46,7 @@ async def upload_activity_log(
         )
     if not body.entries:
         return {"ok": True, "accepted": 0}
-    if user.db_id is None:
-        # Local-only mode has no users table to attach the upload to.
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Activity upload requires a database (not available in local-only mode).",
-        )
+    require_db_id(user, "Activity upload")
 
     await conn.execute(
         """

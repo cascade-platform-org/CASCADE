@@ -25,23 +25,13 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def new_token() -> str:
-    return TOKEN_PREFIX + secrets.token_urlsafe(32)
-
-
 def _row(row) -> AgentToken:
-    return AgentToken(
-        id=row["id"],
-        name=row["name"],
-        created_at=row["created_at"],
-        last_used_at=row["last_used_at"],
-        expires_at=row["expires_at"],
-    )
+    return AgentToken.model_validate(dict(row))
 
 
 async def create_token(conn: DBConn, *, owner_id: str, name: str) -> tuple[AgentToken, str]:
     """A new token for `owner_id`: its record, and the plaintext (shown once)."""
-    token = new_token()
+    token = TOKEN_PREFIX + secrets.token_urlsafe(32)
     row = await conn.fetchrow(
         f"""
         INSERT INTO agent_tokens (owner_id, name, token_hash, expires_at)

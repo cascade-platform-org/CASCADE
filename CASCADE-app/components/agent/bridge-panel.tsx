@@ -7,18 +7,19 @@
  * created; revoking it ends every connection made with it at the next attempt.
  */
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { Download, Link2, Unlink, KeyRound, Copy, Trash2, Check, X } from "lucide-react";
 import { SmallButton, inputCls } from "@/components/temporal/fields";
 import { useAgentStore } from "@/store/agent-store";
 import { useUiStore } from "@/store/ui-store";
 import { useAuthStore } from "@/store/auth-store";
-import { approveAgent, bridgeAgents, denyAgent, onBridgeChange, pairTab, unpairTab } from "@/lib/agent-bridge";
+import { decideAgent, pairTab, unpairTab } from "@/lib/agent-bridge";
 import { apiOrigin, createAgentToken, listAgentTokens, revokeAgentToken } from "@/lib/api-client";
 import { agentKitFiles } from "@/lib/agent-kit";
 import { currentBundle } from "@/lib/project-bundle";
-import { safeName } from "@/lib/file-io";
+import { ZIP_FILE, safeName, saveAs } from "@/lib/file-io";
+import { copyText } from "@/components/model-text/llm-copy";
 import type { AgentToken } from "@/lib/schemas/agent";
 
 /** Build and download the Agent Kit for the open project. */
@@ -32,18 +33,13 @@ async function downloadKit() {
     const zip = new JSZip();
     const root = `cascade-agent-kit-${safeName(bundle.project.meta.name)}`;
     for (const [path, content] of Object.entries(files)) zip.file(`${root}/${path}`, content);
-    const url = URL.createObjectURL(await zip.generateAsync({ type: "blob" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${root}.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await saveAs(`${root}.zip`, await zip.generateAsync({ type: "blob" }), ZIP_FILE);
   } catch (e) {
     pushToast({ message: `The Agent Kit could not be built: ${e instanceof Error ? e.message : String(e)}`, variant: "warning", durationMs: 4000 });
   }
 }
 
-const STATUS_LINE: Record<string, string> = {
+const STATUS_LINE: Record<"off" | "connecting" | "open", string> = {
   off: "This tab is not paired. Pair it to let an agent you started work in it.",
   connecting: "Pairing…",
   open: "Paired. Waiting for an agent to connect with your token.",
@@ -52,15 +48,16 @@ const STATUS_LINE: Record<string, string> = {
 export function BridgePanel() {
   const bridge = useAgentStore((s) => s.bridge);
   const canPropagate = useAuthStore((s) => s.hasPermission("can_propagate"));
-  const agents = useSyncExternalStore(onBridgeChange, bridgeAgents, bridgeAgents);
+  const agents = useAgentStore((s) => s.agents);
+  const working = bridge.status === "open" ? agents.find((a) => a.approved) : undefined;
   const on = bridge.status !== "off" && bridge.status !== "error";
 
   return (
     <section className="border-b border-zinc-200 px-3 py-2 dark:border-zinc-800">
       <div className="flex flex-wrap items-center gap-2">
         <p className="mr-auto">
-          {bridge.status === "paired"
-            ? <span className="text-success">Working with <b>{bridge.agent}</b>. It can read and run on copies; every change waits for you below.</span>
+          {working
+            ? <span className="text-success">Working with <b>{working.name}</b>. It can read and run on copies; every change waits for you below.</span>
             : bridge.status === "error"
               ? <span className="text-danger">{bridge.message}</span>
               : STATUS_LINE[bridge.status]}
@@ -81,8 +78,8 @@ export function BridgePanel() {
           <p className="mr-auto">
             <b>{a.name}</b> asks to work in this tab{a.tokenName ? ` (token “${a.tokenName}”)` : ""}. It will see this project and can propose changes; it cannot apply them.
           </p>
-          <SmallButton onClick={() => denyAgent(a.id)}><X size={12} /> Decline</SmallButton>
-          <SmallButton tone="accent" onClick={() => approveAgent(a.id)}><Check size={12} /> Approve</SmallButton>
+          <SmallButton onClick={() => decideAgent(a.id, false)}><X size={12} /> Decline</SmallButton>
+          <SmallButton tone="accent" onClick={() => decideAgent(a.id, true)}><Check size={12} /> Approve</SmallButton>
         </div>
       ))}
       <TokensSection />
@@ -139,7 +136,7 @@ function TokensSection() {
           <p className="mb-1 text-[11px]">Your new token. It is shown only now:</p>
           <div className="flex items-center gap-1">
             <code className="min-w-0 flex-1 break-all text-[11px]">{created}</code>
-            <SmallButton onClick={() => void navigator.clipboard.writeText(created)}><Copy size={12} /></SmallButton>
+            <SmallButton onClick={() => void copyText(created, "the token")}><Copy size={12} /></SmallButton>
           </div>
         </div>
       )}

@@ -641,22 +641,19 @@ export const ProjectFieldsSchema = z.object({
   expectations: z.array(ExpectationSchema).optional(),
 });
 
-/** Series names are unique. */
-function uniqueSeriesNames(p: { series?: { name: string }[] }, ctx: z.RefinementCtx) {
-  const repeated = duplicateNames((p.series ?? []).map((x) => x.name));
-  if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["series"], message: `series: the name '${repeated[0]}' is used twice` });
-}
-
-/** Expectation ids are unique. */
-function uniqueExpectationIds(p: { expectations?: { id: string }[] }, ctx: z.RefinementCtx) {
-  const repeated = duplicateNames((p.expectations ?? []).map((x) => x.id));
-  if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["expectations"], message: `expectations: the id '${repeated[0]}' is used twice` });
-}
+/** A list's items are unique by `key`: Series by name, Expectations by id. */
+const uniqueBy = (field: string, key: string, keys: (p: z.infer<typeof ProjectFieldsSchema>) => string[]) =>
+  (p: z.infer<typeof ProjectFieldsSchema>, ctx: z.RefinementCtx) => {
+    const repeated = duplicateNames(keys(p));
+    if (repeated.length > 0) ctx.addIssue({ code: "custom", path: [field], message: `${field}: the ${key} '${repeated[0]}' is used twice` });
+  };
 
 /** A project file, migrated (`migrateProjectSimulations`) and validated. */
 export const ProjectSchema = z.preprocess(
   migrateProjectSimulations,
-  ProjectFieldsSchema.superRefine(uniqueSeriesNames).superRefine(uniqueExpectationIds),
+  ProjectFieldsSchema
+    .superRefine(uniqueBy("series", "name", (p) => (p.series ?? []).map((x) => x.name)))
+    .superRefine(uniqueBy("expectations", "id", (p) => (p.expectations ?? []).map((x) => x.id))),
 );
 
 // ---------------------------------------------------------------------------

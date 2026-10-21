@@ -19,13 +19,15 @@
 import { readPath } from "@/lib/attribute-operations";
 import { applyEventToSnapshot, passTime } from "@/lib/event-application";
 import { canvasesById, filterLabel, matchElements } from "@/lib/element-filter";
+import { causesText, levelText, stateNamer } from "@/lib/state-text";
+import { isUnconfirmed } from "@/lib/provenance";
 import { runTimeline, type Propagated } from "@/lib/step-operator";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc } from "@/lib/temporal-simulation-text";
 import { runTable, type RunTable } from "@/lib/temporal-metrics";
 import { compareRuns } from "@/lib/temporal-comparison";
 import { parameterValues, type StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
-import type { ElementAssertion, Expectation, ScenarioCheck, SimulationCheck } from "@/lib/schemas/expectation";
+import type { ElementAssertion, Expectation, ExpectationCheck, ScenarioCheck, SimulationCheck } from "@/lib/schemas/expectation";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { PropagationScope } from "@/lib/schemas/primitives";
@@ -85,12 +87,6 @@ const SYMBOL: Record<Cmp, string> = { "<": "<", "<=": "≤", ">": ">", ">=": "�
 
 const isFunctionality = (path: readonly string[]): boolean => path.length === 1 && path[0] === "functionality";
 
-/** A Functionality level in words: `2 (operational_warning)`. */
-function levelText(level: number, config: ModelConfiguration): string {
-  const label = config.functionality_scale[level - 1]?.label;
-  return label ? `${level} (${label})` : String(level);
-}
-
 /** The expected value as a comparable one: a scale label read as its level. */
 function expectedValue(a: ElementAssertion, config: ModelConfiguration): { value: number | boolean | string } | { error: string } {
   if (typeof a.value !== "string" || !isFunctionality(a.path)) return { value: a.value };
@@ -103,20 +99,16 @@ function shown(value: unknown, path: readonly string[], config: ModelConfigurati
   return isFunctionality(path) && typeof value === "number" ? levelText(value, config) : JSON.stringify(value);
 }
 
-/** Who caused an Element's state, by name, from its Responsibility Share. */
-function causeText(el: { responsibility_share?: Record<string, number> }, snapshot: GraphSnapshot, config: ModelConfiguration): string {
-  const share = el.responsibility_share;
-  if (!share || Object.keys(share).length === 0) return "";
-  const events = new Map(config.events.map((e) => [e.id, e.label]));
-  const name = (id: string) => events.get(id) ?? (id in snapshot.nodes || id in snapshot.edges ? filterLabel(id, snapshot) : id);
-  return `; cause: ${Object.entries(share).sort((x, y) => y[1] - x[1]).map(([id, s]) => `${name(id)} ${Math.round(s * 100)}%`).join(", ")}`;
-}
-
-/** Each assertion's lines, and whether it passed. */
-function assertOn(snapshot: GraphSnapshot, a: ElementAssertion, config: ModelConfiguration): { pass: boolean; lines: string[] } | { error: string } {
+/** Each assertion's lines, and whether it passed. `model` and `name` are built once per played snapshot. */
+function assertOn(
+  snapshot: GraphSnapshot,
+  a: ElementAssertion,
+  config: ModelConfiguration,
+  model: Parameters<typeof matchElements>[1],
+  name: (id: string) => string,
+): { pass: boolean; lines: string[] } | { error: string } {
   const expected = expectedValue(a, config);
   if ("error" in expected) return expected;
-  const model = { nodes: snapshot.nodes, edges: snapshot.edges, canvases: canvasesById(snapshot.canvases) };
   const ids = a.element !== undefined ? [a.element] : matchElements(a.where!, model);
   if (a.element !== undefined && !(a.element in snapshot.nodes) && !(a.element in snapshot.edges)) return { error: `no Element ${a.element}` };
   if (ids.length === 0) return { error: "the filter selects no Element" };
@@ -132,7 +124,8 @@ function assertOn(snapshot: GraphSnapshot, a: ElementAssertion, config: ModelCon
       return { pass: false, line: `✗ ${label}: has no ${field}, expected ${want}` };
     }
     const pass = compare(actual, a.cmp, expected.value);
-    const cause = isFunctionality(a.path) && typeof actual === "number" && actual < config.functionality_scale.length ? causeText(el, snapshot, config) : "";
+    const causes = isFunctionality(a.path) && typeof actual === "number" && actual < config.functionality_scale.length ? causesText(el.responsibility_share, name) : "";
+    const cause = causes ? `; cause: ${causes}` : "";
     return { pass, line: `${pass ? "✓" : "✗"} ${label}: ${field} ${shown(actual, a.path, config)}, expected ${want}${cause}` };
   });
   const pass = a.quantifier === "any" ? outcomes.some((o) => o.pass) : outcomes.every((o) => o.pass);
@@ -142,7 +135,7 @@ function assertOn(snapshot: GraphSnapshot, a: ElementAssertion, config: ModelCon
 }
 
 /** A scenario played on the Reset model: its Events, a Propagation, optionally hours passing and a second one. */
-export interface PlayedScenario {
+interface PlayedScenario {
   snapshot: GraphSnapshot;
   /** Operations an Event refused, and the hours passed. */
   lines: string[];
@@ -174,37 +167,38 @@ export async function playScenario(
     snapshot = applied.snapshot;
     lines.push(...applied.warnings.map((w) => `! ${w}`));
   }
-  let engineCalls = 0;
   snapshot = (await env.propagate(snapshot, scope)).snapshot;
-  engineCalls++;
   const hours = scenario.advance_hours ?? 0;
   if (hours > 0) {
     if (env.signal?.aborted) throw new Error("Cancelled");
     snapshot = passTime(snapshot, hours, "time").snapshot;
     snapshot = (await env.propagate(snapshot, scope)).snapshot;
-    engineCalls++;
     lines.push(`after ${hours} h:`);
   }
-  return { snapshot, lines, engineCalls };
+  return { snapshot, lines, engineCalls: hours > 0 ? 2 : 1 };
 }
 
-async function runScenario(id: string, check: ScenarioCheck, env: ExpectationEnv): Promise<ExpectationResult> {
-  const played = await playScenario(check, env);
-  if ("error" in played) return { id, status: "error", lines: [played.error], engineCalls: 0 };
+type Outcome = Omit<ExpectationResult, "id">;
+
+async function runScenario(check: ScenarioCheck, env: ExpectationEnv, runs: SharedRuns): Promise<Outcome> {
+  const played = await runs.play(check);
+  if ("error" in played) return { status: "error", lines: [played.error], engineCalls: 0 };
   const { snapshot, engineCalls } = played;
+  const model = { nodes: snapshot.nodes, edges: snapshot.edges, canvases: canvasesById(snapshot.canvases) };
+  const name = stateNamer(snapshot, env.config);
   const lines = [...played.lines];
   let pass = true;
   for (const a of check.assertions) {
-    const outcome = assertOn(snapshot, a, env.config);
-    if ("error" in outcome) return { id, status: "error", lines: [...lines, outcome.error], engineCalls };
+    const outcome = assertOn(snapshot, a, env.config, model, name);
+    if ("error" in outcome) return { status: "error", lines: [...lines, outcome.error], engineCalls };
     pass &&= outcome.pass;
     lines.push(...outcome.lines);
   }
-  return { id, status: pass ? "pass" : "fail", lines, engineCalls };
+  return { status: pass ? "pass" : "fail", lines, engineCalls };
 }
 
 /** A Temporal Simulation run to its Run table, on the Reset model, with its own scope. */
-export interface SimulationTable {
+interface SimulationTable {
   name: string;
   table: RunTable;
   warnings: string[];
@@ -246,43 +240,86 @@ export async function runSimulationTable(
   return { name: doc.timeline.name, table: runTable(record, doc.metrics, n, doc.standard_metrics), warnings: record.warnings, engineCalls: plan.engineCalls };
 }
 
-async function runSimulation(id: string, check: SimulationCheck, env: ExpectationEnv): Promise<ExpectationResult> {
-  const run = await runSimulationTable(check.simulation, env);
-  if ("error" in run) return { id, status: "error", lines: [run.error], engineCalls: 0 };
+async function runSimulation(check: SimulationCheck, runs: SharedRuns): Promise<Outcome> {
+  const run = await runs.table(check.simulation);
+  if ("error" in run) return { status: "error", lines: [run.error], engineCalls: 0 };
   const { table, engineCalls } = run;
   const column = table.columns.findIndex((c) => c.label === check.column);
   if (column < 0) {
-    return { id, status: "error", lines: [`no column "${check.column}"; the Run table has: ${table.columns.map((c) => c.label).join(", ")}`], engineCalls };
+    return { status: "error", lines: [`no column "${check.column}"; the Run table has: ${table.columns.map((c) => c.label).join(", ")}`], engineCalls };
   }
   let actual: number | null;
   let where: string;
   if (check.period !== undefined) {
     const row = table.rows.find((r) => r.label === check.period);
-    if (!row) return { id, status: "error", lines: [`no period "${check.period}"`], engineCalls };
+    if (!row) return { status: "error", lines: [`no period "${check.period}"`], engineCalls };
     actual = row.values[column];
     where = `at ${check.period}`;
   } else {
     actual = compareRuns([{ id: check.simulation, name: run.name, table, warnings: [] }]).rows[0].stats[check.column][check.statistic!];
     where = `${check.statistic} over the run`;
   }
-  const want = `${SYMBOL[check.cmp]} ${check.value}${check.tolerance > 0 && (check.cmp === "==" || check.cmp === "!=") ? ` ± ${check.tolerance}` : ""}`;
+  const want = `${SYMBOL[check.cmp]} ${check.value}${toleranceText(check)}`;
   const warnings = run.warnings.map((w) => `! ${w}`);
-  if (actual === null) return { id, status: "fail", lines: [...warnings, `✗ ${check.column} ${where}: no value, expected ${want}`], engineCalls };
+  if (actual === null) return { status: "fail", lines: [...warnings, `✗ ${check.column} ${where}: no value, expected ${want}`], engineCalls };
   const pass = compare(actual, check.cmp, check.value, check.tolerance);
-  return { id, status: pass ? "pass" : "fail", lines: [...warnings, `${pass ? "✓" : "✗"} ${check.column} ${where}: ${round(actual)}, expected ${want}`], engineCalls };
+  return { status: pass ? "pass" : "fail", lines: [...warnings, `${pass ? "✓" : "✗"} ${check.column} ${where}: ${round(actual)}, expected ${want}`], engineCalls };
 }
 
 const round = (v: number): string => (Number.isInteger(v) ? String(v) : v.toPrecision(6).replace(/\.?0+$/, ""));
 
-/** Run one Expectation's check. An engine error is the result's `error`, never a throw, unless cancelled. */
-export async function runExpectation(expectation: Expectation, env: ExpectationEnv): Promise<ExpectationResult> {
+/** ` ± 5` when an equality is read with a tolerance. */
+const toleranceText = (check: SimulationCheck): string =>
+  check.tolerance > 0 && (check.cmp === "==" || check.cmp === "!=") ? ` ± ${check.tolerance}` : "";
+
+/**
+ * One run's scenarios and Run tables, each computed once however many
+ * Expectations read it: "grid down → the hospital holds" and "grid down → the
+ * pumps stop" share one Propagation. The first reader is charged its Engine
+ * Evaluations, a later one none.
+ */
+interface SharedRuns {
+  play(check: ScenarioCheck): Promise<PlayedScenario | { error: string }>;
+  table(simulation: string): Promise<SimulationTable | { error: string }>;
+}
+
+/** `make` once per key; a later call gets the same result, charged no Engine Evaluation. */
+function once<A, T extends { engineCalls: number }>(keyOf: (a: A) => string, make: (a: A) => Promise<T | { error: string }>) {
+  const cache = new Map<string, Promise<T | { error: string }>>();
+  return async (a: A): Promise<T | { error: string }> => {
+    const key = keyOf(a);
+    const hit = cache.get(key);
+    if (!hit) {
+      const made = make(a);
+      cache.set(key, made);
+      return made;
+    }
+    const r = await hit;
+    return "error" in r ? r : { ...r, engineCalls: 0 };
+  };
+}
+
+function sharedRuns(env: ExpectationEnv): SharedRuns {
+  return {
+    play: once((c: ScenarioCheck) => JSON.stringify([c.events, c.advance_hours, c.scope, c.canvas ?? null]), (c) => playScenario(c, env)),
+    table: once((id: string) => id, (id) => runSimulationTable(id, env)),
+  };
+}
+
+async function runShared(expectation: Expectation, env: ExpectationEnv, runs: SharedRuns): Promise<ExpectationResult> {
   try {
     const { check } = expectation;
-    return check.kind === "scenario" ? await runScenario(expectation.id, check, env) : await runSimulation(expectation.id, check, env);
+    const outcome = check.kind === "scenario" ? await runScenario(check, env, runs) : await runSimulation(check, runs);
+    return { id: expectation.id, ...outcome };
   } catch (e) {
     if (env.signal?.aborted) throw e;
     return { id: expectation.id, status: "error", lines: [e instanceof Error ? e.message : String(e)], engineCalls: 0 };
   }
+}
+
+/** Run one Expectation's check. An engine error is the result's `error`, never a throw, unless cancelled. */
+export function runExpectation(expectation: Expectation, env: ExpectationEnv): Promise<ExpectationResult> {
+  return runShared(expectation, env, sharedRuns(env));
 }
 
 /** Every Expectation in order; `onResult` hears each as it finishes. */
@@ -291,10 +328,11 @@ export async function runExpectations(
   env: ExpectationEnv,
   onResult?: (result: ExpectationResult) => void,
 ): Promise<ExpectationResult[]> {
+  const runs = sharedRuns(env);
   const results: ExpectationResult[] = [];
   for (const e of expectations) {
     if (env.signal?.aborted) break;
-    const result = await runExpectation(e, env);
+    const result = await runShared(e, env, runs);
     results.push(result);
     onResult?.(result);
   }
@@ -307,16 +345,15 @@ export function resultsText(expectations: readonly Expectation[], results: reado
   const passed = results.filter((r) => r.status === "pass").length;
   const blocks = results.map((r) => {
     const e = byId.get(r.id);
-    const mark = r.status === "pass" ? "PASS" : r.status === "fail" ? "FAIL" : "ERROR";
-    const unconfirmed = e?.provenance && !e.provenance.confirmed ? " (unconfirmed)" : "";
-    return [`[${mark}] ${r.id}${unconfirmed}: ${e?.statement ?? ""}`, ...r.lines.map((l) => `  ${l}`)].join("\n");
+    const unconfirmed = e && isUnconfirmed(e) ? " (unconfirmed)" : "";
+    return [`[${r.status.toUpperCase()}] ${r.id}${unconfirmed}: ${e?.statement ?? ""}`, ...r.lines.map((l) => `  ${l}`)].join("\n");
   });
   return [`${passed} of ${results.length} Expectations pass.`, ...blocks].join("\n\n");
 }
 
 /** A check in words, for the list: "Grid cut, then 8 h · 2 assertions" / "Banca ore · Payout at 2025-06 = 100 ± 5". */
 export function describeCheck(
-  check: Expectation["check"],
+  check: ExpectationCheck,
   names: { event: (id: string) => string; simulation: (id: string) => string },
 ): string {
   if (check.kind === "scenario") {
@@ -326,12 +363,11 @@ export function describeCheck(
     return `${events}${hours}${scope} · ${check.assertions.length} assertion${check.assertions.length === 1 ? "" : "s"}`;
   }
   const at = check.period !== undefined ? `at ${check.period}` : check.statistic;
-  const tol = check.tolerance > 0 && (check.cmp === "==" || check.cmp === "!=") ? ` ± ${check.tolerance}` : "";
-  return `${names.simulation(check.simulation)} · ${check.column} ${at} ${SYMBOL[check.cmp]} ${check.value}${tol}`;
+  return `${names.simulation(check.simulation)} · ${check.column} ${at} ${SYMBOL[check.cmp]} ${check.value}${toleranceText(check)}`;
 }
 
 /** A starting check for a new Expectation, on the model's own ids. */
-export function templateCheck(eventId: string | undefined, elementId: string | undefined): Expectation["check"] {
+export function templateCheck(eventId: string | undefined, elementId: string | undefined): ScenarioCheck {
   return {
     kind: "scenario",
     events: eventId ? [eventId] : [],

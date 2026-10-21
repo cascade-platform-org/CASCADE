@@ -16,6 +16,7 @@
  */
 
 import { applyToRegistry, deepEqual, diffRegistry, type DiffDirection } from "@/lib/graph-diff";
+import { CONFIG_PARTS, PROJECT_PARTS } from "@/lib/record-lists";
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { ModelDiff } from "@/lib/schemas/network";
 import type { Series } from "@/lib/schemas/series";
@@ -40,39 +41,28 @@ export interface ModelSnapshot {
 
 type Rec = Record<string, unknown>;
 
-/** The lists of records, by part: the subject kind of each item, its id, and its key in the order list. */
-const PROJECT_LISTS = [
-  { part: "temporal_simulations", kind: "simulation", id: (x: Rec) => String(x.id) },
-  { part: "series", kind: "series", id: (x: Rec) => String(x.name) },
-  { part: "expectations", kind: "expectation", id: (x: Rec) => String(x.id) },
-] as const;
-const CONFIG_LISTS = [
-  { key: "events", kind: "event", id: (x: Rec) => String(x.id) },
-  { key: "categories", kind: "category", id: (x: Rec) => String(x.name) },
-  { key: "graph_types", kind: "graph_type", id: (x: Rec) => String(x.name) },
-] as const;
 /** Config fields with subjects of their own; the rest are `settings:config`. A scale is wrapped, a record needing an object. */
-const CONFIG_OWN = new Set(["events", "categories", "graph_types", "node_defaults", "functionality_scale", "level_scale"]);
+const CONFIG_OWN = new Set([...CONFIG_PARTS.map((l) => l.key), "node_defaults", "functionality_scale", "level_scale"]);
 
 /** The snapshot as one registry by subject, and each list's order of ids. */
 function layout(m: ModelSnapshot): { records: Record<string, Rec>; orders: Record<string, string[]> } {
   const records: Record<string, Rec> = {};
   const orders: Record<string, string[]> = {};
-  const list = (key: string, kind: string, items: readonly unknown[], id: (x: Rec) => string) => {
+  const list = (key: string, kind: string, items: readonly unknown[], idField: string) => {
     orders[key] = items.map((x) => {
-      const k = id(x as Rec);
+      const k = String((x as Rec)[idField]);
       records[`${kind}:${k}`] = x as Rec;
       return k;
     });
   };
   if (m.settings) records["settings:project"] = m.settings as unknown as Rec;
-  for (const l of PROJECT_LISTS) {
-    const items = m[l.part];
-    if (items) list(l.part, l.kind, items, l.id);
+  for (const l of PROJECT_PARTS) {
+    const items = m[l.key];
+    if (items) list(l.key, l.kind, items, l.idField);
   }
   if (m.config) {
     const c = m.config as unknown as Rec;
-    for (const l of CONFIG_LISTS) list(l.key, l.kind, (c[l.key] as unknown[] | undefined) ?? [], l.id);
+    for (const l of CONFIG_PARTS) list(l.key, l.kind, (c[l.key] as unknown[] | undefined) ?? [], l.idField);
     for (const [name, t] of Object.entries((c.node_defaults as Record<string, Rec> | undefined) ?? {})) records[`template:${name}`] = t;
     records["scale:functionality"] = { levels: c.functionality_scale };
     if (c.level_scale !== undefined) records["scale:level"] = { bands: c.level_scale };
@@ -114,8 +104,8 @@ export function applyModelDiff(m: ModelSnapshot, diff: ModelDiff, dir: DiffDirec
 
   const out: ModelSnapshot = { ...m };
   if (m.settings && records["settings:project"]) out.settings = records["settings:project"] as unknown as ProjectSettings;
-  for (const l of PROJECT_LISTS) {
-    if (m[l.part]) (out as Rec)[l.part] = rebuild(l.part, l.kind);
+  for (const l of PROJECT_PARTS) {
+    if (m[l.key]) (out as Rec)[l.key] = rebuild(l.key, l.kind);
   }
   if (m.config) {
     const c = m.config as unknown as Rec;
@@ -123,7 +113,7 @@ export function applyModelDiff(m: ModelSnapshot, diff: ModelDiff, dir: DiffDirec
     const level = records["scale:level"]?.bands;
     out.config = {
       ...(records["settings:config"] ?? {}),
-      ...Object.fromEntries(CONFIG_LISTS.map((l) => [l.key, rebuild(l.key, l.kind)])),
+      ...Object.fromEntries(CONFIG_PARTS.map((l) => [l.key, rebuild(l.key, l.kind)])),
       ...(c.node_defaults !== undefined || Object.keys(templates).length > 0 ? { node_defaults: templates } : {}),
       functionality_scale: records["scale:functionality"]?.levels ?? c.functionality_scale,
       ...(level !== undefined ? { level_scale: level } : {}),

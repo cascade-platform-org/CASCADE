@@ -10,7 +10,6 @@
 
 import { useMemo, useState } from "react";
 import { Bot, Check, X, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
 import { SmallButton, inputCls } from "@/components/temporal/fields";
 import { PreviewList } from "@/components/model-text/preview-list";
@@ -21,9 +20,9 @@ import { useCanvasStore } from "@/store/canvas-store";
 import { useConfigStore } from "@/store/config-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { AGENT_ANCHOR_ID } from "@/lib/ui-anchors";
-import { checkDesignText } from "@/lib/llm-design-check";
 import { applyProposal } from "@/lib/agent-host";
 import { currentBundle } from "@/lib/project-bundle";
+import { checkProposal } from "@/lib/agent-tools";
 
 const USAGE = "Agent: what an agent did in this project, and the changes it proposes for you to apply";
 
@@ -32,7 +31,7 @@ export function AgentControl({ buttonClassName }: { buttonClassName: string }) {
   const toggle = useUiStore((s) => s.toggleAgent);
   const close = useUiStore((s) => s.closeAgent);
   const pending = useAgentStore((s) => s.proposals.filter((p) => p.status === "pending").length);
-  const paired = useAgentStore((s) => s.bridge.status === "paired");
+  const paired = useAgentStore((s) => s.agents.some((a) => a.approved));
   return (
     <>
       <button id={AGENT_ANCHOR_ID} type="button" onClick={toggle} title={USAGE} className={buttonClassName}>
@@ -109,7 +108,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
   const edges = useCanvasStore((s) => s.edges);
   const config = useConfigStore((s) => s.config);
   const result = useMemo(
-    () => checkDesignText(currentBundle(), { bulk: true, leaveOut }, proposal.text, "agent"),
+    () => checkProposal(currentBundle(), proposal.text, leaveOut),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the stores read inside currentBundle()
     [proposal.text, leaveOut, nodes, edges, config],
   );
@@ -154,7 +153,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
       )}
       {error && <p className="mt-1 whitespace-pre-wrap text-[11px] text-danger">{error}</p>}
       {rejecting && (
-        <div className={cn("mt-1.5 flex gap-1")}>
+        <div className="mt-1.5 flex gap-1">
           <input className={inputCls} placeholder="Why not? (optional, the agent reads it)" value={reason} onChange={(e) => setReason(e.target.value)} />
           <SmallButton tone="danger" onClick={() => useAgentStore.getState().settleProposal(proposal.id, { status: "rejected", reason: reason.trim() || undefined })}>Reject</SmallButton>
         </div>

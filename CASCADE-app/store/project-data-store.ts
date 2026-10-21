@@ -13,10 +13,18 @@ import { freshOperandName } from "@/lib/schemas/operand";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { runWithSnapshots } from "@/lib/history-entry";
 
+/** The project file's lists this store holds. */
+interface ProjectLists {
+  series?: Series[];
+  expectations?: Expectation[];
+}
+
 interface ProjectDataState {
   series: Series[];
-  /** A loaded project's Series; none when it has none. */
-  loadFromProject: (series: Series[] | undefined) => void;
+  /** A loaded project's lists; a list it lacks loads empty. */
+  loadFromProject: (project: ProjectLists) => void;
+  /** An undo or redo: the lists a model snapshot holds replace this store's. */
+  restoreLists: (lists: ProjectLists) => void;
   /** A new empty Series with a fresh name; returns the name, or null while a run is shown. */
   addSeries: () => string | null;
   /** Replace the Series `name`; returns why not (schema, a run shown), or null when done. */
@@ -26,8 +34,8 @@ interface ProjectDataState {
   removeSeries: (name: string) => string | null;
 
   expectations: Expectation[];
-  /** A loaded project's Expectations; none when it has none. */
-  loadExpectations: (expectations: Expectation[] | undefined) => void;
+  /** A new Expectation with a fresh id and a starting check; returns its id. */
+  addExpectation: (check: Expectation["check"]) => string;
   /** Add one, or replace the one with its id; returns why not (schema), or null when done. */
   putExpectation: (next: Expectation) => string | null;
   removeExpectation: (id: string) => void;
@@ -57,7 +65,8 @@ const recordedExpectations = (label: string, write: () => void): void =>
   runWithSnapshots({ model: () => ({ expectations: get().expectations }) }, write, label, { updateType: "model_update" });
 return {
   series: [],
-  loadFromProject: (series) => set({ series: series ?? [] }),
+  loadFromProject: (project) => set({ series: project.series ?? [], expectations: project.expectations ?? [] }),
+  restoreLists: ({ series, expectations }) => set({ ...(series ? { series } : {}), ...(expectations ? { expectations } : {}) }),
   addSeries: () => recorded("Add a Series", () => {
     if (locked()) return null;
     const name = freshOperandName("series", get().series.map((x) => x.name));
@@ -90,10 +99,17 @@ return {
   }),
 
   expectations: [],
-  loadExpectations: (expectations) => set({ expectations: expectations ?? [] }),
+  addExpectation: (check) => {
+    const id = freshOperandName("expectation", get().expectations.map((x) => x.id));
+    get().putExpectation({ id, statement: "What you know your system does", check });
+    return id;
+  },
   putExpectation: (next) => {
     const parsed = ExpectationSchema.safeParse(next);
-    if (!parsed.success) return parsed.error.issues[0]?.message ?? "invalid Expectation";
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      return issue ? `${issue.path.join(".") || "Expectation"}: ${issue.message}` : "invalid Expectation";
+    }
     const exists = get().expectations.some((x) => x.id === next.id);
     recordedExpectations(exists ? `Edit Expectation ${next.id}` : `Add Expectation ${next.id}`, () =>
       set({ expectations: exists ? get().expectations.map((x) => (x.id === next.id ? parsed.data : x)) : [...get().expectations, parsed.data] }),

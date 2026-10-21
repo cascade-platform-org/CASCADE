@@ -521,8 +521,7 @@ export const useCanvasStore = create<CanvasStore>()(
         });
       }
       if (m.temporal_simulations) useTemporalSimulationStore.getState().restoreSimulations(m.temporal_simulations);
-      if (m.series) useProjectDataStore.getState().loadFromProject(m.series);
-      if (m.expectations) useProjectDataStore.getState().loadExpectations(m.expectations);
+      useProjectDataStore.getState().restoreLists(m);
       if (m.config) useConfigStore.getState().loadConfig(m.config);
     },
 
@@ -784,8 +783,7 @@ export const useCanvasStore = create<CanvasStore>()(
           created_at: project.meta.created_at ?? new Date().toISOString(),
         };
       });
-      useProjectDataStore.getState().loadFromProject(project.series);
-      useProjectDataStore.getState().loadExpectations(project.expectations);
+      useProjectDataStore.getState().loadFromProject(project);
       // Another project's results describe another model.
       useExpectationRunStore.getState().clear();
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
@@ -863,7 +861,7 @@ export const useCanvasStore = create<CanvasStore>()(
       useHistoryStore.getState().reset();
       useScorecardStore.getState().reset();
       useTemporalSimulationStore.getState().loadFromProject(undefined);
-      useProjectDataStore.getState().loadFromProject(undefined);
+      useProjectDataStore.getState().loadFromProject({});
     },
   })),
 );

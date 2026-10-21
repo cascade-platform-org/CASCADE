@@ -1,6 +1,6 @@
 # ADR-0023 — Expectations: what the person knows, as checks the model must pass
 
-**Status:** accepted (2026-10-21, release v1.3). Built: `schemas/expectation.py` ↔
+**Status:** accepted (2026-10-21, release v1.2). Built: `schemas/expectation.py` ↔
 `lib/schemas/expectation.ts`, `lib/expectations.ts` (the runner, pure), `lib/expectations-run.ts`,
 `store/project-data-store.ts` (saved), `store/expectation-run-store.ts` (session results), the
 Topbar's **Expectations** window, the *Calibrate against what you know* Recipe.
@@ -12,7 +12,7 @@ nothing recorded what that system does. The only spec was the model itself, so n
 person nor an LLM could tell a right model from a plausible one. The people who know the
 system best (a director, an operations lead) cannot read `dependency_level` or a Phase, but
 they can say "if the grid fails, the hospital runs 8 hours on its generators, then stops", or
-"the June payout is about half the January balance". Release v1.3 puts an agent in the
+"the June payout is about half the January balance". Release v1.2 puts an agent in the
 modelling loop (ADR-0024), and an agent that edits a model needs a test it can run after each
 edit to know whether the model got closer.
 
@@ -36,7 +36,9 @@ disruption, and what a quantity does over time.
 
 - **Run on a copy, never written.** The runner (`lib/expectations.ts`) is pure and takes the
   engine call as an argument, like model-based Analysis; the app passes `propagateSnapshot`
-  with the check's scope. Each Propagation is an ordinary Engine Evaluation (ADR-0008). The
+  with the check's scope. Each Propagation is an ordinary Engine Evaluation (ADR-0008); in one
+  run, Expectations that share a scenario (the same Events, hours and scope) or a Temporal
+  Simulation share its Propagations, charged to the first. The
   model, its history and the Scorecard are untouched. A result is kept for the session only:
   it describes the model as it was when the check ran, so saving it would let a stale pass
   look current.

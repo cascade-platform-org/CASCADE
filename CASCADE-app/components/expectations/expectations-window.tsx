@@ -25,7 +25,7 @@ import { EXPECTATIONS_ANCHOR_ID } from "@/lib/ui-anchors";
 import { cancelExpectations, runProjectExpectations } from "@/lib/expectations-run";
 import { describeCheck, resultsText, templateCheck, type ExpectationResult } from "@/lib/expectations";
 import { isUnconfirmed } from "@/lib/provenance";
-import { ExpectationCheckSchema, type Expectation } from "@/lib/schemas/expectation";
+import type { Expectation } from "@/lib/schemas/expectation";
 
 const USAGE = "Expectations: what you know your system does, checked against the model";
 
@@ -69,19 +69,14 @@ function ExpectationsPanel() {
   function addNew() {
     const config = useConfigStore.getState().config;
     const nodes = Object.keys(useCanvasStore.getState().nodes);
-    const taken = new Set(useProjectDataStore.getState().expectations.map((e) => e.id));
-    let k = taken.size + 1;
-    while (taken.has(`expectation-${k}`)) k++;
-    const id = `expectation-${k}`;
-    useProjectDataStore.getState().putExpectation({ id, statement: "What you know your system does", check: templateCheck(config.events[0]?.id, nodes[0]) });
-    setEditing(id);
+    setEditing(useProjectDataStore.getState().addExpectation(templateCheck(config.events[0]?.id, nodes[0])));
   }
 
   function copyResults() {
     copyForLlm(() => {
       const list = useProjectDataStore.getState().expectations;
       const latest = useExpectationRunStore.getState().results;
-      return resultsText(list, list.map((e) => latest[e.id]).filter((r): r is ExpectationResult & { at: string } => r !== undefined));
+      return resultsText(list, list.map((e) => latest[e.id]).filter((r): r is ExpectationResult => r !== undefined));
     }, "the results for the LLM");
   }
 
@@ -149,7 +144,7 @@ function ExpectationRow({
   runBlocked,
 }: {
   expectation: Expectation;
-  result: (ExpectationResult & { at: string }) | undefined;
+  result: ExpectationResult | undefined;
   editing: boolean;
   onEdit: () => void;
   runBlocked: string | null;
@@ -219,13 +214,8 @@ function ExpectationEditor({ expectation, onDone }: { expectation: Expectation; 
       setError("The check is not valid JSON.");
       return;
     }
-    const parsed = ExpectationCheckSchema.safeParse(raw);
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0];
-      setError(`${issue?.path.join(".") || "check"}: ${issue?.message ?? "invalid"}`);
-      return;
-    }
-    const why = useProjectDataStore.getState().putExpectation({ ...expectation, statement: statement.trim() || expectation.statement, check: parsed.data });
+    // The store validates the whole Expectation and says which field is wrong.
+    const why = useProjectDataStore.getState().putExpectation({ ...expectation, statement: statement.trim() || expectation.statement, check: raw as Expectation["check"] });
     if (why) setError(why);
     else onDone();
   }

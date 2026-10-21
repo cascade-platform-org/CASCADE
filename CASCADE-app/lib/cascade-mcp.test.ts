@@ -11,7 +11,7 @@ type Rpc = Record<string, unknown>;
 interface McpModule {
   bridgeUrl(origin: string): string;
   STATUS_TEXT: Record<string, string>;
-  createHandler(o: { relay: Relay; fallbackTools: unknown[]; status: () => string }): (msg: Rpc) => Promise<Rpc | null>;
+  createHandler(o: { relay: Relay; fallbackTools: unknown[] }): (msg: Rpc) => Promise<Rpc | null>;
 }
 
 const PATH = "../public/agent/cascade-mcp.mjs";
@@ -33,7 +33,7 @@ describe("cascade-mcp", () => {
   });
 
   it("initializes as a tools server and answers no notification", async () => {
-    const handle = (await load()).createHandler({ relay: relay(() => ({ ok: true })), fallbackTools: [], status: () => "paired" });
+    const handle = (await load()).createHandler({ relay: relay(() => ({ ok: true })), fallbackTools: [] });
     const init = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } });
     expect(init).toMatchObject({ id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "cascade" } } });
     expect(await handle({ jsonrpc: "2.0", method: "notifications/initialized" })).toBeNull();
@@ -42,23 +42,23 @@ describe("cascade-mcp", () => {
 
   it("lists the tab's tools, or the shipped ones when no tab answers", async () => {
     const m = await load();
-    const live = m.createHandler({ relay: relay(() => ({ ok: true, tools: [{ name: "describe_model" }] })), fallbackTools: [{ name: "old" }], status: () => "paired" });
+    const live = m.createHandler({ relay: relay(() => ({ ok: true, tools: [{ name: "describe_model" }] })), fallbackTools: [{ name: "old" }] });
     expect(await live({ id: 3, method: "tools/list" })).toMatchObject({ result: { tools: [{ name: "describe_model" }] } });
-    const none = m.createHandler({ relay: relay(() => ({ ok: false, error: "no tab" })), fallbackTools: [{ name: "old" }], status: () => "no_tab" });
+    const none = m.createHandler({ relay: relay(() => ({ ok: false, error: "no tab" })), fallbackTools: [{ name: "old" }] });
     expect(await none({ id: 4, method: "tools/list" })).toMatchObject({ result: { tools: [{ name: "old" }] } });
   });
 
   it("passes a call to the tab and returns its text, or the refusal with what to do", async () => {
     const m = await load();
     sent.length = 0;
-    const ok = m.createHandler({ relay: relay(() => ({ ok: true, text: "# Harbour" })), fallbackTools: [], status: () => "paired" });
+    const ok = m.createHandler({ relay: relay(() => ({ ok: true, text: "# Harbour" })), fallbackTools: [] });
     expect(await ok({ id: 5, method: "tools/call", params: { name: "describe_model", arguments: {} } })).toMatchObject({
       result: { content: [{ type: "text", text: "# Harbour" }], isError: false },
     });
     expect(sent).toEqual([{ type: "call", tool: "describe_model", args: {} }]);
-    const waiting = m.createHandler({ relay: relay(() => ({ ok: false, error: "not approved" })), fallbackTools: [], status: () => "waiting_approval" });
+    const waiting = m.createHandler({ relay: relay(() => ({ ok: false, error: "The person has not approved this agent yet." })), fallbackTools: [] });
     const r = (await waiting({ id: 6, method: "tools/call", params: { name: "describe_model" } })) as { result: { content: { text: string }[]; isError: boolean } };
     expect(r.result.isError).toBe(true);
-    expect(r.result.content[0].text).toContain(m.STATUS_TEXT.waiting_approval);
+    expect(r.result.content[0].text).toBe("The person has not approved this agent yet.");
   });
 });

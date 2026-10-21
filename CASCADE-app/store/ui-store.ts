@@ -270,7 +270,6 @@ export interface UiActions {
   closeAgent: () => void;
 
   // --- Expectations ---
-  openExpectations: () => void;
   toggleExpectations: () => void;
   closeExpectations: () => void;
 
@@ -527,9 +526,6 @@ export const useUiStore = create<UiStore>()(
       set((state) => { state.agentOpen = false; });
     },
 
-    openExpectations() {
-      set((state) => { state.expectationsOpen = true; });
-    },
     toggleExpectations() {
       set((state) => { state.expectationsOpen = !state.expectationsOpen; });
     },

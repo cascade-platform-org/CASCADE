@@ -5,6 +5,7 @@ import { useProjectDataStore } from "@/store/project-data-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { buildPropagationPayload } from "@/lib/propagation-payload";
 import { ProjectSchema } from "@/lib/schemas/network";
+import { templateCheck } from "@/lib/expectations";
 import type { Series } from "@/lib/schemas/series";
 
 const series: Series[] = [{ name: "worked_h", unit: "h", rows: { "act-pul": { "2023-01": 21555 }, "*": { "2023-01": 0 } } }];
@@ -12,16 +13,16 @@ const saveAndParse = () => ProjectSchema.parse(JSON.parse(JSON.stringify(useCanv
 
 beforeEach(() => {
   useCanvasStore.getState().reset();
-  useProjectDataStore.getState().loadFromProject(undefined);
+  useProjectDataStore.getState().loadFromProject({});
   useTemporalSimulationStore.getState().loadFromProject(undefined);
 });
 
 describe("Series in the project file", () => {
   it("round-trip through toProject, the schema and fromProject", () => {
-    useProjectDataStore.getState().loadFromProject(series);
+    useProjectDataStore.getState().loadFromProject({ series });
     const file = saveAndParse();
     expect(file.series).toEqual(series);
-    useProjectDataStore.getState().loadFromProject(undefined);
+    useProjectDataStore.getState().loadFromProject({});
     useCanvasStore.getState().fromProject(file);
     expect(useProjectDataStore.getState()).toMatchObject({ series });
   });
@@ -32,7 +33,7 @@ describe("Series in the project file", () => {
   });
 
   it("stay out of the Propagation request, in both scopes", () => {
-    useProjectDataStore.getState().loadFromProject(series);
+    useProjectDataStore.getState().loadFromProject({ series });
     useCanvasStore.getState().addCanvas({ id: "c1", label: "Main", graph: { graph_type: "generic", node_ids: [], edge_ids: [] } });
     const config = useConfigStore.getState().config;
     for (const scope of ["global", "local"] as const) {
@@ -75,5 +76,17 @@ describe("editing Series", () => {
     expect(data().addSeries()).toBeNull();
     expect(data().removeSeries("x")).toMatch(/End run/);
     useTemporalSimulationStore.setState({ running: false });
+  });
+});
+
+describe("Expectations in the store", () => {
+  it("get a fresh id, say which field is wrong, and are cleared with a new project", () => {
+    const store = () => useProjectDataStore.getState();
+    const check = templateCheck(undefined, "a");
+    const id = store().addExpectation(check);
+    expect(id).toBe("expectation_1");
+    expect(store().putExpectation({ id, statement: "s", check: { ...check, assertions: [] } })).toMatch(/^check\.assertions: /);
+    useCanvasStore.getState().reset();
+    expect(store().expectations).toEqual([]);
   });
 });
