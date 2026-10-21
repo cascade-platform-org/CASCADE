@@ -29,12 +29,13 @@ import * as temporalSimulation from "@/lib/schemas/temporal-simulation";
 import * as attributeOperation from "@/lib/schemas/attribute-operation";
 import * as provenance from "@/lib/schemas/provenance";
 import * as series from "@/lib/schemas/series";
+import * as expectation from "@/lib/schemas/expectation";
 
 const SCHEMA_DIR = "shared/schemas";
 
 /** Every exported Zod schema, by export name, across the schema modules. */
 const zodExports: Record<string, unknown> = {};
-for (const mod of [network, config, auth, api, propagation, audit, temporalSimulation, attributeOperation, provenance, series]) {
+for (const mod of [network, config, auth, api, propagation, audit, temporalSimulation, attributeOperation, provenance, series, expectation]) {
   for (const [name, value] of Object.entries(mod as Record<string, unknown>)) {
     zodExports[name] ??= value;
   }

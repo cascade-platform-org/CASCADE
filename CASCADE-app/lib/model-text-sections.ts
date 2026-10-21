@@ -83,7 +83,7 @@ function registrySection(bundle: ProjectBundle, registry: "nodes" | "edges", lab
 }
 
 const SHOWN_CONFIG = new Set(["events", "categories", "functionality_scale"]);
-const SHOWN_PROJECT = new Set(["meta", "canvases", "nodes", "edges", "scorecard", "temporal_simulations", "series", "update_history", "version"]);
+const SHOWN_PROJECT = new Set(["meta", "canvases", "nodes", "edges", "scorecard", "temporal_simulations", "series", "expectations", "update_history", "version"]);
 
 /** What a person calls the other saved fields; an unknown one reads as words ("graph_types" → "Graph types"). */
 const FIELD_LABELS: Record<string, string> = {
@@ -108,6 +108,7 @@ export function sectionTree(bundle: ProjectBundle): Section[] {
     { ...leaf("/project/scorecard", "Scorecard"), count: project.scorecard.length, children: items("/project/scorecard", project.scorecard, (e, i) => str(e.label, `#${i}`)) },
     { ...leaf("/project/temporal_simulations", "Temporal Simulations"), count: sims.length, children: items("/project/temporal_simulations", sims, (s, i) => str((s.timeline as { name?: string } | undefined)?.name, `#${i}`)) },
     ...(project.series ? [{ ...leaf("/project/series", "Series"), count: project.series.length, children: items("/project/series", project.series, (x, i) => str(x.name, `#${i}`)) }] : []),
+    ...(project.expectations ? [{ ...leaf("/project/expectations", "Expectations"), count: project.expectations.length, children: items("/project/expectations", project.expectations, (x, i) => str(x.statement, str(x.id, `#${i}`))) }] : []),
   ];
   const configChildren: Section[] = [
     { ...leaf("/config/events", "Events"), count: config.events.length, children: items("/config/events", config.events, (e, i) => str(e.label, str(e.id, `#${i}`))) },

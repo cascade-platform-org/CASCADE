@@ -871,6 +871,90 @@
       "title": "Edge",
       "type": "object"
     },
+    "ElementAssertion": {
+      "additionalProperties": false,
+      "description": "A comparison every (or any) selected Element's field must pass after the scenario.",
+      "properties": {
+        "element": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One Element, by id.",
+          "title": "Element"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementFilter"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Or every Element the filter selects."
+        },
+        "quantifier": {
+          "default": "all",
+          "description": "With `where`: every match must pass, or at least one.",
+          "enum": [
+            "all",
+            "any"
+          ],
+          "title": "Quantifier",
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Path",
+          "type": "array"
+        },
+        "cmp": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "==",
+            "!="
+          ],
+          "title": "Cmp",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "A number, a boolean, or a Functionality scale label (read as its level).",
+          "title": "Value"
+        }
+      },
+      "required": [
+        "cmp",
+        "value"
+      ],
+      "title": "ElementAssertion",
+      "type": "object"
+    },
     "ElementFilter": {
       "additionalProperties": false,
       "description": "Selects Elements by conditions that must all hold (ADR-0021).\n\nResolved when it is used, against the model at that moment, so an Element\nadded later is included. `exclude` holds matches unticked by hand.",
@@ -1182,6 +1266,58 @@
         "type"
       ],
       "title": "EventDefinition",
+      "type": "object"
+    },
+    "Expectation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "statement": {
+          "description": "The person's own words.",
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "check": {
+          "discriminator": {
+            "mapping": {
+              "scenario": "#/$defs/ScenarioCheck",
+              "simulation": "#/$defs/SimulationCheck"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ScenarioCheck"
+            },
+            {
+              "$ref": "#/$defs/SimulationCheck"
+            }
+          ],
+          "title": "Check"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "statement",
+        "check"
+      ],
+      "title": "Expectation",
       "type": "object"
     },
     "FieldChange": {
@@ -2272,6 +2408,14 @@
           },
           "title": "Series",
           "type": "array"
+        },
+        "expectations": {
+          "description": "What the person knows their system does, each with a check run on a copy of the model (ADR-0023). Results are not saved. Client data; the engine never reads them.",
+          "items": {
+            "$ref": "#/$defs/Expectation"
+          },
+          "title": "Expectations",
+          "type": "array"
         }
       },
       "required": [
@@ -2558,10 +2702,14 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge, Event or Expectation that LLM Design or an agent added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "const": "llm_design",
+          "description": "`llm_design`: pasted into LLM Design; `agent`: a Proposal an agent made through the Agent Bridge.",
+          "enum": [
+            "llm_design",
+            "agent"
+          ],
           "title": "Origin",
           "type": "string"
         },
@@ -2635,6 +2783,69 @@
       "title": "RecordDiff",
       "type": "object"
     },
+    "ScenarioCheck": {
+      "additionalProperties": false,
+      "description": "Events on the Reset model, a Propagation, optionally hours passing and a second Propagation.",
+      "properties": {
+        "kind": {
+          "const": "scenario",
+          "title": "Kind",
+          "type": "string"
+        },
+        "events": {
+          "description": "EventDefinition ids, applied in order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "advance_hours": {
+          "default": 0,
+          "description": "Hours that pass after the first Propagation (a Temporal Jump), followed by a second one.",
+          "minimum": 0,
+          "title": "Advance Hours",
+          "type": "integer"
+        },
+        "scope": {
+          "default": "global",
+          "enum": [
+            "global",
+            "local"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "canvas": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For `local`: the Canvas id.",
+          "title": "Canvas"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/ElementAssertion"
+          },
+          "minItems": 1,
+          "title": "Assertions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "assertions"
+      ],
+      "title": "ScenarioCheck",
+      "type": "object"
+    },
     "Series": {
       "additionalProperties": false,
       "properties": {
@@ -2682,6 +2893,95 @@
         "name"
       ],
       "title": "Series",
+      "type": "object"
+    },
+    "SimulationCheck": {
+      "additionalProperties": false,
+      "description": "One column of a Temporal Simulation's Run table, at a period or as a statistic of the run.",
+      "properties": {
+        "kind": {
+          "const": "simulation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "simulation": {
+          "description": "The Temporal Simulation's id.",
+          "minLength": 1,
+          "title": "Simulation",
+          "type": "string"
+        },
+        "column": {
+          "description": "The Run table column, as the table names it.",
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A period label.",
+          "title": "Period"
+        },
+        "statistic": {
+          "anyOf": [
+            {
+              "enum": [
+                "end",
+                "mean",
+                "min",
+                "max",
+                "total"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Or a statistic over the run.",
+          "title": "Statistic"
+        },
+        "cmp": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "==",
+            "!="
+          ],
+          "title": "Cmp",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "tolerance": {
+          "default": 0,
+          "description": "`==` passes within it, `!=` outside it; the other comparisons ignore it.",
+          "minimum": 0,
+          "title": "Tolerance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "simulation",
+        "column",
+        "cmp",
+        "value"
+      ],
+      "title": "SimulationCheck",
       "type": "object"
     },
     "SimulationPeriod": {

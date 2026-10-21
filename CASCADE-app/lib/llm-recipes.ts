@@ -18,7 +18,7 @@ import { deriveSituation, situationEventIds } from "@/lib/situation";
 import type { AnalysisResult } from "@/lib/topological-analysis";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
-export type RecipeId = "describe" | "import" | "red-team" | "explain";
+export type RecipeId = "describe" | "import" | "red-team" | "calibrate" | "explain";
 
 export interface Recipe {
   id: RecipeId;
@@ -51,6 +51,13 @@ export const RECIPES: readonly Recipe[] = [
     label: "Red-team Events",
     blurb: "An LLM with no stake in the organisation proposes hazards across sectors, and what each strikes.",
     input: { label: "Anything to focus on (optional)", placeholder: "the next 10 years; the northern sites; supply chain" },
+    reply: "changes",
+  },
+  {
+    id: "calibrate",
+    label: "Calibrate against what you know",
+    blurb: "Say how your system behaves; the LLM writes each statement as an Expectation the app can check, and the changes that make the model agree.",
+    input: { label: "What you know your system does", placeholder: "If the grid fails, the hospital runs 8 hours on its generators, then stops.\nThe June payout is about half the January balance." },
     reply: "changes",
   },
   {
@@ -136,6 +143,34 @@ const WHY_RULE = `Give every change a "why": the sentence or row of the input it
 gap. Put in "notes" what you modelled, what you left out and what you assumed. The app marks everything you add as
 unconfirmed until a person confirms it.`;
 
+/**
+ * How an Expectation is written and how a model is brought to meet it: the
+ * Calibrate Recipe's guide, and the Agent Kit's (ADR-0023).
+ */
+const CALIBRATION_GUIDE = `## Expectations: what the person knows, as checks the app runs
+- An Expectation is one thing the person knows their system does, in their own words ("statement"), with a
+  "check" the app runs on a copy of the model: a scenario (Events applied to the Reset model, a Propagation,
+  optionally hours passing and a second Propagation, then a comparison on Elements) or a Temporal Simulation
+  (one column of its Run table, at a period or as a statistic of the run, compared with a number).
+- Write the statement as the person said it; never change one to fit the model. If what they said is vague
+  ("the hospital copes"), ask what it means in levels or hours before writing the check.
+- One Expectation per fact. A level is written as its Functionality scale label ("critical"); a backup that
+  holds for 8 h is two Expectations: functionality_time is 8 after the Event, and the level after 8 h.
+- To make a failing Expectation pass, change what the system IS before how it reacts: an edge that is
+  missing or reversed, a Category, a dependency_level, a backup and its duration, a capacity, a demand, a
+  priority. Write a Specific Rule only when the person describes an explicit agreement or procedure.
+- Every change and every Expectation you add is marked unconfirmed until the person confirms it.`;
+
+/** The project's Expectations, for an LLM: each statement and its check, as stored. */
+function expectationsContext(bundle: ProjectBundle): string {
+  const list = bundle.project.expectations ?? [];
+  if (list.length === 0) return "## The project's Expectations\n(none yet)";
+  return [
+    `## The project's Expectations (${list.length})`,
+    ...list.map((e) => `- ${e.id}${e.provenance && !e.provenance.confirmed ? " (unconfirmed)" : ""}: "${e.statement}"\n  check: ${JSON.stringify(e.check)}`),
+  ].join("\n");
+}
+
 function taskFor(recipe: RecipeId, bundle: ProjectBundle): string {
   const n = bundle.config.functionality_scale.length;
   switch (recipe) {
@@ -165,6 +200,15 @@ function taskFor(recipe: RecipeId, bundle: ProjectBundle): string {
 - { "add": "event", "value": { "id": "<new id>", "label": "<short name>", "type": "hazard" (physical damage) or "disservice" (degradation without damage), "frequency_per_10y": how many times in 10 years you expect it }, "why": "the mechanism, and the evidence or comparable cases your frequency rests on" }
 - then, for each Element it strikes directly (a node or an edge), { "set": "vulnerability", "event": "<its id>", "to": levels lost (1..${n - 1}), "id": "<element id>", "why": "how it strikes this Element" }. Only direct hits: the engine spreads the consequences along edges.
 List the Events by how much they would matter. The app marks every Event you add as unconfirmed, and its frequency as an estimate, until a person confirms it.`,
+      ].join("\n\n");
+    case "calibrate":
+      return [
+        "# Task: calibrate a CASCADE model against what the person knows",
+        "The person tells you how their system behaves. Write each fact as an Expectation ({ \"add\": \"expectation\" }), then the model changes you expect to make it pass. The app cannot run the checks for you here: the person applies your reply, runs the Expectations in the Expectations window, and pastes the results back to you; then repair what still fails.",
+        CALIBRATION_GUIDE,
+        ASK_FIRST,
+        WHY_RULE,
+        expectationsContext(bundle),
       ].join("\n\n");
     case "explain":
       return "";

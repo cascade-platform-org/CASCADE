@@ -2,7 +2,7 @@
  * model-diff.ts — what an edit changed beyond the graph, as an invertible diff
  * (ADR-0017, revised 2026-10-19). Pure.
  *
- * The project's parts other than the graph (Temporal Simulations, Series,
+ * The project's parts other than the graph (Temporal Simulations, Series, Expectations,
  * the Model Configuration, the project's settings) are laid out
  * as one registry of records keyed by subject, the keys LLM Design's preview
  * and Import changes already use (`simulation:<id>`, `series:<name>`,
@@ -19,6 +19,7 @@ import { applyToRegistry, deepEqual, diffRegistry, type DiffDirection } from "@/
 import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { ModelDiff } from "@/lib/schemas/network";
 import type { Series } from "@/lib/schemas/series";
+import type { Expectation } from "@/lib/schemas/expectation";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 
 /** The project's settings an edit can change: its name, description and the Global view's graph type. */
@@ -33,6 +34,7 @@ export interface ModelSnapshot {
   settings?: ProjectSettings;
   temporal_simulations?: StoredTemporalSimulation[];
   series?: Series[];
+  expectations?: Expectation[];
   config?: ModelConfiguration;
 }
 
@@ -42,6 +44,7 @@ type Rec = Record<string, unknown>;
 const PROJECT_LISTS = [
   { part: "temporal_simulations", kind: "simulation", id: (x: Rec) => String(x.id) },
   { part: "series", kind: "series", id: (x: Rec) => String(x.name) },
+  { part: "expectations", kind: "expectation", id: (x: Rec) => String(x.id) },
 ] as const;
 const CONFIG_LISTS = [
   { key: "events", kind: "event", id: (x: Rec) => String(x.id) },

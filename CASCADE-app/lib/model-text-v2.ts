@@ -44,7 +44,7 @@ const VERBS = ["set", "scale", "increase", "cap", "floor"] as const;
 type Verb = (typeof VERBS)[number];
 const OP_OF: Record<Verb, AttributeOperation["op"]> = { set: "set", scale: "mul", increase: "add", cap: "at_most", floor: "at_least" };
 
-const KINDS = ["node", "edge", "event", "category", "canvas", "simulation", "series"] as const;
+const KINDS = ["node", "edge", "event", "category", "canvas", "simulation", "series", "expectation"] as const;
 type Kind = (typeof KINDS)[number];
 /** The field that identifies a thing: a Category and a Series by name, the rest by id. */
 const idField = (kind: Kind): "name" | "id" => (kind === "category" || kind === "series" ? "name" : "id");
@@ -239,6 +239,7 @@ const LISTS: Record<Exclude<Kind, "node" | "edge">, { pointer: string; read: (b:
   canvas: { pointer: "/project/canvases", read: (b) => b.project.canvases as unknown as Rec[], id: (x) => x.id, name: (x) => x.label },
   simulation: { pointer: "/project/temporal_simulations", read: (b) => (b.project.temporal_simulations ?? []) as unknown as Rec[], id: (x) => x.id, name: (x) => (x.timeline as Rec | undefined)?.name },
   series: { pointer: "/project/series", read: (b) => (b.project.series ?? []) as unknown as Rec[], id: (x) => x.name },
+  expectation: { pointer: "/project/expectations", read: (b) => (b.project.expectations ?? []) as unknown as Rec[], id: (x) => x.id },
 };
 
 /** A listed thing's position, by its id or (Canvases, Simulations) its name; -1 when absent. */
@@ -432,6 +433,7 @@ export function compilePlain(bundle: ProjectBundle, set: PlainSet, leaveOut?: Re
           const record = kind === "canvas" ? { graph: { graph_type: "generic", node_ids: [], edge_ids: [] }, ...value } : value;
           if (kind === "simulation" && draft.project.temporal_simulations === undefined) emit(at, [{ op: "add", path: "/project/temporal_simulations", value: [] }]);
           if (kind === "series" && draft.project.series === undefined) emit(at, [{ op: "add", path: "/project/series", value: [] }]);
+          if (kind === "expectation" && draft.project.expectations === undefined) emit(at, [{ op: "add", path: "/project/expectations", value: [] }]);
           emit(at, [{ op: "add", path: `${list.pointer}/-`, value: record }]);
           group.subjects.push(`${kind}:${id}`);
         }
@@ -563,8 +565,15 @@ Change a value on Elements — a verb naming a field, then "to" or "by", then "i
   refuses the whole set and names it; add "skip_unfit": true to leave such Elements out instead.
 
 Add, update, delete things by id (never by position):
-  { "add": "node"|"edge"|"event"|"category"|"canvas"|"simulation"|"series", "value": { …the whole thing… } }
+  { "add": "node"|"edge"|"event"|"category"|"canvas"|"simulation"|"series"|"expectation", "value": { …the whole thing… } }
       a series is { "name", "unit"?, "description"?, "rows": { "<element id or *>": { "<period label>": number } } }
+      an expectation is { "id", "statement": "the person's own words", "check": CHECK }, CHECK one of
+        { "kind": "scenario", "events": [event ids], "advance_hours"?: hours passing after the Propagation,
+          "assertions": [ { "element": "<id>" or "where": FILTER, "quantifier"?: "all"|"any",
+          "path"?: ["functionality"] (default) | ["functionality_time"] | ["direct_damage"] | any field,
+          "cmp": "<"|"<="|">"|">="|"=="|"!=", "value": number | true/false | a Functionality level label } ] }
+        { "kind": "simulation", "simulation": "<id>", "column": "<Run table column>", "period": "<label>"
+          or "statistic": "end"|"mean"|"min"|"max"|"total", "cmp", "value": number, "tolerance"?: number }
       a node also takes "canvas": "<id or label>" (needed when there are several); functionality defaults to N;
       without "position" it is placed on a grid below its Canvas's nodes
   { "update": KIND, "id": "<id>", "value": { …only the fields to change… } }   null removes a field

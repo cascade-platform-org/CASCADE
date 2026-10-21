@@ -1,12 +1,14 @@
 /**
  * project-data-store.ts — the project's client data: its Series (ADR-0019,
- * revised 2026-10-12). They are saved in the project file through
+ * revised 2026-10-12) and its Expectations (ADR-0023). They are saved in the project file through
  * canvas-store's `toProject()`, like the Scorecard, and never reach the engine
  * (`buildPropagationPayload` leaves them out).
  */
 
 import { create } from "zustand";
 import { SeriesSchema, type Series } from "@/lib/schemas/series";
+import { ExpectationSchema, type Expectation } from "@/lib/schemas/expectation";
+import { confirmed } from "@/lib/provenance";
 import { freshOperandName } from "@/lib/schemas/operand";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { runWithSnapshots } from "@/lib/history-entry";
@@ -22,6 +24,15 @@ interface ProjectDataState {
   /** Rename a Series and every Temporal Simulation's operations that read it. */
   renameSeries: (from: string, to: string) => string | null;
   removeSeries: (name: string) => string | null;
+
+  expectations: Expectation[];
+  /** A loaded project's Expectations; none when it has none. */
+  loadExpectations: (expectations: Expectation[] | undefined) => void;
+  /** Add one, or replace the one with its id; returns why not (schema), or null when done. */
+  putExpectation: (next: Expectation) => string | null;
+  removeExpectation: (id: string) => void;
+  /** The person agrees the statement is true of their system: its Provenance is confirmed. */
+  confirmExpectation: (id: string) => void;
 }
 
 /** Series are model inputs: like the model, they are read-only while a run is shown (ADR-0019 §1). */
@@ -41,6 +52,9 @@ const recorded = <T>(label: string, write: () => T, coalesce?: "auto"): T =>
     label,
     { updateType: "model_update", ...(coalesce ? { coalesce } : {}) },
   );
+/** An Expectation edit as one undo step. Expectations are not model inputs, so a shown run does not lock them. */
+const recordedExpectations = (label: string, write: () => void): void =>
+  runWithSnapshots({ model: () => ({ expectations: get().expectations }) }, write, label, { updateType: "model_update" });
 return {
   series: [],
   loadFromProject: (series) => set({ series: series ?? [] }),
@@ -74,6 +88,24 @@ return {
     set({ series: get().series.filter((x) => x.name !== name) });
     return null;
   }),
+
+  expectations: [],
+  loadExpectations: (expectations) => set({ expectations: expectations ?? [] }),
+  putExpectation: (next) => {
+    const parsed = ExpectationSchema.safeParse(next);
+    if (!parsed.success) return parsed.error.issues[0]?.message ?? "invalid Expectation";
+    const exists = get().expectations.some((x) => x.id === next.id);
+    recordedExpectations(exists ? `Edit Expectation ${next.id}` : `Add Expectation ${next.id}`, () =>
+      set({ expectations: exists ? get().expectations.map((x) => (x.id === next.id ? parsed.data : x)) : [...get().expectations, parsed.data] }),
+    );
+    return null;
+  },
+  removeExpectation: (id) =>
+    recordedExpectations(`Delete Expectation ${id}`, () => set({ expectations: get().expectations.filter((x) => x.id !== id) })),
+  confirmExpectation: (id) =>
+    recordedExpectations(`Confirm Expectation ${id}`, () =>
+      set({ expectations: get().expectations.map((x) => (x.id === id && x.provenance ? { ...x, provenance: confirmed(x.provenance) } : x)) }),
+    ),
 };
 });
 
@@ -81,7 +113,7 @@ return {
 // Element edit (canvas-store). Deferred import: ui-store is not needed at load.
 if (typeof window !== "undefined") {
   useProjectDataStore.subscribe((state, prev) => {
-    if (state.series !== prev.series) {
+    if (state.series !== prev.series || state.expectations !== prev.expectations) {
       void import("@/store/ui-store").then(({ useUiStore }) => useUiStore.getState().markDirty());
     }
   });

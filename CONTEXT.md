@@ -106,12 +106,16 @@ Everything the project and its Model Configuration save, as a tree of JSON secti
 _Avoid_: "bundle editor", "JSON editor" (it never holds the whole bundle)
 
 **Recipe**:
-One job LLM Design copies for an LLM: its instructions, the model's context, and what the person typed. Model from a description, Import an organisation's data, Red-team Events, Explain the current state. ADR-0022.
+One job LLM Design copies for an LLM: its instructions, the model's context, and what the person typed. Model from a description, Import an organisation's data, Red-team Events, Calibrate against what you know (writes **Expectations**), Explain the current state. ADR-0022, ADR-0023.
 _Avoid_: "prompt template", "preset"
 
 **Provenance**:
-The mark on a node, edge or Event that LLM Design added: `origin` (`llm_design`), the `rationale` (the change's `why`), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
+The mark on a node, edge, Event or Expectation that LLM Design or an agent added: `origin` (`llm_design`, or `agent` for a Proposal), the `rationale` (the change's `why`), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
 _Avoid_: "AI-generated" (the person may have written the change)
+
+**Expectation**:
+One thing a person knows their system does, in their own words, with a check the app runs on a copy of the model: a **scenario** (Events on the Reset model, a Propagation, optionally hours passing and a second one, then a comparison on Elements' fields) or a **simulation** (one column of a Temporal Simulation's Run table, at a period or as a statistic, compared with a number). The person's statements are the spec a model is calibrated against: a model that passes its confirmed Expectations is one the person has reason to trust. Results are computed when a check runs and never saved. One written by an LLM or an agent carries **Provenance** until the person confirms the statement. `Project.expectations`, ADR-0023.
+_Avoid_: "test", "assertion" (an assertion is one comparison inside a check), "requirement", "constraint"
 
 **Parameter**:
 A named number a Temporal Simulation declares (`art8_share = 0.5`), read by Attribute Operations of its profile and of the Events it fires; an Event declares defaults for when it is fired by hand. Changing it once changes every operation that reads it; a **Parameter Sweep** runs over several of its values. ADR-0019, ADR-0021.

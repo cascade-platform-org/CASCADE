@@ -16,6 +16,7 @@ import { z } from "zod";
 import { UNSAFE_KEY_MESSAGE, isSafeKey } from "./field-path";
 import { ProvenanceSchema } from "./provenance";
 import { SeriesSchema } from "./series";
+import { ExpectationSchema } from "./expectation";
 import { duplicateNames } from "./operand";
 import { PropagationMetaSchema, PropagationResultSchema } from "./propagation";
 import { StoredTemporalSimulationSchema, migrateProjectSimulations } from "./temporal-simulation";
@@ -636,6 +637,8 @@ export const ProjectFieldsSchema = z.object({
   temporal_simulations: z.array(StoredTemporalSimulationSchema).optional(),
   /** Project-wide numbers by Element and period label that Attribute Operations read (ADR-0019). Client data. */
   series: z.array(SeriesSchema).optional(),
+  /** What the person knows their system does, each with a check run on a copy of the model (ADR-0023). Client data. */
+  expectations: z.array(ExpectationSchema).optional(),
 });
 
 /** Series names are unique. */
@@ -644,8 +647,17 @@ function uniqueSeriesNames(p: { series?: { name: string }[] }, ctx: z.Refinement
   if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["series"], message: `series: the name '${repeated[0]}' is used twice` });
 }
 
+/** Expectation ids are unique. */
+function uniqueExpectationIds(p: { expectations?: { id: string }[] }, ctx: z.RefinementCtx) {
+  const repeated = duplicateNames((p.expectations ?? []).map((x) => x.id));
+  if (repeated.length > 0) ctx.addIssue({ code: "custom", path: ["expectations"], message: `expectations: the id '${repeated[0]}' is used twice` });
+}
+
 /** A project file, migrated (`migrateProjectSimulations`) and validated. */
-export const ProjectSchema = z.preprocess(migrateProjectSimulations, ProjectFieldsSchema.superRefine(uniqueSeriesNames));
+export const ProjectSchema = z.preprocess(
+  migrateProjectSimulations,
+  ProjectFieldsSchema.superRefine(uniqueSeriesNames).superRefine(uniqueExpectationIds),
+);
 
 // ---------------------------------------------------------------------------
 // Inferred TypeScript types

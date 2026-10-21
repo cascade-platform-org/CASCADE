@@ -208,6 +208,26 @@ export function validateBundle(bundle: ProjectBundle): ValidationIssue[] {
     }
   }
 
+  // ---- Expectations (ADR-0023): what a check names must exist, or it cannot run ----
+
+  const simulationIds = new Set((project.temporal_simulations ?? []).map((s) => s.id));
+  for (const e of project.expectations ?? []) {
+    const missing: string[] = [];
+    if (e.check.kind === "scenario") {
+      for (const id of e.check.events) if (!knownEventIds.has(id)) missing.push(`Event "${id}"`);
+      for (const a of e.check.assertions) if (a.element !== undefined && !nodeIds.has(a.element) && !edgeIds.has(a.element)) missing.push(`Element "${a.element}"`);
+    } else if (!simulationIds.has(e.check.simulation)) {
+      missing.push(`Temporal Simulation "${e.check.simulation}"`);
+    }
+    if (missing.length > 0) {
+      issues.push({
+        severity: "warning",
+        code: "EXPECTATION_UNKNOWN_REFERENCE",
+        message: `Expectation "${e.id}" names ${missing.join(", ")}, which the project does not have; its check cannot run.`,
+      });
+    }
+  }
+
   // Errors before warnings, stable order within each group.
   return issues.sort((a, b) => {
     if (a.severity === b.severity) return 0;

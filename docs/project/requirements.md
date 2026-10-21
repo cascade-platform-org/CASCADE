@@ -849,10 +849,11 @@ since that quota — not an app-defined number — is the real storage limit.
 
 A person describes their organisation or a question in their own words; an LLM, given what the app copies, writes the plain changes; the person reviews them. Nothing in §13.3a's check, preview or undo is bypassed.
 
-- **Recipes.** LLM Design offers four, each copying the instructions for one job, the model's context and, optionally, what the person typed or pasted:
+- **Recipes.** LLM Design offers five, each copying the instructions for one job, the model's context and, optionally, what the person typed or pasted:
   - *Model from a description*: the LLM asks the person up to five questions when the description leaves gaps, then replies with plain changes that add the Categories, Canvases, Elements and edges, each with a `why` that names what in the description it comes from or says it is an assumption.
   - *Import an organisation's data*: the same for a pasted table, list or document; a value the data does not give is left out and said so, never invented.
   - *Red-team Events*: the LLM acts as a risk analyst with no stake in the organisation, infers its context from the names, and proposes Events across sectors (natural, technological, cyber, supply chain, social and organisational, compound), skipping what existing Events cover, each with a frequency estimate and the vulnerability levels of the Elements it strikes, and a `why` for each.
+  - *Calibrate against what you know*: the person says how their system behaves; the LLM writes each fact as an Expectation (§13.3c) and the changes it expects to make them pass, preferring topology and attributes to Specific Rules.
   - *Explain the current state*: the applied Events, every Element below full Functionality with its responsibility shares, and the latest Analysis result; the LLM replies in plain words, so nothing is applied.
 - **Before the first copy for an LLM**, a notice says that the model leaves this computer when pasted, and recommends a chat that keeps no history, or an LLM running locally. A *Don't tell me again* tick hides it for this browser.
 - **Partial apply.** Each change of Bulk operations has a tick in the preview; Apply writes the ticked ones. A change left out is skipped in place, so a later change that needed it is refused with its reason.
@@ -860,6 +861,12 @@ A person describes their organisation or a question in their own words; an LLM, 
 - **Placement.** A node added without a position is placed on a grid below its Canvas's nodes.
 - **Entry points** open LLM Design focused on what the person is looking at: the Canvas's right-click menu (the selection, or the whole model), the Inspector's header (one Element's section, or the selection), the Events tab (*Red-team Events*), and the Analysis window (*Explain the current state*, copied directly). Pasting a plain-changes reply onto the Canvas opens it in Bulk operations, checked.
 - Deferred: an automatic layout for many added nodes, and letting an agent use the app directly (a local MCP server on a project file).
+
+### 13.3c Expectations and calibration — implemented (release v1.3, ADR-0023)
+
+- A project saves **Expectations** (`Project.expectations`): each is a statement in the person's words and a check run on a copy of the model. A **scenario** check applies Events to the Reset model, propagates, optionally lets hours pass and propagates again, then compares Elements' fields (by id, or every/any match of an Element Filter) with a number, a boolean or a scale label. A **simulation** check runs a Temporal Simulation and compares one Run-table column, at a period or as a statistic, with a number within a tolerance.
+- The Topbar's **Expectations** window lists them with their latest result this session (pass, fail, cannot run), each failing Element's actual value and cause; **Run all** or one, **Confirm** an unconfirmed statement, edit the statement or its check, delete, **Copy results for the LLM**, and **Calibrate with an LLM** (the Recipe of the same name). Running needs the server and `can_propagate`; each Propagation is one Engine Evaluation. Results are never saved.
+- Added through LLM Design or by an agent, an Expectation carries Provenance and is unconfirmed until the person confirms the statement. Every edit is one undo step.
 
 ### 13.4 Server Sync (opt-in) — implemented
 

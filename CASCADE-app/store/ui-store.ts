@@ -90,6 +90,9 @@ export interface UiState {
   /** The latest request to open it somewhere; cleared by its Topbar button. */
   llmDesignRequest: LlmDesignRequest | null;
 
+  // --- Expectations (ADR-0023) ---
+  expectationsOpen: boolean;
+
   /**
    * Set by the File panel's "New Project" button; cleared by `app/page.tsx`
    * once it has acted on it. A page-level app-state transition (editor ↔
@@ -258,6 +261,11 @@ export interface UiActions {
   toggleLlmDesign: () => void;
   closeLlmDesign: () => void;
 
+  // --- Expectations ---
+  openExpectations: () => void;
+  toggleExpectations: () => void;
+  closeExpectations: () => void;
+
   // --- File I/O panel ---
   toggleFileIoPanel: () => void;
   closeFileIoPanel: () => void;
@@ -370,6 +378,7 @@ const initialState: UiState = {
   fileIoPanelOpen: false,
   llmDesignOpen: false,
   llmDesignRequest: null,
+  expectationsOpen: false,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
@@ -497,6 +506,16 @@ export const useUiStore = create<UiStore>()(
 
     closeLlmDesign() {
       set((state) => { state.llmDesignOpen = false; });
+    },
+
+    openExpectations() {
+      set((state) => { state.expectationsOpen = true; });
+    },
+    toggleExpectations() {
+      set((state) => { state.expectationsOpen = !state.expectationsOpen; });
+    },
+    closeExpectations() {
+      set((state) => { state.expectationsOpen = false; });
     },
 
     // -------------------------------------------------------------------------

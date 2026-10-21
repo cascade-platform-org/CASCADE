@@ -1,7 +1,7 @@
 /**
- * provenance.ts — mark what LLM Design adds (ADR-0022). Pure.
+ * provenance.ts — mark what LLM Design or an agent adds (ADR-0022, ADR-0024). Pure.
  *
- * A node, edge or Event that an edit adds carries `provenance`: where it came
+ * A node, edge, Event or Expectation that an edit adds carries `provenance`: where it came
  * from, why (the change's `why`), and whether a person has confirmed it. The
  * mark is stamped on the checked result, so it applies to sections and Bulk
  * operations alike, and it overrides whatever the text said: a reply cannot
@@ -9,10 +9,10 @@
  */
 
 import { deepEqual } from "@/lib/graph-diff";
-import { PROVENANCE_ORIGIN, type Provenance } from "@/lib/schemas/provenance";
+import { PROVENANCE_ORIGIN, type Provenance, type ProvenanceOrigin } from "@/lib/schemas/provenance";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
-/** True for an Element or Event LLM Design added that no person has confirmed yet. */
+/** True for an Element, Event or Expectation LLM Design or an agent added that no person has confirmed yet. */
 export const isUnconfirmed = (x: { provenance?: Provenance }): boolean => x.provenance !== undefined && !x.provenance.confirmed;
 
 /** The same mark, confirmed by a person. */
@@ -27,15 +27,21 @@ function withMark<T extends { provenance?: Provenance }>(x: T, provenance: Prove
 }
 
 /**
- * `after` with every node, edge and Event absent from `before` marked as
- * added by LLM Design, unconfirmed, and every other one keeping the mark it
- * had in `before`: a text neither confirms nor removes a mark. `rationale`
- * gives the why of each addition, keyed `node:<id>`, `edge:<id>`, `event:<id>`.
+ * `after` with every node, edge, Event and Expectation absent from `before`
+ * marked as added by `origin` (LLM Design unless an agent's Proposal), unconfirmed,
+ * and every other one keeping the mark it had in `before`: a text neither
+ * confirms nor removes a mark. `rationale` gives the why of each addition, keyed
+ * `node:<id>`, `edge:<id>`, `event:<id>`, `expectation:<id>`.
  */
-export function markAdded(before: ProjectBundle, after: ProjectBundle, rationale: ReadonlyMap<string, string> = new Map()): ProjectBundle {
+export function markAdded(
+  before: ProjectBundle,
+  after: ProjectBundle,
+  rationale: ReadonlyMap<string, string> = new Map(),
+  origin: ProvenanceOrigin = PROVENANCE_ORIGIN,
+): ProjectBundle {
   const mark = (key: string): Provenance => {
     const why = rationale.get(key);
-    return { origin: PROVENANCE_ORIGIN, ...(why ? { rationale: why } : {}), confirmed: false };
+    return { origin, ...(why ? { rationale: why } : {}), confirmed: false };
   };
   const settle = <T extends { provenance?: Provenance }>(x: T, was: T | undefined, key: string): T => {
     const target = was ? was.provenance : mark(key);
@@ -52,12 +58,16 @@ export function markAdded(before: ProjectBundle, after: ProjectBundle, rationale
     return out;
   };
   const events = new Map(before.config.events.map((e) => [e.id, e]));
+  const expectations = new Map((before.project.expectations ?? []).map((e) => [e.id, e]));
   return {
     ...after,
     project: {
       ...after.project,
       nodes: registry(before.project.nodes, after.project.nodes, "node"),
       edges: registry(before.project.edges, after.project.edges, "edge"),
+      ...(after.project.expectations
+        ? { expectations: after.project.expectations.map((e) => settle(e, expectations.get(e.id), `expectation:${e.id}`)) }
+        : {}),
     },
     config: { ...after.config, events: after.config.events.map((e) => settle(e, events.get(e.id), `event:${e.id}`)) },
   };

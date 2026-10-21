@@ -2861,6 +2861,16 @@ export const USER_MANUAL: ManualDoc = {
                 [
                   {
                     "kind": "strong",
+                    "text": "Calibrate against what you know"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": say how your system behaves; the LLM writes Expectations (§7.2) and the changes that make the model agree."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
                     "text": "Explain the current state"
                   },
                   {
@@ -2942,6 +2952,144 @@ export const USER_MANUAL: ManualDoc = {
                 {
                   "kind": "text",
                   "text": " in the Analysis window. Pasting an LLM's reply onto the Canvas opens it in Bulk operations, already checked."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "7.2 Expectations",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
+                  "text": "Expectations"
+                },
+                {
+                  "kind": "text",
+                  "text": " in the Topbar holds what you know your system does, in your own words, each with a check the app runs against the model: "
+                },
+                {
+                  "kind": "em",
+                  "text": "\"if the grid fails, the hospital runs 8 hours on its generators, then stops\""
+                },
+                {
+                  "kind": "text",
+                  "text": ", "
+                },
+                {
+                  "kind": "em",
+                  "text": "\"the June payout is about half the January balance\""
+                },
+                {
+                  "kind": "text",
+                  "text": ". A model that passes the Expectations you confirmed is one you have reason to trust."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Run all"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " (or ▶ on one) runs each check on a copy of the model: its Events on the Reset model, a Propagation, and the comparison; or a Temporal Simulation and one column of its Run table. Your model does not change. Each Propagation counts as one Engine Evaluation."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "Each result says "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Pass"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Fail"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " or "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Cannot run"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " (it names something the model does not have), with every element's actual value and, when it is degraded, what caused it."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Calibrate with an LLM"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " opens the Recipe of the same name: say what you know, and the LLM writes the Expectations and the changes that should make the model agree. Apply them, run, and "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Copy results for the LLM"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " to hand back what still fails."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "An Expectation an LLM or an agent wrote is "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "unconfirmed"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " until you "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Confirm"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " that the statement is true of your system. ✎ edits the statement and its check (JSON); every edit is one "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "Ctrl+Z"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " step."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "Results last for the session and are not saved with the project."
                 }
               ]
             }

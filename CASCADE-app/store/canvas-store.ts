@@ -39,6 +39,7 @@ import { runWithSnapshots, type HistoryEntryOptions } from "@/lib/history-entry"
 import { useHistoryStore } from "@/store/history-store";
 import { useScorecardStore } from "@/store/scorecard-store";
 import { useProjectDataStore } from "@/store/project-data-store";
+import { useExpectationRunStore } from "@/store/expectation-run-store";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
@@ -502,11 +503,12 @@ export const useCanvasStore = create<CanvasStore>()(
 
     toModelSnapshot() {
       const { name, description, global_graph_type } = get().projectMeta;
-      const { series } = useProjectDataStore.getState();
+      const { series, expectations } = useProjectDataStore.getState();
       return {
         settings: { name, ...(description !== undefined ? { description } : {}), ...(global_graph_type !== undefined ? { global_graph_type } : {}) },
         temporal_simulations: useTemporalSimulationStore.getState().simulations,
         series,
+        expectations,
         config: useConfigStore.getState().config,
       };
     },
@@ -520,6 +522,7 @@ export const useCanvasStore = create<CanvasStore>()(
       }
       if (m.temporal_simulations) useTemporalSimulationStore.getState().restoreSimulations(m.temporal_simulations);
       if (m.series) useProjectDataStore.getState().loadFromProject(m.series);
+      if (m.expectations) useProjectDataStore.getState().loadExpectations(m.expectations);
       if (m.config) useConfigStore.getState().loadConfig(m.config);
     },
 
@@ -739,7 +742,7 @@ export const useCanvasStore = create<CanvasStore>()(
     toProject(): Project {
       const state = get();
       const { simulations } = useTemporalSimulationStore.getState();
-      const { series } = useProjectDataStore.getState();
+      const { series, expectations } = useProjectDataStore.getState();
       return {
         version: "2.0",
         meta: {
@@ -757,6 +760,7 @@ export const useCanvasStore = create<CanvasStore>()(
         // Left out while there is none, so a project that never used one keeps its file unchanged.
         temporal_simulations: simulations.length > 0 ? simulations : undefined,
         series: series.length > 0 ? series : undefined,
+        expectations: expectations.length > 0 ? expectations : undefined,
       };
     },
 
@@ -781,6 +785,9 @@ export const useCanvasStore = create<CanvasStore>()(
         };
       });
       useProjectDataStore.getState().loadFromProject(project.series);
+      useProjectDataStore.getState().loadExpectations(project.expectations);
+      // Another project's results describe another model.
+      useExpectationRunStore.getState().clear();
       useHistoryStore.getState().loadHistory(project.update_history ?? []);
       useScorecardStore.getState().loadScorecard(project.scorecard ?? []);
       // Every source is parsed before it opens (lib/project-bundle.ts), and

@@ -72,7 +72,7 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 
 ### State Management — Zustand
 
-All application state is managed through ten Zustand stores:
+All application state is managed through eleven Zustand stores:
 
 - **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
 - **`history-store`** — the Any Graph Update ring buffer (`update_history`) plus the session-only redo stack. Capped at 20 entries **and** at a byte budget, because entries are variable-size Graph Diffs and one bulk deletion can exceed twenty ordinary edits (ADR-0017). Evicted entries are retired into a Scenario Baseline map on the way out, so a scenario can outlive the buffer (ADR-0016).
@@ -80,7 +80,8 @@ All application state is managed through ten Zustand stores:
 - **`config-store`** — `ModelConfiguration`: functionality scale, category definitions, Event definitions, graph-type algorithm pipelines. Owns a draft/commit lifecycle for the Config modal.
 - **`scorecard-store`** — the Scorecard entry list, serialised into `Project.scorecard` via canvas-store.
 - **`temporal-simulation-store`** — the project's Temporal Simulations, serialised into `Project.temporal_simulations` via canvas-store (ADR-0019), and the window's draft of the selected one. An edit is saved only when it passes the schema; otherwise the window lists why and the project keeps the last valid document. Also the run: progress, the in-memory run record (`lib/step-operator.ts`) and the period the **Run View** paints. While a run computes or is shown, the model writers refuse (`lib/model-lock.ts`'s `modelLocked()`: canvas-store's writers, config-store's Save and merge, LLM Design's apply), and the canvas views and Inspector read the period through `useShownElements`. A run's correctness does not rest on that lock: it captures its Propagation Context when it starts.
-- **`project-data-store`** — the project's Series, serialised into `Project.series` via canvas-store, left out of every Propagation request. Series edits are refused while a run is shown.
+- **`project-data-store`** — the project's Series and Expectations, serialised into `Project.series` and `Project.expectations` via canvas-store, left out of every Propagation request. Series edits are refused while a run is shown; Expectations are not model inputs and are not.
+- **`expectation-run-store`** — the session's Expectation results (ADR-0023). Never persisted: a result describes the model as it was when its check ran. `lib/expectations.ts` is the pure runner (engine call injected); `lib/expectations-run.ts` captures its input from the stores once, as a Temporal Simulation run does.
 - **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
 - **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.

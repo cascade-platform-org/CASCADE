@@ -325,7 +325,7 @@ const identity = (x: unknown): string | undefined =>
 const hasIds = (v: unknown[]) => v.every((x) => identity(x) !== undefined);
 
 /** The subject kind of a list's records, by the list's key. */
-const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series" };
+const SUBJECT_OF: Record<string, string> = { events: "event", categories: "category", graph_types: "graph_type", temporal_simulations: "simulation", scorecard: "scorecard", canvases: "canvas", series: "series", expectations: "expectation" };
 /** The subject kind of a record's entries, by the record's key: each Node template is one. */
 const ENTRY_SUBJECT_OF: Record<string, string> = { node_defaults: "template" };
 /** The subject of a top-level field no list or record subject claims. */

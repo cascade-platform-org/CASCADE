@@ -8,6 +8,7 @@ from schemas.field_path import SafeKey
 from schemas.provenance import Provenance
 from schemas.operand import duplicate_names
 from schemas.series import Series
+from schemas.expectation import Expectation
 from schemas.temporal_simulation import FIRST_SIMULATION_ID, StoredTemporalSimulation
 
 if TYPE_CHECKING:
@@ -856,10 +857,24 @@ class Project(BaseModel):
             "read (ADR-0019, revised 2026-10-12). Client data; the engine never reads them."
         ),
     )
+    expectations: list[Expectation] = Field(
+        default_factory=list,
+        description=(
+            "What the person knows their system does, each with a check run on a copy "
+            "of the model (ADR-0023). Results are not saved. Client data; the engine never reads them."
+        ),
+    )
 
     @model_validator(mode="after")
     def _unique_series_names(self) -> "Project":
         repeated = duplicate_names([x.name for x in self.series])
         if repeated:
             raise ValueError(f"series: the name '{repeated[0]}' is used twice")
+        return self
+
+    @model_validator(mode="after")
+    def _unique_expectation_ids(self) -> "Project":
+        repeated = duplicate_names([x.id for x in self.expectations])
+        if repeated:
+            raise ValueError(f"expectations: the id '{repeated[0]}' is used twice")
         return self

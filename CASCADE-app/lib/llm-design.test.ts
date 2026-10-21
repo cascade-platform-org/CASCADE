@@ -198,3 +198,40 @@ describe("Recipes", () => {
     expect(focusContext(bundle(), { nodeIds: ["s"], edgeIds: [] })).toContain("- h — Harbour Hospital — Service");
   });
 });
+
+describe("Expectations through plain changes (ADR-0023)", () => {
+  const HOLDS = {
+    add: "expectation",
+    value: { id: "hosp-holds", statement: "With the grid down the hospital is critical", check: { kind: "scenario", events: ["q"], assertions: [{ element: "h", cmp: "==", value: "critical" }] } },
+    why: "The person said so",
+  };
+
+  it("adds one, marked unconfirmed with its why", () => {
+    const r = checkDesignText(bundle(), { bulk: true }, plain([HOLDS]));
+    expect(r.checked.ok).toBe(true);
+    if (!r.checked.ok) return;
+    expect(r.checked.after.project.expectations).toEqual([
+      { ...HOLDS.value, provenance: { origin: "llm_design", rationale: "The person said so", confirmed: false } },
+    ]);
+  });
+
+  it("refuses a malformed check, and updates and deletes one by id", () => {
+    const bad = checkDesignText(bundle(), { bulk: true }, plain([{ ...HOLDS, value: { ...HOLDS.value, check: { kind: "scenario", assertions: [] } } }]));
+    expect(bad.checked.ok).toBe(false);
+    const added = checkDesignText(bundle(), { bulk: true }, plain([HOLDS]));
+    if (!added.checked.ok) throw new Error("not added");
+    const b = added.checked.after;
+    const updated = checkDesignText(b, { bulk: true }, plain([{ update: "expectation", id: "hosp-holds", value: { statement: "The hospital fails at once" } }]));
+    expect(updated.checked.ok && updated.checked.after.project.expectations?.[0].statement).toBe("The hospital fails at once");
+    const deleted = checkDesignText(b, { bulk: true }, plain([{ delete: "expectation", id: "hosp-holds" }]));
+    expect(deleted.checked.ok && deleted.checked.after.project.expectations).toEqual([]);
+  });
+
+  it("the Calibrate Recipe carries the guide and the project's Expectations", () => {
+    const added = checkDesignText(bundle(), { bulk: true }, plain([HOLDS]));
+    if (!added.checked.ok) throw new Error("not added");
+    const text = recipeContext("calibrate", added.checked.after, { input: "The hospital fails when the grid does." });
+    expect(text).toContain("change what the system IS before how it reacts");
+    expect(text).toContain('- hosp-holds (unconfirmed): "With the grid down the hospital is critical"');
+  });
+});

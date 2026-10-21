@@ -262,6 +262,35 @@ Optional, client data the Propagation request leaves out (ADR-0019).
 | --- | --- |
 | `series[].rows` | Row key (an Element id, or `*` for every Element without a row of its own) → period label → number. An operation reads the value at the exact label of the period being run; a missing one refuses the write. Names unique. |
 
+#### Expectations (`expectations`)
+
+Optional, client data the Propagation request leaves out (ADR-0023). What the
+person knows their system does, each with a check the app runs on a copy of the
+model; results are computed when it runs and never saved.
+
+```json
+"expectations": [{
+  "id": "hospital-holds",
+  "statement": "If the grid fails, the hospital runs 8 hours on its generators, then stops",
+  "check": { "kind": "scenario", "events": ["blackout"], "advance_hours": 8,
+             "assertions": [{ "element": "hospital", "cmp": "==", "value": "critical" }] },
+  "provenance": { "origin": "agent", "rationale": "The director said so", "confirmed": true }
+}, {
+  "id": "june-payout",
+  "statement": "The June payout is about half the January balance",
+  "check": { "kind": "simulation", "simulation": "simulation-1", "column": "Settled",
+             "period": "2025-06", "cmp": "==", "value": 5000, "tolerance": 250 }
+}]
+```
+
+| Field | Description |
+| --- | --- |
+| `statement` | The person's own words. |
+| `check.kind = "scenario"` | `events` (ids, applied in order to the Reset model), a Propagation, then optional `advance_hours` passing and a second Propagation; `scope` `global` (default) or `local` with `canvas`. |
+| `check.assertions[]` | `element` (an id) or `where` (an Element Filter, with `quantifier` `all`, the default, or `any`); `path` (default `["functionality"]`); `cmp` (`<` `<=` `>` `>=` `==` `!=`); `value` a number, a boolean or a Functionality scale label. An unstored `functionality_time` reads 0 and `direct_damage` false. |
+| `check.kind = "simulation"` | `simulation` (id), `column` (as the Run table names it), `period` (a label) or `statistic` (`end` `mean` `min` `max` `total`), `cmp`, `value`, `tolerance` (for `==`/`!=`). The run uses the Temporal Simulation's own scope. |
+| `provenance` | As on Elements and Events: `origin` `llm_design` or `agent`, unconfirmed until the person confirms the statement is true. |
+
 #### Node fields reference
 
 | Field | Type | Description |

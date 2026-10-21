@@ -17,7 +17,8 @@
     "audit:deps": "npm audit --omit=dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "harness:shapley": "vitest run --config vitest.harness.config.mts",
+    "harness:shapley": "vitest run --config vitest.harness.config.mts scripts/shapley-export.harness.ts",
+    "harness:expectations": "vitest run --config vitest.harness.config.mts scripts/expectations.harness.ts",
     "docs:manual": "node scripts/build-user-manual.mjs"
   },
   "dependencies": {

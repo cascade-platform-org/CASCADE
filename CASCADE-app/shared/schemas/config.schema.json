@@ -292,10 +292,14 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "The mark on a node, edge or Event that LLM Design added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
+      "description": "The mark on a node, edge, Event or Expectation that LLM Design or an agent added.\n\nAn LLM's frequency or vulnerability is a guess that looks like a measurement;\nthis keeps the difference visible until a person confirms it. Client-side\nonly: the engine never reads it.",
       "properties": {
         "origin": {
-          "const": "llm_design",
+          "description": "`llm_design`: pasted into LLM Design; `agent`: a Proposal an agent made through the Agent Bridge.",
+          "enum": [
+            "llm_design",
+            "agent"
+          ],
           "title": "Origin",
           "type": "string"
         },

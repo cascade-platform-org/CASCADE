@@ -430,6 +430,8 @@ or paste what it asks for, **Copy for the LLM**, and paste its reply into Bulk o
 - **Red-team Events**: an LLM with no stake in your organisation proposes hazards
   across sectors (weather, outages, cyber, supply chain, staff, combinations) and
   what each one strikes.
+- **Calibrate against what you know**: say how your system behaves; the LLM
+  writes Expectations (§7.2) and the changes that make the model agree.
 - **Explain the current state**: what is degraded and why, in plain words. Its
   answer stays in your LLM.
 
@@ -447,6 +449,31 @@ the selected**), the robot button in the Inspector's header, **Red-team Events
 with an LLM** in the Events tab, or **Explain with an LLM** in the Analysis
 window. Pasting an LLM's reply onto the Canvas opens it in Bulk operations, already
 checked.
+
+### 7.2 Expectations
+
+**Expectations** in the Topbar holds what you know your system does, in your own
+words, each with a check the app runs against the model: *"if the grid fails,
+the hospital runs 8 hours on its generators, then stops"*, *"the June payout is
+about half the January balance"*. A model that passes the Expectations you
+confirmed is one you have reason to trust.
+
+- **Run all** (or ▶ on one) runs each check on a copy of the model: its Events
+  on the Reset model, a Propagation, and the comparison; or a Temporal
+  Simulation and one column of its Run table. Your model does not change.
+  Each Propagation counts as one Engine Evaluation.
+- Each result says **Pass**, **Fail** or **Cannot run** (it names something the
+  model does not have), with every element's actual value and, when it is
+  degraded, what caused it.
+- **Calibrate with an LLM** opens the Recipe of the same name: say what you
+  know, and the LLM writes the Expectations and the changes that should make the
+  model agree. Apply them, run, and **Copy results for the LLM** to hand back
+  what still fails.
+- An Expectation an LLM or an agent wrote is **unconfirmed** until you
+  **Confirm** that the statement is true of your system. ✎ edits the statement
+  and its check (JSON); every edit is one `Ctrl+Z` step.
+
+Results last for the session and are not saved with the project.
 
 ## 8. Server and roles
 
