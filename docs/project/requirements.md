@@ -860,13 +860,22 @@ A person describes their organisation or a question in their own words; an LLM, 
 - **Provenance.** A node, edge or Event that LLM Design adds carries `provenance: { origin: "llm_design", rationale, confirmed: false }` (the change's `why`). The Inspector and the Events tab show it as *unconfirmed*, the Event's frequency as an estimate, until a person confirms it; the Inspector confirms a whole selection at once. The engine never reads it.
 - **Placement.** A node added without a position is placed on a grid below its Canvas's nodes.
 - **Entry points** open LLM Design focused on what the person is looking at: the Canvas's right-click menu (the selection, or the whole model), the Inspector's header (one Element's section, or the selection), the Events tab (*Red-team Events*), and the Analysis window (*Explain the current state*, copied directly). Pasting a plain-changes reply onto the Canvas opens it in Bulk operations, checked.
-- Deferred: an automatic layout for many added nodes, and letting an agent use the app directly (a local MCP server on a project file).
+- Deferred: an automatic layout for many added nodes. Letting an agent use the app directly is built in §13.3d, through the open tab.
 
 ### 13.3c Expectations and calibration — implemented (release v1.3, ADR-0023)
 
 - A project saves **Expectations** (`Project.expectations`): each is a statement in the person's words and a check run on a copy of the model. A **scenario** check applies Events to the Reset model, propagates, optionally lets hours pass and propagates again, then compares Elements' fields (by id, or every/any match of an Element Filter) with a number, a boolean or a scale label. A **simulation** check runs a Temporal Simulation and compares one Run-table column, at a period or as a statistic, with a number within a tolerance.
 - The Topbar's **Expectations** window lists them with their latest result this session (pass, fail, cannot run), each failing Element's actual value and cause; **Run all** or one, **Confirm** an unconfirmed statement, edit the statement or its check, delete, **Copy results for the LLM**, and **Calibrate with an LLM** (the Recipe of the same name). Running needs the server and `can_propagate`; each Propagation is one Engine Evaluation. Results are never saved.
 - Added through LLM Design or by an agent, an Expectation carries Provenance and is unconfirmed until the person confirms the statement. Every edit is one undo step.
+
+### 13.3d An agent in the modelling loop — implemented (release v1.3, ADR-0024)
+
+- **Ownership.** The organisation owns the model, the facilitator operates the app, and an agent only proposes: every change it wants is a **Proposal** a person applies (all or the ticked changes, one undo step) or rejects with an optional reason. What an applied Proposal adds carries Provenance `origin: "agent"`, unconfirmed.
+- **Tools** (run in the tab, on the live model, with the person's session): describe the model, get references, get Elements as stored, propose a change, read a Proposal's outcome, run a scenario on a copy, run the Expectations, run a Temporal Simulation (with Parameter overrides), score with a topological metric, explain the current state, select Elements on the canvas. Runs never write the model; each Propagation is one Engine Evaluation of the person's quota.
+- The Topbar's **Agent** window lists the pending Proposals with LLM Design's preview, the agent's activity this session, the bridge's state and the agents asking to connect (**Approve**/**Decline**), and **Personal tokens** (create, shown once; list with last use and expiry; revoke).
+- **Agent Kit**: a zip with `AGENTS.md`, `SETUP.md`, the references, this project's context, `cascade-mcp.mjs` and `tools.json`; it also serves the copy/paste route.
+- **Agent Bridge**: `cascade-mcp.mjs` (MCP over stdio, Node ≥ 22, no dependencies) connects with a personal token to `WS /api/agent/bridge/agent`; the tab pairs on `WS /api/agent/bridge/tab` (session cookie, Origin checked). One tab per user, each agent approved by the person, approvals ending with the tab; nothing relayed is stored or logged. Tokens and both sockets need `can_propagate`.
+- Deferred: an in-app assistant with a configurable model endpoint, and headless runs with no tab.
 
 ### 13.4 Server Sync (opt-in) — implemented
 

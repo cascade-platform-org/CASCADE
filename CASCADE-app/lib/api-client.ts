@@ -37,6 +37,7 @@ import {
   type WorkingCopyDetail,
 } from "@/lib/schemas/api";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
+import { AgentTokenSchema, CreatedAgentTokenSchema, type AgentToken, type CreatedAgentToken } from "@/lib/schemas/agent";
 import {
   MeResponseSchema,
   AuthConfigSchema,
@@ -710,4 +711,30 @@ export async function syncDeleteProject(versionId: string): Promise<string | nul
     await request(`/api/projects/${encodeURIComponent(versionId)}`, { method: "DELETE" }),
     "Delete failed",
   );
+}
+
+// ---------------------------------------------------------------------------
+// Agent Bridge (ADR-0024) — personal tokens and the tab's socket
+// ---------------------------------------------------------------------------
+
+/** The API's origin, which the Agent Kit's program connects to. */
+export const apiOrigin = (): string => new URL(API_BASE, typeof window !== "undefined" ? window.location.href : undefined).origin;
+
+/** The tab's end of the Agent Bridge: http(s) → ws(s), at the API's origin. */
+export function agentBridgeTabUrl(): string {
+  const u = new URL("/api/agent/bridge/tab", apiOrigin());
+  u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+  return u.toString();
+}
+
+export async function createAgentToken(name: string): Promise<CreatedAgentToken> {
+  return unwrap(await request("/api/agent/tokens", { method: "POST", body: { name }, schema: CreatedAgentTokenSchema }), "Creating the token failed");
+}
+
+export async function listAgentTokens(): Promise<AgentToken[]> {
+  return unwrap(await request("/api/agent/tokens", { schema: z.array(AgentTokenSchema) }), "Listing tokens failed");
+}
+
+export async function revokeAgentToken(id: string): Promise<string | null> {
+  return errorOrNull(await request(`/api/agent/tokens/${encodeURIComponent(id)}`, { method: "DELETE" }), "Revoking the token failed");
 }

@@ -26,6 +26,7 @@ from api import (
     auth_router,
     health_router,
     import_router,
+    agent_router,
     propagation_router,
     sync_router,
 )
@@ -116,6 +117,12 @@ def create_app() -> FastAPI:
             environment=settings.env,
             release=f"cascade-backend@{_API_VERSION}",
             traces_sample_rate=settings.sentry_traces_sample_rate,
+            # ADR-0007: a network never reaches the server's disk, and an error
+            # report is a disk somewhere else. Request bodies (a Propagation's
+            # project) and stack-frame locals (where an Agent Bridge message
+            # or a payload would sit) are never attached.
+            max_request_body_size="never",
+            include_local_variables=False,
         )
         logger.info("Sentry error tracking enabled.")
 
@@ -180,6 +187,7 @@ def create_app() -> FastAPI:
     app.include_router(audit_router)
     app.include_router(sync_router)
     app.include_router(import_router)
+    app.include_router(agent_router)
 
     # Root → API docs (eliminates the 404 when a browser hits /)
     @app.get("/", include_in_schema=False)

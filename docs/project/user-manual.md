@@ -475,6 +475,33 @@ confirmed is one you have reason to trust.
 
 Results last for the session and are not saved with the project.
 
+### 7.3 Working with an agent
+
+An agent (Claude Code, Claude Desktop, an LLM running on your machine or on a
+server you trust) can work in your open project with you: interview you, write
+your Expectations, build the model, run it and explain what it finds. **Agent**
+in the Topbar is where you stay in charge of it.
+
+- **Your project is yours.** The agent reads the model and runs scenarios,
+  Expectations and Temporal Simulations on copies; it never changes the model.
+  Every change it wants arrives as a **Proposal**: the same before → after
+  preview as LLM Design, with a tick per change. **Apply** writes the ticked
+  ones (`Ctrl+Z` undoes them as one step); **Reject** says no, with a reason it
+  reads if you give one. What it adds is marked unconfirmed until you confirm it.
+- **Agent Kit** downloads what the agent needs: `AGENTS.md` (how to work with
+  you), `SETUP.md`, the references, this project's context, and
+  `cascade-mcp.mjs`, the small program that connects it to this tab.
+- To connect: open **Personal tokens**, **Create** one and copy it (it is shown
+  once), give it to your agent as `SETUP.md` says, then **Pair this tab**. When
+  the agent connects, the window names it: **Approve** or **Decline**. Nothing
+  happens before you approve, and closing the tab or **Disconnect** ends it.
+  Revoke the token when you are done.
+- The window lists everything the agent did this session. Its runs count
+  against your engine quota like your own.
+
+What you show the agent leaves your computer for wherever that agent's LLM
+runs: choose one you trust with your organisation's names.
+
 ## 8. Server and roles
 
 **Propagate** and the model-based analyses (Shapley, Vitality) need the server

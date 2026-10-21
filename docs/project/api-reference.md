@@ -271,6 +271,26 @@ The same body, pipeline and response, for a Temporal Simulation (ADR-0020, `core
 
 ---
 
+## Agent Bridge — requires `can_propagate` (requirements.md §13.3d, ADR-0024)
+
+### `POST /api/agent/tokens`
+
+Body `{ name }` (1–100 characters). Returns `{ token, record }`: `token` (`cas_…`) is shown only in this response; the server keeps its SHA-256. `record` is `{ id, name, created_at, last_used_at, expires_at }` (30 days). `501` in local-only mode, where an agent connects with the token `local`.
+
+### `GET /api/agent/tokens` · `DELETE /api/agent/tokens/{id}`
+
+List my tokens (never their values), or revoke one (`204`; `404` when it is not mine).
+
+### `WS /api/agent/bridge/tab`
+
+The user's open tab. Authenticated by the session cookie; refused (close `1008`) unless the `Origin` is one of `CORS_ORIGINS`, the user is signed in and has `can_propagate`. Server → tab: `agent_connected {agent, name, token_name}`, `agent_disconnected {agent}`, `call {agent, id, tool, args}`, `list {agent, id}`, `replaced` (a newer tab paired). Tab → server: `approve {agent}`, `deny {agent}`, `result {agent, id, ok, text | error | tools}`.
+
+### `WS /api/agent/bridge/agent`
+
+An agent (`cascade-mcp.mjs`). First message `{type: "auth", token, name}`; a bad token gets `status unauthorized` and close `1008`. Agent → server: `call {id, tool, args}`, `list {id}`. Server → agent: `status {state: no_tab | waiting_approval | paired | denied}`, `result {id, ok, …}` (from the tab, or at once with the reason when no tab is paired or the agent is not approved). Messages are routed by `agent` and `id` only, never stored or logged.
+
+---
+
 ## Not implemented (by design, yet)
 
 Nothing outstanding here. Batch propagation, listed here until 2026-09-10, now exists — see `POST /api/propagate/batch` above. It is **stateless**: no job table, no stored results. The speculative `batch_propagation_jobs` table dropped in migration 006 stays dropped, because its `results` JSONB would have persisted Propagation outputs, which ADR-0007 forbids.

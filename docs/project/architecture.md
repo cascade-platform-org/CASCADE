@@ -72,7 +72,7 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 
 ### State Management — Zustand
 
-All application state is managed through eleven Zustand stores:
+All application state is managed through twelve Zustand stores:
 
 - **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
 - **`history-store`** — the Any Graph Update ring buffer (`update_history`) plus the session-only redo stack. Capped at 20 entries **and** at a byte budget, because entries are variable-size Graph Diffs and one bulk deletion can exceed twenty ordinary edits (ADR-0017). Evicted entries are retired into a Scenario Baseline map on the way out, so a scenario can outlive the buffer (ADR-0016).
@@ -82,6 +82,7 @@ All application state is managed through eleven Zustand stores:
 - **`temporal-simulation-store`** — the project's Temporal Simulations, serialised into `Project.temporal_simulations` via canvas-store (ADR-0019), and the window's draft of the selected one. An edit is saved only when it passes the schema; otherwise the window lists why and the project keeps the last valid document. Also the run: progress, the in-memory run record (`lib/step-operator.ts`) and the period the **Run View** paints. While a run computes or is shown, the model writers refuse (`lib/model-lock.ts`'s `modelLocked()`: canvas-store's writers, config-store's Save and merge, LLM Design's apply), and the canvas views and Inspector read the period through `useShownElements`. A run's correctness does not rest on that lock: it captures its Propagation Context when it starts.
 - **`project-data-store`** — the project's Series and Expectations, serialised into `Project.series` and `Project.expectations` via canvas-store, left out of every Propagation request. Series edits are refused while a run is shown; Expectations are not model inputs and are not.
 - **`expectation-run-store`** — the session's Expectation results (ADR-0023). Never persisted: a result describes the model as it was when its check ran. `lib/expectations.ts` is the pure runner (engine call injected); `lib/expectations-run.ts` captures its input from the stores once, as a Temporal Simulation run does.
+- **`agent-store`** — an agent in the loop (ADR-0024): pending and settled Proposals, the agent's activity this session, the Agent Bridge's state. Never persisted. The tools are `lib/agent-tools.ts` (typed entries over an `AgentHost`); `lib/agent-host.ts` is the live host and the only path from a Proposal to the model (`applyProposal`, through `checkDesignText` and `applyModelBundle`); `lib/agent-bridge.ts` is the tab's socket.
 - **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
 - **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.
@@ -534,6 +535,10 @@ The fix: register the middleware via `app.add_middleware()` **before** `CORSMidd
 ### Engine Capabilities Endpoint
 
 `GET /api/engine/algorithms` returns an `EngineAlgorithms` snapshot listing available graph types and heuristics with their parameter schemas. The frontend uses this to populate the graph-type selector and the algorithm pipeline editor in the Config modal. Requires at minimum `viewer` role. Returns `HeuristicMeta.param_schema` fragments so the frontend can render typed parameter forms instead of raw JSON textareas (Slice 1 uses raw JSON as a fallback when this endpoint is unreachable).
+
+### Agent Bridge relay
+
+`services/agent_bridge.py` pairs each user's open tab (`WS /api/agent/bridge/tab`, session cookie, Origin checked against `CORS_ORIGINS`) with the agents they started (`WS /api/agent/bridge/agent`, personal token from `db/agent_tokens.py`). It is in-memory state, like the Entitlement meter, and so assumes the single backend instance. It routes by `agent` and `id` and holds no message; the tools run in the tab (ADR-0024).
 
 ### Engine Isolation
 

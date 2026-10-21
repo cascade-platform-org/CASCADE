@@ -20,7 +20,7 @@ import { runExpectations, type ExpectationEnv, type ExpectationResult } from "@/
 let controller: AbortController | null = null;
 
 /** What the checks read from the app, captured now. */
-function captureExpectationEnv(signal?: AbortSignal): ExpectationEnv {
+export function captureExpectationEnv(signal?: AbortSignal): ExpectationEnv {
   const ctx = propagationContext();
   const n = ctx.config.functionality_scale.length;
   return {

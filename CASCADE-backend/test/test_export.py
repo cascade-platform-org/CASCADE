@@ -180,9 +180,24 @@ async def test_export_covers_every_user_scoped_table(migrated_db):
         "audit_logs",
         "analysis_logs",
         "activity_log_uploads",
+        "agent_tokens",  # ADR-0024 — names and dates only; the hash is a credential, not data about the person
     }
     assert tables == covered, (
         f"tables keyed to a person changed: {tables ^ covered}. "
         "Add it to db/export.py, scripts/purge_expired.py (if a log), and the "
         "Art. 30 table in docs/project/privacy-and-data-protection.md."
     )
+
+
+async def test_export_lists_agent_tokens_without_their_hash(migrated_db):
+    from db import agent_tokens as db_tokens
+    from db.export import export_user_data
+    from db.users import upsert_user
+
+    async with migrated_db.acquire() as conn:
+        user = await upsert_user(conn, external_id="sub-tok", email="t@example.org", name="T")
+        _, token = await db_tokens.create_token(conn, owner_id=user.id, name="laptop")
+        data = await export_user_data(conn, user_id=user.id, external_id="sub-tok")
+    assert [t["name"] for t in data["agent_tokens"]] == ["laptop"]
+    assert "token_hash" not in data["agent_tokens"][0]
+    assert db_tokens.hash_token(token) not in str(data)

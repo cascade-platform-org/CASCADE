@@ -48,6 +48,13 @@ RETENTION = {
         730,
         "security/integrity record of role changes and deletions",
     ),
+    # Counted from the expiry, not the creation: a token stops working at
+    # `expires_at` and has no reason to be kept after it (ADR-0024).
+    "agent_tokens": (
+        "expires_at",
+        0,
+        "Agent Bridge personal tokens, once expired",
+    ),
 }
 
 

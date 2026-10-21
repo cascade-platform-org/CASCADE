@@ -603,6 +603,10 @@ backend origin. Because it is a single-page app, the server must fall back to
   [privacy-and-data-protection.md](privacy-and-data-protection.md). Work through
   its checklist before opening signup to the public.
 
+## Agent Bridge
+
+The relay (ADR-0024) keeps its pairings in memory, so it needs the single backend worker this guide already prescribes. Caddy proxies its WebSockets under `/api/*` with no extra configuration; the CSP's `connect-src` lists `wss:` for browsers that do not count a same-origin `wss:` as `'self'`. The tab socket accepts only the origins in `CORS_ORIGINS`, so set that to the public app origin. Migration 008 adds `agent_tokens`. `/agent/cascade-mcp.mjs` is served as a static file and is what the Agent Kit packs.
+
 ## Engine Capacity & Entitlement Calibration
 
 The entitlement caps (ADR-0008) must fit the VM. Run the benchmark **on the

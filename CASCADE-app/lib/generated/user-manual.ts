@@ -3094,6 +3094,188 @@ export const USER_MANUAL: ManualDoc = {
               ]
             }
           ]
+        },
+        {
+          "type": "sub",
+          "title": "7.3 Working with an agent",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "An agent (Claude Code, Claude Desktop, an LLM running on your machine or on a server you trust) can work in your open project with you: interview you, write your Expectations, build the model, run it and explain what it finds. "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Agent"
+                },
+                {
+                  "kind": "text",
+                  "text": " in the Topbar is where you stay in charge of it."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Your project is yours."
+                  },
+                  {
+                    "kind": "text",
+                    "text": " The agent reads the model and runs scenarios, Expectations and Temporal Simulations on copies; it never changes the model. Every change it wants arrives as a "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Proposal"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": the same before → after preview as LLM Design, with a tick per change. "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Apply"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " writes the ticked ones ("
+                  },
+                  {
+                    "kind": "code",
+                    "text": "Ctrl+Z"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " undoes them as one step); "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Reject"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " says no, with a reason it reads if you give one. What it adds is marked unconfirmed until you confirm it."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Agent Kit"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " downloads what the agent needs: "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "AGENTS.md"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " (how to work with you), "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "SETUP.md"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", the references, this project's context, and "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "cascade-mcp.mjs"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", the small program that connects it to this tab."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "To connect: open "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Personal tokens"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ", "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Create"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " one and copy it (it is shown once), give it to your agent as "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "SETUP.md"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " says, then "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Pair this tab"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". When the agent connects, the window names it: "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Approve"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " or "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Decline"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ". Nothing happens before you approve, and closing the tab or "
+                  },
+                  {
+                    "kind": "strong",
+                    "text": "Disconnect"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " ends it. Revoke the token when you are done."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "The window lists everything the agent did this session. Its runs count against your engine quota like your own."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "What you show the agent leaves your computer for wherever that agent's LLM runs: choose one you trust with your organisation's names."
+                }
+              ]
+            }
+          ]
         }
       ]
     },

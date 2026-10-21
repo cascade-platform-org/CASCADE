@@ -31,6 +31,14 @@ _bearer = HTTPBearer(auto_error=False)
 _ACCESS_COOKIE = "cascade_access"
 
 
+LOCAL_USER = AuthUser(
+    sub="local-user",
+    email="local@cascade.dev",
+    display_name="Local User",
+    roles=["admin"],
+)
+
+
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
     access_cookie: Annotated[str | None, Cookie(alias=_ACCESS_COOKIE)] = None,
@@ -43,21 +51,25 @@ async def get_current_user(
     returning users keep their assigned role. When auth is disabled (local-only
     mode) a synthetic admin is returned and no database is required.
     """
+    # Browser sessions authenticate via the httpOnly cookie (set at /callback);
+    # a Bearer header still wins when present (API clients, tests, tools).
+    token = credentials.credentials if credentials else (access_cookie or "")
+    return await resolve_user(token)
+
+
+async def resolve_user(token: str) -> AuthUser:
+    """The user an OIDC access token belongs to, with their role and Entitlement.
+
+    Shared by every HTTP route (through `get_current_user`) and by the Agent
+    Bridge's tab socket, which reads the same cookie (ADR-0024).
+    """
     from config import get_settings
     settings = get_settings()
 
     if not settings.auth_enabled:
         # Local-only mode — no token or database required, synthetic admin.
-        return AuthUser(
-            sub="local-user",
-            email="local@cascade.dev",
-            display_name="Local User",
-            roles=["admin"],
-        )
+        return LOCAL_USER
 
-    # Browser sessions authenticate via the httpOnly cookie (set at /callback);
-    # a Bearer header still wins when present (API clients, tests, tools).
-    token = credentials.credentials if credentials else (access_cookie or "")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

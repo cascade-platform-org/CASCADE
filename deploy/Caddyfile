@@ -33,8 +33,10 @@
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		# Permissive-but-safe CSP. 'unsafe-inline' is needed for Next's inline
 		# bootstrap + React inline styles; https:/blob: cover MapLibre tiles and
-		# workers. Tighten to your exact tile hosts if you want a stricter policy.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self' blob:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'"
+		# workers; wss: the Agent Bridge's tab socket (ADR-0024), which older
+		# Safari does not count as 'self'. Tighten to your exact tile hosts if you
+		# want a stricter policy.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'"
 		# Don't advertise the server software.
 		-Server
 	}

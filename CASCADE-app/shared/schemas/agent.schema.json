@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CreateAgentTokenRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "What the token is for, e.g. 'Claude Code on my laptop'.",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CreateAgentTokenRequest",
+      "type": "object"
+    },
+    "AgentToken": {
+      "description": "A token as listed: never its value.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_used_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Used At"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "expires_at"
+      ],
+      "title": "AgentToken",
+      "type": "object"
+    },
+    "CreatedAgentToken": {
+      "description": "The one response that carries the token's value.",
+      "properties": {
+        "token": {
+          "title": "Token",
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/$defs/AgentToken"
+        }
+      },
+      "required": [
+        "token",
+        "record"
+      ],
+      "title": "CreatedAgentToken",
+      "type": "object"
+    }
+  }
+}

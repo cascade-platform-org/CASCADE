@@ -111,11 +111,23 @@ _Avoid_: "prompt template", "preset"
 
 **Provenance**:
 The mark on a node, edge, Event or Expectation that LLM Design or an agent added: `origin` (`llm_design`, or `agent` for a Proposal), the `rationale` (the change's `why`), and whether a person has `confirmed` it. Unconfirmed until then; the engine never reads it. ADR-0022.
-_Avoid_: "AI-generated" (the person may have written the change)
+_Avoid_: "AI-generated" (the person may have written the change); "agent" bare for the modelling assistant (§15 Personnel behaviour is also called agentic): say Agent Bridge, Agent Kit, Proposal
 
 **Expectation**:
 One thing a person knows their system does, in their own words, with a check the app runs on a copy of the model: a **scenario** (Events on the Reset model, a Propagation, optionally hours passing and a second one, then a comparison on Elements' fields) or a **simulation** (one column of a Temporal Simulation's Run table, at a period or as a statistic, compared with a number). The person's statements are the spec a model is calibrated against: a model that passes its confirmed Expectations is one the person has reason to trust. Results are computed when a check runs and never saved. One written by an LLM or an agent carries **Provenance** until the person confirms the statement. `Project.expectations`, ADR-0023.
 _Avoid_: "test", "assertion" (an assertion is one comparison inside a check), "requirement", "constraint"
+
+**Proposal**:
+A change an agent wants, as plain changes (ADR-0022), checked when proposed and again when applied, waiting in the Agent window for a person to apply it (all or the ticked changes, one undo step) or reject it (with a reason the agent reads). The only way an agent's text reaches the model; what it adds carries Provenance `origin: "agent"`. ADR-0024.
+_Avoid_: "suggestion", "patch", "agent edit" (the agent never edits)
+
+**Agent Kit**:
+The download (Agent window → Agent Kit) that gives any agent what it needs to model with a person in CASCADE: `AGENTS.md` (who owns what, how to interview, Expectations first, how to calibrate and answer), the references, the project's context, and `cascade-mcp.mjs`. Built from the same texts the Recipes and the agent tools use. ADR-0024.
+_Avoid_: "prompt", "agent config"
+
+**Agent Bridge**:
+How an agent outside the browser reaches the person's open tab: `cascade-mcp.mjs` (an MCP server the agent starts) connects with a personal token to a relay on the backend, which pairs it with the tab the person paired, once they approve it. The tools run in the tab with the tab's session; the relay only routes and never stores a message. ADR-0024.
+_Avoid_: "MCP integration", "API access" (a personal token opens nothing but the bridge)
 
 **Parameter**:
 A named number a Temporal Simulation declares (`art8_share = 0.5`), read by Attribute Operations of its profile and of the Events it fires; an Event declares defaults for when it is fired by hand. Changing it once changes every operation that reads it; a **Parameter Sweep** runs over several of its values. ADR-0019, ADR-0021.

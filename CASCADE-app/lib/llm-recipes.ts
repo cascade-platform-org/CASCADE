@@ -101,7 +101,7 @@ export function focusContext(bundle: ProjectBundle, focus: Focus): string {
   ].join("\n");
 }
 
-const MODELLING_GUIDE = `## Turning an organisation into a CASCADE model
+export const MODELLING_GUIDE = `## Turning an organisation into a CASCADE model
 - A node is anything whose failure matters on its own: a site, a plant, a system, a team, a supplier, a service to
   people. Prefer fewer, meaningful nodes. node_type (${NODE_TYPES.join(", ")}) only sets how it is drawn:
   "Source" produces a resource (a power plant, a well, a supplier, an IT provider); "Infrastructure" carries or
@@ -147,7 +147,7 @@ unconfirmed until a person confirms it.`;
  * How an Expectation is written and how a model is brought to meet it: the
  * Calibrate Recipe's guide, and the Agent Kit's (ADR-0023).
  */
-const CALIBRATION_GUIDE = `## Expectations: what the person knows, as checks the app runs
+export const CALIBRATION_GUIDE = `## Expectations: what the person knows, as checks the app runs
 - An Expectation is one thing the person knows their system does, in their own words ("statement"), with a
   "check" the app runs on a copy of the model: a scenario (Events applied to the Reset model, a Propagation,
   optionally hours passing and a second Propagation, then a comparison on Elements) or a Temporal Simulation
@@ -162,7 +162,7 @@ const CALIBRATION_GUIDE = `## Expectations: what the person knows, as checks the
 - Every change and every Expectation you add is marked unconfirmed until the person confirms it.`;
 
 /** The project's Expectations, for an LLM: each statement and its check, as stored. */
-function expectationsContext(bundle: ProjectBundle): string {
+export function expectationsContext(bundle: ProjectBundle): string {
   const list = bundle.project.expectations ?? [];
   if (list.length === 0) return "## The project's Expectations\n(none yet)";
   return [

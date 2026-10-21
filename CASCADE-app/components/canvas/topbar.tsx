@@ -11,6 +11,7 @@ import { useConfigStore } from "@/store/config-store";
 import { HELP_ANCHOR_ID, SCORECARD_ANCHOR_ID } from "@/lib/ui-anchors";
 import { ModelTextControl } from "@/components/model-text/model-text-window";
 import { ExpectationsControl } from "@/components/expectations/expectations-window";
+import { AgentControl } from "@/components/agent/agent-window";
 import { useUiStore } from "@/store/ui-store";
 import { nanoid } from "nanoid";
 import type { Canvas } from "@/lib/schemas/network";
@@ -70,6 +71,9 @@ export function Topbar() {
 
         {/* LLM Design: everything the project saves, edited as JSON with an LLM (ADR-0022) */}
         <ModelTextControl buttonClassName="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" />
+
+        {/* Agent: Proposals to review, the Agent Bridge and the Agent Kit (ADR-0024) */}
+        <AgentControl buttonClassName="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" />
 
         {/* Expectations: what the person knows, checked against the model (ADR-0023) */}
         <ExpectationsControl buttonClassName="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200" />

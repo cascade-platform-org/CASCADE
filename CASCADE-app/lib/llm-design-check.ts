@@ -12,11 +12,13 @@ import { asChangeSet, checkBulkText, type BulkResult } from "@/lib/model-text-v2
 import { findSection, sectionPatch, sectionTree } from "@/lib/model-text-sections";
 import { markAdded } from "@/lib/provenance";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
+import type { ProvenanceOrigin } from "@/lib/schemas/provenance";
 
 /** What the text edits: Bulk operations (with the changes left out of it), or one section. */
 export type DesignTarget = { bulk: true; leaveOut?: ReadonlySet<number> } | { bulk: false; sectionKey: string; label: string };
 
-export function checkDesignText(full: ProjectBundle, target: DesignTarget, text: string): BulkResult {
+/** `origin` is who wrote the text: LLM Design (pasted), or an agent's Proposal (ADR-0024). */
+export function checkDesignText(full: ProjectBundle, target: DesignTarget, text: string, origin?: ProvenanceOrigin): BulkResult {
   // The history is read-only to every text and kept by Apply: leave it out of the copies the check makes
   // (it is most of a large project's size).
   const bundle = { ...full, project: { ...full.project, update_history: [] } };
@@ -29,7 +31,7 @@ export function checkDesignText(full: ProjectBundle, target: DesignTarget, text:
     const reason = g.why ?? result.notes;
     if (reason) for (const s of g.subjects) if (!why.has(s)) why.set(s, reason);
   }
-  return { ...result, checked: { ...r, after: markAdded(bundle, r.after, why) } };
+  return { ...result, checked: { ...r, after: markAdded(bundle, r.after, why, origin) } };
 }
 
 function checkSection(bundle: ProjectBundle, target: { sectionKey: string; label: string }, text: string): BulkResult {

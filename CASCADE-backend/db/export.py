@@ -75,6 +75,16 @@ async def export_user_data(conn: DBConn, *, user_id: str, external_id: str) -> d
         user_id,
     )
 
+    # Personal tokens for the Agent Bridge (ADR-0024). The hash is left out: it
+    # is a credential's fingerprint, not information about the person.
+    agent_tokens = await conn.fetch(
+        """
+        SELECT id::text, name, created_at, last_used_at, expires_at
+        FROM agent_tokens WHERE owner_id = $1::uuid ORDER BY created_at
+        """,
+        user_id,
+    )
+
     # Actions this user PERFORMED.
     audit = await conn.fetch(
         """
@@ -134,6 +144,7 @@ async def export_user_data(conn: DBConn, *, user_id: str, external_id: str) -> d
         "account": dict(account) if account else None,
         "synced_projects": [_row(r, "data") for r in projects],
         "synced_working_copies": [_row(r, "data") for r in working_copies],
+        "agent_tokens": [dict(r) for r in agent_tokens],
         "audit_entries": [_row(r, "details") for r in audit],
         "audit_entries_about_me": [_row(r, "details") for r in audit_about],
         "analysis_runs": [dict(r) for r in analysis],

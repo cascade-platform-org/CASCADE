@@ -22,6 +22,9 @@ export const TEMPORAL_SIMULATION_ANCHOR_ID = "cascade-temporal-simulation-anchor
 /** The Topbar's "LLM Design" button — home of the LLM Design window. */
 export const MODEL_TEXT_ANCHOR_ID = "cascade-model-text-anchor";
 
+/** The Topbar's "Agent" button — home of the Agent window. */
+export const AGENT_ANCHOR_ID = "cascade-agent-anchor";
+
 /** The Topbar's "Expectations" button — home of the Expectations window. */
 export const EXPECTATIONS_ANCHOR_ID = "cascade-expectations-anchor";
 

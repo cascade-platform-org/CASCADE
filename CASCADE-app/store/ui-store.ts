@@ -93,6 +93,9 @@ export interface UiState {
   // --- Expectations (ADR-0023) ---
   expectationsOpen: boolean;
 
+  // --- Agent (ADR-0024) ---
+  agentOpen: boolean;
+
   /**
    * Set by the File panel's "New Project" button; cleared by `app/page.tsx`
    * once it has acted on it. A page-level app-state transition (editor ↔
@@ -261,6 +264,11 @@ export interface UiActions {
   toggleLlmDesign: () => void;
   closeLlmDesign: () => void;
 
+  // --- Agent ---
+  openAgent: () => void;
+  toggleAgent: () => void;
+  closeAgent: () => void;
+
   // --- Expectations ---
   openExpectations: () => void;
   toggleExpectations: () => void;
@@ -379,6 +387,7 @@ const initialState: UiState = {
   llmDesignOpen: false,
   llmDesignRequest: null,
   expectationsOpen: false,
+  agentOpen: false,
   newProjectRequested: false,
   interCanvasEdgeDialogOpen: false,
   interCanvasEdgeSourceNodeId: null,
@@ -506,6 +515,16 @@ export const useUiStore = create<UiStore>()(
 
     closeLlmDesign() {
       set((state) => { state.llmDesignOpen = false; });
+    },
+
+    openAgent() {
+      set((state) => { state.agentOpen = true; });
+    },
+    toggleAgent() {
+      set((state) => { state.agentOpen = !state.agentOpen; });
+    },
+    closeAgent() {
+      set((state) => { state.agentOpen = false; });
     },
 
     openExpectations() {

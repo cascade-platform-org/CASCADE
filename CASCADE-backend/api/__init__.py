@@ -5,6 +5,7 @@ from .admin_routes import router as admin_router
 from .audit_routes import router as audit_router
 from .sync_routes import router as sync_router
 from .import_routes import router as import_router
+from .agent_routes import router as agent_router
 
 __all__ = [
     "health_router",
@@ -14,4 +15,5 @@ __all__ = [
     "audit_router",
     "sync_router",
     "import_router",
+    "agent_router",
 ]

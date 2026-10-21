@@ -22,7 +22,7 @@ import { canvasesById, filterLabel, matchElements } from "@/lib/element-filter";
 import { runTimeline, type Propagated } from "@/lib/step-operator";
 import { planTimeline } from "@/lib/timeline-plan";
 import { checkDoc } from "@/lib/temporal-simulation-text";
-import { runTable } from "@/lib/temporal-metrics";
+import { runTable, type RunTable } from "@/lib/temporal-metrics";
 import { compareRuns } from "@/lib/temporal-comparison";
 import { parameterValues, type StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import type { ElementAssertion, Expectation, ScenarioCheck, SimulationCheck } from "@/lib/schemas/expectation";
@@ -141,20 +141,35 @@ function assertOn(snapshot: GraphSnapshot, a: ElementAssertion, config: ModelCon
   return { pass, lines };
 }
 
-async function runScenario(id: string, check: ScenarioCheck, env: ExpectationEnv): Promise<ExpectationResult> {
+/** A scenario played on the Reset model: its Events, a Propagation, optionally hours passing and a second one. */
+export interface PlayedScenario {
+  snapshot: GraphSnapshot;
+  /** Operations an Event refused, and the hours passed. */
+  lines: string[];
+  engineCalls: number;
+}
+
+/**
+ * Play `events` on the Reset model (`env.start`) and propagate; with
+ * `advanceHours`, let them pass and propagate again. An error names what the
+ * scenario refers to and the model lacks. The model is never written.
+ */
+export async function playScenario(
+  scenario: { events: readonly string[]; advance_hours?: number; scope?: PropagationScope; canvas?: string },
+  env: ExpectationEnv,
+): Promise<PlayedScenario | { error: string }> {
   const { config } = env;
   const n = config.functionality_scale.length;
   const byId = new Map(config.events.map((e) => [e.id, e]));
-  const unknown = check.events.filter((e) => !byId.has(e));
-  if (unknown.length) return { id, status: "error", lines: [`Unknown Event ids: ${unknown.join(", ")}`], engineCalls: 0 };
-  if (check.scope === "local" && !env.start.canvases.some((c) => c.id === check.canvas)) {
-    return { id, status: "error", lines: [`no Canvas ${check.canvas}`], engineCalls: 0 };
-  }
-  const scope: CheckScope = { scope: check.scope, canvasId: check.canvas ?? null };
+  const unknown = scenario.events.filter((e) => !byId.has(e));
+  if (unknown.length) return { error: `Unknown Event ids: ${unknown.join(", ")}` };
+  const local = scenario.scope === "local";
+  if (local && !env.start.canvases.some((c) => c.id === scenario.canvas)) return { error: `no Canvas ${scenario.canvas ?? "(none given)"}` };
+  const scope: CheckScope = { scope: local ? "local" : "global", canvasId: local ? scenario.canvas! : null };
 
   const lines: string[] = [];
   let snapshot = env.start;
-  for (const eventId of check.events) {
+  for (const eventId of scenario.events) {
     const applied = applyEventToSnapshot(snapshot, byId.get(eventId)!, n, { parameters: {}, series: env.series });
     snapshot = applied.snapshot;
     lines.push(...applied.warnings.map((w) => `! ${w}`));
@@ -162,17 +177,25 @@ async function runScenario(id: string, check: ScenarioCheck, env: ExpectationEnv
   let engineCalls = 0;
   snapshot = (await env.propagate(snapshot, scope)).snapshot;
   engineCalls++;
-  if (check.advance_hours > 0) {
+  const hours = scenario.advance_hours ?? 0;
+  if (hours > 0) {
     if (env.signal?.aborted) throw new Error("Cancelled");
-    snapshot = passTime(snapshot, check.advance_hours, "time").snapshot;
+    snapshot = passTime(snapshot, hours, "time").snapshot;
     snapshot = (await env.propagate(snapshot, scope)).snapshot;
     engineCalls++;
-    lines.push(`after ${check.advance_hours} h:`);
+    lines.push(`after ${hours} h:`);
   }
+  return { snapshot, lines, engineCalls };
+}
 
+async function runScenario(id: string, check: ScenarioCheck, env: ExpectationEnv): Promise<ExpectationResult> {
+  const played = await playScenario(check, env);
+  if ("error" in played) return { id, status: "error", lines: [played.error], engineCalls: 0 };
+  const { snapshot, engineCalls } = played;
+  const lines = [...played.lines];
   let pass = true;
   for (const a of check.assertions) {
-    const outcome = assertOn(snapshot, a, config);
+    const outcome = assertOn(snapshot, a, env.config);
     if ("error" in outcome) return { id, status: "error", lines: [...lines, outcome.error], engineCalls };
     pass &&= outcome.pass;
     lines.push(...outcome.lines);
@@ -180,17 +203,33 @@ async function runScenario(id: string, check: ScenarioCheck, env: ExpectationEnv
   return { id, status: pass ? "pass" : "fail", lines, engineCalls };
 }
 
-async function runSimulation(id: string, check: SimulationCheck, env: ExpectationEnv): Promise<ExpectationResult> {
-  const stored = env.simulations.find((s) => s.id === check.simulation);
-  if (!stored) return { id, status: "error", lines: [`no Temporal Simulation ${check.simulation}`], engineCalls: 0 };
+/** A Temporal Simulation run to its Run table, on the Reset model, with its own scope. */
+export interface SimulationTable {
+  name: string;
+  table: RunTable;
+  warnings: string[];
+  engineCalls: number;
+}
+
+/**
+ * Run the project's Temporal Simulation `id`, with `overrides` replacing some of
+ * its Parameters (as a Parameter Sweep does), and return its Run table.
+ */
+export async function runSimulationTable(
+  id: string,
+  env: ExpectationEnv,
+  overrides: Readonly<Record<string, number>> = {},
+): Promise<SimulationTable | { error: string }> {
+  const stored = env.simulations.find((s) => s.id === id || s.timeline.name === id);
+  if (!stored) return { error: `no Temporal Simulation ${id}${env.simulations.length ? `; the project has: ${env.simulations.map((s) => s.id).join(", ")}` : ""}` };
   const { id: _id, ...raw } = stored;
   const checked = checkDoc(raw);
-  if (!checked.ok) return { id, status: "error", lines: [`the Temporal Simulation is invalid: ${checked.errors[0]}`], engineCalls: 0 };
+  if (!checked.ok) return { error: `the Temporal Simulation is invalid: ${checked.errors[0]}` };
   const doc = checked.doc;
+  const unknown = Object.keys(overrides).filter((k) => !doc.parameters.some((p) => p.name === k));
+  if (unknown.length) return { error: `no Parameter ${unknown.join(", ")}; it declares: ${doc.parameters.map((p) => p.name).join(", ") || "none"}` };
   const plan = planTimeline(doc.timeline);
-  if (plan.errors.length > 0 || plan.periods.length === 0) {
-    return { id, status: "error", lines: [plan.errors[0] ?? "its Timeline has no period"], engineCalls: 0 };
-  }
+  if (plan.errors.length > 0 || plan.periods.length === 0) return { error: plan.errors[0] ?? "its Timeline has no period" };
   const n = env.config.functionality_scale.length;
   const scope: CheckScope = { scope: doc.scope, canvasId: doc.canvas ?? null };
   const record = await runTimeline({
@@ -199,32 +238,38 @@ async function runSimulation(id: string, check: SimulationCheck, env: Expectatio
     profile: doc.profile,
     events: env.config.events,
     n,
-    parameters: parameterValues(doc),
+    parameters: parameterValues(doc, overrides),
     series: env.series,
     propagate: (snapshot) => env.propagate(snapshot, scope),
     signal: env.signal,
   });
-  const table = runTable(record, doc.metrics, n, doc.standard_metrics);
+  return { name: doc.timeline.name, table: runTable(record, doc.metrics, n, doc.standard_metrics), warnings: record.warnings, engineCalls: plan.engineCalls };
+}
+
+async function runSimulation(id: string, check: SimulationCheck, env: ExpectationEnv): Promise<ExpectationResult> {
+  const run = await runSimulationTable(check.simulation, env);
+  if ("error" in run) return { id, status: "error", lines: [run.error], engineCalls: 0 };
+  const { table, engineCalls } = run;
   const column = table.columns.findIndex((c) => c.label === check.column);
   if (column < 0) {
-    return { id, status: "error", lines: [`no column "${check.column}"; the Run table has: ${table.columns.map((c) => c.label).join(", ")}`], engineCalls: plan.engineCalls };
+    return { id, status: "error", lines: [`no column "${check.column}"; the Run table has: ${table.columns.map((c) => c.label).join(", ")}`], engineCalls };
   }
   let actual: number | null;
   let where: string;
   if (check.period !== undefined) {
     const row = table.rows.find((r) => r.label === check.period);
-    if (!row) return { id, status: "error", lines: [`no period "${check.period}"`], engineCalls: plan.engineCalls };
+    if (!row) return { id, status: "error", lines: [`no period "${check.period}"`], engineCalls };
     actual = row.values[column];
     where = `at ${check.period}`;
   } else {
-    actual = compareRuns([{ id: stored.id, name: doc.timeline.name, table, warnings: [] }]).rows[0].stats[check.column][check.statistic!];
+    actual = compareRuns([{ id: check.simulation, name: run.name, table, warnings: [] }]).rows[0].stats[check.column][check.statistic!];
     where = `${check.statistic} over the run`;
   }
   const want = `${SYMBOL[check.cmp]} ${check.value}${check.tolerance > 0 && (check.cmp === "==" || check.cmp === "!=") ? ` ± ${check.tolerance}` : ""}`;
-  const warnings = record.warnings.map((w) => `! ${w}`);
-  if (actual === null) return { id, status: "fail", lines: [...warnings, `✗ ${check.column} ${where}: no value, expected ${want}`], engineCalls: plan.engineCalls };
+  const warnings = run.warnings.map((w) => `! ${w}`);
+  if (actual === null) return { id, status: "fail", lines: [...warnings, `✗ ${check.column} ${where}: no value, expected ${want}`], engineCalls };
   const pass = compare(actual, check.cmp, check.value, check.tolerance);
-  return { id, status: pass ? "pass" : "fail", lines: [...warnings, `${pass ? "✓" : "✗"} ${check.column} ${where}: ${round(actual)}, expected ${want}`], engineCalls: plan.engineCalls };
+  return { id, status: pass ? "pass" : "fail", lines: [...warnings, `${pass ? "✓" : "✗"} ${check.column} ${where}: ${round(actual)}, expected ${want}`], engineCalls };
 }
 
 const round = (v: number): string => (Number.isInteger(v) ? String(v) : v.toPrecision(6).replace(/\.?0+$/, ""));

@@ -18,6 +18,7 @@ Output
     CASCADE-app/shared/schemas/config.schema.json
     CASCADE-app/shared/schemas/results.schema.json
     CASCADE-app/shared/schemas/auth.schema.json
+    CASCADE-app/shared/schemas/agent.schema.json
 
 Workflow for schema changes (CLAUDE.md §6)
 ------------------------------------------
@@ -66,6 +67,11 @@ from schemas.results import (                        # noqa: E402
     PropagationResult,
 )
 from schemas.auth import AuthUser                    # noqa: E402
+from schemas.agent import (                          # noqa: E402
+    AgentToken,
+    CreateAgentTokenRequest,
+    CreatedAgentToken,
+)
 from schemas.sync import (                            # noqa: E402
     ProjectBundle,
     SaveProjectRequest,
@@ -111,6 +117,10 @@ def main() -> None:
     export(
         "auth.schema.json",
         AuthUser,
+    )
+    export(
+        "agent.schema.json",
+        CreateAgentTokenRequest, AgentToken, CreatedAgentToken,
     )
     export(
         "sync.schema.json",
