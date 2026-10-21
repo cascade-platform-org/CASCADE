@@ -137,9 +137,11 @@ export const MODELLING_GUIDE = `## Turning an organisation into a CASCADE model
     "category_dependency_profiles": { "electric": { "dependency_level": 3, "demand": 40 } }, "position": { "x": 0, "y": 200 } }, "why": "…" }
   { "connect": { "from": "spring", "to": "pump" }, "why": "…" }`;
 
-const ASK_FIRST = `Before writing any change, check what you know. If the input leaves out what you need to build a sound
-model (what the organisation does, what it depends on, which sites), ask the person up to five short questions in
-plain words, with no jargon, and wait for the answers. Then reply.`;
+const ASK_FIRST = `Before writing any change, check what you know. Ask only what you cannot sensibly assume: what the
+organisation does, what depends on what, which sites. Then ask at most three short questions, in plain words, as
+ordinary text with no JSON, and wait for the answers. Never ask about CASCADE's own concepts (a kind of dependency, a
+Category, a level): choose them yourself from what the person said. Anything else you need, assume it, write
+"Assumed: …" in that change's "why", and say so in "notes". Once you write changes, reply with the JSON block only.`;
 
 const WHY_RULE = `Give every change a "why": the sentence or row of the input it comes from, or "Assumed: …" when you filled a
 gap. Put in "notes" what you modelled, what you left out and what you assumed. The app marks everything you add as

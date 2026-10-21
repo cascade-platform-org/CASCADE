@@ -414,8 +414,9 @@ removes its vulnerability levels; a node added under a canvas is placed on it.
 The undo history is not shown and cannot be changed.
 
 **Copy with context for an LLM** copies the open part with this model's ids and
-names. Paste the reply and press **Check & preview**: every change is shown as
-before → after, or every problem is listed, and **Copy the problems for the
+names. Paste the reply and it is checked at once (after an edit by hand too, a
+moment after the last key; **Check & preview** checks again): every change is
+shown as before → after, or every problem is listed, and **Copy the problems for the
 LLM** hands them back to it to fix. In Bulk operations each change has a tick:
 untick the ones you don't want. Nothing changes until you press **Apply**. The
 project as it was is kept in Recent saves first, and **Undo this edit** puts it

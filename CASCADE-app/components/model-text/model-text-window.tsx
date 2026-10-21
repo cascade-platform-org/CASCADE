@@ -24,7 +24,7 @@
  * never run and never rendered as HTML.
  */
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Bot, Braces, Check, ChevronRight, ClipboardCopy, RotateCcw, Sparkles, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -248,6 +248,14 @@ function ModelTextPanel() {
     setResult(toResult(checked()));
   }
 
+  // Checked as it is pasted or typed, a moment after the last key, so a pasted reply previews at once.
+  useEffect(() => {
+    if (!dirty || !text.trim()) return;
+    const t = setTimeout(() => setResult(toResult(checked(new Set()))), CHECK_DELAY_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `checked` reads the live model when it runs; the text is what changed
+  }, [text, section.key]);
+
   function toggle(index: number) {
     const next = toggled(leaveOut, index);
     setLeaveOut(next);
@@ -364,7 +372,7 @@ function ModelTextPanel() {
             <textarea
               spellCheck={false}
               value={text}
-              placeholder={bulk ? "Paste the LLM's reply here, then Check & preview." : undefined}
+              placeholder={bulk ? "Paste the LLM's reply here: it is checked and previewed at once." : undefined}
               onChange={(e) => { setTexts((m) => ({ ...m, [section.key]: e.target.value })); resetPreview(); }}
               className="min-h-[160px] flex-1 resize-none rounded-md border border-zinc-200 bg-white p-2 font-mono text-[11px] leading-4 text-zinc-800 focus:border-blue-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
             />
@@ -428,6 +436,9 @@ function ModelTextPanel() {
   );
 }
 
+/** How long after the last key an edited text is checked. */
+const CHECK_DELAY_MS = 400;
+
 /** A check's outcome as the window shows it. */
 function toResult({ checked: r, groups, notes }: BulkResult): Result {
   return r.ok ? { kind: "preview", preview: r.preview, warnings: r.warnings, groups, notes } : { kind: "errors", errors: r.errors };
@@ -436,7 +447,7 @@ function toResult({ checked: r, groups, notes }: BulkResult): Result {
 /** What the window is for, in the Topbar button's tooltip and atop the window. */
 const USAGE =
   "Design the model with an LLM. Start from a Recipe (describe your organisation, paste its data, red-team its Events), " +
-  "or pick a part and Copy with context for an LLM; paste the LLM's reply back and Check & preview. " +
+  "or pick a part and Copy with context for an LLM; paste the LLM's reply back and it is checked and previewed at once. " +
   "Nothing changes until you Apply, and Undo this edit puts it back.";
 
 export function ModelTextControl({ buttonClassName }: { buttonClassName: string }) {

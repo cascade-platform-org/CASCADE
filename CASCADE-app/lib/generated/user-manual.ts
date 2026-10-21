@@ -2759,7 +2759,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " copies the open part with this model's ids and names. Paste the reply and press "
+                  "text": " copies the open part with this model's ids and names. Paste the reply and it is checked at once (after an edit by hand too, a moment after the last key; "
                 },
                 {
                   "kind": "strong",
@@ -2767,7 +2767,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": ": every change is shown as before → after, or every problem is listed, and "
+                  "text": " checks again): every change is shown as before → after, or every problem is listed, and "
                 },
                 {
                   "kind": "strong",
