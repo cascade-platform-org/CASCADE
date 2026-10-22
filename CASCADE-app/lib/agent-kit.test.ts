@@ -25,6 +25,9 @@ describe("the Agent Kit (ADR-0024)", () => {
     const md = files["AGENTS.md"];
     expect(md).toContain("The organisation owns the model.");
     for (const t of AGENT_TOOLS) expect(md).toContain(`\`${t.name}\``);
+    // The interview asks the six FRAM questions in plain words and says where each answer goes.
+    expect(md).toContain("What must already be in place before it can start");
+    expect(md).toContain("What steers it");
   });
 
   it("carries the references the tools serve, this project's context and the program", () => {

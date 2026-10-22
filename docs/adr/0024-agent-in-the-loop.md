@@ -46,7 +46,7 @@ reason the agent reads with `get_proposal`. Every tool call is logged in the win
 session.
 
 **The Agent Kit** (`lib/agent-kit.ts`, Agent → Agent Kit) is the downloadable context:
-`AGENTS.md` (ownership, the interview, Expectations first, small Proposals, calibrating by
+`AGENTS.md` (ownership, the interview built on the FRAM method's six aspects asked in plain words (`FUNCTION_QUESTIONS`), Expectations first, small Proposals, calibrating by
 changing what the system *is*, plain-language answers), the references, this project's
 context, `SETUP.md`, `cascade-mcp.mjs` and `tools.json`. Every text in it is built from the
 strings the Recipes and tools already use. Without the bridge the same kit serves the

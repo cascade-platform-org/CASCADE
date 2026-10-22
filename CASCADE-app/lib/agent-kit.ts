@@ -16,6 +16,7 @@
  */
 
 import { AGENT_TOOLS, REFERENCE_TOPICS, modelContext, toolList } from "@/lib/agent-tools";
+import { FUNCTION_QUESTIONS } from "@/lib/llm-recipes";
 import type { ProjectBundle } from "@/lib/schemas/bundle";
 
 /** Where the kit's program finds the app; the relay's address is derived from it. */
@@ -49,6 +50,8 @@ lead) who knows the organisation and does not know CASCADE.
 2. **Interview.** Ask the decision maker short questions in plain words, one or two at a time:
    what the organisation delivers, what each part needs to work, what has gone wrong before,
    how long things last without power, water, staff, a supplier. Repeat back what you understood.
+
+   ${FUNCTION_QUESTIONS.replace(/\n/g, "\n   ")}
 3. **Write what they know as Expectations before modelling it.** Each fact they state about how
    the system behaves ("if the grid fails, the hospital runs 8 hours on its generators, then
    stops") becomes an Expectation in their words (\`{ "add": "expectation" }\`, see

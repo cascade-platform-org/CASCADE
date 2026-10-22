@@ -137,11 +137,31 @@ export const MODELLING_GUIDE = `## Turning an organisation into a CASCADE model
     "category_dependency_profiles": { "electric": { "dependency_level": 3, "demand": 40 } }, "position": { "x": 0, "y": 200 } }, "why": "…" }
   { "connect": { "from": "spring", "to": "pump" }, "why": "…" }`;
 
+/**
+ * What to find out about each thing a person names, in the words a non-technical
+ * person answers (the six questions of the FRAM method: input, output,
+ * precondition, resource, time, control), with where each answer goes. Shared by
+ * the Recipes and the Agent Kit's AGENTS.md.
+ */
+export const FUNCTION_QUESTIONS = `What to find out about each thing the person names (a site, a team, a service). Ask only
+what the model needs and the person can answer, within the question limit; put each answer where it belongs, and
+never show the person this mapping:
+- What must already be in place before it can start (power on, a person present, a licence)? A Requisite Category it
+  depends on.
+- What does it use up while it works (electricity, water, hours of work)? A SourceToDemands Category, with "demand".
+- What does it hand on, and to whom? Its outgoing edges, and "supply_capacity" when it produces a quantity.
+- How long can it carry on without something, and what limits its time? "backup" and "backup_duration" in hours,
+  or a Phase's hours in a Temporal Simulation.
+- What steers it: an agreement, a procedure, a person who decides who is served first? "priority", or a Specific
+  Rule when they describe the procedure.`;
+
 const ASK_FIRST = `Before writing any change, check what you know. Ask only what you cannot sensibly assume: what the
 organisation does, what depends on what, which sites. Then ask at most three short questions, in plain words, as
 ordinary text with no JSON, and wait for the answers. Never ask about CASCADE's own concepts (a kind of dependency, a
 Category, a level): choose them yourself from what the person said. Anything else you need, assume it, write
-"Assumed: …" in that change's "why", and say so in "notes". Once you write changes, reply with the JSON block only.`;
+"Assumed: …" in that change's "why", and say so in "notes". Once you write changes, reply with the JSON block only.
+
+${FUNCTION_QUESTIONS}`;
 
 const WHY_RULE = `Give every change a "why": the sentence or row of the input it comes from, or "Assumed: …" when you filled a
 gap. Put in "notes" what you modelled, what you left out and what you assumed. The app marks everything you add as
