@@ -25,6 +25,10 @@ export interface KitTarget {
   apiOrigin: string;
 }
 
+/** The command that adds the Agent Bridge program to Claude Code, run from the Agent Kit's folder. */
+export const claudeCodeCommand = (apiOrigin: string, token: string): string =>
+  `claude mcp add cascade --env CASCADE_TOKEN=${token} -- node mcp/cascade-mcp.mjs ${apiOrigin}`;
+
 const AGENTS_MD = `# Working with CASCADE
 
 You help a person build and use a CASCADE model of their organisation: how a failure in one part
@@ -88,22 +92,24 @@ where it is checked and previewed the same way.
 
 const SETUP_MD = (t: KitTarget) => `# Connecting an agent to CASCADE
 
-The agent reaches the CASCADE tab you have open through the **Agent Bridge**: \`cascade-mcp.mjs\` is a
+The agent reaches the CASCADE tab you have open through the **Agent Bridge**: \`mcp/cascade-mcp.mjs\` is a
 small MCP server (Node.js 22 or newer, no dependencies) that your agent starts; it connects to
 CASCADE with a personal token and passes the agent's tool calls to your tab. The tools run in your
 tab with your session, so they see exactly what you see and use your own engine quota.
 
+Unzip this kit into a folder and open your agent in it (a terminal in that folder).
+
 1. In CASCADE, open **Agent** (Topbar) → **Personal tokens** → **Create**, and copy the token. It is
    shown once. It lets a program reach your open tab: keep it like a password, and revoke it in the
    same place when you are done.
-2. Add the server to your agent, with the token. Claude Code:
+2. Add the server to your agent, with the token. Claude Code, from this folder:
 
    \`\`\`
-   claude mcp add cascade --env CASCADE_TOKEN=<token> -- node /path/to/cascade-mcp.mjs ${t.apiOrigin}
+   ${claudeCodeCommand(t.apiOrigin, "<token>")}
    \`\`\`
 
    Claude Desktop, opencode or any MCP client: a stdio server with command \`node\`, arguments
-   \`["/path/to/cascade-mcp.mjs", "${t.apiOrigin}"]\` and the environment variable
+   \`["/full/path/to/mcp/cascade-mcp.mjs", "${t.apiOrigin}"]\` and the environment variable
    \`CASCADE_TOKEN=<token>\`.
 3. In CASCADE, open **Agent** → **Pair this tab**. When the agent connects, the window names it:
    press **Approve**. Until you approve, the agent can do nothing. Close the tab, press

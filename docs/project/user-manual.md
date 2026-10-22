@@ -492,11 +492,21 @@ in the Topbar is where you stay in charge of it.
 - **Agent Kit** downloads what the agent needs: `AGENTS.md` (how to work with
   you), `SETUP.md`, the references, this project's context, and
   `cascade-mcp.mjs`, the small program that connects it to this tab.
-- To connect: open **Personal tokens**, **Create** one and copy it (it is shown
-  once), give it to your agent as `SETUP.md` says, then **Pair this tab**. When
-  the agent connects, the window names it: **Approve** or **Decline**. Nothing
-  happens before you approve, and closing the tab or **Disconnect** ends it.
-  Revoke the token when you are done.
+- **To connect** (the window shows these steps, ready to copy). The agent is a
+  program you start yourself; it reaches this tab through CASCADE's server.
+  1. **Agent Kit**: download it and unzip it into a folder. You need Node.js 22
+     or newer.
+  2. A token: open **Personal tokens**, **Create** one and copy it (shown once).
+     Without sign-in (a local CASCADE) there are no tokens and the agent
+     connects with the word `local`.
+  3. In a terminal inside that folder, add CASCADE to your agent; for Claude
+     Code the window gives the command, other agents are in `SETUP.md`.
+  4. **Pair this tab**. When the agent connects, the window names it:
+     **Approve** or **Decline**. Nothing happens before you approve, and
+     closing the tab or **Disconnect** ends it. Revoke the token when you are
+     done.
+  5. Talk to the agent in its own chat; what it wants to change comes back here
+     as Proposals.
 - The window lists everything the agent did this session. Its runs count
   against your engine quota like your own.
 

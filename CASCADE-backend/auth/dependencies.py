@@ -183,12 +183,12 @@ def require_permission(permission: str):
     return _check
 
 
-def require_db_id(user: AuthUser, feature: str) -> str:
+def require_db_id(user: AuthUser, feature: str, hint: str = "") -> str:
     """The user's database id; local-only mode has no users table row to attach
-    `feature`'s data to, so it answers 501."""
+    `feature`'s data to, so it answers 501 (with `hint`, what to do instead)."""
     if user.db_id is None:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=f"{feature} requires a database (not available in local-only mode).",
+            detail=f"{feature} requires a database (not available in local-only mode).{f' {hint}' if hint else ''}",
         )
     return user.db_id

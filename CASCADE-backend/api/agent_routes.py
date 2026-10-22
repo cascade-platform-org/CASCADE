@@ -46,7 +46,7 @@ def bridge_key(user: AuthUser) -> str:
 
 
 async def _token_owner(user: AuthUser = Depends(require_permission(PERMISSION))) -> str:
-    return require_db_id(user, "Personal tokens (in local-only mode an agent connects with the token 'local')")
+    return require_db_id(user, "Personal tokens", "In local-only mode an agent connects with the token 'local'.")
 
 
 @router.post("/tokens", response_model=CreatedAgentToken, summary="Create a personal token for the Agent Bridge")

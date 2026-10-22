@@ -3198,8 +3198,28 @@ export const USER_MANUAL: ManualDoc = {
                 ],
                 [
                   {
+                    "kind": "strong",
+                    "text": "To connect"
+                  },
+                  {
                     "kind": "text",
-                    "text": "To connect: open "
+                    "text": " (the window shows these steps, ready to copy). The agent is a program you start yourself; it reaches this tab through CASCADE's server."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Agent Kit"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": download it and unzip it into a folder. You need Node.js 22 or newer."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "A token: open "
                   },
                   {
                     "kind": "strong",
@@ -3215,7 +3235,21 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": " one and copy it (it is shown once), give it to your agent as "
+                    "text": " one and copy it (shown once). Without sign-in (a local CASCADE) there are no tokens and the agent connects with the word "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "local"
+                  },
+                  {
+                    "kind": "text",
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "In a terminal inside that folder, add CASCADE to your agent; for Claude Code the window gives the command, other agents are in "
                   },
                   {
                     "kind": "code",
@@ -3223,8 +3257,10 @@ export const USER_MANUAL: ManualDoc = {
                   },
                   {
                     "kind": "text",
-                    "text": " says, then "
-                  },
+                    "text": "."
+                  }
+                ],
+                [
                   {
                     "kind": "strong",
                     "text": "Pair this tab"
@@ -3256,6 +3292,12 @@ export const USER_MANUAL: ManualDoc = {
                   {
                     "kind": "text",
                     "text": " ends it. Revoke the token when you are done."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "Talk to the agent in its own chat; what it wants to change comes back here as Proposals."
                   }
                 ],
                 [

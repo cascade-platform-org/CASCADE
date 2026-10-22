@@ -38,6 +38,6 @@ describe("the Agent Kit (ADR-0024)", () => {
   });
 
   it("tells the person how to connect to this deployment", () => {
-    expect(files["SETUP.md"]).toContain("node /path/to/cascade-mcp.mjs https://cascade.example");
+    expect(files["SETUP.md"]).toContain("node mcp/cascade-mcp.mjs https://cascade.example");
   });
 });

@@ -261,6 +261,11 @@ export function checkChange(before: ProjectBundle, change: ChangeSet): CheckedCh
 
   // The text's own values are what is kept; the schema's output would add defaults the preview would then report.
   const after = draft as unknown as ProjectBundle;
+  // The schema defaults a removed registry or Canvas list to empty; the stages below read them.
+  const project = after.project as unknown as Record<string, unknown>;
+  project.nodes ??= {};
+  project.edges ??= {};
+  project.canvases ??= [];
   const n = after.config.functionality_scale.length;
   const model = { nodes: after.project.nodes, edges: after.project.edges, canvases: canvasesById(after.project.canvases) };
   change.elements.forEach((op, i) => {
