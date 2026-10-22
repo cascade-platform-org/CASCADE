@@ -48,8 +48,10 @@ const STATUS_LINE: Record<"off" | "connecting" | "open", string> = {
 /** How to connect an agent, in the order a person does it; what differs in local-only mode is said in place. */
 function HowItWorks({ local }: { local: boolean }) {
   const command = claudeCodeCommand(apiOrigin(), local ? "local" : "<your token>");
+  // Open until an agent has been here; after that the Proposals matter more than the steps.
+  const [firstTime] = useState(() => useAgentStore.getState().activity.length === 0 && useAgentStore.getState().proposals.length === 0);
   return (
-    <details className="mb-2 rounded-md bg-blue-50 px-2 py-1.5 text-[11px] leading-4 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200" open>
+    <details className="mb-2 rounded-md bg-blue-50 px-2 py-1.5 text-[11px] leading-4 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200" open={firstTime}>
       <summary className="cursor-pointer font-medium">How to work with an agent</summary>
       <p className="mt-1">
         An agent is a program <b>you start yourself</b> (Claude Code, Claude Desktop, a model running on your machine). It does not
@@ -71,7 +73,7 @@ function HowItWorks({ local }: { local: boolean }) {
           </div>
         </li>
         <li><b>Pair this tab</b> (button below). When the agent connects, a card names it: press <b>Approve</b>. Until then it can do nothing.</li>
-        <li>Ask the agent for what you want in its own chat (&ldquo;interview me about my hospital&rdquo;). What it wants to change appears below as a Proposal.</li>
+        <li><b>Once approved</b>, ask the agent for what you want in its own chat (&ldquo;interview me about my hospital&rdquo;). An agent that asks before you approve is told to wait. What it wants to change appears below as a Proposal.</li>
       </ol>
       <p className="mt-1 text-blue-800/80 dark:text-blue-200/70">What you show the agent goes to wherever its LLM runs: choose one you trust with your organisation&apos;s names.</p>
     </details>

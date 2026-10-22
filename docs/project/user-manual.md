@@ -505,8 +505,9 @@ in the Topbar is where you stay in charge of it.
      **Approve** or **Decline**. Nothing happens before you approve, and
      closing the tab or **Disconnect** ends it. Revoke the token when you are
      done.
-  5. Talk to the agent in its own chat; what it wants to change comes back here
-     as Proposals.
+  5. Once approved, talk to the agent in its own chat; what it wants to change
+     comes back here as Proposals. The steps stay open until an agent has been
+     here, then fold away.
 - The window lists everything the agent did this session. Its runs count
   against your engine quota like your own.
 

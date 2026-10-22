@@ -3297,7 +3297,7 @@ export const USER_MANUAL: ManualDoc = {
                 [
                   {
                     "kind": "text",
-                    "text": "Talk to the agent in its own chat; what it wants to change comes back here as Proposals."
+                    "text": "Once approved, talk to the agent in its own chat; what it wants to change comes back here as Proposals. The steps stay open until an agent has been here, then fold away."
                   }
                 ],
                 [
