@@ -85,6 +85,55 @@ def read_zheng() -> FramModel:
     return model
 
 
+def read_long(path: Path, name: str) -> FramModel:
+    """Long format `function,name,aspect,value` with O rows naming outputs
+    (Smith 2017, Tian 2016). A received value no function outputs becomes a
+    background function, as in read_zheng."""
+    model = FramModel(name)
+    rows = _rows(path)
+    producers: dict[str, list[str]] = {}
+    for r in rows:
+        model.add_function(r["function"], r["name"])
+        if r["aspect"] == "O":
+            producers.setdefault(r["value"], []).append(r["function"])
+    for r in rows:
+        if r["aspect"] == "O":
+            continue
+        srcs = producers.get(r["value"])
+        if not srcs:
+            ext = "X:" + r["value"]
+            model.add_function(ext, r["value"], background=True)
+            srcs = [ext]
+        for src in srcs:
+            model.add_coupling(src, r["value"], r["function"], r["aspect"])
+    return model
+
+
+def read_smith() -> FramModel:
+    return read_long(MODELS / "smith_2017_propane_fram.csv", "smith_2017_propane")
+
+
+def read_tian() -> FramModel:
+    return read_long(MODELS / "tian_2016_herald.csv", "tian_2016_herald")
+
+
+def read_kim() -> tuple[FramModel, list[dict[str, str]]]:
+    """Kim & Yoon 2021 Table 3. The upstream set of each rule is the coupling
+    list; aspect types are only in Fig. 5, so every coupling is read as I."""
+    model = FramModel("kim_2021_covid")
+    rows = _rows(MODELS / "kim_2021_covid_rules.csv")
+    for r in rows:
+        model.add_function(r["function"], r["name"])
+    for r in rows:
+        for src in dict.fromkeys(re.findall(r"F\d+", r["rule"])):
+            model.add_coupling(src, f"output of {src}", r["function"], "I")
+    return model, rows
+
+
+def zheng_judgements() -> dict[str, str]:
+    return {r["function"]: r["judgement"] for r in _rows(LOCAL / "zheng_2024_table2.csv")}
+
+
 def read_kaya() -> tuple[FramModel, list[dict[str, str]]]:
     """Kaya & Hocaoglu 2020 Appendix 1. Returns the model and the raw rows
     (the per-coupling distributions and factors are inputs to E1 and the VPN

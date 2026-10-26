@@ -1,0 +1,20 @@
+# Zheng, Liu, Yang, Wang, Adriaensen 2024, PSEP 188:514-527, Table 2 "The performance variability analysis of each function" and Sect. 4.2.1. CC BY 4.0.
+# The experts' Step-3 result per function. negative = variability judged harmful (late, insufficient, failed); positive = performs well.
+# Origins stated by the experts: F5 one-way communication with the fire department (low efficiency); damaged communication facilities; limited firefighters; limited time.
+function,judgement,evidence
+F2,positive,Sect. 4.2.1: F2 performs well
+F4,positive,notifies the fire department in time
+F5,negative,communication efficiency is low (one-way communication)
+F6,positive,issues the information on time; all people escape on time
+F7,negative,command post established a bit late; advice a little late (F5 delayed)
+F9,negative,issues the assessment results a little late (F7 delayed)
+F10,negative,issues the assessment results a little late (F7 delayed)
+F11,negative,issues the assessment results a little late (F7 delayed)
+F12,negative,issues the guideline a little late; does not call more firefighters (limited time; damaged communications)
+F14,positive,Sect. 4.2.1: F14 performs well
+F15,positive,Sect. 4.2.1: F15 performs well
+F16,positive,facilities shut down in time and supervised effectively
+F17,negative,does not gather enough firefighters (assembles available ones on time although F12 is delayed)
+F18,positive,all members don PPE and SCBA as required quickly
+F19,positive,PPE checked quickly and strictly
+F20,negative,fire not extinguished within the specified time (coupling of F12 late and F17 short)

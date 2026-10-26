@@ -69,3 +69,47 @@ V1 (FMI mode): every aspect blocks; profile None → `dependency_level` 1; Any �
 
 ## 5. E1b variants (declared now, run after E1)
 Control/Time attenuation 4 (blocking) and 2; Resource attenuation 3; one-hop truncation.
+
+---
+
+# v1 proposal and new cases (frozen 2026-10-26, before the runs below)
+
+Motivation (from the v0 run, not from the new ground truths): v0 recovers the
+negatives but degrades almost everything downstream. Zheng's own narrative
+(Table 2) states the mechanism FRAM assumes: one deviating input is absorbed
+("F17 assembles on time although guidelines from F12 are delayed"), two
+coinciding deviations pass ("coupled F12 + F17 → F20").
+
+## S2 — damping + resonance (`resonance_config`)
+- Every coupling absorbs one level (`dependency_level` = N − 1).
+- The function also follows the **second-worst** of its distinct inputs.
+- Compiled into Specific Rules (a firing rule replaces the proposal, engine
+  Guard 3), giving level = min(worst input + 1, second-worst input).
+- S1 = damping alone (`dependency_level` N − 1 on every aspect, no rules).
+- **Trigger couplings:** an Input the function acts on when it *deviates* (a monitor watching what it monitors) gets `dependency_level` 1 and no rule.
+
+## New cases and mappings
+**Zheng, expanded truth** (Table 2 + §4.2.1, 16 labelled functions: 8 negative, 8 positive; `data/zheng_2024_table2.csv`).
+- Origins as v0, plus F5's own variability = 3 ("one-way communication", stated as the origin of the delay chain).
+- Communications at 2, the v0 value; 3 is reported as a sensitivity.
+- Metric: negatives recovered, positives kept, balanced accuracy.
+
+**Kaya workshop** (function level, {F1, F2, F8, F9}).
+- Output levels as v0.
+- Metric: top-4 functions by frequency of degradation.
+
+**Smith 2017 FRAM** (App. A).
+- N = 2. Basic events map to functions: PT → Measure pressure; PC → Control pressure; PY → Relay pressure; A_valve ∪ Actuator → Automatically operate valve; Hum_error ∪ M_valve → Manually operate valve.
+- *Controlled propane flow* takes its two Inputs as alternatives (profile Any, from its description).
+- Variants:
+  - (a) literal;
+  - (b) Monitor and Alert read *Feed controlled automatically* as a trigger;
+  - (c) (b) plus Smith's question: Monitor also needs *Pressure measured* (shared sensor).
+- Ground truth: the FT top event 0.2720 for (b); the direction of (c).
+
+**Tian 2016** (Table 1).
+- States → levels: nominal 4; "earlier / later / faster" 3; "too early" 2; "not closed / not trimmed / absent" 1.
+- Inputs searched: F7 ∈ {4, 3, 2}; assistant bosun absent (F2 = 1) or present; F1 ∈ {4, 3}.
+- The violation is F2 < 4 ∧ F5 < 4 ∧ F8 < 4.
+- Ground truth: goal0 (bosun absent, F7 = 3), goal1 (bosun present, F7 = 3), goal2 (F7 = 2) violate; F7 = 4 does not.
+- Rule-encoded variant, from the paper's text ("time pressure from F7 resonates through untrimmed ballast and higher speed"): `if F7 below 4 then F5 is not performed`.

@@ -62,6 +62,14 @@ class TranslationConfig:
     # aspect -> dependency_level on the 1..n scale; n = full dependency.
     dep: dict[str, int] = field(default_factory=dict)
     fmi_mode: bool = False
+    # Resonance (proposal v1): the function also follows the SECOND-worst of
+    # its distinct inputs, compiled into Specific Rules. With damping on every
+    # coupling (dep = n - 1) a single deviating input is absorbed by one level
+    # and two coinciding deviations pass: Hollnagel's resonance principle.
+    resonance: bool = False
+    # (target fid, source fid) couplings read as triggers: the target acts on
+    # the source's deviation, so it does not depend on the source being up.
+    triggers: frozenset[tuple[str, str]] = frozenset()
 
     def dependency(self, aspect: str) -> int:
         return self.dep.get(aspect, self.n)
@@ -71,6 +79,11 @@ def default_config(n: int = 4) -> TranslationConfig:
     """Default translation (TRANSLATION.md §2): I, P, R pass the full drop;
     Control and Time degrade without blocking (one level absorbed)."""
     return TranslationConfig(n=n, dep={"I": n, "P": n, "R": n, "C": n - 1, "T": n - 1})
+
+
+def resonance_config(n: int = 4) -> TranslationConfig:
+    """Proposal v1: damping on every coupling + compiled second-worst rule."""
+    return TranslationConfig(n=n, dep={a: n - 1 for a in ASPECTS}, resonance=True)
 
 
 def fmi_config() -> TranslationConfig:
@@ -119,13 +132,21 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
 
     # consumer -> category -> aspects it arrives through
     arrivals: dict[str, dict[str, set[str]]] = {}
+    # consumer -> category -> producing output nodes (for the resonance rules)
+    producers: dict[str, dict[str, set[str]]] = {}
+    trigger_cats: dict[str, set[str]] = {}
     for c in model.couplings:
         eid = f"e_{len(edges)}"
         target = fn_node[c.target]
+        cat = out_category(c.output)
         edges[eid] = Edge(id=eid, source=out_node[(c.source, c.output)], target=target,
                           functionality=tc.n)
         coupling_edge[(c.source, c.output, c.target, c.aspect)] = eid
-        arrivals.setdefault(target, {}).setdefault(out_category(c.output), set()).add(c.aspect)
+        arrivals.setdefault(target, {}).setdefault(cat, set()).add(c.aspect)
+        if (c.target, c.source) in tc.triggers:
+            trigger_cats.setdefault(target, set()).add(cat)
+        else:
+            producers.setdefault(target, {}).setdefault(cat, set()).add(out_node[(c.source, c.output)])
 
     for fid, nid in fn_node.items():
         fn = model.functions[fid]
@@ -136,6 +157,8 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             levels = []
             for a in aspects:
                 if tc.fmi_mode and fn.profile(a) == "None":
+                    levels.append(1)
+                elif cat in trigger_cats.get(nid, set()):
                     levels.append(1)
                 else:
                     levels.append(tc.dependency(a))
@@ -157,6 +180,10 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             parts += all_cats
             expr = f"worst_of({', '.join(parts)})" if len(parts) > 1 else parts[0]
             update["rules"] = [f"{expr} propagates to {nid}"]
+        if tc.resonance:
+            rules = resonance_rules(nid, producers.get(nid, {}), tc.n)
+            if rules:
+                update["rules"] = list(update.get("rules", [])) + rules  # type: ignore[arg-type]
         if update:
             nodes[nid] = nodes[nid].model_copy(update=update)
 
@@ -174,6 +201,33 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
     )
     return Translated(project, config, fn_node, out_node, coupling_edge,
                       {lv: _label(lv, tc.n)[0] for lv in range(1, tc.n + 1)})
+
+
+def resonance_rules(nid: str, inputs: dict[str, set[str]], n: int) -> list[str]:
+    """Second-worst order statistic over a function's distinct inputs, as rules.
+
+    An input (one output category) is below level L when every producer of it
+    is below L (producers are alternatives). For each pair of distinct inputs
+    and each L in n..2: `if <A below L> and <B below L> then <nid> is <L-1>`.
+    A firing Specific Rule REPLACES the computed proposal (engine Guard 3), so
+    the one-level damping of single inputs is compiled too:
+    `if <A below L> then <nid> is <L>` for L in 2..n-1. Together the rules give
+    level = min(worst input + 1, second-worst input), capped at n; when no rule
+    fires every input is nominal or a single one is one level down (absorbed).
+    """
+    cats = sorted(inputs)
+    rules = []
+    for a in cats:
+        for lv in range(2, n):
+            cond = " and ".join(f"{o}.functionality is <{lv}" for o in sorted(inputs[a]))
+            rules.append(f"if {cond} then {nid} is {_label(lv, n)[0]}")
+    for i, a in enumerate(cats):
+        for b in cats[i + 1:]:
+            for lv in range(n, 1, -1):
+                cond = " and ".join(f"{o}.functionality is <{lv}"
+                                    for o in sorted(inputs[a]) + sorted(inputs[b]))
+                rules.append(f"if {cond} then {nid} is {_label(lv - 1, n)[0]}")
+    return rules
 
 
 def _label(level: int, n: int) -> tuple[str, str]:
