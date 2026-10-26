@@ -40,6 +40,34 @@ Why: 48 of 49 couplings amplify when the output deviates (A_T = A_P = 2), so aft
 
 **Ground-truth finding (post-freeze, labelled).** Fig. 5 is the output of Kaya's own Monte Carlo. The independent expert conclusion is the workshop: the functions that "vary the most" are F1, F2, F8, F9. The nurses also say variability "is likely to aggregate and, in turn, delay other activities", which is a statement of transitivity.
 
+## 2b. RQ1 under the v1 proposal (E1b, frozen at f22f61b)
+
+The proposal is two parts:
+- **Damping:** every coupling absorbs one level.
+- **Resonance:** a function also follows the *second-worst* of its distinct inputs, so level = min(worst + 1, second worst). This is compiled into Specific Rules; no engine change.
+
+**Trigger couplings:** an Input that a function acts on when it deviates (a monitor watching what it monitors) does not count as a dependency. Raw: `results/e1b_*.csv`.
+
+| Case (ground truth) | S0 = v0 | S1 damping | **S2 damping + resonance** |
+|---|---|---|---|
+| Zheng, 16 functions of Table 2, comms = 2 (frozen) | 8/8 neg · 0/8 pos · bal. acc 0.50 | 5/8 · 5/8 · 0.63 | **8/8 · 3/8 · 0.69** |
+| Zheng, comms = 3 (sensitivity) | 0.50 | 1/8 · 8/8 · 0.56 | **8/8 · 6/8 · 0.875** (wrong: F18, F19) |
+| Tian, 6 scenarios (model checking) | 4/6 | 2/6 | 3/6 |
+| Tian + the paper's rule "time pressure from F7 → untrimmed" | 5/6 | 5/6 | 5/6 |
+| Kaya workshop, top-4 ∩ {F1, F2, F8, F9} (VPN: 3) | 1 | 2 | 2 |
+
+**Reading the table**
+- **Zheng.** Resonance reproduces the experts' chain: F5 → F7 → F9–F11 → F12 → F17 and F20 are flagged, while F13 → F14 → F15 → F16 absorb F12's single delay. The F20 rule from §4.2.1 makes F20 *severe* (rule-encoded class).
+  - F18 and F19 remain wrong. They receive F12 and F17, whose deficits share one origin, so the rule counts a common cause as a coincidence.
+  - The severity given to "damaged communications" is the largest sensitivity (0.69 vs 0.875). The paper does not quantify it.
+- **Tian.** The remaining miss (bosun present, early call) needs the paper's Table 3 rule for F2 (an early call pulls the bosun away before closing). That rule was not in the freeze.
+- **Kaya.** Unchanged in substance: its information sits in the probability mass, which the one-level collapse cannot carry.
+
+**Smith 2017** (P of losing *controlled propane flow*, 2⁵ scenarios):
+- (a) literal translation: **0.7326**. The monitor and the alarm depend on the automatic feed they watch, so the manual backup is useless.
+- (b) with trigger couplings: **0.2720**, the fault tree exactly.
+- (c) (b) plus Smith's shared-sensor question: **0.3756**, i.e. +38 % from the dependency the FT and BN hide. This quantifies the paper's qualitative conclusion.
+
 ## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
 
 | Case (k) | Vitality | Degree | Betweenness | PageRank (rev.) | Katz (rev.) | Random |

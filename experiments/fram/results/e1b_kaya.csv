@@ -1,0 +1,4 @@
+case,semantics,top4,top4_in_workshop,functions_ever_degraded,max_freq,coupling_P/R/F1,vpn_top4_in_workshop
+kaya_workshop,S0_v0,F9 F11 F12 F13,1,18/18,77.2,0.36/1.00/0.52,3
+kaya_workshop,S1_damping,F8 F21 F9 F10,2,17/18,75.6,0.42/0.94/0.58,3
+kaya_workshop,S2_resonance,F8 F21 F9 F10,2,17/18,75.6,0.42/0.94/0.58,3
