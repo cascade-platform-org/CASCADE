@@ -1,0 +1,12 @@
+model,functions,couplings,acyclic,non_default_profiles,scenarios,cascade_eq_gfp,cascade_eq_fmi,functions_diverging_from_fmi
+Resilience potentials 0,8,14,False,0,209,209,207,7
+Resilience potentials 1,8,14,False,3,209,209,209,0
+Resilience potentials 2,8,14,False,3,209,209,209,0
+leave_harbour_example,8,14,True,1,209,209,209,0
+prepare_work_example,11,13,True,0,212,212,212,0
+render_options_test,5,3,True,0,206,206,206,0
+F1Pit Stop WAD 231,33,65,True,0,234,234,234,0
+Safety-II Figure 6.4,6,4,True,0,207,207,207,0
+Safety-II Figure 6.5,11,10,True,0,212,212,212,0
+Safety-II Figure 6.6,19,37,False,1,220,220,220,0
+grabbe_2022_overtaking,285,798,False,117,486,486,357,28
