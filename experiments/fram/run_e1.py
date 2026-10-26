@@ -15,7 +15,6 @@ from scipy.stats import spearmanr
 
 from framkit import readers
 from framkit.engine import function_levels, propagate
-from framkit.model import FramModel
 from framkit.oracles import spc_scenarios, vpn_frequency
 from framkit.translate import TranslationConfig, default_config, translate
 
