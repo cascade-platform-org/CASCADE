@@ -99,6 +99,34 @@ Remaining misses, all in the *beyond the scale* class:
 - F18 and F19, which adapt ("quickly");
 - Kaya's probability mass.
 
+## 2d. Held-out case: Wenzhou 2011 (E1d — declared at 504048f before the run)
+
+**Digitisation.** Li & Huang 2025 Fig. 4 (a 300 dpi raster) was traced semi-automatically:
+- port positions were found by template matching;
+- each coupling was fitted with Bézier curves and line tracking, and the ambiguous crossings were checked by eye.
+
+The result is 20 modules and 35 couplings. Every coupling in the paper's Table 3 (12) and Table 1 (5, aspects included) is present, which is an independent check of the tracing. The overlay is in `docs/paper/FRAM/models/li_2025_wenzhou_check.png` (private).
+
+**Run.** v2 candidate, no case-specific rules; lightning fails M7 (track circuit) and M10 (GSM-R). Raw: `results/e1d_*.csv`.
+
+| | S0 = v0 | **v2 candidate** |
+|---|---|---|
+| Accident chain degraded (M5, M8, M11, M16, M17, M19, M20) | 7/7 | **7/7** |
+| Uninvolved downstream modules nominal (M12, M13) | 0/2 | **2/2** |
+| Modules degraded in total (of 20) | 13 | 9 |
+| Couplings flagged | 18 | 10 |
+| P / R vs Table 1 (5 broken connections) | 0.28 / 1.00 | 0.50 / 1.00 |
+| P / R vs Table 3 (12 transmission paths) | 0.67 / 1.00 | **1.00 / 0.83** |
+| Collision (M20, D301 braking) | not performed | severe |
+
+- **Function level: v2 reproduces the accident exactly.** M11's single deviating input (the wrong command) is absorbed one level, so interlocking, route control and both departures stay nominal. The paper's Table 4 gives them zero or ~10⁻⁸ variability.
+- **Coupling level.** v2 flags 10 couplings, all of them in Table 3. The two it misses (M11 → M15, M11 → M18) carry 10⁻⁸ in the paper.
+- **Severity sensitivity (A2, M7 = M10 = 2).** 6/7 and 2/2: M11 now absorbs the drop entirely.
+- **Critical modules (Shapley on M20 over the seven Table 2 origins).**
+  - S0: M7 and M10 first (1.17), then M5, M8, M11 and M19 tie at 0.17, so its 4/4 comes from the id tie-break.
+  - v2: M7 and M10 (0.92), then M8 and M19 (0.08); M5 gets 0 and the top-4 hits 3/4.
+  - Both rankings put the two lightning-struck modules on top. Neither separates dispatch (M5) from the train-side origins. Under v2, M5's own variability reaches the collision only through M11 → M18 → M19 → M20, and that path is damped at each hop.
+
 ## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
 
 | Case (k) | Vitality | Degree | Betweenness | PageRank (rev.) | Katz (rev.) | Random |
@@ -128,6 +156,6 @@ Remaining misses, all in the *beyond the scale* class:
 
 ## 5. Not yet run
 
-- Transcriptions: Smith 2017 FRAM, Kim & Yoon 2021, Tian 2016, the FRW toy.
+- Transcriptions: the FRW toy. Kim & Yoon 2021 is transcribed (Table 3) but not yet run.
 - The FRW oracle; Shapley Value (only Vitality so far).
 - The demonstration's Temporal Simulation and SourceToDemands resources.
