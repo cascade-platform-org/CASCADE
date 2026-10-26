@@ -113,3 +113,19 @@ coinciding deviations pass ("coupled F12 + F17 → F20").
 - The violation is F2 < 4 ∧ F5 < 4 ∧ F8 < 4.
 - Ground truth: goal0 (bosun absent, F7 = 3), goal1 (bosun present, F7 = 3), goal2 (F7 = 2) violate; F7 = 4 does not.
 - Rule-encoded variant, from the paper's text ("time pressure from F7 resonates through untrimmed ballast and higher speed"): `if F7 below 4 then F5 is not performed`.
+
+---
+
+# Held-out case: Wenzhou 2011 (declared 2026-10-26, before the run)
+
+Model: Li & Huang 2025 Fig. 4, digitised (`models/li_2025_wenzhou.csv`, 20 modules, 35 couplings; all 12 Table 3 and all 5 Table 1 couplings present). Translation: the v2 candidate (nested S2, N = 4, Δ = 1), compared with S0. **No case-specific rules**: the paper's text (v)–(viii) only restates transmissions the network already carries.
+
+**Scenarios** (from Sect. 6 and Table 2):
+- A, physical trigger only: lightning fails the track circuit M7 and GSM-R M10 → level 1 (they no longer deliver their output).
+- A2, sensitivity: M7 = M10 = 2.
+- B, all origins of Table 2: A plus the human/management variability of M5, M8, M11, M16, M19 → 3.
+
+**Ground truth and metrics**
+- Functions (scenario A). Positives: Table 1's influenced modules and the accident's chain {M5, M8, M11, M16, M17, M19, M20} (M20 = D301 fails to brake, the collision). Negatives: the downstream modules with no variability in Table 4 {M12, M13}. M15 and M18 are reported but not scored: the paper gives them only transmitted variability (~10⁻⁸), and the report is silent on them.
+- Couplings (scenario A). A coupling is flagged when its source and its target are both below 4. Truth: Table 1's five broken connections; secondary truth: Table 3's twelve transmission paths.
+- Critical modules (scenario B). Shapley value of the seven origins for the collision, v(S) = 4 − level(M20) when only the origins in S deviate. Top-4 vs {M5, M7, M8, M10} (Table 5, which the authors state agrees with the report).
