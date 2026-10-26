@@ -37,6 +37,7 @@ from schemas.config import (  # noqa: E402
     FunctionalityScaleLevel,
     ModelConfiguration,
 )
+import schemas.results  # noqa: E402,F401  (defines PropagationResult, which Project references)
 from schemas.network import (  # noqa: E402
     Canvas,
     CategoryDependencyProfile,
@@ -67,6 +68,14 @@ class TranslationConfig:
     # coupling (dep = n - 1) a single deviating input is absorbed by one level
     # and two coinciding deviations pass: Hollnagel's resonance principle.
     resonance: bool = False
+    # "rules": compiled Specific Rules (N = 4 only, labels needed);
+    # "nested": one nested intercategorical rule per function over damped
+    # copies of its inputs (any N): worst_of(damped inputs, best_of pairs).
+    resonance_mode: str = "rules"
+    # Common-cause refinement (nested mode): drop a resonance pair when one
+    # input's producer lies upstream of the other's, since their deviations
+    # can share an origin and do not coincide independently.
+    independent_pairs: bool = False
     # (target fid, source fid) couplings read as triggers: the target acts on
     # the source's deviation, so it does not depend on the source being up.
     triggers: frozenset[tuple[str, str]] = frozenset()
@@ -81,9 +90,10 @@ def default_config(n: int = 4) -> TranslationConfig:
     return TranslationConfig(n=n, dep={"I": n, "P": n, "R": n, "C": n - 1, "T": n - 1})
 
 
-def resonance_config(n: int = 4) -> TranslationConfig:
-    """Proposal v1: damping on every coupling + compiled second-worst rule."""
-    return TranslationConfig(n=n, dep={a: n - 1 for a in ASPECTS}, resonance=True)
+def resonance_config(n: int = 4, damping: int = 1, mode: str = "rules") -> TranslationConfig:
+    """Proposal v1: damping on every coupling + second-worst resonance."""
+    return TranslationConfig(n=n, dep={a: n - damping for a in ASPECTS}, resonance=True,
+                             resonance_mode=mode)
 
 
 def fmi_config() -> TranslationConfig:
@@ -148,7 +158,15 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
         else:
             producers.setdefault(target, {}).setdefault(cat, set()).add(out_node[(c.source, c.output)])
 
-    for fid, nid in fn_node.items():
+    damped: dict[str, list[tuple[str, str]]] = {}   # consumer -> (copy category, input category)
+    # consumer node -> input category -> producing function ids; FRAM ancestors
+    src_of: dict[str, dict[str, set[str]]] = {}
+    for c in model.couplings:
+        src_of.setdefault(fn_node[c.target], {}).setdefault(out_category(c.output), set()).add(c.source)
+    import networkx as nx
+    graph = nx.DiGraph((c.source, c.target) for c in model.couplings)
+    ancestors = {f: nx.ancestors(graph, f) for f in graph}
+    for fid, nid in list(fn_node.items()):
         fn = model.functions[fid]
         profiles: dict[str, CategoryDependencyProfile] = {}
         any_cats: dict[str, list[str]] = {}   # aspect -> its Any categories
@@ -163,7 +181,27 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
                 else:
                     levels.append(tc.dependency(a))
             dep = max(levels)
-            if dep < tc.n:
+            nested = tc.resonance and tc.resonance_mode == "nested"
+            if nested and cat not in trigger_cats.get(nid, set()):
+                # The damping moves onto a per-input copy; the raw input stays
+                # undamped for the second-worst term.
+                k = sum(len(v) for v in damped.values())
+                # node id d_k, category dmp_k: distinct strings, because the rule
+                # parser resolves node ids before categories and the rule must
+                # reference the CATEGORY (an all-node rule is intracategorical).
+                did, dcat = f"d_{k}", f"dmp_{k}"
+                damped.setdefault(nid, []).append((dcat, cat))
+                categories.append(dcat)
+                nodes[did] = Node(id=did, label=did, functionality=tc.n, node_categories=[dcat],
+                                  category_dependency_profiles=(
+                                      {cat: CategoryDependencyProfile(dependency_level=dep)}
+                                      if dep < tc.n else None))
+                for o in sorted(producers[nid][cat]):
+                    eid = f"e_{len(edges)}"
+                    edges[eid] = Edge(id=eid, source=o, target=did, functionality=tc.n)
+                eid = f"e_{len(edges)}"
+                edges[eid] = Edge(id=eid, source=did, target=nid, functionality=tc.n)
+            elif dep < tc.n:
                 profiles[cat] = CategoryDependencyProfile(dependency_level=dep)
             any_aspects = sorted(a for a in aspects if tc.fmi_mode and fn.profile(a) == "Any")
             if any_aspects:
@@ -180,10 +218,16 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             parts += all_cats
             expr = f"worst_of({', '.join(parts)})" if len(parts) > 1 else parts[0]
             update["rules"] = [f"{expr} propagates to {nid}"]
-        if tc.resonance:
+        if tc.resonance and tc.resonance_mode == "rules":
             rules = resonance_rules(nid, producers.get(nid, {}), tc.n)
             if rules:
                 update["rules"] = list(update.get("rules", [])) + rules  # type: ignore[arg-type]
+        if tc.resonance and tc.resonance_mode == "nested" and damped.get(nid):
+            raw = [cat for _, cat in damped[nid]]
+            terms = [dcat for dcat, _ in damped[nid]]
+            terms += [f"best_of({a}, {b})" for i, a in enumerate(raw) for b in raw[i + 1:]
+                      if not (tc.independent_pairs and _related(src_of[nid][a], src_of[nid][b], ancestors))]
+            update["rules"] = [f"worst_of({', '.join(terms)}) propagates to {nid}"]
         if update:
             nodes[nid] = nodes[nid].model_copy(update=update)
 
@@ -201,6 +245,12 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
     )
     return Translated(project, config, fn_node, out_node, coupling_edge,
                       {lv: _label(lv, tc.n)[0] for lv in range(1, tc.n + 1)})
+
+
+def _related(a: set[str], b: set[str], ancestors: dict[str, set[str]]) -> bool:
+    """True when a producer of one input lies upstream of a producer of the other."""
+    return any(x in ancestors.get(y, set()) or y in ancestors.get(x, set())
+               for x in a for y in b)
 
 
 def resonance_rules(nid: str, inputs: dict[str, set[str]], n: int) -> list[str]:

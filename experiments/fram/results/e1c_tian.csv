@@ -1,0 +1,7 @@
+semantics,rules,scenarios_correct,late_loading_alone_violates
+S0_v0,none,4/6,2
+S0_v0,F5,5/6,2
+S0_v0,F5+F2,6/6,2
+S2_nested,none,3/6,0
+S2_nested,F5,5/6,0
+S2_nested,F5+F2,6/6,0

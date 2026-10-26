@@ -68,6 +68,37 @@ The proposal is two parts:
 - (b) with trigger couplings: **0.2720**, the fault tree exactly.
 - (c) (b) plus Smith's shared-sensor question: **0.3756**, i.e. +38 % from the dependency the FT and BN hide. This quantifies the paper's qualitative conclusion.
 
+## 2c. Exploratory fidelity study (E1c — after v1, not frozen; informs Gate 1)
+
+Raw: `results/e1c_*.csv`.
+
+1. **Resonance with existing rule types only.** One nested intercategorical rule per function implements it: `worst_of(dmp_a, dmp_b, …, best_of(a, b), best_of(a, c), …) propagates to F`. Here `dmp_x` is a damped copy of input x, carrying `dependency_level` N − 1, and the best_of pairs give the second-worst term.
+   - **Identical to the compiled Specific Rules:** 0 mismatches in 64 toy cases and 800 random scenarios on four models.
+   - Responsibility shares stay meaningful, and no new operator is needed.
+   - Pitfall: rule arguments must name *categories*. The parser resolves node ids first, and an all-node rule is intracategorical, which overrides nothing.
+2. **Wider scale (Zheng; N ∈ {4, 7, 10}, damping Δ, severities as fractions of the scale).**
+   - No fidelity gain. The outcome depends only on whether the single-input damping covers the event's deficit, which is a ratio, so every N reaches the same best value (0.875) at the matching ratio.
+   - N = 4 with Δ = 2 gives 0.875 for every communications severity, **but it breaks Tian (2/6 even with rules)**: over-damping stops the "faster" deviation before F8. Δ = 1 is the robust choice across cases.
+3. **Common-cause refinement** (drop pairs whose inputs share an upstream origin): worse, losing F9–F12, F17 and F20. The experts *do* pass delays with a shared origin (F7's lateness through F9–F11 to F12). Dropped.
+4. **Tian with the rules written from the paper** ("time pressure from F7 → untrimmed", text; "early call → doors not closed even with an order", Table 3): **6/6** under both S0 and S2. S2 also removes S0's 2 spurious violations from late loading alone.
+5. **Kaya on N = 10** (exceedance probability graded onto the scale, functions ranked by expected deficit): still 1/4. The workshop truth is coarse, and the per-coupling probabilities do not localise to functions.
+
+**Candidate v2 for Gate 1:**
+- S2 in nested-rule form, N = 4, Δ = 1;
+- trigger couplings and rules written from the papers' descriptions;
+- event severity "damaged" = one level unless the paper says otherwise.
+
+| Case | v2 candidate |
+|---|---|
+| Zheng | 8/8 neg, 6/8 pos (0.875); 0.69 if communications count as severe |
+| Tian | 6/6 |
+| Smith | FT exact (0.2720); shared sensor 0.3756 |
+| Kaya workshop | 2/4 |
+
+Remaining misses, all in the *beyond the scale* class:
+- F18 and F19, which adapt ("quickly");
+- Kaya's probability mass.
+
 ## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
 
 | Case (k) | Vitality | Degree | Betweenness | PageRank (rev.) | Katz (rev.) | Random |
