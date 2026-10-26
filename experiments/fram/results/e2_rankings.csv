@@ -1,0 +1,25 @@
+case,method,k,gold,universe,hits,expected_random,p_hypergeom,top5,spearman
+grabbe_2022_human,vitality,23,23,285,0,1.86,1.0,,
+grabbe_2022_human,degree,23,23,285,16,1.86,0.0,,
+grabbe_2022_human,out_reach,23,23,285,0,1.86,1.0,,
+grabbe_2022_human,betweenness,23,23,285,14,1.86,0.0,,
+grabbe_2022_human,pagerank_rev,23,23,285,11,1.86,0.0,,
+grabbe_2022_human,katz_rev,23,23,285,13,1.86,0.0,,
+grabbe_2022_automation,vitality,21,21,285,0,1.55,1.0,,
+grabbe_2022_automation,degree,21,21,285,7,1.55,0.0003,,
+grabbe_2022_automation,out_reach,21,21,285,0,1.55,1.0,,
+grabbe_2022_automation,betweenness,21,21,285,10,1.55,0.0,,
+grabbe_2022_automation,pagerank_rev,21,21,285,5,1.55,0.0124,,
+grabbe_2022_automation,katz_rev,21,21,285,4,1.55,0.057,,
+li_2026,vitality,5,5,13,2,1.92,0.6845,P5 P3 R2 R3 P7,
+li_2026,degree,5,5,13,4,1.92,0.0319,P4 R5 R3 R4 P5,
+li_2026,out_reach,5,5,13,2,1.92,0.6845,P5 P3 P4 R2 P2,
+li_2026,betweenness,5,5,13,3,1.92,0.2494,S2 S4 R5 R3 R4,
+li_2026,pagerank_rev,5,5,13,5,1.92,0.0008,P5 P4 R3 S2 R5,
+li_2026,katz_rev,5,5,13,5,1.92,0.0008,P4 P5 R3 S2 R5,
+kaya_2020_couplings,vitality,13,13,49,6,3.45,0.0693,,0.377
+kaya_2020_couplings,edge_betweenness,13,13,49,6,3.45,0.0693,,0.185
+kaya_2020_couplings,source_out_reach,13,13,49,6,3.45,0.0693,,0.368
+zinetullina_2021_couplings,vitality,3,3,31,0,0.29,1.0,,-0.488
+zinetullina_2021_couplings,edge_betweenness,3,3,31,1,0.29,0.2712,,0.002
+zinetullina_2021_couplings,source_out_reach,3,3,31,0,0.29,1.0,,-0.296

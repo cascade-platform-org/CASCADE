@@ -1,0 +1,9 @@
+case,variant,neg_recovered,pos_kept,levels_labelled,degraded_functions,F20
+zheng_2024,default,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,default+rule,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,CT_blocking,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,CT_blocking+rule,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,CT_dep2,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,CT_dep2+rule,3/3,0/3,F12=2 F17=2 F20=2 F2=2 F14=2 F15=2,21/22,2
+zheng_2024,R_dep3,3/3,0/3,F12=3 F17=3 F20=3 F2=3 F14=3 F15=3,21/22,3
+zheng_2024,R_dep3+rule,3/3,0/3,F12=3 F17=3 F20=2 F2=3 F14=3 F15=3,21/22,2
