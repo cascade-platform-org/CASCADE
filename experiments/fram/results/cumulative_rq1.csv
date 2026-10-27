@@ -1,0 +1,16 @@
+case,variant,recall,precision,misses
+Zheng 2024,v2,8/8,8/10,F18 F19
+Zheng 2024,v2+3,8/8,8/10,F18 F19
+Zheng 2024,v2+c,8/8,8/10,F18 F19
+Tian 2016,v2,4/4 violating scenarios,4/4,
+Tian 2016,v2+3,4/4 violating scenarios,4/4,
+Tian 2016,v2+c,4/4 violating scenarios,4/4,
+Kaya 2020,v2,2/4 in top-4,-,top-4 F8 F21 F9 F10; VPN re-run 3/4
+Kaya 2020,v2+3,2/4 in top-4,-,top-4 F8 F21 F9 F10; VPN re-run 3/4
+Kaya 2020,v2+c,2/4 in top-4,-,top-4 F8 F21 F9 F10; VPN re-run 3/4
+Wenzhou 2011 (held out),v2,7/7,7/7,"couplings P 10/10, R 10/12"
+Wenzhou 2011 (held out),v2+3,7/7,7/7,"couplings P 10/10, R 10/12"
+Wenzhou 2011 (held out),v2+c,7/7,7/7,"couplings P 10/10, R 10/12"
+Koriyama 2019 (held out),v2,3/3,3/3,"couplings P 4/4, R 4/4"
+Koriyama 2019 (held out),v2+3,3/3,3/3,"couplings P 4/4, R 4/4"
+Koriyama 2019 (held out),v2+c,3/3,3/3,"couplings P 4/4, R 4/4"

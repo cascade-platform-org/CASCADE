@@ -91,4 +91,4 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 | 9e5c3e2 | RQ2 exact counterfactuals |
 | 3afa017, c2249b7 | RQ2 extraction rules; frozen claim list |
 | c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |
-| (this commit) | sensitivity: cumulative worsening, v2+3 and v2+c |
+| d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |

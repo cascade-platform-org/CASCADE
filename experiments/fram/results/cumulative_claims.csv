@@ -1,0 +1,11 @@
+id,paper,direction,v2,v2 detail,v2+3,v2+3 detail,v2+c,v2+c detail
+C1,Tian 2016,stay degraded,agree,F5:1->1 F8:3->3,agree,F5:1->1 F8:2->3,agree,F5:1->1 F8:2->3
+C2,Tian 2016,improve,agree,F2:2->4,agree,F2:2->4,agree,F2:2->4
+C4,Togawa 2023,improve,disagree,T6:3->3,disagree,T6:2->2,agree,T6:1->2
+C5,Togawa 2023,improve,agree,T5:3->4 T6:3->3 T9:3->3,agree,T5:3->4 T6:2->3 T9:2->2,agree,T5:3->4 T6:1->3 T9:2->2
+C6,Togawa 2023,improve,disagree,T9:3->3,agree,T9:2->3,agree,T9:2->3
+C8,Zheng 2024,improve,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:3->4,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:2->4,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:2->4
+C9,Zheng 2024,avoid (nominal),agree,F20:2->4 (direction improves),agree,F20:2->4 (direction improves),agree,F20:2->4 (direction improves)
+C10,Li & Huang 2025,avoid (nominal),disagree,M20:2->3 (direction improves),disagree,M20:2->3 (direction improves),disagree,M20:2->3 (direction improves)
+C12,Li & Huang 2025,avoid (nominal),agree,M20:2->4 (direction improves),agree,M20:2->4 (direction improves),agree,M20:2->4 (direction improves)
+C14,Li 2026,PEP > DER > PER reduction,disagree,deficit reduction DER:6.0 PER:6.0 PEP:5.0,disagree,deficit reduction DER:11.0 PEP:10.0 PER:6.0,disagree,deficit reduction DER:16.0 PEP:15.0 PER:7.0

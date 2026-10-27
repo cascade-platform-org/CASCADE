@@ -8,6 +8,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_v1.py` | verification | ~1 min |
 | `run_rq1.py` | RQ1 | 4 s |
 | `run_rq2.py` | RQ2 | ~3 min |
+| `run_cumulative.py` | sensitivity: cumulative worsening | 6 s |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `demo_zheng.py` | demonstration | 4 s |
 
@@ -62,7 +63,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | Verdict | Claims |
 |---|---|
 | **agree (7)** | Tian: fixing the door alone would not avoid the accident; a direct order helps. Togawa: better public communication reduces resonance. Zheng: two-way updates improve the chain; cancelling F5 plus mutual aid lets F20 extinguish in time. Wenzhou: barriers on M5, M7, M8, M10 prevent the accident. Smith: a shared sensor worsens both branches. |
-| disagree (4) | Wenzhou: an alternative channel avoids the accident (model: M20 2 → 3, direction right, not nominal). Togawa: preparation time affected evacuation (evacuation behaviour is overdetermined by three other deviations). Togawa: better evacuation relieves rescue (the paper's map has 119 calls as exogenous). Li 2026: the stage hierarchy (a learned policy's frequency, a different quantity). |
+| disagree (4) | Wenzhou: an alternative channel avoids the accident (model: M20 2 → 3, direction right, not nominal). Togawa: preparation time affected evacuation (evacuation behaviour is overdetermined by three other deviations). Togawa: better evacuation relieves rescue (the paper's map has 119 calls as exogenous). Both Togawa claims agree under cumulative worsening (below). Li 2026: the stage hierarchy (a learned policy's frequency, a different quantity). |
 | not expressible (3) | berth renewal; community engagement (no such functions); failure warnings to dispatch (a protective information flow) |
 
 **Exploratory, declared after the run (c8e8c2b): protective information as an alternative path** (`results/rq2_paths.csv`). Fig. 4 draws no link by which dispatch reaches the D301 driver. Drawn as an alternative source of the occupancy information for M20, with the failure warning as a trigger:
@@ -75,6 +76,18 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | both | **2 → 4: avoided** |
 
 The two claims are expressible once the path is drawn, and the model shows they work only together. The scope boundary is the map, which lacks the path; the method can express it.
+
+**Sensitivity, declared at d3312fa: cumulative worsening** (`results/cumulative_*.csv`). v2 lets a function fall to its second-worst input and no lower. The variants add Specific Rules, so that three coinciding deviations cost one level more (v2+3), or each one beyond two does (v2+c).
+
+| | v2 | v2+3 | v2+c |
+|---|---|---|---|
+| RQ1, all five N = 4 cases | as above | identical | identical |
+| claims agreeing | 7/11 | **8/11**: C6 (T9 2 → 3) | **9/11**: C6, and C4 (T6 1 → 2) |
+| C10, C14 | disagree | disagree | disagree (C14 moves to DER > PEP > PER) |
+
+- The hand reading recorded with the declaration predicted every change. v2+c was shaped by C4's structure (T6 has four deviating inputs), so the claim gains are not independent evidence.
+- The independent part: deeper levels change no function-level score on any case, held-out ones included. Only the levels of functions already degraded fall (Koriyama T6 reaches 1 under v2+c).
+- Togawa's two "overdetermined" disagreements are therefore a question of how coinciding deviations combine. The paper leaves that implicit, and the converted model makes it an explicit, testable choice.
 
 **Kim interventions** (IEV_p × factor vs the oracle).
 - At × 0.9 (the paper's Fig. 8) the model resolves 1 of 12 functions (ρ = −0.35).
@@ -94,7 +107,8 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 | answers to questions the FRAM raises but cannot settle | Smith's shared sensor: +38 % P(top); the sensor becomes the most critical component |
 | mechanisms a FRAM table cannot express | demonstration: fire water decides F20 and Tank 63 (below) |
 | criticality that accounts for redundancy and coincidence | Smith's backup first by Birnbaum; topology misses it |
-| repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Koriyama's "evacuation relieves rescue" and Wenzhou's warnings need links the maps lack |
+| repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Wenzhou's warnings need a path Fig. 4 lacks |
+| an explicit rule for how coinciding deviations combine | Togawa's two claims turn on it (cumulative worsening: 9/11); RQ1 does not |
 | how recommendations combine | Wenzhou: the failure warning and the alternative channel avoid the accident only together |
 | precision about what stays nominal | held-out cases: contained and uninvolved functions kept |
 
