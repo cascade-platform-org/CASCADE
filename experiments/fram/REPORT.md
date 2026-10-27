@@ -291,6 +291,35 @@ RQ2 is now about consequences: what each function's deviation costs. FRAM papers
 - **The collapse cannot resolve small changes in variability magnitude.** A 10 % change rarely crosses a level band. At 50 % the model finds F7 and F5 but correlates weakly.
 - This intervention changes *how variable* a function is: the "born and amplified" side, which is FRAM's quantity, not a consequence of deviation. The result fits the positioning; it is not a counterexample to it.
 
+## 3e. E3 layer 2: the experts' counterfactual claims (rules 3afa017, list frozen c2249b7)
+
+I extracted every intervention-with-effect statement from the ten case papers with a model in hand. That gives 15 claims, plus 7 statements excluded under the rules (`data/e3_claims*.csv`). Each claim ran as a model edit on the case's RQ1 scenario under v2. Raw: `results/e3c_claims.csv`.
+
+| Claim | Paper | Verdict | Model |
+|---|---|---|---|
+| C1: fixing the door alone would not avoid the accident | Tian | **agree** | with F2 held, F5 and F8 stay degraded (1, 3) |
+| C2: a direct order makes the bosun close the door | Tian | **agree** | F2 2 → 4 |
+| C3: berth renewal helps close the doors | Tian | not expressible | no berth function |
+| C4: lack of preparation time affected evacuation behaviour | Togawa | disagree | Evacuation Behavior stays 3 |
+| C5: better public communication reduces resonance | Togawa | **agree** | Evacuation Preparation 3 → 4; others unchanged |
+| C6: evacuation behaviour performing as expected absorbs earlier variability | Togawa | disagree | Rescue stays 3 |
+| C7: community engagement aids evacuation | Togawa | not expressible | no such function |
+| C8: two-way information updates improve efficiency | Zheng | **agree** | F7, F9–F12 all 3 → 4 |
+| C9: cancel F5 + mutual aid → F20 extinguishes in time | Zheng | **agree** | F20 2 → 4 |
+| C10: an alternative contact channel would avoid the accident | Li & Huang | disagree (direction agrees) | M20 2 → 3 |
+| C11: failure warnings to dispatch would avoid the accident | Li & Huang | not expressible | protective information flow |
+| C12: barriers on M5, M7, M8, M10 prevent the accident | Li & Huang | **agree** | M20 2 → 4 |
+| C13: a shared sensor worsens both branches | Smith | **agree** | P(top) 0.272 → 0.376 |
+| C14: prevention-stage control is the strongest lever | Li 2026 | disagree | deficit reduction DER 6 = PER 6 > PEP 5 |
+| C15: F7 and F11 are the most influential | Kim | see E3b | F7 found at × 0.5, F11 not |
+
+**Reading.** 7 of 11 evaluable claims agree. The disagreements and the claims the model cannot express fall into three groups:
+- **Protective information flows** (C10, C11). The intervention works by information that *compensates* for a wrong signal: the stopped train's driver tells dispatch, or a failure warning reaches it. A disservice-propagation model can carry this only through a rule that writes the claimed effect, which would be circular. C10's direction agrees (2 → 3), but the track circuit's fail-unsafe occupancy signal still reaches the braking function. **This is the scope boundary of the approach, and the paper should state it.**
+- **Overdetermination and mechanisms outside the map** (C4, C6).
+  - C4: evacuation behaviour already has three other coinciding deviations, and v2's second-worst rule gives no cumulative worsening for a fourth.
+  - C6: in Togawa's own map, 119 calls are exogenous, so better evacuation does not reduce them. The claim relies on a link the paper's model does not draw.
+- **A method-derived claim** (C14). Li's stage hierarchy is the learned policy's action frequency, which weighs control costs. It is a different quantity.
+
 ## 4. Issues found
 
 1. **Engine behaviour (by design, documented):** a parent passes all its Requisite categories to every child, so the translation needs one output node per (function, output text).

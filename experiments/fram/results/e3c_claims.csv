@@ -1,0 +1,16 @@
+id,paper,claim,verdict,detail
+C1,Tian 2016,stay degraded,agree,F5:1->1 F8:3->3
+C2,Tian 2016,improve,agree,F2:2->4
+C3,Tian 2016,not expressible,not expressible,no berth function in the model
+C4,Togawa 2023,improve,disagree,T6:3->3
+C5,Togawa 2023,improve,agree,T5:3->4 T6:3->3 T9:3->3
+C6,Togawa 2023,improve,disagree,T9:3->3
+C7,Togawa 2023,not expressible,not expressible,no community-engagement function
+C8,Zheng 2024,improve,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:3->4
+C9,Zheng 2024,avoid (nominal),agree,F20:2->4 (direction improves)
+C10,Li & Huang 2025,avoid (nominal),disagree,M20:2->3 (direction improves)
+C11,Li & Huang 2025,not expressible (protective coupling),not expressible,a protective information flow: only a rule that writes the claimed effect
+C12,Li & Huang 2025,avoid (nominal),agree,M20:2->4 (direction improves)
+C13,Smith 2017,worse,agree,P(top) 0.2720 -> 0.3756
+C14,Li 2026,PEP > DER > PER reduction,disagree,deficit reduction DER:6.0 PER:6.0 PEP:5.0
+C15,Kim & Yoon 2021,evaluated in E3b,see E3b,"Spearman -0.35 (x0.9), 0.26 (x0.5); F7 found at x0.5, F11 not"
