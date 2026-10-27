@@ -1011,6 +1011,7 @@ without a separate validation script — the same comparison
 | Temporal Simulation (release v1.1): a saved, re-runnable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Implemented** — §9.6; ADR-0019/0020/0021; design `temporal-simulation-design.md`. Exposing `served_ratio` and storage's `stored` amends ADR-0003; `utilisation` (per source) and source-side fairness between ordinary sources are deferred. Open: backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 | Parameter and Series follow-ups | Deferred: saved Parameter Sweeps, Series resampled across calendar units |
+| Automatic sensitivity sets: generated families of model changes (an Event's severity, a dependency level, a rule's offset) run as one batch, to show which conclusions survive. Each change reads as an intervention or as uncertain modelling knowledge | Idea, parked (2026-10-27). Motivated by the FRAM study, where the triggering event's severity moved results more than any modelling choice |
 
 ---
 
