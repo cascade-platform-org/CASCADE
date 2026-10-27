@@ -20,7 +20,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 
 ## V1. Verification (`results/v1_*.csv`)
 
-- **FMI semantics.** 11 models, 2,624 scenarios.
+- **FMI semantics.** 11 models, 2,613 scenarios.
   - CASCADE equals the greatest fixed point of the FMI activation operator in every scenario.
   - It equals the FMI's least fixed point on every acyclic model.
   - The divergences are cyclic deadlocks the modellers break by hand (Resilience potentials v0; Grabbe's 162-function loop).
