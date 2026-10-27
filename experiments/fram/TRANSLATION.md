@@ -200,3 +200,19 @@ Sensitivity: the same event without PC3 and PC4 (alerts read as timely).
 **Ground truth: Fig. 6.**
 - Functions. Resonated, non-origin: Evacuation Preparation, Evacuation Behavior, Rescue Operations → predicted below 4. Contained: Shelters, Care Needs → predicted 4. Uninvolved: PC5, Emergency Deployment → predicted 4.
 - Couplings. Flagged when source and target are both below 4. Truth: the red couplings PC3→EP, PC4→EB, EP→EB, EB→Rescue. Precision and recall over all couplings.
+
+---
+
+# E2b — RQ2 reframed: scenario attribution vs topology (declared 2026-10-27, before the run)
+
+Question: what do model-based metrics reveal that topological rankings miss? Tested on every case whose source reports which of the observed deviations produced the outcome. Translation: v2.
+
+**Metrics.** Each ranks the case's candidate deviations.
+- **Shapley:** scenario-conditioned, exact over the players. v(S) = summed deficit (N − level) of the outcome functions when only the players in S deviate, at the severities of the RQ1 mapping.
+- **Vitality:** structural; the Operativity drop when the candidate alone is set to 1, on v2.
+- **Topological:** degree, betweenness, reverse PageRank, reverse Katz (α = 0.1), out-reach, all on the function graph.
+
+**Cases.**
+- **Wenzhou.** Players: the seven Table 2 origins (M7, M10 = 1; M5, M8, M11, M16, M19 = 3). Outcome: M20. Truth: {M5, M7, M8, M10}; top-4 overlap.
+- **Koriyama.** Players: PC3, PC4, Shelters, Care Needs (the functions with variability in Fig. 6, one level each), plus the context conditions of E1f (*Immediate environment*, night, 119 calls). Outcome: Evacuation Behavior + Rescue. Truth: the resonated PC3 and PC4 rank above the contained Shelters and Care Needs. Score = the share of correctly ordered (red, blue) pairs (4 pairs; ties count ½).
+- **Tian.** Players: F7 early call (3), assistant bosun absent (F2 = 1), late loading (F1 = 3). Outcome: F2, F5, F8 (the safety constraint), with the v2 description rules. Truth: F7 ranks first ("fixing door closing alone would not avoid the hazard").
