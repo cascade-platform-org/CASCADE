@@ -1,0 +1,16 @@
+id,paper,claim,direction,verdict,detail
+C1,Tian 2016,the accident would NOT be substantially avoided if only the factor of closing the door (in,stay degraded,agree,F5:1->1 F8:3->3
+C2,Tian 2016,[the assistant bosun] is much more likely to correct it if a direct order to close the doo,improve,agree,F2:2->4
+C3,Tian 2016,berth renewal was implemented so that ferries would be better able to shut their bow or st,not expressible,not expressible,no berth function in the model
+C4,Togawa 2023,"If residents did lack sufficient preparation time before they started evacuating, then thi",improve,disagree,T6:3->3
+C5,Togawa 2023,changing the manner and timing of public communications could reduce the general risk of f,improve,agree,T5:3->4 T6:3->3 T9:3->3
+C6,Togawa 2023,"If this function achieves its everyday, expected performance (if residents evacuate as the",improve,disagree,T9:3->3
+C7,Togawa 2023,enhancing engagement within the community plays a vital role in facilitating evacuation be,not expressible,not expressible,no community-engagement function
+C8,Zheng 2024,Simultaneously updating seismic Natech accident-related information to both parties can en,improve,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:3->4
+C9,Zheng 2024,cancel the unnecessary functions F5 ... dispatch more firefighters from the other organiza,avoid (nominal),agree,F20:2->4 (direction improves)
+C10,Li & Huang 2025,"If there are alternative contact methods that can be activated, the dispatch center can co",avoid (nominal),disagree,M20:2->3 (direction improves)
+C11,Li & Huang 2025,"if the M8 ... failed, a warning message was also immediately sent to the dispatch center, ",not expressible (protective coupling),not expressible,a protective information flow: only a rule that writes the claimed effect
+C12,Li & Huang 2025,"[barriers on M5, M7, M8, M10] effectively controlling the emergence of risk factors into a",avoid (nominal),agree,M20:2->4 (direction improves)
+C13,Smith 2017,if that pressure sensor is also used in the alarm system ... increasing the chance of impr,worse,agree,P(top) 0.2720 -> 0.3756
+C14,Li 2026,the learned hierarchy (PEP > DER > PER) ... pre-disaster mitigation constitutes the most e,PEP > DER > PER reduction,disagree,deficit reduction DER:6.0 PER:6.0 PEP:5.0
+C15,Kim & Yoon 2021,F7 and F11 were found to be the most influential functions,evaluated in E3b,see kim,Kim interventions table

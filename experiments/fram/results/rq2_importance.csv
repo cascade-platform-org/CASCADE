@@ -1,0 +1,19 @@
+variant,metric,spearman_vs_FT,first,scores
+as published,CASCADE Birnbaum,1.0,S2,S8:0.119 S9:0.138 S6:0.117 S3:0.189 S2:0.733
+as published,CASCADE Shapley,0.71,S2,S8:0.05 S9:0.05 S6:0.05 S3:0.05 S2:0.8
+as published,single-knockout Vitality,-0.67,S8,S8:0.4 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+as published,degree,0.72,S3,S8:1 S9:3 S6:2 S3:4 S2:3
+as published,out_reach,-0.7,S8,S8:7 S9:6 S6:5 S3:4 S2:1
+as published,betweenness,0.0,S3,S8:0 S9:0.125 S6:0.167 S3:0.181 S2:0.0556
+as published,pagerank_rev,-0.5,S9,S8:0.115 S9:0.169 S6:0.149 S3:0.124 S2:0.061
+as published,katz_rev,-0.3,S3,S8:0.306 S9:0.307 S6:0.312 S3:0.364 S2:0.303
+as published,(FT Birnbaum),,S2,S8:0.119 S9:0.138 S6:0.117 S3:0.189 S2:0.733
+shared sensor,CASCADE Birnbaum,0.4,S8,S8:0.748 S9:0.138 S6:0.117 S3:0.189 S2:0.568
+shared sensor,CASCADE Shapley,0.11,S8,S8:0.55 S9:0.05 S6:0.05 S3:0.05 S2:0.3
+shared sensor,single-knockout Vitality,-0.67,S8,S8:0.7 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+shared sensor,degree,0.72,S3,S8:1 S9:3 S6:2 S3:4 S2:3
+shared sensor,out_reach,-0.7,S8,S8:7 S9:6 S6:5 S3:4 S2:1
+shared sensor,betweenness,0.0,S3,S8:0 S9:0.125 S6:0.167 S3:0.181 S2:0.0556
+shared sensor,pagerank_rev,-0.5,S9,S8:0.115 S9:0.169 S6:0.149 S3:0.124 S2:0.061
+shared sensor,katz_rev,-0.3,S3,S8:0.306 S9:0.307 S6:0.312 S3:0.364 S2:0.303
+shared sensor,(FT Birnbaum),,S2,S8:0.119 S9:0.138 S6:0.117 S3:0.189 S2:0.733

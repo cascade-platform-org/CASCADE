@@ -70,7 +70,7 @@ def build(remedy: bool) -> tuple[Translated, dict[str, str]]:
         model.add_function("F23", "Locate and mobilise firefighters from other organisations")
         model.add_coupling("F2", "Immediate action guidelines", "F23", "I")
         model.add_coupling(RADIO, "Radio/Telephone", "F23", "R")
-    t = translate(model, resonance_config(mode="nested"))
+    t = translate(model, resonance_config())
     f = t.fn_node
     nodes, edges = dict(t.project.nodes), dict(t.project.edges)
 

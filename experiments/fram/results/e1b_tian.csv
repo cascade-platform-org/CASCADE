@@ -1,7 +1,0 @@
-case,semantics,f7_rule,scenarios_correct,detail
-tian_2016,S0_v0,False,4/6,F7=4/p/F1=4:- F7=4/p/F1=3:V F7=4/a/F1=4:- F7=4/a/F1=3:V F7=3/p/F1=4:- F7=3/p/F1=3:V F7=3/a/F1=4:- F7=3/a/F1=3:V F7=2/p/F1=4:V F7=2/p/F1=3:V F7=2/a/F1=4:V F7=2/a/F1=3:V
-tian_2016,S0_v0,True,5/6,F7=4/p/F1=4:- F7=4/p/F1=3:V F7=4/a/F1=4:- F7=4/a/F1=3:V F7=3/p/F1=4:- F7=3/p/F1=3:V F7=3/a/F1=4:V F7=3/a/F1=3:V F7=2/p/F1=4:V F7=2/p/F1=3:V F7=2/a/F1=4:V F7=2/a/F1=3:V
-tian_2016,S1_damping,False,2/6,F7=4/p/F1=4:- F7=4/p/F1=3:- F7=4/a/F1=4:- F7=4/a/F1=3:- F7=3/p/F1=4:- F7=3/p/F1=3:- F7=3/a/F1=4:- F7=3/a/F1=3:- F7=2/p/F1=4:- F7=2/p/F1=3:- F7=2/a/F1=4:- F7=2/a/F1=3:-
-tian_2016,S1_damping,True,5/6,F7=4/p/F1=4:- F7=4/p/F1=3:- F7=4/a/F1=4:- F7=4/a/F1=3:- F7=3/p/F1=4:- F7=3/p/F1=3:- F7=3/a/F1=4:V F7=3/a/F1=3:V F7=2/p/F1=4:V F7=2/p/F1=3:V F7=2/a/F1=4:V F7=2/a/F1=3:V
-tian_2016,S2_resonance,False,3/6,F7=4/p/F1=4:- F7=4/p/F1=3:- F7=4/a/F1=4:- F7=4/a/F1=3:- F7=3/p/F1=4:- F7=3/p/F1=3:- F7=3/a/F1=4:- F7=3/a/F1=3:V F7=2/p/F1=4:- F7=2/p/F1=3:- F7=2/a/F1=4:V F7=2/a/F1=3:V
-tian_2016,S2_resonance,True,5/6,F7=4/p/F1=4:- F7=4/p/F1=3:- F7=4/a/F1=4:- F7=4/a/F1=3:- F7=3/p/F1=4:- F7=3/p/F1=3:V F7=3/a/F1=4:V F7=3/a/F1=3:V F7=2/p/F1=4:V F7=2/p/F1=3:V F7=2/a/F1=4:V F7=2/a/F1=3:V

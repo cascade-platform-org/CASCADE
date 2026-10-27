@@ -1,0 +1,11 @@
+case,translation,functions,rho_out_reach,rho_katz_rev,rho_degree
+Zheng,S0,22,1.0,0.3,-0.15
+Zheng,v2,22,0.54,0.74,0.29
+Wenzhou,S0,20,0.99,0.61,-0.21
+Wenzhou,v2,20,0.63,0.99,0.34
+Koriyama,S0,9,1.0,0.89,-0.2
+Koriyama,v2,9,0.88,1.0,-0.18
+Tian,S0,8,0.99,0.95,0.46
+Tian,v2,8,1.0,0.97,0.46
+Kaya,S0,21,0.99,0.58,0.14
+Kaya,v2,21,0.85,0.74,0.35

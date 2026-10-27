@@ -1,334 +1,135 @@
-# FRAM experiments — first run report (2026-10-26)
+# FRAM → CASCADE: results
 
-Branch `feat/fram-experiments`. Translation frozen in [TRANSLATION.md](TRANSLATION.md) v0
-(commit 96fda35) before any ground-truth run. Raw numbers in `results/`.
-Re-run: `CASCADE-backend/.venv/bin/python experiments/fram/run_v1.py` (then `run_e1.py`, `run_e2.py`).
+Translation and protocol: [TRANSLATION.md](TRANSLATION.md). Raw numbers: `results/`.
+Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 
-## 0. v2: one translation, every case (`run_v2.py`, `results/v2_all_cases.csv`)
-
-The translation is specified in [TRANSLATION.md](TRANSLATION.md), section v2. The only case-specific content is rules read from each paper's description.
-
-| Case | Ground truth | v2 result |
+| Script | Covers | Run time |
 |---|---|---|
-| Zheng 2024 | Table 2 expert judgements | neg 8/8, pos 6/8, bal. acc 0.875 (misses F18, F19: adaptation) |
-| Tian 2016 | model-checking scenarios + accident report | 6/6, no spurious violation |
-| Smith 2017 | fault tree 0.2720 | 0.2720; shared sensor 0.3756 |
-| Kaya 2020 | workshop {F1, F2, F8, F9} | 2/4 (VPN re-run 3/4): probability mass beyond the scale |
-| **Wenzhou 2011 (held out)** | accident report (Tables 1, 3, 4) | chain 7/7, uninvolved 2/2, coupling P/R vs Table 3 1.00/0.83 |
-| **Koriyama 2019 (held out)** | Fig. 6 (retrospective report, interviews) | resonated 3/3, contained 2/2, uninvolved 2/2, coupling P/R 1.00/1.00 |
-| Kim & Yoon 2021 (N = 7) | Tables 6–7 (method output) | pattern 8/9, resonance 8/12 |
-| V1 (FMI, fault tree) | fixed points, closed form | 2,624/2,624; 0.272042 |
+| `run_v1.py` | verification | ~1 min |
+| `run_rq1.py` | RQ1 | 4 s |
+| `run_rq2.py` | RQ2 | ~3 min |
+| `demo_zheng.py` | demonstration | 4 s |
 
-## 1. Verification (V1) — passes
+## Research questions
 
-**FMI.** 11 models, 2,624 scenarios (baseline, every single knockout, 200 random pairs each).
+- **RQ1.** Does converting a FRAM model into a propagation model preserve the conclusions of the original analysis?
+- **RQ2.** Does the converted model correctly predict the effect of interventions on the system?
+- **RQ3.** What does each of the two analyses capture that the other misses?
 
-| Result | Value |
+## V1. Verification (`results/v1_*.csv`)
+
+- **FMI semantics.** 11 models, 2,624 scenarios.
+  - CASCADE equals the greatest fixed point of the FMI activation operator in every scenario.
+  - It equals the FMI's least fixed point on every acyclic model.
+  - The divergences are cyclic deadlocks the modellers break by hand (Resilience potentials v0; Grabbe's 162-function loop).
+- **Fault tree.** Khakzad 2011 gives a top event of 0.272042 in CASCADE, equal to the closed form and to the published 0.2720.
+
+## RQ1. Preserving the analysis (`results/rq1.csv`)
+
+| Case | Ground truth | S0 (reachability) recall · precision | **v2** recall · precision |
+|---|---|---|---|
+| Zheng | Table 2 judgements | 8/8 · 8/16 | **8/8 · 8/10** (misses F18, F19) |
+| Tian | model-checking violations | 4/4 · 4/4 | 4/4 · 4/4 |
+| Kaya | workshop top-4 | 1/4 | 2/4 (VPN re-run 3/4) |
+| **Wenzhou** (held out) | accident report | 7/7 · 7/9; couplings P 12/18 | **7/7 · 7/7; couplings P 10/10, R 10/12** |
+| **Koriyama** (held out) | Fig. 6 | 3/3 · 3/5; couplings P 4/9 | **3/3 · 3/3; couplings P 4/4, R 4/4** |
+| Kim (N = 7) | Tables 6–7 | shape only: 0/7 | **formula rules: 7/7 · 7/8**; resonance set 5/8 |
+| Smith | FT 0.2720 | — | **0.2720**; shared sensor 0.3756 |
+
+- **Recall is easy and precision is the test.** Reachability finds every affected function but degrades about half the uninvolved ones. v2's damping keeps them nominal, because a single deviating input is absorbed and coinciding ones pass. On the two held-out cases v2 is exact at function level.
+- **Misses, each with a cause.**
+  - Zheng F18, F19: their staff adapt ("don PPE quickly").
+  - Kaya: its information lives in probability mass, which a collapsed level cannot carry.
+  - Kim F2: a government function the paper holds acceptable by assumption.
+- **Kim needs its formulas.** Kim's additive and multiplicative aggregation drives its resonance. The formula's shape alone propagates nothing; the formulas compiled into Specific Rules reproduce the pattern. Only N = 7 resolves the three scenarios.
+- **Event severity is the largest sensitivity.**
+  - Zheng with communications at 2: bal. acc. 0.69.
+  - Koriyama with the alerts read as timely: 2/3.
+  - Wenzhou with lightning at 2: 6/7.
+
+  The conversion preserves the conclusions *given the analysts' own description of the event*.
+
+## RQ2. Predicting interventions (`results/rq2_*.csv`)
+
+**Exact importance, Smith / Khakzad.**
+- CASCADE's Birnbaum importance equals the fault tree's (ρ = 1.00), and it and Shapley put the manual backup S2 first.
+- Single-knockout Vitality (ρ = −0.67) and every topological measure miss S2 (out-reach −0.70, reverse Katz −0.30, degree 0.72, but S3 first). A backup matters only together with another failure, which one-at-a-time and link-counting measures cannot see.
+- With the shared sensor Smith asks about, the transmitter S8 becomes the most critical component (0.75 vs 0.57). The fault tree, which hides the dependency, still says S2.
+
+**The experts' counterfactual claims.** 15 claims extracted, 7 statements excluded; list frozen before the run.
+
+| Verdict | Claims |
 |---|---|
-| CASCADE = greatest fixed point of the FMI operator | **2,624 / 2,624** (every model, cycles and Grabbe's 117 non-default profiles included) |
-| CASCADE = FMI (least fixed point) on the 7 acyclic models | **all scenarios** (P1) |
-| CASCADE = FMI on the 4 cyclic models | Resilience potentials 0: 207/209; Grabbe: 357/486; the other two: all |
+| **agree (7)** | Tian: fixing the door alone would not avoid the accident; a direct order helps. Togawa: better public communication reduces resonance. Zheng: two-way updates improve the chain; cancelling F5 plus mutual aid lets F20 extinguish in time. Wenzhou: barriers on M5, M7, M8, M10 prevent the accident. Smith: a shared sensor worsens both branches. |
+| disagree (4) | Wenzhou: an alternative channel avoids the accident (model: M20 2 → 3, direction right, not nominal). Togawa: preparation time affected evacuation (evacuation behaviour is overdetermined by three other deviations). Togawa: better evacuation relieves rescue (the paper's map has 119 calls as exogenous). Li 2026: the stage hierarchy (a learned policy's frequency, a different quantity). |
+| not expressible (3) | berth renewal; community engagement (no such functions); failure warnings to dispatch (a protective information flow) |
 
-The divergences are exactly P3's loops:
-- **Resilience potentials 0:** the four potentials feed each other, so the FMI deadlocks 7 of 8 functions. Versions 1 and 2 of the *same* library model add profiles that break the loop, i.e. the modellers repair the deadlock by hand.
-- **Grabbe:** one strongly connected component of 162 functions. At baseline the FMI never activates 7 oncoming-vehicle functions (*driving free (OV)*, *plan escape route (OV)* …), which the authors clearly intend as active.
+**Kim interventions** (IEV_p × factor vs the oracle).
+- At × 0.9 (the paper's Fig. 8) the model resolves 1 of 12 functions (ρ = −0.35).
+- At × 0.5 it resolves 8 (ρ = 0.26; finds F7 and F5).
+- A small change in *how variable* a function is rarely crosses a level band.
 
-**Fault tree.** Khakzad 2011 enumerated through CASCADE (2⁷ scenarios): **0.272042**; closed form 0.272042; published 0.2720 (P2).
+**Why single-failure rankings carry little model content.** Single-knockout Vitality is a topological measure in disguise:
+- under S0 it equals out-reach (ρ ≥ 0.99 on all five cases);
+- under v2 it tracks reverse Katz (ρ = 0.74–1.00), because a lone failure loses one level per hop and dies after N − 1.
 
-## 2. RQ1 — faithful collapse (E1): recall yes, specificity no
+Coincidence, redundancy and capacity, the model's own content, appear only when several elements deviate together (Birnbaum, Shapley) or carry quantities (flow).
 
-**Zheng 2024** (earthquake: communications 2, firefighters 3):
-- negatives F12, F17, F20: **3/3 recovered**, all structural;
-- positives F2, F14, F15: **0/3 kept**; 21 of 22 functions degrade.
-- F2 itself requires *Radio/Telephone* in Table 1, yet the experts say it performs well; F14 and F15 sit downstream of F12 and are also judged fine.
-- The declared variants change nothing on this case (communications enter as Resources). With Resource attenuation (R_dep3), F12 and F17 become mild, and the rule written from the paper's text ("F12 + F17 → F20 cannot extinguish") is what makes F20 severe. This is a working example of the rule-encoded class.
+## RQ3. What each analysis captures that the other misses
 
-**Kaya & Hocaoğlu 2020**, exact over 81 SPC scenarios:
-
-| Method | Couplings flagged | P / R / F1 vs Fig. 5 | Spearman | Top-4 functions ∩ workshop {F1, F2, F8, F9} |
-|---|---|---|---|---|
-| VPN re-run (paper's method) | 16 | 0.62 / 0.62 / 0.62 | 0.49 | 3 (F2 F8 F1 F6) |
-| CASCADE one-hop | 36 | 0.42 / 0.94 / 0.58 | 0.25 | 2 |
-| CASCADE transitive | 45 | 0.36 / 1.00 / 0.52 | −0.21 | 1 (saturated: most functions 66–77 %) |
-
-Why: 48 of 49 couplings amplify when the output deviates (A_T = A_P = 2), so after the one-level collapse every variable output passes, and transitivity floods the model. Kaya's discrimination lives in the probability mass that the VPN multiplies; the collapse keeps only "possibly variable".
-
-**Ground-truth finding (post-freeze, labelled).** Fig. 5 is the output of Kaya's own Monte Carlo. The independent expert conclusion is the workshop: the functions that "vary the most" are F1, F2, F8, F9. The nurses also say variability "is likely to aggregate and, in turn, delay other activities", which is a statement of transitivity.
-
-## 2b. RQ1 under the v1 proposal (E1b, frozen at f22f61b)
-
-The proposal is two parts:
-- **Damping:** every coupling absorbs one level.
-- **Resonance:** a function also follows the *second-worst* of its distinct inputs, so level = min(worst + 1, second worst). This is compiled into Specific Rules; no engine change.
-
-**Trigger couplings:** an Input that a function acts on when it deviates (a monitor watching what it monitors) does not count as a dependency. Raw: `results/e1b_*.csv`.
-
-| Case (ground truth) | S0 = v0 | S1 damping | **S2 damping + resonance** |
-|---|---|---|---|
-| Zheng, 16 functions of Table 2, comms = 2 (frozen) | 8/8 neg · 0/8 pos · bal. acc 0.50 | 5/8 · 5/8 · 0.63 | **8/8 · 3/8 · 0.69** |
-| Zheng, comms = 3 (sensitivity) | 0.50 | 1/8 · 8/8 · 0.56 | **8/8 · 6/8 · 0.875** (wrong: F18, F19) |
-| Tian, 6 scenarios (model checking) | 4/6 | 2/6 | 3/6 |
-| Tian + the paper's rule "time pressure from F7 → untrimmed" | 5/6 | 5/6 | 5/6 |
-| Kaya workshop, top-4 ∩ {F1, F2, F8, F9} (VPN: 3) | 1 | 2 | 2 |
-
-**Reading the table**
-- **Zheng.** Resonance reproduces the experts' chain: F5 → F7 → F9–F11 → F12 → F17 and F20 are flagged, while F13 → F14 → F15 → F16 absorb F12's single delay. The F20 rule from §4.2.1 makes F20 *severe* (rule-encoded class).
-  - F18 and F19 remain wrong. They receive F12 and F17, whose deficits share one origin, so the rule counts a common cause as a coincidence.
-  - The severity given to "damaged communications" is the largest sensitivity (0.69 vs 0.875). The paper does not quantify it.
-- **Tian.** The remaining miss (bosun present, early call) needs the paper's Table 3 rule for F2 (an early call pulls the bosun away before closing). That rule was not in the freeze.
-- **Kaya.** Unchanged in substance: its information sits in the probability mass, which the one-level collapse cannot carry.
-
-**Smith 2017** (P of losing *controlled propane flow*, 2⁵ scenarios):
-- (a) literal translation: **0.7326**. The monitor and the alarm depend on the automatic feed they watch, so the manual backup is useless.
-- (b) with trigger couplings: **0.2720**, the fault tree exactly.
-- (c) (b) plus Smith's shared-sensor question: **0.3756**, i.e. +38 % from the dependency the FT and BN hide. This quantifies the paper's qualitative conclusion.
-
-## 2c. Exploratory fidelity study (E1c — after v1, not frozen; informs Gate 1)
-
-Raw: `results/e1c_*.csv`.
-
-1. **Resonance with existing rule types only.** One nested intercategorical rule per function implements it: `worst_of(dmp_a, dmp_b, …, best_of(a, b), best_of(a, c), …) propagates to F`. Here `dmp_x` is a damped copy of input x, carrying `dependency_level` N − 1, and the best_of pairs give the second-worst term.
-   - **Identical to the compiled Specific Rules:** 0 mismatches in 64 toy cases and 800 random scenarios on four models.
-   - Responsibility shares stay meaningful, and no new operator is needed.
-   - Pitfall: rule arguments must name *categories*. The parser resolves node ids first, and an all-node rule is intracategorical, which overrides nothing.
-2. **Wider scale (Zheng; N ∈ {4, 7, 10}, damping Δ, severities as fractions of the scale).**
-   - No fidelity gain. The outcome depends only on whether the single-input damping covers the event's deficit, which is a ratio, so every N reaches the same best value (0.875) at the matching ratio.
-   - N = 4 with Δ = 2 gives 0.875 for every communications severity, **but it breaks Tian (2/6 even with rules)**: over-damping stops the "faster" deviation before F8. Δ = 1 is the robust choice across cases.
-3. **Common-cause refinement** (drop pairs whose inputs share an upstream origin): worse, losing F9–F12, F17 and F20. The experts *do* pass delays with a shared origin (F7's lateness through F9–F11 to F12). Dropped.
-4. **Tian with the rules written from the paper** ("time pressure from F7 → untrimmed", text; "early call → doors not closed even with an order", Table 3): **6/6** under both S0 and S2. S2 also removes S0's 2 spurious violations from late loading alone.
-5. **Kaya on N = 10** (exceedance probability graded onto the scale, functions ranked by expected deficit): still 1/4. The workshop truth is coarse, and the per-coupling probabilities do not localise to functions.
-
-**Candidate v2 for Gate 1:**
-- S2 in nested-rule form, N = 4, Δ = 1;
-- trigger couplings and rules written from the papers' descriptions;
-- event severity "damaged" = one level unless the paper says otherwise.
-
-| Case | v2 candidate |
+| The propagation model adds | Evidence |
 |---|---|
-| Zheng | 8/8 neg, 6/8 pos (0.875); 0.69 if communications count as severe |
-| Tian | 6/6 |
-| Smith | FT exact (0.2720); shared sensor 0.3756 |
-| Kaya workshop | 2/4 |
+| answers to questions the FRAM raises but cannot settle | Smith's shared sensor: +38 % P(top); the sensor becomes the most critical component |
+| mechanisms a FRAM table cannot express | demonstration: fire water decides F20 and Tank 63 (below) |
+| criticality that accounts for redundancy and coincidence | Smith's backup first by Birnbaum; topology misses it |
+| repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Koriyama's "evacuation relieves rescue" needs a link the map lacks |
+| precision about what stays nominal | held-out cases: contained and uninvolved functions kept |
 
-Remaining misses, all in the *beyond the scale* class:
-- F18 and F19, which adapt ("quickly");
-- Kaya's probability mass.
+| FRAM keeps | Evidence |
+|---|---|
+| adaptation and positive variability | Zheng F18, F19 |
+| where variability is born and amplified, and how likely it is | Kaya's probability mass; Kim's small variability changes |
+| information that compensates for a wrong signal | Wenzhou's alternative channel and failure warnings |
+| the events themselves | the severity of the triggering deviations is the largest sensitivity |
 
-## 2d. Held-out case: Wenzhou 2011 (E1d — declared at 504048f before the run)
+## Demonstration: Zheng with physical networks (`demo_zheng.py`, `demo/*.json`, `results/d_*.csv`)
 
-**Digitisation.** Li & Huang 2025 Fig. 4 (a 300 dpi raster) was traced semi-automatically:
-- port positions were found by template matching;
-- each coupling was fitted with Bézier curves and line tracking, and the ambiguous crossings were checked by eye.
+**Setup.** Zheng's FRAM (v2) on three physical canvases. Quantities are illustrative:
+- telecom (Requisite);
+- firefighter crews (SourceToDemands; other affected areas served first);
+- fire water (SourceToDemands; main → hydrants → F20 foam and the cooling of Tank 63; firetruck tanks as a small second source).
 
-The result is 20 modules and 35 couplings. Every coupling in the paper's Table 3 (12) and Table 1 (5, aspects included) is present, which is an independent check of the tracing. The overlay is in `docs/paper/FRAM/models/li_2025_wenzhou_check.png` (private).
+The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, and the bundle opens in the app.
 
-**Run.** v2 candidate, no case-specific rules; lightning fails M7 (track circuit) and M10 (GSM-R). Raw: `results/e1d_*.csv`.
+**Results.**
+- **Claim from physical damage alone** (hour 0): 8/8 negatives, 6/8 positives, F12 = 3, F17 = 3, F20 = 2, with F2, F14, F15 nominal. This is RQ1, produced by the physical layer.
+- **Operativity, as planned / with Zheng's Fig. 9 remedy:**
 
-| | S0 = v0 | **v2 candidate** |
-|---|---|---|
-| Accident chain degraded (M5, M8, M11, M16, M17, M19, M20) | 7/7 | **7/7** |
-| Uninvolved downstream modules nominal (M12, M13) | 0/2 | **2/2** |
-| Modules degraded in total (of 20) | 13 | 9 |
-| Couplings flagged | 18 | 10 |
-| P / R vs Table 1 (5 broken connections) | 0.28 / 1.00 | 0.50 / 1.00 |
-| P / R vs Table 3 (12 transmission paths) | 0.67 / 1.00 | **1.00 / 0.83** |
-| Collision (M20, D301 braking) | not performed | severe |
+  | Hour | 0 | 6 | 8 |
+  |---|---|---|---|
+  | as planned | 0.80 | 0.92 | 0.985 |
+  | remedy | 0.94 | 0.94 | 1.00 |
 
-- **Function level: v2 reproduces the accident exactly.** M11's single deviating input (the wrong command) is absorbed one level, so interlocking, route control and both departures stay nominal. The paper's Table 4 gives them zero or ~10⁻⁸ variability.
-- **Coupling level.** v2 flags 10 couplings, all of them in Table 3. The two it misses (M11 → M15, M11 → M18) carry 10⁻⁸ in the paper.
-- **Severity sensitivity (A2, M7 = M10 = 2).** 6/7 and 2/2: M11 now absorbs the drop entirely.
-- **Critical modules (Shapley on M20 over the seven Table 2 origins).**
-  - S0: M7 and M10 first (1.17), then M5, M8, M11 and M19 tie at 0.17, so its 4/4 comes from the id tie-break.
-  - v2: M7 and M10 (0.92), then M8 and M19 (0.08); M5 gets 0 and the top-4 hits 3/4.
-  - Both rankings put the two lightning-struck modules on top. Neither separates dispatch (M5) from the train-side origins. Under v2, M5's own variability reaches the collision only through M11 → M18 → M19 → M20, and that path is damped at each hop.
+- **The remedy fixes F12 and F17 from hour 0, not F20.** With the main destroyed, foam gets the trucks' 80 of 240 m³/h until the repair at hour 8. Tank 63's cooling gets nothing: the paper's "radiation may fail Tank 63", through a mechanism its FRAM cannot express.
+- **Shapley on the hour-0 damage** (Operativity loss 0.197 in total): F5 one-way 0.051, fire-water main 0.049, exchange 0.036, fibre 0.036, crews 0.026, radio repeater 0. The repeater is redundant with the exchange.
 
-## 2e. Kim & Yoon 2021: Specific Rules (A) vs structural (B) (E1e, declared at 6fa015a)
+## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 
-**Oracle.** Their simulation re-implemented (Sect. 3).
-- **Matches:** Table 7's shares, within about 2 points (F7 17.8 vs 16.4, F10 18.3 vs 19.5, F11 13.7 vs 14.0).
-- **Mismatch:** durations about 1.25× Table 5's, the same ratio in every scenario. That is a residual implementation difference I could not locate.
-- **Deterministic behaviour:** run with a fixed IEV, the recurrence has a sharp threshold. Nothing propagates at IEV ≤ IEV_p, and everything except F2 and F6 resonates from about 1.25·IEV_p. Their resonance is a tail event of the sampling.
+- **Resonance as one nested rule per function**, using existing rule types only. It is identical to the compiled-Specific-Rule version (0 of 864 scenarios differ).
+- **N = 4 for qualitative sources.** A wider scale gave no gain: what matters is the ratio of damping to the event's deficit.
+- **One level of damping.** Two levels fit Zheng at every severity but break Tian (2/6).
+- **No common-cause pruning.** Dropping coincidences with a shared origin made results worse: the experts do pass shared-origin delays.
 
-**Translations.**
-- **A:** Kim's rule, θ and IEV_p compiled into minimal monotone Specific Rules: 207 at N = 4, 1,236 at N = 7.
-- **B:** the formula's shape as one nested rule per function (8 rules), with damping set by θ/IEV_p.
+## Caveats
 
-Raw: `results/e1e_*.csv`.
+- **Wenzhou's network** is digitised from a raster figure. Every Table 1 and Table 3 coupling is present, and three readings at crossings are noted in the transcription.
+- **Kim's oracle** durations run about 1.25× Table 5's in every scenario. Their "F11 is critical" does not reproduce in their own simulation at 1,500 trials (F7 first, F11 8th), so it rests on 20 trials. This is a footnote, not a finding of this paper.
+- **The ground truths** are the analysts' conclusions. Only the two held-out cases rest on official reports (Wenzhou: State Council; Koriyama: city retrospective).
 
-| Translation | Events | G1 pattern (9) | G2 resonance (12) | G4 scenario order |
-|---|---|---|---|---|
-| **A, N = 4** | 95th pct (level 3) | 2 | 4 | flat |
-| **A, N = 4** | one level worse (2) | **8** | **11** | flat |
-| **A, N = 7** | 95th pct (declared) | **8** | 8 | **ok** |
-| B, N = 4 | 95th pct / worse | 2 / 4 | 4 / 4 | flat |
-| B, N = 7 | 95th pct / worse | 2 / 4 | 4 / 4 | ok |
-| v2 generic, N = 4 | 95th pct / worse | 4 / 8 | 4 / 4 | flat |
-| S0, N = 4 | either | 7 | 4 | flat |
+## Dropped from scope
 
-- **A reproduces Kim's propagation; B does not.**
-  - With enough deviation at the origins, A degrades F7–F13 and keeps F6 nominal. Its level-1 set is Table 6's resonance set; the only misses are F13, which reaches level 1, and F2, which degrades.
-  - At N = 4 with the declared events, A propagates nothing. This is Kim's own threshold appearing in the collapsed model.
-  - N = 7 resolves the declared events and is the only scale that orders the three scenarios.
-  - B loses what decides Kim's model: the amplification of sums and products, and IEV_p as a multiplier.
-- **G3 (influence) fails for every translation.**
-  - Vitality and a one-level nudge (exploratory) both rank F2 and F6 first. These are the government functions upstream of everything, which Kim holds acceptable by assumption (IEV_p = 0.4).
-  - Fig. 8 perturbs the IEV multiplier, which is a different question.
-  - **The paper's F11 claim does not reproduce in its own method.** The oracle at 1,500 trials ranks F7 first (as the paper does), then F5, and F11 only 8th. Table 6 puts F11 at 3 % in every scenario. The "F11 critical" conclusion rests on 20 trials per scenario.
-
-**Choice for the paper:** A. Rules written from a paper's quantitative description are the faithful channel, and the case argues for N = 7 when the source is quantitative.
-
-## 2f. Second held-out case: Koriyama 2019 (E1f — declared at afc1bf5 before the run)
-
-Togawa et al. 2023, Typhoon Hagibis. The model is Fig. 5 with Table 2's texts (9 functions, a vector figure read directly). Fig. 6 is an unusually clean ground truth: it colours each function and coupling as resonated, present but contained, or uninvolved, from the city's retrospective report and the interviews. The event is the deviations named in Sects. 3.3 and 4.4.1, one level each. Raw: `results/e1f_koriyama.csv`.
-
-| | S0 = v0 | **v2** |
-|---|---|---|
-| Resonated degraded (Evacuation Preparation, Evacuation Behavior, Rescue) | 3/3 | **3/3** |
-| Contained stay nominal (Shelters, Care Needs) | 0/2 | **2/2** |
-| Uninvolved stay nominal (PC5, Emergency Deployment) | 2/2 | 2/2 |
-| Couplings P / R vs the red couplings | 0.44 / 1.00 | **1.00 / 1.00** |
-
-- **v2 reproduces Fig. 6 exactly.** The Level-3 alert reaches Shelters and Care Needs as one deviating input each, and both absorb it, which is the paper's "variability absorbed" reading. Evacuation Preparation receives two coinciding deviations (the alert and the immediate environment), and they pass.
-- **Sensitivity (alerts read as timely).** Evacuation Preparation stays nominal (2/3), so the paper's reading that the alerts deviated is needed. This is the same lesson as Zheng's communications severity: the event description carries weight.
-
-## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
-
-| Case (k) | Vitality | Degree | Betweenness | PageRank (rev.) | Katz (rev.) | Random |
-|---|---|---|---|---|---|---|
-| Grabbe human (23 of 285) | 0 | **16** | 14 | 11 | 13 | 1.9 |
-| Grabbe automation (21 of 285) | 0 | 7 | **10** | 5 | 4 | 1.6 |
-| Li 2026 DRL set (5 of 13) | 2 | 4 | 3 | **5** | **5** | 1.9 |
-| Kaya couplings (13 of 49), Spearman | 6, 0.38 | — | 6, 0.19 (edge) | — | — | 3.5 |
-| Zinetullina couplings (3 of 31), Spearman | 0, −0.49 | — | 1, 0.00 (edge) | — | — | 0.3 |
-
-- **The published rankings are outputs of each paper's own method, and those methods are topological.**
-  - Grabbe's "system resonance" weights functions by link counts, and degree recovers 16 of 23.
-  - Li's one-hop propagation runs along out-links, and **reverse Katz/PageRank reproduce the learned DRL policy exactly (5/5)**.
-  - Kaya's and Zinetullina's rankings come from per-coupling factors that no structural measure can see.
-- **Vitality answers a different question:** what the system cannot lose.
-  - Grabbe's top Vitality functions are background provisions: *enable clear view ahead*, *provide road signs*, *provide speedometer*, *observe road signs*. This is Falegnami 2026's power-supply point, the functions topology ranks low.
-  - Li's top is P5, cross-department coordination.
-- **Saturation again:** in Grabbe's 162-function loop, one knockout costs about 50 % of operativity for almost every function, so Vitality barely discriminates there.
-
-## 3b. RQ2 reframed: scenario attribution vs topology (E2b — declared at 5b31c45 before the run)
-
-On every case that reports which deviations produced the outcome, I ranked the candidate deviations by:
-- scenario-conditioned Shapley;
-- structural Vitality on v2;
-- five topological measures.
-
-Raw: `results/e2b_attribution.csv`.
-
-| Metric | Wenzhou (top-4 of 7 vs report) | Koriyama (resonated > contained pairs) | Tian (F7 first) |
-|---|---|---|---|
-| Shapley (scenario) | 3/4 | 0.12 | **hit** |
-| Vitality (v2) | 3/4 | 0.62 | **hit** |
-| Out-reach | **4/4** | 0.62 | F1 |
-| Reverse Katz | 3/4 | 0.62 | **hit** |
-| Reverse PageRank | 3/4 | 0.62 | F1 |
-| Degree / betweenness | 1/4 | 0.12 / 0.50 | F2 |
-
-- **Model-based rankings do not beat topology at ranking reported causes.** Reverse Katz matches Vitality on all three cases, and out-reach is best on Wenzhou. This repeats E2: ranking which functions matter is largely a topological question.
-- **Koriyama's Shapley failure is a design error, declared and kept.** Fig. 6's "contained" functions had internal variability, but their outputs did not deviate; adaptive responses at the scene controlled them. The declared design entered that variability as output deviations, which is the opposite of what happened. E1f, which leaves those outputs nominal, reproduces Fig. 6 exactly.
-- **What the model adds is a different question from ranking.** Given a scenario, the model says which functions absorb a deviation and which pass it on: contained vs resonated (Koriyama), uninvolved downstream modules (Wenzhou M12, M13), positives kept (Zheng). No topological score can express this. The topological baseline for that question is reachability, which is what S0 effectively computes, and it fails each time (Koriyama 0/2, Wenzhou 0/2, Zheng 0/8 positives).
-
-## 3c. Demonstration D: Zheng's earthquake with the physical damage modelled (`demo_zheng.py`)
-
-The FRAM canvas is the v2 translation of Zheng's Table 1. Three physical canvases replace the resources the paper names as damaged. Quantities are illustrative, since the paper gives none:
-- **Telecom (Requisite).** Radio repeater, telephone exchange and fibre link. *Radio/Telephone* takes the best of voice; *Internet/Telephone* the best of data or voice.
-- **Firefighter crews (SourceToDemands).** 40 crews serve F17 (demand 30) and the other earthquake-affected areas (demand 20, served first).
-- **Fire water (SourceToDemands).** Pump station → main (400 m³/h) → hydrant ring → F20 foam (240, priority 9) and the cooling of Tank 63 (120). Firetruck tanks (80) are a second source. This gives a coupling to the destroyed network, which Zheng's Table 1 lacks (issue 4).
-
-Physical flows have `dependency_level` N, because a shortfall is a shortfall; FRAM couplings keep v2's damping.
-
-**Timeline.** Twelve hours as a Temporal Simulation of Events:
-- earthquake and F5's one-way communication at 0 h;
-- radio restored at 4 h;
-- exchange restored and crews released at 6 h;
-- main repaired at 8 h;
-- fibre restored at 10 h.
-
-The remedy variant is Zheng's Fig. 9: two-way information updates (no F5 deviation), plus a new function that mobilises other organisations' crews (15 more). Both bundles (`demo/zheng_natech*.json`) validate against the backend schemas and the app's own bundle parser, so the run can be repeated in the app. Raw: `results/d_*.csv`.
-
-**Testable claim, from physical damage alone (hour 0).** Neg 8/8, pos 6/8, bal. acc 0.875: F12 = 3, F17 = 3, F20 = 2, while F2, F14 and F15 = 4. This is the RQ1 result, now produced by the physical layer and not by hand-set severities.
-
-| Hour | 0–3 | 4–5 | 6–7 | 8–12 |
-|---|---|---|---|---|
-| Operativity, as planned | 0.80 | 0.80 | 0.92 | 0.985 |
-| Operativity, remedy | 0.94 | 0.94 | 0.94 | 1.00 |
-| F20 (foam), both variants | severe | severe | severe | nominal |
-| Tank 63 cooling, both variants | not performed | not performed | not performed | nominal |
-
-- **The remedy fixes the organisational chain (F12, F17 nominal from hour 0) but not F20.** With the main destroyed, foam injection gets only the trucks' water (80 of 240), and priority sends all of it to F20. Tank 63's cooling therefore gets nothing. This is the paper's "radiation may fail Tank 63", reached through a physical mechanism that its FRAM could not express.
-- **Shapley of the hour-0 damage on Operativity loss (0.197 in total):** F5 one-way communication 0.051, fire-water main 0.049, telephone exchange 0.036, fibre link 0.036, crews drawn away 0.026, radio repeater 0. The radio repeater is redundant with the exchange.
-- **The point for the paper.** The collapsed output stays the FRAM's, function levels on one scale. The modelling underneath is physical (capacities, priorities, repair times), and it adds a finding the expert analysis missed: Fig. 9's remedy leaves the fire unextinguished until the fire water returns.
-
-## 3d. E3 layer 1: exact counterfactuals (declared at 9e5c3e2 before the run)
-
-RQ2 is now about consequences: what each function's deviation costs. FRAM papers rank where variability is born and amplified, so they are not the ground truth here. Layer 1 uses executable oracles. Raw: `results/e3a_*.csv`, `results/e3b_*.csv`.
-
-**E3a, Smith / Khakzad: importance measures** (the truth is the closed-form fault tree).
-
-| Metric | Spearman vs FT Birnbaum | First | Manual backup S2 first? |
-|---|---|---|---|
-| CASCADE Birnbaum | **1.00** | S2 | yes |
-| CASCADE Shapley (structural, top event) | 0.71 | S2 | yes |
-| Single-knockout Vitality | −0.67 | S8 | no |
-| Degree / betweenness | 0.72 / 0.00 | S3 | no |
-| Out-reach / reverse PageRank / reverse Katz | −0.70 / −0.50 / −0.30 | S8 / S9 / S3 | no |
-
-- **Outcome-specific, joint-failure measures capture redundancy; single-knockout and topological measures cannot.** S2, the manual valve, matters only together with an automatic failure, so it is invisible to any one-at-a-time or link-counting measure. The criticality importance gives the same picture.
-- CASCADE Birnbaum = FT is expected from V1, since CASCADE reproduces the structure function. This case shows the ranking inherits that exactness.
-- **Shared sensor (variant c, Smith's open question).** S8's Birnbaum rises from 0.12 to **0.75** and overtakes S2 (0.57): the transmitter becomes the most critical component. The FT, which hides the dependency, still says S2. All topological scores move only slightly. Quantifying this is the paper's own "is the monitored pressure from the same sensor?".
-
-**E3b, Kim & Yoon: interventions against the oracle** (IEV_p × factor in S2).
-
-| Factor | Spearman (12 functions) | Oracle top-3 | Model top-3 | Functions the model resolves |
-|---|---|---|---|---|
-| 0.9 (Fig. 8) | −0.35 | F7 F5 F3 | F2 … | 1 of 12 |
-| 0.5 | 0.26 | F7 F5 F8 | F3 F5 F7 | 8 of 12 |
-
-- **The collapse cannot resolve small changes in variability magnitude.** A 10 % change rarely crosses a level band. At 50 % the model finds F7 and F5 but correlates weakly.
-- This intervention changes *how variable* a function is: the "born and amplified" side, which is FRAM's quantity, not a consequence of deviation. The result fits the positioning; it is not a counterexample to it.
-
-## 3e. E3 layer 2: the experts' counterfactual claims (rules 3afa017, list frozen c2249b7)
-
-I extracted every intervention-with-effect statement from the ten case papers with a model in hand. That gives 15 claims, plus 7 statements excluded under the rules (`data/e3_claims*.csv`). Each claim ran as a model edit on the case's RQ1 scenario under v2. Raw: `results/e3c_claims.csv`.
-
-| Claim | Paper | Verdict | Model |
-|---|---|---|---|
-| C1: fixing the door alone would not avoid the accident | Tian | **agree** | with F2 held, F5 and F8 stay degraded (1, 3) |
-| C2: a direct order makes the bosun close the door | Tian | **agree** | F2 2 → 4 |
-| C3: berth renewal helps close the doors | Tian | not expressible | no berth function |
-| C4: lack of preparation time affected evacuation behaviour | Togawa | disagree | Evacuation Behavior stays 3 |
-| C5: better public communication reduces resonance | Togawa | **agree** | Evacuation Preparation 3 → 4; others unchanged |
-| C6: evacuation behaviour performing as expected absorbs earlier variability | Togawa | disagree | Rescue stays 3 |
-| C7: community engagement aids evacuation | Togawa | not expressible | no such function |
-| C8: two-way information updates improve efficiency | Zheng | **agree** | F7, F9–F12 all 3 → 4 |
-| C9: cancel F5 + mutual aid → F20 extinguishes in time | Zheng | **agree** | F20 2 → 4 |
-| C10: an alternative contact channel would avoid the accident | Li & Huang | disagree (direction agrees) | M20 2 → 3 |
-| C11: failure warnings to dispatch would avoid the accident | Li & Huang | not expressible | protective information flow |
-| C12: barriers on M5, M7, M8, M10 prevent the accident | Li & Huang | **agree** | M20 2 → 4 |
-| C13: a shared sensor worsens both branches | Smith | **agree** | P(top) 0.272 → 0.376 |
-| C14: prevention-stage control is the strongest lever | Li 2026 | disagree | deficit reduction DER 6 = PER 6 > PEP 5 |
-| C15: F7 and F11 are the most influential | Kim | see E3b | F7 found at × 0.5, F11 not |
-
-**Reading.** 7 of 11 evaluable claims agree. The disagreements and the claims the model cannot express fall into three groups:
-- **Protective information flows** (C10, C11). The intervention works by information that *compensates* for a wrong signal: the stopped train's driver tells dispatch, or a failure warning reaches it. A disservice-propagation model can carry this only through a rule that writes the claimed effect, which would be circular. C10's direction agrees (2 → 3), but the track circuit's fail-unsafe occupancy signal still reaches the braking function. **This is the scope boundary of the approach, and the paper should state it.**
-- **Overdetermination and mechanisms outside the map** (C4, C6).
-  - C4: evacuation behaviour already has three other coinciding deviations, and v2's second-worst rule gives no cumulative worsening for a fourth.
-  - C6: in Togawa's own map, 119 calls are exogenous, so better evacuation does not reduce them. The claim relies on a link the paper's model does not draw.
-- **A method-derived claim** (C14). Li's stage hierarchy is the learned policy's action frequency, which weighs control costs. It is a different quantity.
-
-## 4. Issues found
-
-1. **Engine behaviour (by design, documented):** a parent passes all its Requisite categories to every child, so the translation needs one output node per (function, output text).
-2. **Kaya CSV:** F20's rows print the aspect as "F15R"; the reader accepts both spellings.
-3. **Grabbe Table A4:** 21 automation marks against 22 in the text; three names are spelled differently from the model file (aliases in `data/`).
-4. **Zheng:** the destroyed fire-water network and the "limited time" have no coupling in Table 1, so they are not representable in v0.
-5. **FMI oracle assumption:** entries are functions without incoming couplings. The 7-function deadlock in Grabbe should be confirmed in FMV's own FMI.
-
-## 5. Not yet run
-
-- Transcriptions: the FRW toy.
-- The FRW oracle; Shapley Value (only Vitality so far).
+| Dropped | Why |
+|---|---|
+| Ranking comparisons on Grabbe 2022, Li 2026, Zinetullina 2021 | the published rankings are their methods' topological outputs (Grabbe ≈ degree; Li ≈ reverse Katz); one sentence in the discussion |
+| Scenario attribution vs topology (5b31c45) | superseded by RQ2's counterfactual design |
+| The FRW toy | related work only |

@@ -169,42 +169,9 @@ def _kaya_names() -> dict[str, str]:
     return {}
 
 
-def read_li() -> tuple[FramModel, dict[str, dict[str, str]]]:
-    """Li et al. 2026 Tables 4-5. Returns the model and per-function parameters
-    (only the 13 control domains carry them)."""
-    model = FramModel("li_2026_metro")
-    params: dict[str, dict[str, str]] = {}
-    rows = _rows(MODELS / "li_2026_metro_rainfall.csv")
-    for r in rows:
-        model.add_function(r["upstream"], r["function_name"])
-        if r["V"]:
-            params[r["upstream"]] = r
-    for r in rows:
-        if r["downstream"]:
-            model.add_function(r["downstream"], r["downstream"])
-            model.add_coupling(r["upstream"], r["function_name"], r["downstream"], r["aspect"])
-    return model, params
-
-
-def read_zinetullina() -> tuple[FramModel, list[dict[str, str]]]:
-    """Zinetullina et al. 2021 Table 5: coupling id, downstream, aspect, upstream."""
-    model = FramModel("zinetullina_2021_separator")
-    rows = _rows(MODELS / "zinetullina_2021_separator_couplings.csv")
-    aspect = {"Input": "I", "Precondition": "P", "Resource": "R", "Control": "C", "Time": "T"}
-    for r in rows:
-        model.add_function(r["upstream"], r["upstream"])
-        model.add_function(r["downstream"], r["downstream"])
-        model.add_coupling(r["upstream"], r["upstream"], r["downstream"], aspect[r["aspect"]])
-    return model, rows
-
-
 def library_models() -> list[Path]:
     return sorted(LIBRARY.rglob("*.xfmv"))
 
 
 def grabbe_path() -> Path:
     return MODELS / "grabbe_2022_overtaking.xfmv"
-
-
-def grabbe_risk_functions() -> list[dict[str, str]]:
-    return _rows(LOCAL / "grabbe_2022_table_a4.csv")

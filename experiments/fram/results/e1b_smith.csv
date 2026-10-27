@@ -1,4 +1,0 @@
-case,variant,p_top,fault_tree
-smith_2017,a_literal,0.7326,0.272
-smith_2017,b_triggers,0.272,0.272
-smith_2017,c_shared_sensor,0.3756,0.272

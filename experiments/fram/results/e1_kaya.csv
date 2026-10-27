@@ -1,5 +1,0 @@
-case,variant,vpn_reproduction_flagged,vpn_reproduction_P/R/F1,vpn_reproduction_spearman,cascade_flagged,cascade_P/R/F1,cascade_spearman,cascade_onehop_flagged,cascade_onehop_P/R/F1,cascade_onehop_spearman,fn_vpn_top4,fn_vpn_top4_in_workshop,fn_cascade_top4,fn_cascade_top4_in_workshop,fn_cascade_onehop_top4,fn_cascade_onehop_top4_in_workshop
-kaya_2020,default,16,0.62/0.62/0.62,0.49,45,0.36/1.00/0.52,-0.21,36,0.42/0.94/0.58,0.253,F2 F8 F1 F6,3,F9 F11 F12 F13,1,F8 F21 F9 F10,2
-kaya_2020,CT_blocking,16,0.62/0.62/0.62,0.49,45,0.36/1.00/0.52,-0.21,36,0.42/0.94/0.58,0.253,F2 F8 F1 F6,3,F9 F11 F12 F13,1,F8 F21 F9 F10,2
-kaya_2020,CT_dep2,16,0.62/0.62/0.62,0.49,45,0.36/1.00/0.52,-0.21,36,0.42/0.94/0.58,0.253,F2 F8 F1 F6,3,F9 F11 F12 F13,1,F8 F21 F9 F10,2
-kaya_2020,R_dep3,16,0.62/0.62/0.62,0.49,45,0.36/1.00/0.52,-0.21,36,0.42/0.94/0.58,0.253,F2 F8 F1 F6,3,F9 F11 F12 F13,1,F8 F21 F9 F10,2
