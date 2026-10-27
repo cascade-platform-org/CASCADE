@@ -67,6 +67,16 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
   - The alternative channel: a function ALT, which the lightning does not reach, produces M10's output as an alternative for every consumer.
   - Runs on the RQ1 event (M7, M10 = 1): (a) the path alone, which is C11; (b) ALT alone, which is C10; (c) the path with ALT. Outcome M20, verdict *avoid*. The RQ1 scores of the base case are recomputed with the path drawn and no ALT. W, D and ALT are not scored.
 
+## 4a. Sensitivity: cumulative worsening
+
+Declared before running, in answer to the owner's Gate 2 question (can resonance carry cumulative worsening?). Reported beside v2; v2, the frozen claim list and the verdict rules stay as they are.
+
+- **The term.** With m ≥ 3 distinct inputs at or below level k, the function is at most max(1, k + 2 − m). This continues v2's series: m = 1 gives worst + 1 (damping), m = 2 the second worst (resonance), m = 3 one level below the third worst, m = 4 two below the fourth.
+- **Variants.** *v2+3* adds m = 3 only (PLAN §7.2). *v2+c* adds every m; on N = 4 it saturates at m = 4.
+- **Encoding.** Specific Rules on one helper node per function with at least three distinct non-trigger inputs. An input counts as ≤ k when every producer of its text is (alternatives). The helper's category enters the function's nested `worst_of` undamped. A helper, because a firing Specific Rule on the function itself replaces its proposal and would undo a lower v2 level.
+- **Scope.** Every N = 4 run under v2: RQ1 (Zheng, Tian, Kaya, Wenzhou, Koriyama) and the claims run on v2 (C1, C2, C4–C6, C8–C10, C12, C14). Kim (N = 7, compiled rules) and Smith (N = 2) are unaffected.
+- **Recorded before running: the hand reading behind v2+c.** Under v2 Koriyama's T6 has four inputs deviating at level 3 (immediate environment, PC4, night, T5), and T9 has three (119 calls, night, T6). Expected: v2+3 flips C6 (T9) but not C4, since holding T5 leaves three deviations on T6; v2+c flips both. The cost to watch: lower levels travel further, so RQ1 precision may fall, notably on the held-out cases.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -81,3 +91,4 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
 | 9e5c3e2 | RQ2 exact counterfactuals |
 | 3afa017, c2249b7 | RQ2 extraction rules; frozen claim list |
 | c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |
+| (this commit) | sensitivity: cumulative worsening, v2+3 and v2+c |

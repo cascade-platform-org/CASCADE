@@ -20,6 +20,13 @@ Shape of the CASCADE model:
 * v2 (resonance_config): every coupling absorbs one level, and the function
   also follows the second-worst of its distinct inputs, written as one nested
   intercategorical rule over damped copies of its inputs.
+* Cumulative worsening (sensitivity, TRANSLATION.md §4): with m >= 3 inputs at
+  or below level k the function is at most k + 2 - m, continuing v2's series
+  (m = 1: worst + 1; m = 2: second worst). The term lives on a helper node c_k
+  whose Specific Rules read the producers' levels, and its category cum_k joins
+  the function's nested worst_of undamped. A helper, because a firing Specific
+  Rule on the function itself would replace the proposal (engine/rules_eval) and
+  undo a lower v2 level.
 * FMI mode (V1) reads the model's profiles: None -> dependency_level 1
   (any drop neutralised); Any -> an intercategorical rule
   `worst_of(best_of(<Any outputs>), <All outputs>...) propagates to <node>`.
@@ -29,6 +36,7 @@ Output nodes are plumbing: every score in the harness counts function nodes only
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import itertools
 import sys
 from pathlib import Path
 
@@ -73,6 +81,9 @@ class TranslationConfig:
     # (target fid, source fid) couplings read as triggers: the target acts on
     # the source's deviation, so it does not depend on the source being up.
     triggers: frozenset[tuple[str, str]] = frozenset()
+    # Cumulative worsening: the highest m (coinciding deviations) whose term is
+    # added; 0 = off, 3 = the third deviation only, n = every m that can bite.
+    cumulative: int = 0
 
     def dependency(self, aspect: str) -> int:
         return self.dep.get(aspect, self.n)
@@ -87,6 +98,11 @@ def default_config(n: int = 4) -> TranslationConfig:
 def resonance_config(n: int = 4) -> TranslationConfig:
     """v2: one level of damping on every coupling + second-worst resonance."""
     return TranslationConfig(n=n, dep={a: n - 1 for a in ASPECTS}, resonance=True)
+
+
+def cumulative_config(order: int, n: int = 4) -> TranslationConfig:
+    """v2 plus cumulative worsening up to `order` coinciding deviations."""
+    return TranslationConfig(n=n, dep={a: n - 1 for a in ASPECTS}, resonance=True, cumulative=order)
 
 
 def fmi_config() -> TranslationConfig:
@@ -207,6 +223,9 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             raw = [cat for _, cat in damped[nid]]
             terms = [dcat for dcat, _ in damped[nid]]
             terms += [f"best_of({a}, {b})" for i, a in enumerate(raw) for b in raw[i + 1:]]
+            if tc.cumulative >= 3 and len(raw) >= 3:
+                terms.append(_cumulative_node(nodes, edges, categories, tc,
+                                              [sorted(producers[nid][c]) for c in raw], nid))
             update["rules"] = [f"worst_of({', '.join(terms)}) propagates to {nid}"]
         if update:
             nodes[nid] = nodes[nid].model_copy(update=update)
@@ -225,6 +244,36 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
     )
     return Translated(project, config, fn_node, out_node, coupling_edge,
                       {lv: _label(lv, tc.n)[0] for lv in range(1, tc.n + 1)})
+
+
+def _cumulative_node(nodes, edges, categories, tc: TranslationConfig,
+                     inputs: list[list[str]], target: str) -> str:
+    """Helper c_k for one function: Specific Rules 'at least m inputs <= k ->
+    level max(1, k + 2 - m)'; an input is <= k when every producer of its text is
+    (they are alternatives). Its own edges absorb everything (dependency 1), so
+    only the rules move it. Returns its category."""
+    k = sum(1 for nid in nodes if nid.startswith("c_"))
+    cid, cat = f"c_{k}", f"cum_{k}"
+    categories.append(cat)
+    srcs = sorted({o for group in inputs for o in group})
+    for o in srcs:
+        eid = f"e_{len(edges)}"
+        edges[eid] = Edge(id=eid, source=o, target=cid, functionality=tc.n)
+    rules = []
+    for m in range(3, min(tc.cumulative, len(inputs)) + 1):
+        for lv in range(1, tc.n):
+            def at_most(group, lv=lv):
+                return " and ".join(f"{o}.functionality is <{lv + 1}" for o in group)
+            cond = " or ".join("(" + " and ".join(f"({at_most(g)})" for g in combo) + ")"
+                               for combo in itertools.combinations(inputs, m))
+            rules.append(f"if {cond} then {cid} is {_label(max(1, lv + 2 - m), tc.n)[0]}")
+    nodes[cid] = Node(id=cid, label=cid, functionality=tc.n, node_categories=[cat], rules=rules,
+                      category_dependency_profiles={
+                          c: CategoryDependencyProfile(dependency_level=1)
+                          for c in {nodes[o].node_categories[0] for o in srcs}})
+    eid = f"e_{len(edges)}"
+    edges[eid] = Edge(id=eid, source=cid, target=target, functionality=tc.n)
+    return cat
 
 
 def _label(level: int, n: int) -> tuple[str, str]:
