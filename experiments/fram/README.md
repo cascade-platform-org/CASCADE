@@ -11,7 +11,8 @@ models (plan: `docs/paper/FRAM/PLAN.md`, gitignored). It calls the real engine
 | `framkit/` | FRAM model, readers (data path `FRAM_DATA`, default `docs/paper/FRAM`), translation, engine call, oracles (FMI, Kaya VPN, Khakzad FT, Kim simulation), Kim formula rules |
 | `run_v1.py` | verification: FMI fixed points, fault tree |
 | `run_rq1.py` | RQ1: every case, S0 vs v2 |
-| `run_rq2.py` | RQ2: exact importance, Kim interventions, expert claims, Vitality vs topology |
+| `run_rq2.py` | RQ2: exact importance, Kim interventions, expert claims, Vitality vs topology; exploratory alternative path (Wenzhou) |
+| `check_kim.py` | Kim & Yoon's "F11 is critical" on our re-implementation of their simulation (a footnote) |
 | `demo_zheng.py` | demonstration: Zheng with telecom, crews and fire water; writes `demo/*.json` (open in the app) |
 | `data/` | the redistributable inputs (Zheng, Grabbe: CC BY) and the frozen RQ2 claim list; sources and licences in `data/README.md` |
 | `results/` | CSV outputs |

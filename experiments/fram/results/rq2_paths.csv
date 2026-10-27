@@ -1,0 +1,5 @@
+run,verdict,detail,W,D
+"base, path drawn",-,recall=7/7 precision=7/7 misses=,4,2
+(a) C11: the path alone,disagree,M20:2->2 (direction does not improve),4,2
+(b) C10: ALT alone,disagree,M20:2->3 (direction improves),-,-
+(c) the path with ALT,agree,M20:2->4 (direction improves),4,4

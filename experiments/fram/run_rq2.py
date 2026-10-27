@@ -8,6 +8,8 @@ RQ2 — does the converted model correctly predict the effect of interventions?
               c2249b7 under the rules declared at 3afa017), run as model edits.
   topology    single-knockout Vitality vs topological reach on every case
               (the reason rankings by single failures carry little model content).
+  paths       exploratory (declared at c8e8c2b, after the claims run): Wenzhou's
+              protective information drawn as an alternative path.
 
 Run from the repository root:
     CASCADE-backend/.venv/bin/python experiments/fram/run_rq2.py
@@ -15,6 +17,7 @@ Run from the repository root:
 from __future__ import annotations
 
 import csv
+import dataclasses
 import itertools
 import math
 import random
@@ -30,7 +33,8 @@ from framkit.kim import to_level, translate_kim
 from framkit.model import FramModel
 from framkit.oracles import kim_simulate
 from framkit.translate import Translated, default_config, resonance_config, translate
-from run_rq1 import KORIYAMA_EVENT, N, SMITH_EVENTS, add_rule, levels, smith_ptop, smith_translation
+from run_rq1 import (KORIYAMA_EVENT, N, SMITH_EVENTS, WZ_DEGRADED, WZ_NOMINAL, add_rule, levels, score,
+                     smith_ptop, smith_translation)
 from schemas.network import CategoryDependencyProfile
 
 HERE = Path(__file__).resolve().parent
@@ -190,8 +194,21 @@ def zheng(edit=None):
     return levels(t, {k: v for k, v in start.items() if k not in drop})
 
 
-def wenzhou(held: list[str]):
-    t = translate(readers.read_wenzhou(), resonance_config())
+def wenzhou(held: list[str], path: bool = False, alt: bool = False):
+    model, cfg = readers.read_wenzhou(), resonance_config()
+    if path:                                           # M8 failure -> dispatch -> D301 driver
+        model.add_function("W", "Warn dispatch of an M8 failure")
+        model.add_function("D", "Dispatch warns the D301 driver")
+        model.add_coupling("M8", "output of M8", "W", "I")
+        model.add_coupling("W", "output of W", "D", "I")
+        model.add_coupling("M10", "output of M10", "D", "R")
+        model.add_coupling("D", "output of M8", "M20", "P")
+        cfg = dataclasses.replace(cfg, triggers=frozenset({("W", "M8")}))
+    if alt:                                            # a channel the lightning does not reach
+        model.add_function("ALT", "Alternative contact channel")
+        for c in [c for c in model.couplings if c.source == "M10"]:
+            model.add_coupling("ALT", "output of M10", c.target, c.aspect)
+    t = translate(model, cfg)
     for f in held:
         barrier(t, f)
     return levels(t, {k: v for k, v in {"M7": 1, "M10": 1}.items() if k not in held})
@@ -255,6 +272,21 @@ def claims() -> list[dict[str, object]]:
     return out
 
 
+def paths() -> list[dict[str, object]]:
+    base = wenzhou([])
+    out = []
+    for run, path, alt in (("base, path drawn", True, False), ("(a) C11: the path alone", True, False),
+                           ("(b) C10: ALT alone", False, True), ("(c) the path with ALT", True, True)):
+        lv = wenzhou([], path, alt)
+        row = {"run": run}
+        if run.startswith("base"):
+            row |= {"verdict": "-", "detail": " ".join(f"{k}={v}" for k, v in score(lv, WZ_DEGRADED, WZ_NOMINAL).items())}
+        else:
+            row |= dict(zip(("verdict", "detail"), verdict(base, lv, ["M20"], "avoid")))
+        out.append(row | {"W": lv.get("W", "-"), "D": lv.get("D", "-")})
+    return out
+
+
 # --- single-knockout Vitality vs topology ------------------------------------------------
 
 def topology_check() -> list[dict[str, object]]:
@@ -282,7 +314,7 @@ def write(name: str, rows: list[dict[str, object]]) -> None:
 
 def main() -> None:
     for name, fn in (("rq2_importance.csv", importance), ("rq2_claims.csv", claims),
-                     ("rq2_topology.csv", topology_check), ("rq2_kim.csv", kim)):
+                     ("rq2_topology.csv", topology_check), ("rq2_kim.csv", kim), ("rq2_paths.csv", paths)):
         rows = fn()
         write(name, rows)
         print(f"== {name}")

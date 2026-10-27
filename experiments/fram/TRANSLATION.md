@@ -57,7 +57,7 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
 
 - **Exact oracles.**
   - Smith: closed-form Birnbaum importance.
-  - Kim: the re-implemented simulation (Sect. 3, Eqs. 1–6). It reproduces Table 7 within about 2 points, though its durations run about 1.25× Table 5's.
+  - Kim: the re-implemented simulation (Sect. 3, Eqs. 1–6). It reproduces Table 7 within 4 points, systematically lower, and its durations run about 1.25× Table 5's.
 - **Expert claims.**
   - Extraction rules (3afa017). A claim is a statement in the paper's own analysis or recommendations that a named change would move a named outcome. It must map to a model edit (remove a deviation, hold a function nominal, add or remove a coupling or function) and to outcome functions. Statements with no stated effect, or with effects outside the model, are excluded.
   - Verdict on the case's RQ1 scenario. *Improve* means at least one outcome function rises and none falls; *avoid* means the outcome returns to nominal; *stays degraded* means it stays below nominal.
@@ -80,4 +80,4 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
 | 5b31c45 | scenario attribution vs topology (superseded by RQ2) |
 | 9e5c3e2 | RQ2 exact counterfactuals |
 | 3afa017, c2249b7 | RQ2 extraction rules; frozen claim list |
-| this commit | exploratory: protective information as an alternative path (Wenzhou) |
+| c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |

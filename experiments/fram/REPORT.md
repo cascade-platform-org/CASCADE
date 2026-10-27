@@ -8,6 +8,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_v1.py` | verification | ~1 min |
 | `run_rq1.py` | RQ1 | 4 s |
 | `run_rq2.py` | RQ2 | ~3 min |
+| `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `demo_zheng.py` | demonstration | 4 s |
 
 ## Research questions
@@ -64,6 +65,17 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | disagree (4) | Wenzhou: an alternative channel avoids the accident (model: M20 2 → 3, direction right, not nominal). Togawa: preparation time affected evacuation (evacuation behaviour is overdetermined by three other deviations). Togawa: better evacuation relieves rescue (the paper's map has 119 calls as exogenous). Li 2026: the stage hierarchy (a learned policy's frequency, a different quantity). |
 | not expressible (3) | berth renewal; community engagement (no such functions); failure warnings to dispatch (a protective information flow) |
 
+**Exploratory, declared after the run (c8e8c2b): protective information as an alternative path** (`results/rq2_paths.csv`). Fig. 4 draws no link by which dispatch reaches the D301 driver. Drawn as an alternative source of the occupancy information for M20, with the failure warning as a trigger:
+
+| Run | M20 |
+|---|---|
+| the path drawn, no intervention | 2 (RQ1 unchanged: 7/7 · 7/7) |
+| failure warning alone (C11) | 2: the warning travels on the GSM-R the lightning destroyed |
+| alternative channel alone (C10) | 2 → 3 |
+| both | **2 → 4: avoided** |
+
+The two claims are expressible once the path is drawn, and the model shows they work only together. The scope boundary is the map, which lacks the path; the method can express it.
+
 **Kim interventions** (IEV_p × factor vs the oracle).
 - At × 0.9 (the paper's Fig. 8) the model resolves 1 of 12 functions (ρ = −0.35).
 - At × 0.5 it resolves 8 (ρ = 0.26; finds F7 and F5).
@@ -82,14 +94,15 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 | answers to questions the FRAM raises but cannot settle | Smith's shared sensor: +38 % P(top); the sensor becomes the most critical component |
 | mechanisms a FRAM table cannot express | demonstration: fire water decides F20 and Tank 63 (below) |
 | criticality that accounts for redundancy and coincidence | Smith's backup first by Birnbaum; topology misses it |
-| repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Koriyama's "evacuation relieves rescue" needs a link the map lacks |
+| repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Koriyama's "evacuation relieves rescue" and Wenzhou's warnings need links the maps lack |
+| how recommendations combine | Wenzhou: the failure warning and the alternative channel avoid the accident only together |
 | precision about what stays nominal | held-out cases: contained and uninvolved functions kept |
 
 | FRAM keeps | Evidence |
 |---|---|
 | adaptation and positive variability | Zheng F18, F19 |
 | where variability is born and amplified, and how likely it is | Kaya's probability mass; Kim's small variability changes |
-| information that compensates for a wrong signal | Wenzhou's alternative channel and failure warnings |
+| the paths that information takes, which the analyst must draw | Wenzhou's warning path, absent from Fig. 4 |
 | the events themselves | the severity of the triggering deviations is the largest sensitivity |
 
 ## Demonstration: Zheng with physical networks (`demo_zheng.py`, `demo/*.json`, `results/d_*.csv`)
@@ -123,7 +136,11 @@ The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, a
 ## Caveats
 
 - **Wenzhou's network** is digitised from a raster figure. Every Table 1 and Table 3 coupling is present, and three readings at crossings are noted in the transcription.
-- **Kim's oracle** durations run about 1.25× Table 5's in every scenario. Their "F11 is critical" does not reproduce in their own simulation at 1,500 trials (F7 first, F11 8th), so it rests on 20 trials. This is a footnote, not a finding of this paper.
+- **Kim's oracle** (`check_kim.py`, 3,000 paired trials) runs about 1.25× Table 5's durations and stays within 4 points of Table 7, systematically lower (F10 15.4 vs 19.5). On it, "F11 is critical" does not reproduce:
+  - Fig. 8: F11 ranks 8th of 12 at both ×0.9 and ×1.1. F7 and F5 lead, and a 20-trial run puts F11 in the top two 1–3 % of the time, so sampling noise does not explain the claim.
+  - Tables 6–7: excluding F3–F5, as the paper does, F7 changes most from S1 to S3 (+4.1 points) and F11 changes +0.7.
+
+  The difference may lie in our re-implementation. This is a footnote, not a finding of this paper.
 - **The ground truths** are the analysts' conclusions. Only the two held-out cases rest on official reports (Wenzhou: State Council; Koriyama: city retrospective).
 
 ## Dropped from scope
