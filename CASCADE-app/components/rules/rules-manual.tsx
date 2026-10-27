@@ -240,6 +240,41 @@ if pump_a is critical or pump_b is critical then tank is warning`}</Block>
         </p>
       </Section>
 
+      <Section title="Offsets — shifting a level inside a rule">
+        <p className="text-xs text-zinc-500">
+          Use when a target should absorb part of a drop, or worsen when several
+          things go wrong at once.
+        </p>
+        <Block>{`<operator>(…) + <levels>   <operator>(…) - <levels>   <category> + <levels>`}</Block>
+        <p>
+          Any term of a propagation rule — a category, an element or a whole
+          function — can carry one offset. <Code>+k</Code> absorbs k levels;{" "}
+          <Code>-k</Code> worsens a degraded level by k. Results stay between 1
+          and <Code>N</Code>.
+        </p>
+        <Block>{`worst_of(water, power) + 1 propagates to hub`}</Block>
+        <p className="text-xs text-zinc-500">
+          &ldquo;The hub absorbs one level of whatever its worst service
+          loses&rdquo;: <Code>water = 2</Code> gives <Code>hub = 3</Code> — what a
+          dependency level of <Code>N − 1</Code> does, written in the rule.
+        </p>
+        <Block>{`worst_of(
+  worst_of(a, b, c) + 1,
+  worst_of(best_of(a, b), best_of(a, c), best_of(b, c))
+) propagates to f`}</Block>
+        <p className="text-xs text-zinc-500">
+          One degraded input is absorbed by a level; two degraded together pass
+          in full (the second line is the second-worst input).
+        </p>
+        <Callout>
+          <strong>A minus only acts on a drop.</strong> A nominal term stays
+          nominal under <Code>-k</Code>, so an offset never starts a failure.
+          Offsets apply after the dependency level. A rule with an offset is
+          evaluated over category levels: an element named in it stands for its
+          category, as in a nested rule.
+        </Callout>
+      </Section>
+
       <Section title="Operators">
         <table className="w-full border-collapse text-xs">
           <thead>
@@ -301,6 +336,7 @@ if pump_a is critical or pump_b is critical then tank is warning`}</Block>
           <li>Intracategorical element lists only select the category; they don&rsquo;t restrict the operator to just those elements.</li>
           <li>A name matching no element (a typo) makes the rule <em>ignored with a warning</em> rather than silently misfiring — prefer picking the element from the editor.</li>
           <li>A display label shared by two nodes is <em>ambiguous</em>: rules that use it are reported, not guessed — rename the nodes or use the element id.</li>
+          <li>Write an offset with a space before the sign (<Code>pump + 1</Code>). <Code>pump+1</Code> also works, unless an element is literally named <Code>pump+1</Code>: an existing name always wins.</li>
         </ul>
       </Section>
     </div>

@@ -24,6 +24,9 @@ element's `rules` list:
 - **Intercategorical** `op(cats) propagates to <target>` — re-parameterises the
   compose (intercategorical) operator across the referenced categories at the
   target (default `worst_of`); categories with no candidate count as full N.
+- A rule whose function nests another function, or carries a level offset on
+  any term (`worst_of(a, b) + 1`, ADR-0025), is evaluated as a whole expression
+  over the target's category levels (engine/logical.eval_nested_func_ast).
 
 Conditions are boolean formulas (`and`/`or`/`not`) over attribute comparisons on
 any element field, with arithmetic operators `< > = ≠ <= >=`.
@@ -33,7 +36,7 @@ from __future__ import annotations
 from typing import Any, Callable, Optional
 
 from core.aggregation import OPERATORS
-from core.rule_ast import ConditionAST, FunctionAST, RuleAST
+from core.rule_ast import ConditionAST, FunctionArgumentAST, FunctionAST, RuleAST
 from core.rule_parser import (
     RuleIgnored,
     RuleParser,
@@ -246,10 +249,11 @@ class RuleContext:
             return
 
         # Nested function: one or more direct arguments are themselves functions
-        # (e.g. worst_of(best_of(A, B), best_of(C, B))). The flat (operator,
-        # categories) representation loses the nested grouping, so we store the
-        # full AST for dedicated evaluation in the propagation loop.
-        has_nested = any(
+        # (e.g. worst_of(best_of(A, B), best_of(C, B))), or a term carries a level
+        # offset (ADR-0025). The flat (operator, categories) representation loses
+        # the grouping and the offsets, so we store the full AST for dedicated
+        # evaluation in the propagation loop.
+        has_nested = _has_offset(ast["function"]) or any(
             arg.get("type") == "function"
             for arg in ast["function"].get("arguments", [])
         )
@@ -375,6 +379,13 @@ def _coerce_assignment_value(value: Any) -> Any:
     if isinstance(value, str) and value.strip().lower() in ("true", "false"):
         return value.strip().lower() == "true"
     return value
+
+
+def _has_offset(term: FunctionArgumentAST) -> bool:
+    """True when this term or any term inside it carries a level offset."""
+    if "offset" in term:
+        return True
+    return term["type"] == "function" and any(_has_offset(a) for a in term["arguments"])
 
 
 def _condition_elements(ast: ConditionAST) -> list[str]:

@@ -25,7 +25,8 @@ rule-type enum, structural AST validation, and reference extraction.
 Rule kinds (see CONTEXT.md → *Rule*):
 - **Specific**      — `if <condition> then <target> is <level>`
 - **Intracategorical** / **Intercategorical** — `<function> propagates to <target>`
-  distinguished by whether the function references a Category.
+  distinguished by whether the function references a Category. Any term of the
+  function may carry a level offset, `worst_of(a, b) + 1` (ADR-0025).
 """
 from __future__ import annotations
 
@@ -48,7 +49,11 @@ from core.rule_ast import (
     SpecificRuleAST,
     ThenBlock,
 )
-from core.rule_grammar import DISABLED_RULE_PREFIX, OPERATORS as _GRAMMAR_OPERATORS
+from core.rule_grammar import (
+    DISABLED_RULE_PREFIX,
+    OFFSET_SIGNS as _OFFSET_SIGNS,
+    OPERATORS as _GRAMMAR_OPERATORS,
+)
 from core.utils.normalization import (
     normalize_category_name,
     normalize_label,
@@ -305,6 +310,12 @@ class RuleParser:
 
     _ALLOWED_OPERATORS: frozenset[str] = frozenset(_GRAMMAR_OPERATORS)
 
+    # A signed whole number written as one token ("+1", "-2"), and a name with an
+    # offset glued to it ("pump+1"). The tokenizer cannot split on the signs:
+    # element ids are nanoids, whose alphabet contains "-".
+    _SIGNED_INT_RE = re.compile(r"^([" + re.escape("".join(sorted(_OFFSET_SIGNS))) + r"])(\d+)$")
+    _GLUED_OFFSET_RE = re.compile(r"^(.+?)([" + re.escape("".join(sorted(_OFFSET_SIGNS))) + r"])(\d*)$")
+
     # `is not …` folds into the logical complement of the comparison operator.
     _NEGATED_OPERATORS: dict[str, str] = {
         "=": "≠", "≠": "=", "<": ">=", ">": "<=", "<=": ">", ">=": "<",
@@ -439,6 +450,10 @@ class RuleParser:
                 if "then" in rule_lower and "is" in rule_lower and not rule_lower.startswith("if"):
                     raise RuleSyntaxError("Specific rule must start with 'if'")
                 if "propagates to" in rule_lower:
+                    # Type detection swallows the function's own syntax error;
+                    # parse it again so the author sees what is actually wrong.
+                    self.position = 0
+                    self._parse_function_expression()
                     raise RuleSyntaxError("Failed to parse propagation rule. Check function syntax.")
                 raise RuleSyntaxError("Could not determine rule type.")
             validate_ast_structure(ast, rule_type)
@@ -652,6 +667,7 @@ class RuleParser:
             "intracategorical" if rule_type == RuleType.INTRACATEGORICAL else "intercategorical"
         )
         function_ast = self._parse_function_expression()
+        self._attach_offset(function_ast)
         if not (self._consume_keyword("propagates") and self._consume_keyword("to")):
             raise RuleSyntaxError(f"{rule_type.value} rule must contain 'propagates to'")
         if not self._has_more_tokens():
@@ -690,11 +706,11 @@ class RuleParser:
                 self.position + 1 < len(self.tokens)
                 and self.tokens[self.position + 1].value == "("
             ):
-                arguments.append(self._parse_function_expression())
+                argument: FunctionArgumentAST = self._parse_function_expression()
+                self._attach_offset(argument)
             else:
-                raw_name = self._get_current_token().value
-                arguments.append(self._classify_reference(raw_name))
-                self.position += 1
+                argument = self._parse_reference_argument()
+            arguments.append(argument)
 
             if self._has_more_tokens() and self._get_current_token().value == ",":
                 self.position += 1
@@ -706,6 +722,85 @@ class RuleParser:
         self.position += 1
 
         return {"type": "function", "name": function_name, "arguments": arguments}
+
+    # -- level offsets (ADR-0025) ---------------------------------------------
+
+    def _parse_reference_argument(self) -> ReferenceAST:
+        """A reference argument, with its offset if one follows or is glued on.
+
+        A token that is a known name as written stays whole (an element may be
+        called "pump-1"). Otherwise "pump+1", or "pump+" followed by "1", is read
+        as the name "pump" with an offset, provided "pump" is a known name, so a
+        typo still surfaces as one unknown reference spelled as the author wrote.
+        """
+        raw = self._get_current_token().value
+        self.position += 1
+        glued = self._GLUED_OFFSET_RE.match(raw)
+        if glued and not self._is_known_name(raw) and self._is_known_name(glued.group(1)):
+            name, sign, digits = glued.groups()
+            reference = self._classify_reference(name)
+            if not digits:  # "pump+" then "1"
+                if not (self._has_more_tokens() and self._get_current_token().value.isdigit()):
+                    raise RuleSyntaxError(f"Expected a whole number after '{sign}' in '{raw}'")
+                digits = self._get_current_token().value
+                self.position += 1
+            reference["offset"] = self._signed(sign, digits)
+            self._reject_second_offset()
+            return reference
+        reference = self._classify_reference(raw)
+        self._attach_offset(reference)
+        return reference
+
+    def _attach_offset(self, term: FunctionArgumentAST) -> None:
+        """Read an optional offset right after a term ("+ 1", "+1", "- 2") and
+        store it on the term. At most one offset per term."""
+        if not self._has_more_tokens():
+            return
+        token = self._get_current_token().value
+        if token in _OFFSET_SIGNS:
+            if not (
+                self.position + 1 < len(self.tokens)
+                and self.tokens[self.position + 1].value.isdigit()
+            ):
+                raise RuleSyntaxError(f"Expected a whole number after '{token}'")
+            term["offset"] = self._signed(token, self.tokens[self.position + 1].value)
+            self.position += 2
+        else:
+            signed = self._SIGNED_INT_RE.match(token)
+            if signed is None:
+                return
+            term["offset"] = self._signed(signed.group(1), signed.group(2))
+            self.position += 1
+        self._reject_second_offset()
+
+    def _reject_second_offset(self) -> None:
+        """An offset must be followed by ',', ')' or the end of the function:
+        a second offset ("a + 1 - 1") or a decimal ("a + 1.5") is an error,
+        because offsets do not compose (a nominal level absorbs a minus)."""
+        if not self._has_more_tokens():
+            return
+        following = self._get_current_token().value
+        if following in _OFFSET_SIGNS or self._SIGNED_INT_RE.match(following):
+            raise RuleSyntaxError("Only one offset per term")
+        if following == ".":
+            raise RuleSyntaxError("An offset must be a whole number of levels")
+
+    @staticmethod
+    def _signed(sign: str, digits: str) -> int:
+        value = int(digits)
+        if value < 1:
+            raise RuleSyntaxError("An offset must be at least one level")
+        return value if sign == "+" else -value
+
+    def _is_known_name(self, token_value: str) -> bool:
+        """True when a token names an element, a category or a display label."""
+        display = self._denormalize(token_value)
+        return (
+            display in self.nodes
+            or display in self.edges
+            or self._resolve_category(display) is not None
+            or normalize_label(display) in self._label_to_id
+        )
 
     def _classify_reference(self, raw_name: str) -> ReferenceAST:
         """Tag an argument token as a node / category / edge / unknown reference.

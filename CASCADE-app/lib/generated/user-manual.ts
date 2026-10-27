@@ -1838,6 +1838,43 @@ export const USER_MANUAL: ManualDoc = {
               "type": "paragraph",
               "spans": [
                 {
+                  "kind": "strong",
+                  "text": "Offsets."
+                },
+                {
+                  "kind": "text",
+                  "text": " Any term of a propagation rule — a category, an element or a whole function — can carry one offset: "
+                },
+                {
+                  "kind": "code",
+                  "text": "+k"
+                },
+                {
+                  "kind": "text",
+                  "text": " absorbs k levels, "
+                },
+                {
+                  "kind": "code",
+                  "text": "-k"
+                },
+                {
+                  "kind": "text",
+                  "text": " worsens a degraded level by k. Results stay between 1 and N, and a nominal term stays nominal under "
+                },
+                {
+                  "kind": "code",
+                  "text": "-k"
+                },
+                {
+                  "kind": "text",
+                  "text": ", so an offset never starts a failure. Offsets apply after the Dependency level. A rule with an offset is evaluated over category levels, like a nested rule: an element named in it stands for its category, and categories it does not name are left out (ADR-0025)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
                   "kind": "text",
                   "text": "Conditions take "
                 },
@@ -1977,6 +2014,80 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "strong",
+                  "text": "Absorb one failure, pass two."
+                },
+                {
+                  "kind": "text",
+                  "text": " A function copes with one degraded input, losing a level less than the input lost, but two degraded inputs together pass in full:"
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "text": "worst_of(\n  worst_of(a, b, c) + 1,\n  worst_of(best_of(a, b), best_of(a, c), best_of(b, c))\n) propagates to f"
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "The first line is the worst input softened by a level; the second is the second-worst input. With "
+                },
+                {
+                  "kind": "code",
+                  "text": "a = 2"
+                },
+                {
+                  "kind": "text",
+                  "text": " alone degraded, "
+                },
+                {
+                  "kind": "code",
+                  "text": "f = 3"
+                },
+                {
+                  "kind": "text",
+                  "text": "; with "
+                },
+                {
+                  "kind": "code",
+                  "text": "a = 2"
+                },
+                {
+                  "kind": "text",
+                  "text": " and "
+                },
+                {
+                  "kind": "code",
+                  "text": "b = 2"
+                },
+                {
+                  "kind": "text",
+                  "text": ", "
+                },
+                {
+                  "kind": "code",
+                  "text": "f = 2"
+                },
+                {
+                  "kind": "text",
+                  "text": ". Adding "
+                },
+                {
+                  "kind": "code",
+                  "text": "best_of(a, b, c) - 1"
+                },
+                {
+                  "kind": "text",
+                  "text": " as a third line makes three coinciding drops cost one level more."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "strong",
                   "text": "Hold an element up under a standing agreement."
                 },
                 {
@@ -2080,6 +2191,36 @@ export const USER_MANUAL: ManualDoc = {
                   {
                     "kind": "text",
                     "text": ", not an error. Read the warnings after a Propagation."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "Write an offset with a space before the sign ("
+                  },
+                  {
+                    "kind": "code",
+                    "text": "pump + 1"
+                  },
+                  {
+                    "kind": "text",
+                    "text": "). "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "pump+1"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " works too, unless an element is literally named "
+                  },
+                  {
+                    "kind": "code",
+                    "text": "pump+1"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": an existing name always wins."
                   }
                 ]
               ]

@@ -313,6 +313,7 @@ Future category types (multicommodity flow, transport, etc.) add as further addi
 - **Specific rules** — explicit conditions targeting a specific element: `if <cond> then <target>[.<attr>] is <value>`. A `functionality` consequent (or the bare `then <target> is <level>`) overrides the target's proposal, clamped to worsening. **Any other attribute** — first-class `direct_damage` / `expected_repair_time`, or a custom `properties` key — is a generic **attribute-set** consequent (ADR-0015): the value is written onto the target and emitted, without changing `functionality`. Attribute-sets apply as a set-once latch (first firing per element+attribute wins) so the fixed point stays terminating.
 - **Intracategorical rules** — conditions within one category.
 - **Intercategorical rules** — conditions across categories.
+- **Level offsets** *(implemented, ADR-0025)* — any term of a propagation rule may carry one integer offset: `worst_of(a, b) + 1`, `best_of(a, b, c) - 1`. `+k` absorbs k levels (clamped at N); `-k` worsens a degraded term by k (clamped at 1) and leaves a nominal term nominal. A rule with an offset is evaluated as a whole expression over category levels, like a nested rule.
 - Authored with human-readable labels; internally mapped to node IDs. Labels may not contain `.` (the rule grammar's attribute-access operator); the label input strips it.
 
 ### 7.4 Iterative Convergence
@@ -1010,6 +1011,7 @@ without a separate validation script — the same comparison
 | Temporal Simulation (release v1.1): a saved, re-runnable Timeline of Steps and Phases, diff-based run recording with custom metrics, per-category stocks inside `supply_capacity`, and Event Attribute Operations | **Implemented** — §9.6; ADR-0019/0020/0021; design `temporal-simulation-design.md`. Exposing `served_ratio` and storage's `stored` amends ADR-0003; `utilisation` (per source) and source-side fairness between ordinary sources are deferred. Open: backlog stocks (`couples`), automatic repair, backups whose countdown stops when supply returns |
 | Root attribution for deferred drops (backup countdowns) in intervention prioritisation | Deferred — engine does not emit blame for deferred proposals; at-risk Elements are listed without a responsible root (§10) |
 | Parameter and Series follow-ups | Deferred: saved Parameter Sweeps, Series resampled across calendar units |
+| Automatic sensitivity sets: generated families of model changes (an Event's severity, a dependency level, a rule's offset) run as one batch, to show which conclusions survive. Each change reads as an intervention or as uncertain modelling knowledge | Idea, parked (2026-10-27). Motivated by the FRAM study, where the triggering event's severity moved results more than any modelling choice |
 
 ---
 

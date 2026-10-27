@@ -35,4 +35,6 @@ DISABLED_RULE_PREFIX: str = _spec["disabled_rule_prefix"]
 RULE_KINDS: frozenset[str] = frozenset(_spec["rule_kinds"])
 FUNCTION_NAMES: tuple[str, ...] = tuple(_spec["function_names"])
 OPERATORS: frozenset[str] = frozenset(_spec["operators"])
+# Signs of a level offset on a rule term (ADR-0025): `worst_of(a, b) + 1`.
+OFFSET_SIGNS: frozenset[str] = frozenset(_spec["offset_signs"])
 NODE_ATTRIBUTES: tuple[str, ...] = tuple(_spec["node_attributes"])

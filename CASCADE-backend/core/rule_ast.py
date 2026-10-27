@@ -17,7 +17,7 @@ against (`AttributeCondition.value`) — int, float or str, exactly what
 """
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict, Union
+from typing import Any, Literal, NotRequired, TypedDict, Union
 
 # ---------------------------------------------------------------------------
 # Specific-rule condition tree: and / or / not / attribute_condition
@@ -75,24 +75,32 @@ class SpecificRuleAST(TypedDict):
 # ---------------------------------------------------------------------------
 # Propagation-rule (intra/intercategorical) function tree
 # ---------------------------------------------------------------------------
+#
+# Every term — a reference or a function call — may carry a level `offset`
+# (ADR-0025): `worst_of(a, b) + 1`, `best_of(a, b, c) - 1`. The key is absent
+# when the author wrote none, so walkers that only collect names need not know
+# about it; the evaluator applies it (engine/logical.py).
 
 
 class ReferenceNode(TypedDict):
     type: Literal["reference_node"]
     name: str
     raw_name: str
+    offset: NotRequired[int]
 
 
 class ReferenceEdge(TypedDict):
     type: Literal["reference_edge"]
     name: str
     raw_name: str
+    offset: NotRequired[int]
 
 
 class ReferenceCategory(TypedDict):
     type: Literal["reference_category"]
     name: str
     raw_name: str
+    offset: NotRequired[int]
 
 
 class ReferenceUnknown(TypedDict):
@@ -103,6 +111,7 @@ class ReferenceUnknown(TypedDict):
     type: Literal["reference_unknown"]
     name: str
     raw_name: str
+    offset: NotRequired[int]
 
 
 ReferenceAST = Union[ReferenceNode, ReferenceEdge, ReferenceCategory, ReferenceUnknown]
@@ -112,6 +121,7 @@ class FunctionAST(TypedDict):
     type: Literal["function"]
     name: str
     arguments: list["FunctionArgumentAST"]
+    offset: NotRequired[int]
 
 
 FunctionArgumentAST = Union[FunctionAST, ReferenceAST]
