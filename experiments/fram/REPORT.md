@@ -127,6 +127,41 @@ The result is 20 modules and 35 couplings. Every coupling in the paper's Table 3
   - v2: M7 and M10 (0.92), then M8 and M19 (0.08); M5 gets 0 and the top-4 hits 3/4.
   - Both rankings put the two lightning-struck modules on top. Neither separates dispatch (M5) from the train-side origins. Under v2, M5's own variability reaches the collision only through M11 → M18 → M19 → M20, and that path is damped at each hop.
 
+## 2e. Kim & Yoon 2021: Specific Rules (A) vs structural (B) (E1e, declared at 6fa015a)
+
+**Oracle.** Their simulation re-implemented (Sect. 3).
+- **Matches:** Table 7's shares, within about 2 points (F7 17.8 vs 16.4, F10 18.3 vs 19.5, F11 13.7 vs 14.0).
+- **Mismatch:** durations about 1.25× Table 5's, the same ratio in every scenario. That is a residual implementation difference I could not locate.
+- **Deterministic behaviour:** run with a fixed IEV, the recurrence has a sharp threshold. Nothing propagates at IEV ≤ IEV_p, and everything except F2 and F6 resonates from about 1.25·IEV_p. Their resonance is a tail event of the sampling.
+
+**Translations.**
+- **A:** Kim's rule, θ and IEV_p compiled into minimal monotone Specific Rules: 207 at N = 4, 1,236 at N = 7.
+- **B:** the formula's shape as one nested rule per function (8 rules), with damping set by θ/IEV_p.
+
+Raw: `results/e1e_*.csv`.
+
+| Translation | Events | G1 pattern (9) | G2 resonance (12) | G4 scenario order |
+|---|---|---|---|---|
+| **A, N = 4** | 95th pct (level 3) | 2 | 4 | flat |
+| **A, N = 4** | one level worse (2) | **8** | **11** | flat |
+| **A, N = 7** | 95th pct (declared) | **8** | 8 | **ok** |
+| B, N = 4 | 95th pct / worse | 2 / 4 | 4 / 4 | flat |
+| B, N = 7 | 95th pct / worse | 2 / 4 | 4 / 4 | ok |
+| v2 generic, N = 4 | 95th pct / worse | 4 / 8 | 4 / 4 | flat |
+| S0, N = 4 | either | 7 | 4 | flat |
+
+- **A reproduces Kim's propagation; B does not.**
+  - With enough deviation at the origins, A degrades F7–F13 and keeps F6 nominal. Its level-1 set is Table 6's resonance set; the only misses are F13, which reaches level 1, and F2, which degrades.
+  - At N = 4 with the declared events, A propagates nothing. This is Kim's own threshold appearing in the collapsed model.
+  - N = 7 resolves the declared events and is the only scale that orders the three scenarios.
+  - B loses what decides Kim's model: the amplification of sums and products, and IEV_p as a multiplier.
+- **G3 (influence) fails for every translation.**
+  - Vitality and a one-level nudge (exploratory) both rank F2 and F6 first. These are the government functions upstream of everything, which Kim holds acceptable by assumption (IEV_p = 0.4).
+  - Fig. 8 perturbs the IEV multiplier, which is a different question.
+  - **The paper's F11 claim does not reproduce in its own method.** The oracle at 1,500 trials ranks F7 first (as the paper does), then F5, and F11 only 8th. Table 6 puts F11 at 3 % in every scenario. The "F11 critical" conclusion rests on 20 trials per scenario.
+
+**Choice for the paper:** A. Rules written from a paper's quantitative description are the faithful channel, and the case argues for N = 7 when the source is quantitative.
+
 ## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
 
 | Case (k) | Vitality | Degree | Betweenness | PageRank (rev.) | Katz (rev.) | Random |
@@ -156,6 +191,6 @@ The result is 20 modules and 35 couplings. Every coupling in the paper's Table 3
 
 ## 5. Not yet run
 
-- Transcriptions: the FRW toy. Kim & Yoon 2021 is transcribed (Table 3) but not yet run.
+- Transcriptions: the FRW toy.
 - The FRW oracle; Shapley Value (only Vitality so far).
 - The demonstration's Temporal Simulation and SourceToDemands resources.
