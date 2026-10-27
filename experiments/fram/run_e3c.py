@@ -13,7 +13,6 @@ import math
 from pathlib import Path
 
 import run_e1b
-import run_e1d
 import run_e1f
 from framkit import readers
 from framkit.engine import function_levels, propagate
@@ -146,7 +145,7 @@ def li_stages() -> dict[str, float]:
 
 
 def main() -> None:
-    claims = {r["id"]: r for r in csv.DictReader(l for l in open(HERE / "data" / "e3_claims.csv") if not l.startswith("#"))}
+    claims = {r["id"]: r for r in csv.DictReader(line for line in open(HERE / "data" / "e3_claims.csv") if not line.startswith("#"))}
     out = []
 
     def rec(cid, verdict, detail):
@@ -181,7 +180,7 @@ def main() -> None:
         w.writerows(out)
     for r in out:
         print(r)
-    _ = run_e1d  # scenario A of E1d is restated in wenzhou()
+
 
 
 if __name__ == "__main__":
