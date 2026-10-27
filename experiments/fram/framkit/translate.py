@@ -7,26 +7,26 @@ Shape of the CASCADE model:
 
 * Each function is a node with its own Requisite category `fn_<i>`.
 * Each distinct (function, output text) is a small output node with the
-  Requisite category `out_<k>`, where k indexes the output TEXT. Two functions
+  Requisite category `out_<k>`, where k indexes the output TEXT: one node per
+  service a function provides, CASCADE's modelling standard. Two functions
   producing the same text therefore supply the same category, and a consumer
-  takes `best_of` over them (same-named outputs are alternatives).
-  The output nodes exist because the engine passes ALL of a parent's Requisite
-  categories to every child (engine/logical.py, unconditional Requisite
-  inclusion): wiring F straight to its consumers would make each consumer
-  depend on every output of F.
+  takes `best_of` over them (same-named outputs are alternatives). Wiring F
+  straight to its consumers would make each consumer depend on every output of
+  F, since a parent passes all its Requisite categories to every child
+  (engine/logical.py, unconditional Requisite inclusion).
 * A consumer combines its distinct outputs with `worst_of` (FMI profile All).
 * The aspect a coupling enters through sets the consumer's
   `dependency_level` for that output's category (TranslationConfig.dep).
 * v2 (resonance_config): every coupling absorbs one level, and the function
-  also follows the second-worst of its distinct inputs, written as one nested
-  intercategorical rule over damped copies of its inputs.
-* Cumulative worsening (sensitivity, TRANSLATION.md §4): with m >= 3 inputs at
-  or below level k the function is at most k + 2 - m, continuing v2's series
-  (m = 1: worst + 1; m = 2: second worst). The term lives on a helper node c_k
-  whose Specific Rules read the producers' levels, and its category cum_k joins
-  the function's nested worst_of undamped. A helper, because a firing Specific
-  Rule on the function itself would replace the proposal (engine/rules_eval) and
-  undo a lower v2 level.
+  also follows the second-worst of its distinct inputs. One rule per function,
+  with level offsets (ADR-0025):
+      worst_of(worst_of(a, b, c) + 1,
+               worst_of(best_of(a, b), best_of(a, c), best_of(b, c))) propagates to F
+  The damping lives in the `+ 1`, so the inputs carry no dependency profile.
+* Cumulative worsening (sensitivity, TRANSLATION.md §4a): the m-th worst input
+  minus (m - 2), for m = 3 .. cumulative, continuing v2's series (m = 1: worst
+  + 1; m = 2: second worst). A minus leaves a nominal input nominal, so the term
+  bites only when m inputs deviate.
 * FMI mode (V1) reads the model's profiles: None -> dependency_level 1
   (any drop neutralised); Any -> an intercategorical rule
   `worst_of(best_of(<Any outputs>), <All outputs>...) propagates to <node>`.
@@ -167,12 +167,12 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
         else:
             producers.setdefault(target, {}).setdefault(cat, set()).add(out_node[(c.source, c.output)])
 
-    damped: dict[str, list[tuple[str, str]]] = {}   # consumer -> (copy category, input category)
     for fid, nid in list(fn_node.items()):
         fn = model.functions[fid]
         profiles: dict[str, CategoryDependencyProfile] = {}
         any_cats: dict[str, list[str]] = {}   # aspect -> its Any categories
         all_cats: list[str] = []
+        resonant: list[tuple[str, int]] = []   # (input category, levels its coupling absorbs)
         for cat, aspects in arrivals.get(nid, {}).items():
             levels = []
             for a in aspects:
@@ -184,24 +184,9 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
                     levels.append(tc.dependency(a))
             dep = max(levels)
             if tc.resonance and cat not in trigger_cats.get(nid, set()):
-                # The damping moves onto a per-input copy; the raw input stays
-                # undamped for the second-worst term.
-                k = sum(len(v) for v in damped.values())
-                # node id d_k, category dmp_k: distinct strings, because the rule
-                # parser resolves node ids before categories and the rule must
-                # reference the CATEGORY (an all-node rule is intracategorical).
-                did, dcat = f"d_{k}", f"dmp_{k}"
-                damped.setdefault(nid, []).append((dcat, cat))
-                categories.append(dcat)
-                nodes[did] = Node(id=did, label=did, functionality=tc.n, node_categories=[dcat],
-                                  category_dependency_profiles=(
-                                      {cat: CategoryDependencyProfile(dependency_level=dep)}
-                                      if dep < tc.n else None))
-                for o in sorted(producers[nid][cat]):
-                    eid = f"e_{len(edges)}"
-                    edges[eid] = Edge(id=eid, source=o, target=did, functionality=tc.n)
-                eid = f"e_{len(edges)}"
-                edges[eid] = Edge(id=eid, source=did, target=nid, functionality=tc.n)
+                # The damping moves into the rule's worst term (`+ k`); the
+                # input stays undamped for the second-worst term.
+                resonant.append((cat, tc.n - dep))
             elif dep < tc.n:
                 profiles[cat] = CategoryDependencyProfile(dependency_level=dep)
             any_aspects = sorted(a for a in aspects if tc.fmi_mode and fn.profile(a) == "Any")
@@ -219,14 +204,8 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             parts += all_cats
             expr = f"worst_of({', '.join(parts)})" if len(parts) > 1 else parts[0]
             update["rules"] = [f"{expr} propagates to {nid}"]
-        if tc.resonance and damped.get(nid):
-            raw = [cat for _, cat in damped[nid]]
-            terms = [dcat for dcat, _ in damped[nid]]
-            terms += [f"best_of({a}, {b})" for i, a in enumerate(raw) for b in raw[i + 1:]]
-            if tc.cumulative >= 3 and len(raw) >= 3:
-                terms.append(_cumulative_node(nodes, edges, categories, tc,
-                                              [sorted(producers[nid][c]) for c in raw], nid))
-            update["rules"] = [f"worst_of({', '.join(terms)}) propagates to {nid}"]
+        if tc.resonance and resonant:
+            update["rules"] = [f"{_resonance_rule(resonant, tc.cumulative)} propagates to {nid}"]
         if update:
             nodes[nid] = nodes[nid].model_copy(update=update)
 
@@ -246,34 +225,37 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
                       {lv: _label(lv, tc.n)[0] for lv in range(1, tc.n + 1)})
 
 
-def _cumulative_node(nodes, edges, categories, tc: TranslationConfig,
-                     inputs: list[list[str]], target: str) -> str:
-    """Helper c_k for one function: Specific Rules 'at least m inputs <= k ->
-    level max(1, k + 2 - m)'; an input is <= k when every producer of its text is
-    (they are alternatives). Its own edges absorb everything (dependency 1), so
-    only the rules move it. Returns its category."""
-    k = sum(1 for nid in nodes if nid.startswith("c_"))
-    cid, cat = f"c_{k}", f"cum_{k}"
-    categories.append(cat)
-    srcs = sorted({o for group in inputs for o in group})
-    for o in srcs:
-        eid = f"e_{len(edges)}"
-        edges[eid] = Edge(id=eid, source=o, target=cid, functionality=tc.n)
-    rules = []
-    for m in range(3, min(tc.cumulative, len(inputs)) + 1):
-        for lv in range(1, tc.n):
-            def at_most(group, lv=lv):
-                return " and ".join(f"{o}.functionality is <{lv + 1}" for o in group)
-            cond = " or ".join("(" + " and ".join(f"({at_most(g)})" for g in combo) + ")"
-                               for combo in itertools.combinations(inputs, m))
-            rules.append(f"if {cond} then {cid} is {_label(max(1, lv + 2 - m), tc.n)[0]}")
-    nodes[cid] = Node(id=cid, label=cid, functionality=tc.n, node_categories=[cat], rules=rules,
-                      category_dependency_profiles={
-                          c: CategoryDependencyProfile(dependency_level=1)
-                          for c in {nodes[o].node_categories[0] for o in srcs}})
-    eid = f"e_{len(edges)}"
-    edges[eid] = Edge(id=eid, source=cid, target=target, functionality=tc.n)
-    return cat
+def _offset(k: int) -> str:
+    return "" if k == 0 else f" + {k}" if k > 0 else f" - {-k}"
+
+
+def _kth_worst(cats: list[str], k: int) -> str:
+    """The k-th worst of the inputs: the worst, over every k of them, of their
+    best. k = 1 is the worst input, k = len(cats) the best."""
+    if k == 1:
+        return f"worst_of({', '.join(cats)})"
+    groups = [f"best_of({', '.join(g)})" for g in itertools.combinations(cats, k)]
+    return groups[0] if len(groups) == 1 else f"worst_of({', '.join(groups)})"
+
+
+def _resonance_rule(inputs: list[tuple[str, int]], cumulative: int) -> str:
+    """worst_of(worst + damping, second worst[, m-th worst - (m - 2) ...]).
+
+    `inputs` pairs each input category with the levels its coupling absorbs.
+    When every coupling absorbs the same amount (always, under v2) the damping
+    is one offset on the worst term; otherwise each input carries its own.
+    """
+    cats = [c for c, _ in inputs]
+    absorbs = {k for _, k in inputs}
+    if len(absorbs) == 1:
+        terms = [_kth_worst(cats, 1) + _offset(absorbs.pop())]
+    else:
+        terms = [f"worst_of({', '.join(c + _offset(k) for c, k in inputs)})"]
+    for m in range(2, len(cats) + 1):
+        if m >= 3 and m > cumulative:
+            break
+        terms.append(_kth_worst(cats, m) + _offset(2 - m))
+    return terms[0] if len(terms) == 1 else f"worst_of({', '.join(terms)})"
 
 
 def _label(level: int, n: int) -> tuple[str, str]:

@@ -142,7 +142,7 @@ The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, a
 
 ## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 
-- **Resonance as one nested rule per function**, using existing rule types only. It is identical to the compiled-Specific-Rule version (0 of 864 scenarios differ).
+- **Resonance as one rule per function.** First written over damped copy nodes, identical to a compiled-Specific-Rule version (0 of 864 scenarios differ). Now written with level offsets (ADR-0025), `worst_of(worst_of(a, b, …) + 1, <second worst>)`, with no copy or helper nodes: every result byte-identical, and the demonstration model shrinks from 178 to 101 nodes.
 - **N = 4 for qualitative sources.** A wider scale gave no gain: what matters is the ratio of damping to the event's deficit.
 - **One level of damping.** Two levels fit Zheng at every severity but break Tian (2/6).
 - **No common-cause pruning.** Dropping coincidences with a shared origin made results worse: the experts do pass shared-origin delays.

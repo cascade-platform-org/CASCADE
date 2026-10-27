@@ -17,7 +17,7 @@ history keeps each declaration verbatim (log at the end). Code: `framkit/transla
 | | |
 |---|---|
 | **Damping** | every coupling absorbs one level (`dependency_level` N − 1): a single deviating input is absorbed |
-| **Resonance** | a function also follows the **second-worst** of its distinct inputs, so level = min(worst + 1, second worst): two coinciding deviations pass. Implemented as one nested intercategorical rule per function over damped copies of its inputs: `worst_of(dmp_a, dmp_b, …, best_of(a, b), …) propagates to F` |
+| **Resonance** | a function also follows the **second-worst** of its distinct inputs, so level = min(worst + 1, second worst): two coinciding deviations pass. Implemented as one nested intercategorical rule per function over damped copies of its inputs: `worst_of(dmp_a, dmp_b, …, best_of(a, b), …) propagates to F`. Re-encoded with level offsets (ADR-0025) as `worst_of(worst_of(a, b, …) + 1, worst_of(best_of(a, b), …)) propagates to F`, with no copy nodes; every result identical |
 | **Trigger couplings** | an Input the function acts on *when it deviates* (a monitor watching what it monitors) has `dependency_level` 1 and no rule |
 | **Baseline S0** | full dependency on I, P, R; one level absorbed on C, T. A drop reaches everything downstream, i.e. reachability |
 
@@ -73,7 +73,7 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 
 - **The term.** With m ≥ 3 distinct inputs at or below level k, the function is at most max(1, k + 2 − m). This continues v2's series: m = 1 gives worst + 1 (damping), m = 2 the second worst (resonance), m = 3 one level below the third worst, m = 4 two below the fourth.
 - **Variants.** *v2+3* adds m = 3 only (PLAN §7.2). *v2+c* adds every m; on N = 4 it saturates at m = 4.
-- **Encoding.** Specific Rules on one helper node per function with at least three distinct non-trigger inputs. An input counts as ≤ k when every producer of its text is (alternatives). The helper's category enters the function's nested `worst_of` undamped. A helper, because a firing Specific Rule on the function itself replaces its proposal and would undo a lower v2 level.
+- **Encoding.** Specific Rules on one helper node per function with at least three distinct non-trigger inputs. An input counts as ≤ k when every producer of its text is (alternatives). The helper's category enters the function's nested `worst_of` undamped. A helper, because a firing Specific Rule on the function itself replaces its proposal and would undo a lower v2 level. Re-encoded with level offsets (ADR-0025): the m-th worst input `- (m − 2)` as one more `worst_of` term, with no helper node; every result identical.
 - **Scope.** Every N = 4 run under v2: RQ1 (Zheng, Tian, Kaya, Wenzhou, Koriyama) and the claims run on v2 (C1, C2, C4–C6, C8–C10, C12, C14). Kim (N = 7, compiled rules) and Smith (N = 2) are unaffected.
 - **Recorded before running: the hand reading behind v2+c.** Under v2 Koriyama's T6 has four inputs deviating at level 3 (immediate environment, PC4, night, T5), and T9 has three (119 calls, night, T6). Expected: v2+3 flips C6 (T9) but not C4, since holding T5 leaves three deviations on T6; v2+c flips both. The cost to watch: lower levels travel further, so RQ1 precision may fall, notably on the held-out cases.
 
@@ -92,3 +92,4 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 | 3afa017, c2249b7 | RQ2 extraction rules; frozen claim list |
 | c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |
 | d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |
+| (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
