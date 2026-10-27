@@ -238,3 +238,22 @@ RQ2 now asks about consequences: what each function's deviation costs. FRAM pape
 - Model: translation A, N = 7, rules and events recompiled with the reduced IEV_p. Effect = reduction of the total deficit in S2.
 - Metric: Spearman over the 12 rule-bearing functions, and top-3 overlap.
 - Robustness: IEV_p × 0.5 in both the oracle and the model.
+
+---
+
+# E3 layer 2 — the experts' counterfactual claims (rules declared 2026-10-27, before extraction)
+
+**Corpus.** Every case paper with a model in hand: Tian 2016, Togawa 2023, Zheng 2024, Li & Huang 2025, Kaya 2020, Smith 2017, Kim & Yoon 2021, Li 2026, Grabbe 2022, Zinetullina 2021.
+
+**Extraction rules**
+1. **Unit.** A statement in the paper's own analysis, discussion, recommendations or conclusions that a change to the system would change an outcome. This covers explicit counterfactuals ("fixing X alone would not avoid Y") and recommendations with a stated effect ("doing X would reduce/prevent/absorb Y").
+2. **Intervention.** It must name a model edit: remove or reduce a named function's or resource's deviation; add a barrier (the function holds nominal); add or remove a coupling; add a function; change a resource.
+3. **Outcome.** It must name functions, or the paper's adverse outcome as mapped in RQ1.
+4. **Excluded:** recommendations with no stated effect; effects on quantities outside the model (cost, culture, "resilience" in general); claims about other systems.
+5. **Record.** Verbatim text, section, the edit, the outcome functions, and the stated direction.
+6. **Evaluation.** The case's RQ1 scenario under v2, run with and without the edit.
+   - **Agree:** the outcome functions move in the stated direction. "Improves" means at least one rises and none falls; "alone is not enough" means the outcome stays degraded.
+   - **Disagree:** they do not move that way.
+   - **Not expressible:** the edit cannot be made in the model.
+   - Cases without an RQ1 scenario use their published scenario: Kaya the SPC scenarios; Kim S2; Li 2026 its rainfall origins; Grabbe one knockout per risk function.
+7. **Freeze.** The extracted list is committed before any run, and reported claim by claim (no aggregate score).
