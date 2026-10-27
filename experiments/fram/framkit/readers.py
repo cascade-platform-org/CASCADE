@@ -122,6 +122,11 @@ def read_wenzhou() -> FramModel:
     return read_long(MODELS / "li_2025_wenzhou.csv", "li_2025_wenzhou")
 
 
+def read_togawa() -> FramModel:
+    """Togawa et al. 2023 Fig. 5 with Table 2's output texts."""
+    return read_long(MODELS / "togawa_2023_koriyama.csv", "togawa_2023_koriyama")
+
+
 def read_kim() -> tuple[FramModel, list[dict[str, str]]]:
     """Kim & Yoon 2021 Table 3. The upstream set of each rule is the coupling
     list; aspect types are only in Fig. 5, so every coupling is read as I."""

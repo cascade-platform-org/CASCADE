@@ -182,3 +182,21 @@ One translation for every case. Case-specific content enters only as rules read 
 | Kaya | per-coupling amplification (E[A_T·A_P | deviated] > 1 passes, else one more level absorbed) | Appendix 1 |
 | Kim | each function's aggregation rule, θ and IEV_p, compiled to Specific Rules | Table 3 |
 | Wenzhou | none | — |
+
+---
+
+# Second held-out case: Koriyama 2019 (declared 2026-10-27, before the run)
+
+Model: Togawa et al. 2023 Fig. 5 with Table 2's output texts (`models/togawa_2023_koriyama.csv`, 9 functions). Translation: v2, no case rules (the paper writes none beyond the map).
+
+**Event** (Sects. 3.3 and 4.4.1), each one level, by the v2 convention:
+- PC3 and PC4: alerts issued early, yet "residents may still have lacked sufficient time", and the system "failed to communicate information across the municipality, resulting in confusion";
+- *Immediate environment*: flooded routes, storm, events still underway;
+- *Function restricted during nighttime*: evacuation and rescue after dark;
+- *Emergency call (119)*: the surge after the levee breach.
+
+Sensitivity: the same event without PC3 and PC4 (alerts read as timely).
+
+**Ground truth: Fig. 6.**
+- Functions. Resonated, non-origin: Evacuation Preparation, Evacuation Behavior, Rescue Operations → predicted below 4. Contained: Shelters, Care Needs → predicted 4. Uninvolved: PC5, Emergency Deployment → predicted 4.
+- Couplings. Flagged when source and target are both below 4. Truth: the red couplings PC3→EP, PC4→EB, EP→EB, EB→Rescue. Precision and recall over all couplings.
