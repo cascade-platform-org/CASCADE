@@ -214,7 +214,7 @@ How a `SourceToDemands` category shares **scarce** supply — the first Graph Ty
 _Avoid_: "algorithm" bare (say allocation or allocation strategy)
 
 **Rule**:
-A logical condition on an Element determining when its Functionality degrades from other Elements' state. Kinds: **Specific** (named Element), **Intracategorical**, **Intercategorical**. Authored client-side with grammar-aware autocomplete (`lib/rule-suggestions.ts`, driven by the shared spec `CASCADE-app/shared/rule-grammar.json` that `core/rule_grammar.py` also reads); **parsed and evaluated exclusively by the engine** — no client-side parser or validator exists, so a malformed rule is only caught at Propagation. Levels may be integers or scale labels (resolved at parse time; undefined labels ignored with a warning).
+A logical condition on an Element determining when its Functionality degrades from other Elements' state. Kinds: **Specific** (named Element), **Intracategorical**, **Intercategorical**. Authored client-side with grammar-aware autocomplete (`lib/rule-suggestions.ts`, driven by the shared spec `CASCADE-app/shared/rule-grammar.json` that `core/rule_grammar.py` also reads); **parsed and evaluated exclusively by the engine** — no client-side parser or validator exists, so a malformed rule is only caught at Propagation. Levels may be integers or scale labels (resolved at parse time; undefined labels ignored with a warning). Any term of a propagation rule may carry one **level offset** (`worst_of(a, b) + 1`): `+k` absorbs, `-k` worsens a degraded term and leaves a nominal one nominal (ADR-0025).
 _Avoid_: Dependency rule, condition, constraint
 
 **Category Dependency Profile**:

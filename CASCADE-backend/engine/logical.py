@@ -240,12 +240,20 @@ def eval_nested_func_ast(
       → ``n``, no blame.
     - ``function``: sub-expression evaluated recursively.
 
+    Any term may carry a level ``offset`` (ADR-0025), applied to the term's level
+    after it is resolved: see `apply_offset`.
+
     Returns ``None`` only when the entire outer function has no resolvable arguments
     at all (no candidates whatsoever), so the propagation loop can fall back to the
     default compose.
     """
 
     def _resolve(ast_node: FunctionArgumentAST) -> tuple[int, dict[str, float]]:
+        level, shares = _resolve_term(ast_node)
+        offset = ast_node.get("offset")
+        return (level, shares) if offset is None else apply_offset(level, shares, offset, n)
+
+    def _resolve_term(ast_node: FunctionArgumentAST) -> tuple[int, dict[str, float]]:
         if ast_node["type"] == "reference_category":
             cat = ast_node["name"]
             if cat in candidates:
@@ -288,6 +296,28 @@ def eval_nested_func_ast(
 
     level, shares = _resolve(func_ast)
     return level, shares, frozenset()
+
+
+def apply_offset(
+    level: int, shares: dict[str, float], offset: int, n: int
+) -> tuple[int, dict[str, float]]:
+    """A term's level moved by a rule offset (ADR-0025), on the scale 1..n.
+
+    - ``+k`` absorbs k levels: ``min(n, level + k)``. A term lifted back to
+      nominal carries no blame.
+    - ``-k`` amplifies a deviation by k levels: ``max(1, level - k)``. A nominal
+      term stays nominal, so a minus never originates a drop.
+
+    `level + k` with k = n − dependency_level is exactly the dependency-level
+    attenuation (engine/guards.attenuate), applied to one term instead of a
+    whole category.
+    """
+    if offset > 0:
+        lifted = min(n, level + offset)
+        return lifted, ({} if lifted == n else shares)
+    if level >= n:
+        return level, shares
+    return max(1, level + offset), shares
 
 
 def _rekey_shares(shares: dict[str, float], binding: dict[str, str]) -> dict[str, float]:

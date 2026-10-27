@@ -12,6 +12,9 @@
  *   Intracategorical  <func>(<elements>) propagates to <target>
  *   Intercategorical  <func>(<categories>) propagates to <target>
  *
+ * Any term of a propagation function may carry a level offset (ADR-0025):
+ * `worst_of(a, b) + 1 propagates to t`.
+ *
  * The suggestion context is derived purely from the sequence of already-typed
  * tokens; the partial word (the incomplete token at the cursor) is used only
  * for prefix-filtering the generated candidates.
@@ -28,6 +31,7 @@ import grammar from "@/shared/rule-grammar.json";
 
 const RULE_FUNC_NAMES: readonly string[] = grammar.function_names;
 const RULE_OPERATORS: readonly string[] = grammar.operators;
+const OFFSET_SIGNS: readonly string[] = grammar.offset_signs;
 const NODE_ATTRIBUTES: readonly string[] = grammar.node_attributes;
 
 // ---------------------------------------------------------------------------
@@ -49,7 +53,9 @@ type RuleContext =
   | "then_element"       // after 'then' — expect target element
   | "is_after_then_elem" // after element in then-block — expect 'is'
   | "in_func_args"       // inside '(' of propagation function — expect element or category
-  | "after_func"         // after ')' — expect 'propagates'
+  | "after_func"         // after ')' — expect 'propagates' or an offset sign
+  | "offset_value"       // after an offset sign — expect a number of levels
+  | "after_offset"       // after the function's offset — expect 'propagates'
   | "after_propagates"   // after 'propagates' — expect 'to'
   | "prop_target"        // after 'to' (propagation rule) — expect target element
   | "unknown";           // cannot determine — fall back to broad set
@@ -61,10 +67,12 @@ type RuleContext =
 /**
  * Splits rule text into tokens. Mirrors the tokenize_rule logic in the
  * backend parser: whitespace separates; `(`, `)`, `,`, `.` are own tokens;
- * operator sequences `<`, `<=`, `>`, `>=`, `=`, `≠` are own tokens.
+ * operator sequences `<`, `<=`, `>`, `>=`, `=`, `≠` are own tokens, and so is
+ * each offset sign `+` / `-` (the backend reads a sign glued to a name the
+ * same way, so the context comes out alike).
  */
 function tokenize(text: string): string[] {
-  return text.match(/\w+|[<>=≠]+|[().,]/g) ?? [];
+  return text.match(/\w+|[<>=≠]+|[+-]|[().,]/g) ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +127,21 @@ function detectRuleContext(settled: string[]): RuleContext {
     if (t === "(") parenDepth++;
     if (t === ")") parenDepth--;
   }
+  // ── Offsets exist only in propagation rules; in a Specific rule a sign is
+  // part of a hyphenated label ("Pump-1"). ───────────────────────────────────
+  const propagation = lower[0] !== "if";
+  if (propagation && (OFFSET_SIGNS as readonly string[]).includes(last))
+    return "offset_value";
+
   if (parenDepth > 0) return "in_func_args";
+
+  // A finished outer offset (`… ) + 1`) — the function is complete.
+  if (
+    propagation &&
+    (OFFSET_SIGNS as readonly string[]).includes(secondLast) &&
+    /^\d+$/.test(last)
+  )
+    return "after_offset";
 
   // ── Single-token triggers ─────────────────────────────────────────────────
   if (last === ".") return "attribute";
@@ -315,8 +337,19 @@ export function computeRuleSuggestions(
       break;
 
     case "after_func":
-      // After the closing ')' of a propagation function
+      // After the closing ')' of a propagation function: finish the rule, or
+      // shift the function's level by an offset first.
+      candidates = ["propagates", ...OFFSET_SIGNS];
+      break;
+
+    case "after_offset":
+      // One offset per term: only the rest of the rule can follow.
       candidates = ["propagates"];
+      break;
+
+    case "offset_value":
+      // After '+' / '-': a whole number of levels, 1..N-1 (more is clamped).
+      candidates = levelNumbers.slice(0, Math.max(functionalityN - 1, 1));
       break;
 
     case "after_propagates":
@@ -403,7 +436,9 @@ const CONTEXT_LABELS: Record<RuleContext, string> = {
   then_element: "target element",
   is_after_then_elem: "'is'",
   in_func_args: "element or category",
-  after_func: "'propagates'",
+  after_func: "'propagates' or an offset",
+  offset_value: "number of levels",
+  after_offset: "'propagates'",
   after_propagates: "'to'",
   prop_target: "target element",
   unknown: "…",

@@ -239,6 +239,14 @@ The target takes no category suffix.
 
 Operators: `worst_of`, `best_of`, `average_of`, `median_of`, `majority_of`.
 
+**Offsets.** Any term of a propagation rule — a category, an element or a whole
+function — can carry one offset: `+k` absorbs k levels, `-k` worsens a degraded
+level by k. Results stay between 1 and N, and a nominal term stays nominal under
+`-k`, so an offset never starts a failure. Offsets apply after the Dependency
+level. A rule with an offset is evaluated over category levels, like a nested
+rule: an element named in it stands for its category, and categories it does
+not name are left out (ADR-0025).
+
 Conditions take `and` / `or` / `not`, parentheses, any attribute after a dot
 (default `functionality`), and `< <= > >= = ≠`.
 
@@ -266,6 +274,22 @@ worst_of(
 ) propagates to Jalmicco
 ```
 
+**Absorb one failure, pass two.** A function copes with one degraded input,
+losing a level less than the input lost, but two degraded inputs together pass
+in full:
+
+```
+worst_of(
+  worst_of(a, b, c) + 1,
+  worst_of(best_of(a, b), best_of(a, c), best_of(b, c))
+) propagates to f
+```
+
+The first line is the worst input softened by a level; the second is the
+second-worst input. With `a = 2` alone degraded, `f = 3`; with `a = 2` and
+`b = 2`, `f = 2`. Adding `best_of(a, b, c) - 1` as a third line makes three
+coinciding drops cost one level more.
+
 **Hold an element up under a standing agreement.** A water source depends on
 power, but a protocol between the two operators keeps it running while both are
 functioning:
@@ -290,6 +314,8 @@ firing and normal propagation takes over.
   category directly to be unambiguous: `worst_of(water) propagates to tank`.
 - A misspelt level label or an unknown element name makes the rule **ignored
   with a warning**, not an error. Read the warnings after a Propagation.
+- Write an offset with a space before the sign (`pump + 1`). `pump+1` works too,
+  unless an element is literally named `pump+1`: an existing name always wins.
 
 ## 4. Running a scenario
 

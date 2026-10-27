@@ -313,6 +313,7 @@ Future category types (multicommodity flow, transport, etc.) add as further addi
 - **Specific rules** — explicit conditions targeting a specific element: `if <cond> then <target>[.<attr>] is <value>`. A `functionality` consequent (or the bare `then <target> is <level>`) overrides the target's proposal, clamped to worsening. **Any other attribute** — first-class `direct_damage` / `expected_repair_time`, or a custom `properties` key — is a generic **attribute-set** consequent (ADR-0015): the value is written onto the target and emitted, without changing `functionality`. Attribute-sets apply as a set-once latch (first firing per element+attribute wins) so the fixed point stays terminating.
 - **Intracategorical rules** — conditions within one category.
 - **Intercategorical rules** — conditions across categories.
+- **Level offsets** *(implemented, ADR-0025)* — any term of a propagation rule may carry one integer offset: `worst_of(a, b) + 1`, `best_of(a, b, c) - 1`. `+k` absorbs k levels (clamped at N); `-k` worsens a degraded term by k (clamped at 1) and leaves a nominal term nominal. A rule with an offset is evaluated as a whole expression over category levels, like a nested rule.
 - Authored with human-readable labels; internally mapped to node IDs. Labels may not contain `.` (the rule grammar's attribute-access operator); the label input strips it.
 
 ### 7.4 Iterative Convergence
