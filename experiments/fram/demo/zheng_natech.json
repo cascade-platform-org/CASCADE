@@ -1,0 +1,5989 @@
+{
+ "project": {
+  "version": "2.0",
+  "meta": {
+   "name": "Zheng 2024 Natech \u2014 physical demonstration",
+   "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) under CASCADE translation v2, with illustrative telecom, crew and fire-water canvases."
+  },
+  "nodes": {
+   "fn_0": {
+    "id": "fn_0",
+    "functionality": 4,
+    "label": "F1 Confirm location of fire",
+    "node_categories": [
+     "fn_0"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_0, dmp_1, best_of(out_0, out_1)) propagates to fn_0"
+    ]
+   },
+   "fn_1": {
+    "id": "fn_1",
+    "functionality": 4,
+    "label": "F2 Contact the control room and shift officer for i",
+    "node_categories": [
+     "fn_1"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_2, dmp_3, dmp_4, dmp_5, best_of(out_2, out_3), best_of(out_2, out_4), best_of(out_2, out_5), best_of(out_3, out_4), best_of(out_3, out_5), best_of(out_4, out_5)) propagates to fn_1"
+    ]
+   },
+   "fn_2": {
+    "id": "fn_2",
+    "functionality": 4,
+    "label": "F3 Actuate siren",
+    "node_categories": [
+     "fn_2"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_6, dmp_7, dmp_8, best_of(out_6, out_7), best_of(out_6, out_8), best_of(out_7, out_8)) propagates to fn_2"
+    ]
+   },
+   "fn_3": {
+    "id": "fn_3",
+    "functionality": 4,
+    "label": "F4 Contact fire department",
+    "node_categories": [
+     "fn_3"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_9, dmp_10, dmp_11, best_of(out_6, out_3), best_of(out_6, out_9), best_of(out_3, out_9)) propagates to fn_3"
+    ]
+   },
+   "fn_4": {
+    "id": "fn_4",
+    "functionality": 4,
+    "label": "F5 Contact the fire marshal for instructions and ac",
+    "node_categories": [
+     "fn_4"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_12, dmp_13, dmp_14, best_of(out_10, out_3), best_of(out_10, out_11), best_of(out_3, out_11)) propagates to fn_4"
+    ]
+   },
+   "fn_5": {
+    "id": "fn_5",
+    "functionality": 4,
+    "label": "F6 Establish if any missing persons at assembly mus",
+    "node_categories": [
+     "fn_5"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_15, dmp_16, dmp_17, best_of(out_6, out_12), best_of(out_6, out_13), best_of(out_12, out_13)) propagates to fn_5"
+    ]
+   },
+   "fn_6": {
+    "id": "fn_6",
+    "functionality": 4,
+    "label": "F7 Establish incident command post and advise fire ",
+    "node_categories": [
+     "fn_6"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_18, dmp_19, dmp_20, best_of(out_14, out_12), best_of(out_14, out_15), best_of(out_12, out_15)) propagates to fn_6"
+    ]
+   },
+   "fn_7": {
+    "id": "fn_7",
+    "functionality": 4,
+    "label": "F8 Post the accident location and information",
+    "node_categories": [
+     "fn_7"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_21, dmp_22, dmp_23, best_of(out_10, out_12), best_of(out_10, out_16), best_of(out_12, out_16)) propagates to fn_7"
+    ]
+   },
+   "fn_8": {
+    "id": "fn_8",
+    "functionality": 4,
+    "label": "F9 Check extent of fire and escalation potential",
+    "node_categories": [
+     "fn_8"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_24, dmp_25, dmp_26, dmp_27, best_of(out_17, out_18), best_of(out_17, out_12), best_of(out_17, out_19), best_of(out_18, out_12), best_of(out_18, out_19), best_of(out_12, out_19)) propagates to fn_8"
+    ]
+   },
+   "fn_9": {
+    "id": "fn_9",
+    "functionality": 4,
+    "label": "F10 Evaluate the availability of equipment and resou",
+    "node_categories": [
+     "fn_9"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 0.0
+    },
+    "rules": [
+     "worst_of(dmp_28, dmp_29, dmp_30, dmp_31, best_of(out_17, out_18), best_of(out_17, out_12), best_of(out_17, out_20), best_of(out_18, out_12), best_of(out_18, out_20), best_of(out_12, out_20)) propagates to fn_9"
+    ]
+   },
+   "fn_10": {
+    "id": "fn_10",
+    "functionality": 4,
+    "label": "F11 Assess flame or heat affected facilities",
+    "node_categories": [
+     "fn_10"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_32, dmp_33, dmp_34, dmp_35, best_of(out_17, out_18), best_of(out_17, out_12), best_of(out_17, out_19), best_of(out_18, out_12), best_of(out_18, out_19), best_of(out_12, out_19)) propagates to fn_10"
+    ]
+   },
+   "fn_11": {
+    "id": "fn_11",
+    "functionality": 4,
+    "label": "F12 Develop response guidelines",
+    "node_categories": [
+     "fn_11"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_36, dmp_37, dmp_38, dmp_39, dmp_40, dmp_41, best_of(out_21, out_22), best_of(out_21, out_23), best_of(out_21, out_24), best_of(out_21, out_18), best_of(out_21, out_4), best_of(out_22, out_23), best_of(out_22, out_24), best_of(out_22, out_18), best_of(out_22, out_4), best_of(out_23, out_24), best_of(out_23, out_18), best_of(out_23, out_4), best_of(out_24, out_18), best_of(out_24, out_4), best_of(out_18, out_4)) propagates to fn_11"
+    ]
+   },
+   "fn_12": {
+    "id": "fn_12",
+    "functionality": 4,
+    "label": "F13 Send technician to stand-by with equipment and r",
+    "node_categories": [
+     "fn_12"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_42, dmp_43, best_of(out_25, out_26)) propagates to fn_12"
+    ]
+   },
+   "fn_13": {
+    "id": "fn_13",
+    "functionality": 4,
+    "label": "F14 Isolate equipment and commence shutdown of affec",
+    "node_categories": [
+     "fn_13"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_44, dmp_45, best_of(out_27, out_28)) propagates to fn_13"
+    ]
+   },
+   "fn_14": {
+    "id": "fn_14",
+    "functionality": 4,
+    "label": "F15 Pump the product of tanks 52, 53 and 54 to other",
+    "node_categories": [
+     "fn_14"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_46, dmp_47, dmp_48, best_of(out_27, out_29), best_of(out_27, out_30), best_of(out_29, out_30)) propagates to fn_14"
+    ]
+   },
+   "fn_15": {
+    "id": "fn_15",
+    "functionality": 4,
+    "label": "F16 Respond to the incident area for shutdown superv",
+    "node_categories": [
+     "fn_15"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_49, dmp_50, dmp_51, best_of(out_31, out_32), best_of(out_31, out_33), best_of(out_32, out_33)) propagates to fn_15"
+    ]
+   },
+   "fn_16": {
+    "id": "fn_16",
+    "functionality": 4,
+    "label": "F17 Assemble the fire team with equipment and resour",
+    "node_categories": [
+     "fn_16"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 140.0
+    },
+    "category_dependency_profiles": {
+     "crews": {
+      "dependency_level": 4,
+      "demand": 30.0,
+      "priority": 5
+     }
+    },
+    "rules": [
+     "worst_of(crews, dmp_52, dmp_53, best_of(out_25, out_34)) propagates to fn_16"
+    ]
+   },
+   "fn_17": {
+    "id": "fn_17",
+    "functionality": 4,
+    "label": "F18 All members don firefighting PPE, and SCBAS for ",
+    "node_categories": [
+     "fn_17"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_54, dmp_55, dmp_56, best_of(out_35, out_25), best_of(out_35, out_36), best_of(out_25, out_36)) propagates to fn_17"
+    ]
+   },
+   "fn_18": {
+    "id": "fn_18",
+    "functionality": 4,
+    "label": "F19 Ensure all members don firefighting PPE",
+    "node_categories": [
+     "fn_18"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 140.0
+    },
+    "rules": [
+     "worst_of(dmp_57, dmp_58, dmp_59, best_of(out_37, out_25), best_of(out_37, out_38), best_of(out_25, out_38)) propagates to fn_18"
+    ]
+   },
+   "fn_19": {
+    "id": "fn_19",
+    "functionality": 4,
+    "label": "F20 Direct fire team to inject foam to the bund wall",
+    "node_categories": [
+     "fn_19"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 140.0
+    },
+    "category_dependency_profiles": {
+     "firewater": {
+      "dependency_level": 4,
+      "demand": 240.0,
+      "priority": 9
+     }
+    },
+    "rules": [
+     "worst_of(firewater, dmp_60, dmp_61, dmp_62, dmp_63, best_of(out_39, out_25), best_of(out_39, out_35), best_of(out_39, out_40), best_of(out_25, out_35), best_of(out_25, out_40), best_of(out_35, out_40)) propagates to fn_19",
+     "if fn_11.functionality is <4 and fn_16.functionality is <4 then fn_19 is severe"
+    ]
+   },
+   "fn_20": {
+    "id": "fn_20",
+    "functionality": 4,
+    "label": "F21 Fire teams remain on standby until the area is d",
+    "node_categories": [
+     "fn_20"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 280.0
+    },
+    "rules": [
+     "worst_of(dmp_64, dmp_65, dmp_66, dmp_67, dmp_68, best_of(out_41, out_42), best_of(out_41, out_35), best_of(out_41, out_43), best_of(out_41, out_39), best_of(out_42, out_35), best_of(out_42, out_43), best_of(out_42, out_39), best_of(out_35, out_43), best_of(out_35, out_39), best_of(out_43, out_39)) propagates to fn_20"
+    ]
+   },
+   "fn_21": {
+    "id": "fn_21",
+    "functionality": 4,
+    "label": "F22 Monitor the response actions",
+    "node_categories": [
+     "fn_21"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 280.0
+    },
+    "rules": [
+     "worst_of(dmp_69, dmp_70, dmp_71, dmp_72, dmp_73, dmp_74, dmp_75, dmp_76, best_of(out_27, out_25), best_of(out_27, out_31), best_of(out_27, out_32), best_of(out_27, out_37), best_of(out_27, out_39), best_of(out_27, out_41), best_of(out_27, out_44), best_of(out_25, out_31), best_of(out_25, out_32), best_of(out_25, out_37), best_of(out_25, out_39), best_of(out_25, out_41), best_of(out_25, out_44), best_of(out_31, out_32), best_of(out_31, out_37), best_of(out_31, out_39), best_of(out_31, out_41), best_of(out_31, out_44), best_of(out_32, out_37), best_of(out_32, out_39), best_of(out_32, out_41), best_of(out_32, out_44), best_of(out_37, out_39), best_of(out_37, out_41), best_of(out_37, out_44), best_of(out_39, out_41), best_of(out_39, out_44), best_of(out_41, out_44)) propagates to fn_21"
+    ]
+   },
+   "fn_22": {
+    "id": "fn_22",
+    "functionality": 4,
+    "label": "X:Alarm information",
+    "node_categories": [
+     "fn_22"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 280.0
+    }
+   },
+   "fn_23": {
+    "id": "fn_23",
+    "functionality": 4,
+    "label": "X:Well-performed monitoring system",
+    "node_categories": [
+     "fn_23"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 280.0
+    }
+   },
+   "fn_24": {
+    "id": "fn_24",
+    "functionality": 4,
+    "label": "X:Radio/Telephone",
+    "node_categories": [
+     "fn_24"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 280.0
+    }
+   },
+   "fn_25": {
+    "id": "fn_25",
+    "functionality": 4,
+    "label": "X:Rescue rules and regulations",
+    "node_categories": [
+     "fn_25"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 280.0
+    }
+   },
+   "fn_26": {
+    "id": "fn_26",
+    "functionality": 4,
+    "label": "X:All relative officers stand by",
+    "node_categories": [
+     "fn_26"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 280.0
+    }
+   },
+   "fn_27": {
+    "id": "fn_27",
+    "functionality": 4,
+    "label": "X:Alarm system",
+    "node_categories": [
+     "fn_27"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 280.0
+    }
+   },
+   "fn_28": {
+    "id": "fn_28",
+    "functionality": 4,
+    "label": "X:Well-performed warning systems",
+    "node_categories": [
+     "fn_28"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 280.0
+    }
+   },
+   "fn_29": {
+    "id": "fn_29",
+    "functionality": 4,
+    "label": "X:Fire department standing by",
+    "node_categories": [
+     "fn_29"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 280.0
+    }
+   },
+   "fn_30": {
+    "id": "fn_30",
+    "functionality": 4,
+    "label": "X:Fire marshal standing by",
+    "node_categories": [
+     "fn_30"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 420.0
+    }
+   },
+   "fn_31": {
+    "id": "fn_31",
+    "functionality": 4,
+    "label": "X:Internet/Telephone",
+    "node_categories": [
+     "fn_31"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 420.0
+    },
+    "rules": [
+     "best_of(data, voice) propagates to fn_31"
+    ]
+   },
+   "fn_32": {
+    "id": "fn_32",
+    "functionality": 4,
+    "label": "X:All related departments standing by",
+    "node_categories": [
+     "fn_32"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 420.0
+    }
+   },
+   "fn_33": {
+    "id": "fn_33",
+    "functionality": 4,
+    "label": "X:Principles of releasing accident information",
+    "node_categories": [
+     "fn_33"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 420.0
+    }
+   },
+   "fn_34": {
+    "id": "fn_34",
+    "functionality": 4,
+    "label": "X:Experts with process experience and knowledge",
+    "node_categories": [
+     "fn_34"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 420.0
+    }
+   },
+   "fn_35": {
+    "id": "fn_35",
+    "functionality": 4,
+    "label": "X:Information on fire, fuel, and facilities",
+    "node_categories": [
+     "fn_35"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 420.0
+    }
+   },
+   "fn_36": {
+    "id": "fn_36",
+    "functionality": 4,
+    "label": "X:Information on equipment and resources",
+    "node_categories": [
+     "fn_36"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 420.0
+    }
+   },
+   "fn_37": {
+    "id": "fn_37",
+    "functionality": 4,
+    "label": "X:Sufficient technician",
+    "node_categories": [
+     "fn_37"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 420.0
+    }
+   },
+   "fn_38": {
+    "id": "fn_38",
+    "functionality": 4,
+    "label": "X:Information on equipment and facilities",
+    "node_categories": [
+     "fn_38"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 420.0
+    }
+   },
+   "fn_39": {
+    "id": "fn_39",
+    "functionality": 4,
+    "label": "X:Pump facilities",
+    "node_categories": [
+     "fn_39"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 420.0
+    }
+   },
+   "fn_40": {
+    "id": "fn_40",
+    "functionality": 4,
+    "label": "X:Standard of pump operation",
+    "node_categories": [
+     "fn_40"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 560.0
+    }
+   },
+   "fn_41": {
+    "id": "fn_41",
+    "functionality": 4,
+    "label": "X:Technician",
+    "node_categories": [
+     "fn_41"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 560.0
+    }
+   },
+   "fn_42": {
+    "id": "fn_42",
+    "functionality": 4,
+    "label": "X:Firetruck; firefighter; PPE, SCBAS, etc.",
+    "node_categories": [
+     "fn_42"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 560.0
+    }
+   },
+   "fn_43": {
+    "id": "fn_43",
+    "functionality": 4,
+    "label": "X:Standard of wearing firefighting PPE and SCBAS",
+    "node_categories": [
+     "fn_43"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 560.0
+    }
+   },
+   "fn_44": {
+    "id": "fn_44",
+    "functionality": 4,
+    "label": "X:Standard of wearing firefighting PPE SCBAS",
+    "node_categories": [
+     "fn_44"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 560.0
+    }
+   },
+   "fn_45": {
+    "id": "fn_45",
+    "functionality": 4,
+    "label": "X:Operation specifications of firetrucks",
+    "node_categories": [
+     "fn_45"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 560.0
+    }
+   },
+   "fn_46": {
+    "id": "fn_46",
+    "functionality": 4,
+    "label": "X:Standard of security",
+    "node_categories": [
+     "fn_46"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 560.0
+    }
+   },
+   "o_0": {
+    "id": "o_0",
+    "functionality": 4,
+    "label": "o_0",
+    "node_categories": [
+     "out_0"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 560.0
+    }
+   },
+   "o_1": {
+    "id": "o_1",
+    "functionality": 4,
+    "label": "o_1",
+    "node_categories": [
+     "out_1"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 560.0
+    }
+   },
+   "o_2": {
+    "id": "o_2",
+    "functionality": 4,
+    "label": "o_2",
+    "node_categories": [
+     "out_2"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 560.0
+    }
+   },
+   "o_3": {
+    "id": "o_3",
+    "functionality": 4,
+    "label": "o_3",
+    "node_categories": [
+     "out_3"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 700.0
+    }
+   },
+   "o_4": {
+    "id": "o_4",
+    "functionality": 4,
+    "label": "o_4",
+    "node_categories": [
+     "out_4"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 700.0
+    }
+   },
+   "o_5": {
+    "id": "o_5",
+    "functionality": 4,
+    "label": "o_5",
+    "node_categories": [
+     "out_5"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 700.0
+    }
+   },
+   "o_6": {
+    "id": "o_6",
+    "functionality": 4,
+    "label": "o_6",
+    "node_categories": [
+     "out_6"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 700.0
+    }
+   },
+   "o_7": {
+    "id": "o_7",
+    "functionality": 4,
+    "label": "o_7",
+    "node_categories": [
+     "out_7"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 700.0
+    }
+   },
+   "o_8": {
+    "id": "o_8",
+    "functionality": 4,
+    "label": "o_8",
+    "node_categories": [
+     "out_8"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 700.0
+    }
+   },
+   "o_9": {
+    "id": "o_9",
+    "functionality": 4,
+    "label": "o_9",
+    "node_categories": [
+     "out_9"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 700.0
+    }
+   },
+   "o_10": {
+    "id": "o_10",
+    "functionality": 4,
+    "label": "o_10",
+    "node_categories": [
+     "out_10"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 700.0
+    }
+   },
+   "o_11": {
+    "id": "o_11",
+    "functionality": 4,
+    "label": "o_11",
+    "node_categories": [
+     "out_11"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 700.0
+    }
+   },
+   "o_12": {
+    "id": "o_12",
+    "functionality": 4,
+    "label": "o_12",
+    "node_categories": [
+     "out_12"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 700.0
+    }
+   },
+   "o_13": {
+    "id": "o_13",
+    "functionality": 4,
+    "label": "o_13",
+    "node_categories": [
+     "out_13"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 840.0
+    }
+   },
+   "o_14": {
+    "id": "o_14",
+    "functionality": 4,
+    "label": "o_14",
+    "node_categories": [
+     "out_14"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 840.0
+    }
+   },
+   "o_15": {
+    "id": "o_15",
+    "functionality": 4,
+    "label": "o_15",
+    "node_categories": [
+     "out_15"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 840.0
+    }
+   },
+   "o_16": {
+    "id": "o_16",
+    "functionality": 4,
+    "label": "o_16",
+    "node_categories": [
+     "out_16"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 840.0
+    }
+   },
+   "o_17": {
+    "id": "o_17",
+    "functionality": 4,
+    "label": "o_17",
+    "node_categories": [
+     "out_17"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 840.0
+    }
+   },
+   "o_18": {
+    "id": "o_18",
+    "functionality": 4,
+    "label": "o_18",
+    "node_categories": [
+     "out_18"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 840.0
+    }
+   },
+   "o_19": {
+    "id": "o_19",
+    "functionality": 4,
+    "label": "o_19",
+    "node_categories": [
+     "out_19"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 840.0
+    }
+   },
+   "o_20": {
+    "id": "o_20",
+    "functionality": 4,
+    "label": "o_20",
+    "node_categories": [
+     "out_20"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 840.0
+    }
+   },
+   "o_21": {
+    "id": "o_21",
+    "functionality": 4,
+    "label": "o_21",
+    "node_categories": [
+     "out_21"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 840.0
+    }
+   },
+   "o_22": {
+    "id": "o_22",
+    "functionality": 4,
+    "label": "o_22",
+    "node_categories": [
+     "out_22"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 840.0
+    }
+   },
+   "o_23": {
+    "id": "o_23",
+    "functionality": 4,
+    "label": "o_23",
+    "node_categories": [
+     "out_23"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 980.0
+    }
+   },
+   "o_24": {
+    "id": "o_24",
+    "functionality": 4,
+    "label": "o_24",
+    "node_categories": [
+     "out_24"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 980.0
+    }
+   },
+   "o_25": {
+    "id": "o_25",
+    "functionality": 4,
+    "label": "o_25",
+    "node_categories": [
+     "out_25"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 980.0
+    }
+   },
+   "o_26": {
+    "id": "o_26",
+    "functionality": 4,
+    "label": "o_26",
+    "node_categories": [
+     "out_26"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 980.0
+    }
+   },
+   "o_27": {
+    "id": "o_27",
+    "functionality": 4,
+    "label": "o_27",
+    "node_categories": [
+     "out_27"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 980.0
+    }
+   },
+   "o_28": {
+    "id": "o_28",
+    "functionality": 4,
+    "label": "o_28",
+    "node_categories": [
+     "out_28"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 980.0
+    }
+   },
+   "o_29": {
+    "id": "o_29",
+    "functionality": 4,
+    "label": "o_29",
+    "node_categories": [
+     "out_29"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 980.0
+    }
+   },
+   "o_30": {
+    "id": "o_30",
+    "functionality": 4,
+    "label": "o_30",
+    "node_categories": [
+     "out_30"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 980.0
+    }
+   },
+   "o_31": {
+    "id": "o_31",
+    "functionality": 4,
+    "label": "o_31",
+    "node_categories": [
+     "out_31"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 980.0
+    }
+   },
+   "o_32": {
+    "id": "o_32",
+    "functionality": 4,
+    "label": "o_32",
+    "node_categories": [
+     "out_32"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 980.0
+    }
+   },
+   "o_33": {
+    "id": "o_33",
+    "functionality": 4,
+    "label": "o_33",
+    "node_categories": [
+     "out_33"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1120.0
+    }
+   },
+   "o_34": {
+    "id": "o_34",
+    "functionality": 4,
+    "label": "o_34",
+    "node_categories": [
+     "out_34"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1120.0
+    }
+   },
+   "o_35": {
+    "id": "o_35",
+    "functionality": 4,
+    "label": "o_35",
+    "node_categories": [
+     "out_35"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1120.0
+    }
+   },
+   "o_36": {
+    "id": "o_36",
+    "functionality": 4,
+    "label": "o_36",
+    "node_categories": [
+     "out_36"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1120.0
+    }
+   },
+   "o_37": {
+    "id": "o_37",
+    "functionality": 4,
+    "label": "o_37",
+    "node_categories": [
+     "out_37"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1120.0
+    }
+   },
+   "o_38": {
+    "id": "o_38",
+    "functionality": 4,
+    "label": "o_38",
+    "node_categories": [
+     "out_38"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1120.0
+    }
+   },
+   "o_39": {
+    "id": "o_39",
+    "functionality": 4,
+    "label": "o_39",
+    "node_categories": [
+     "out_39"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1120.0
+    }
+   },
+   "o_40": {
+    "id": "o_40",
+    "functionality": 4,
+    "label": "o_40",
+    "node_categories": [
+     "out_40"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1120.0
+    }
+   },
+   "o_41": {
+    "id": "o_41",
+    "functionality": 4,
+    "label": "o_41",
+    "node_categories": [
+     "out_41"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1120.0
+    }
+   },
+   "o_42": {
+    "id": "o_42",
+    "functionality": 4,
+    "label": "o_42",
+    "node_categories": [
+     "out_42"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1120.0
+    }
+   },
+   "o_43": {
+    "id": "o_43",
+    "functionality": 4,
+    "label": "o_43",
+    "node_categories": [
+     "out_43"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1260.0
+    }
+   },
+   "o_44": {
+    "id": "o_44",
+    "functionality": 4,
+    "label": "o_44",
+    "node_categories": [
+     "out_44"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1260.0
+    }
+   },
+   "d_0": {
+    "id": "d_0",
+    "functionality": 4,
+    "label": "d_0",
+    "node_categories": [
+     "dmp_0"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_0": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_1": {
+    "id": "d_1",
+    "functionality": 4,
+    "label": "d_1",
+    "node_categories": [
+     "dmp_1"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_1": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_2": {
+    "id": "d_2",
+    "functionality": 4,
+    "label": "d_2",
+    "node_categories": [
+     "dmp_2"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_2": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_3": {
+    "id": "d_3",
+    "functionality": 4,
+    "label": "d_3",
+    "node_categories": [
+     "dmp_3"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_3": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_4": {
+    "id": "d_4",
+    "functionality": 4,
+    "label": "d_4",
+    "node_categories": [
+     "dmp_4"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_4": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_5": {
+    "id": "d_5",
+    "functionality": 4,
+    "label": "d_5",
+    "node_categories": [
+     "dmp_5"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_5": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_6": {
+    "id": "d_6",
+    "functionality": 4,
+    "label": "d_6",
+    "node_categories": [
+     "dmp_6"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_6": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_7": {
+    "id": "d_7",
+    "functionality": 4,
+    "label": "d_7",
+    "node_categories": [
+     "dmp_7"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1260.0
+    },
+    "category_dependency_profiles": {
+     "out_7": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_8": {
+    "id": "d_8",
+    "functionality": 4,
+    "label": "d_8",
+    "node_categories": [
+     "dmp_8"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_8": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_9": {
+    "id": "d_9",
+    "functionality": 4,
+    "label": "d_9",
+    "node_categories": [
+     "dmp_9"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_6": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_10": {
+    "id": "d_10",
+    "functionality": 4,
+    "label": "d_10",
+    "node_categories": [
+     "dmp_10"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_3": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_11": {
+    "id": "d_11",
+    "functionality": 4,
+    "label": "d_11",
+    "node_categories": [
+     "dmp_11"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_9": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_12": {
+    "id": "d_12",
+    "functionality": 4,
+    "label": "d_12",
+    "node_categories": [
+     "dmp_12"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_10": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_13": {
+    "id": "d_13",
+    "functionality": 4,
+    "label": "d_13",
+    "node_categories": [
+     "dmp_13"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_3": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_14": {
+    "id": "d_14",
+    "functionality": 4,
+    "label": "d_14",
+    "node_categories": [
+     "dmp_14"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_11": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_15": {
+    "id": "d_15",
+    "functionality": 4,
+    "label": "d_15",
+    "node_categories": [
+     "dmp_15"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_6": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_16": {
+    "id": "d_16",
+    "functionality": 4,
+    "label": "d_16",
+    "node_categories": [
+     "dmp_16"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_17": {
+    "id": "d_17",
+    "functionality": 4,
+    "label": "d_17",
+    "node_categories": [
+     "dmp_17"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1400.0
+    },
+    "category_dependency_profiles": {
+     "out_13": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_18": {
+    "id": "d_18",
+    "functionality": 4,
+    "label": "d_18",
+    "node_categories": [
+     "dmp_18"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_14": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_19": {
+    "id": "d_19",
+    "functionality": 4,
+    "label": "d_19",
+    "node_categories": [
+     "dmp_19"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_20": {
+    "id": "d_20",
+    "functionality": 4,
+    "label": "d_20",
+    "node_categories": [
+     "dmp_20"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_15": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_21": {
+    "id": "d_21",
+    "functionality": 4,
+    "label": "d_21",
+    "node_categories": [
+     "dmp_21"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_10": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_22": {
+    "id": "d_22",
+    "functionality": 4,
+    "label": "d_22",
+    "node_categories": [
+     "dmp_22"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_23": {
+    "id": "d_23",
+    "functionality": 4,
+    "label": "d_23",
+    "node_categories": [
+     "dmp_23"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_16": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_24": {
+    "id": "d_24",
+    "functionality": 4,
+    "label": "d_24",
+    "node_categories": [
+     "dmp_24"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_17": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_25": {
+    "id": "d_25",
+    "functionality": 4,
+    "label": "d_25",
+    "node_categories": [
+     "dmp_25"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_18": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_26": {
+    "id": "d_26",
+    "functionality": 4,
+    "label": "d_26",
+    "node_categories": [
+     "dmp_26"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_27": {
+    "id": "d_27",
+    "functionality": 4,
+    "label": "d_27",
+    "node_categories": [
+     "dmp_27"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1540.0
+    },
+    "category_dependency_profiles": {
+     "out_19": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_28": {
+    "id": "d_28",
+    "functionality": 4,
+    "label": "d_28",
+    "node_categories": [
+     "dmp_28"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_17": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_29": {
+    "id": "d_29",
+    "functionality": 4,
+    "label": "d_29",
+    "node_categories": [
+     "dmp_29"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_18": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_30": {
+    "id": "d_30",
+    "functionality": 4,
+    "label": "d_30",
+    "node_categories": [
+     "dmp_30"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_31": {
+    "id": "d_31",
+    "functionality": 4,
+    "label": "d_31",
+    "node_categories": [
+     "dmp_31"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_20": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_32": {
+    "id": "d_32",
+    "functionality": 4,
+    "label": "d_32",
+    "node_categories": [
+     "dmp_32"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_17": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_33": {
+    "id": "d_33",
+    "functionality": 4,
+    "label": "d_33",
+    "node_categories": [
+     "dmp_33"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_18": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_34": {
+    "id": "d_34",
+    "functionality": 4,
+    "label": "d_34",
+    "node_categories": [
+     "dmp_34"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_12": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_35": {
+    "id": "d_35",
+    "functionality": 4,
+    "label": "d_35",
+    "node_categories": [
+     "dmp_35"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_19": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_36": {
+    "id": "d_36",
+    "functionality": 4,
+    "label": "d_36",
+    "node_categories": [
+     "dmp_36"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_21": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_37": {
+    "id": "d_37",
+    "functionality": 4,
+    "label": "d_37",
+    "node_categories": [
+     "dmp_37"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1680.0
+    },
+    "category_dependency_profiles": {
+     "out_22": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_38": {
+    "id": "d_38",
+    "functionality": 4,
+    "label": "d_38",
+    "node_categories": [
+     "dmp_38"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_23": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_39": {
+    "id": "d_39",
+    "functionality": 4,
+    "label": "d_39",
+    "node_categories": [
+     "dmp_39"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_24": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_40": {
+    "id": "d_40",
+    "functionality": 4,
+    "label": "d_40",
+    "node_categories": [
+     "dmp_40"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_18": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_41": {
+    "id": "d_41",
+    "functionality": 4,
+    "label": "d_41",
+    "node_categories": [
+     "dmp_41"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_4": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_42": {
+    "id": "d_42",
+    "functionality": 4,
+    "label": "d_42",
+    "node_categories": [
+     "dmp_42"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_43": {
+    "id": "d_43",
+    "functionality": 4,
+    "label": "d_43",
+    "node_categories": [
+     "dmp_43"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_26": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_44": {
+    "id": "d_44",
+    "functionality": 4,
+    "label": "d_44",
+    "node_categories": [
+     "dmp_44"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_27": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_45": {
+    "id": "d_45",
+    "functionality": 4,
+    "label": "d_45",
+    "node_categories": [
+     "dmp_45"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_28": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_46": {
+    "id": "d_46",
+    "functionality": 4,
+    "label": "d_46",
+    "node_categories": [
+     "dmp_46"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_27": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_47": {
+    "id": "d_47",
+    "functionality": 4,
+    "label": "d_47",
+    "node_categories": [
+     "dmp_47"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1820.0
+    },
+    "category_dependency_profiles": {
+     "out_29": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_48": {
+    "id": "d_48",
+    "functionality": 4,
+    "label": "d_48",
+    "node_categories": [
+     "dmp_48"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_30": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_49": {
+    "id": "d_49",
+    "functionality": 4,
+    "label": "d_49",
+    "node_categories": [
+     "dmp_49"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_31": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_50": {
+    "id": "d_50",
+    "functionality": 4,
+    "label": "d_50",
+    "node_categories": [
+     "dmp_50"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_32": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_51": {
+    "id": "d_51",
+    "functionality": 4,
+    "label": "d_51",
+    "node_categories": [
+     "dmp_51"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_33": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_52": {
+    "id": "d_52",
+    "functionality": 4,
+    "label": "d_52",
+    "node_categories": [
+     "dmp_52"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_53": {
+    "id": "d_53",
+    "functionality": 4,
+    "label": "d_53",
+    "node_categories": [
+     "dmp_53"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_34": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_54": {
+    "id": "d_54",
+    "functionality": 4,
+    "label": "d_54",
+    "node_categories": [
+     "dmp_54"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_35": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_55": {
+    "id": "d_55",
+    "functionality": 4,
+    "label": "d_55",
+    "node_categories": [
+     "dmp_55"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_56": {
+    "id": "d_56",
+    "functionality": 4,
+    "label": "d_56",
+    "node_categories": [
+     "dmp_56"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_36": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_57": {
+    "id": "d_57",
+    "functionality": 4,
+    "label": "d_57",
+    "node_categories": [
+     "dmp_57"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 1960.0
+    },
+    "category_dependency_profiles": {
+     "out_37": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_58": {
+    "id": "d_58",
+    "functionality": 4,
+    "label": "d_58",
+    "node_categories": [
+     "dmp_58"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_59": {
+    "id": "d_59",
+    "functionality": 4,
+    "label": "d_59",
+    "node_categories": [
+     "dmp_59"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_38": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_60": {
+    "id": "d_60",
+    "functionality": 4,
+    "label": "d_60",
+    "node_categories": [
+     "dmp_60"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_39": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_61": {
+    "id": "d_61",
+    "functionality": 4,
+    "label": "d_61",
+    "node_categories": [
+     "dmp_61"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_62": {
+    "id": "d_62",
+    "functionality": 4,
+    "label": "d_62",
+    "node_categories": [
+     "dmp_62"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_35": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_63": {
+    "id": "d_63",
+    "functionality": 4,
+    "label": "d_63",
+    "node_categories": [
+     "dmp_63"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_40": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_64": {
+    "id": "d_64",
+    "functionality": 4,
+    "label": "d_64",
+    "node_categories": [
+     "dmp_64"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_41": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_65": {
+    "id": "d_65",
+    "functionality": 4,
+    "label": "d_65",
+    "node_categories": [
+     "dmp_65"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_42": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_66": {
+    "id": "d_66",
+    "functionality": 4,
+    "label": "d_66",
+    "node_categories": [
+     "dmp_66"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_35": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_67": {
+    "id": "d_67",
+    "functionality": 4,
+    "label": "d_67",
+    "node_categories": [
+     "dmp_67"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 2100.0
+    },
+    "category_dependency_profiles": {
+     "out_43": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_68": {
+    "id": "d_68",
+    "functionality": 4,
+    "label": "d_68",
+    "node_categories": [
+     "dmp_68"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_39": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_69": {
+    "id": "d_69",
+    "functionality": 4,
+    "label": "d_69",
+    "node_categories": [
+     "dmp_69"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_27": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_70": {
+    "id": "d_70",
+    "functionality": 4,
+    "label": "d_70",
+    "node_categories": [
+     "dmp_70"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_25": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_71": {
+    "id": "d_71",
+    "functionality": 4,
+    "label": "d_71",
+    "node_categories": [
+     "dmp_71"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_31": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_72": {
+    "id": "d_72",
+    "functionality": 4,
+    "label": "d_72",
+    "node_categories": [
+     "dmp_72"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_32": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_73": {
+    "id": "d_73",
+    "functionality": 4,
+    "label": "d_73",
+    "node_categories": [
+     "dmp_73"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_37": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_74": {
+    "id": "d_74",
+    "functionality": 4,
+    "label": "d_74",
+    "node_categories": [
+     "dmp_74"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_39": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_75": {
+    "id": "d_75",
+    "functionality": 4,
+    "label": "d_75",
+    "node_categories": [
+     "dmp_75"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_41": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "d_76": {
+    "id": "d_76",
+    "functionality": 4,
+    "label": "d_76",
+    "node_categories": [
+     "dmp_76"
+    ],
+    "position": {
+     "x": 1760.0,
+     "y": 2240.0
+    },
+    "category_dependency_profiles": {
+     "out_44": {
+      "dependency_level": 3
+     }
+    }
+   },
+   "ph_radio": {
+    "id": "ph_radio",
+    "functionality": 4,
+    "label": "Radio repeater",
+    "node_type": "Infrastructure",
+    "node_categories": [
+     "voice"
+    ],
+    "position": {
+     "x": 1980.0,
+     "y": 2240.0
+    }
+   },
+   "ph_phone": {
+    "id": "ph_phone",
+    "functionality": 4,
+    "label": "Telephone exchange",
+    "node_type": "Infrastructure",
+    "node_categories": [
+     "voice"
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2380.0
+    }
+   },
+   "ph_fibre": {
+    "id": "ph_fibre",
+    "functionality": 4,
+    "label": "Fibre link",
+    "node_type": "Infrastructure",
+    "node_categories": [
+     "data"
+    ],
+    "position": {
+     "x": 220.0,
+     "y": 2380.0
+    }
+   },
+   "ph_crews": {
+    "id": "ph_crews",
+    "functionality": 4,
+    "label": "Fire brigade crews",
+    "node_type": "Personnel",
+    "node_categories": [
+     "crews"
+    ],
+    "position": {
+     "x": 440.0,
+     "y": 2380.0
+    },
+    "supply_capacity": {
+     "crews": 40.0
+    }
+   },
+   "ph_other_areas": {
+    "id": "ph_other_areas",
+    "functionality": 4,
+    "label": "Other earthquake-affected areas",
+    "node_type": "Service",
+    "node_categories": [
+     "crews"
+    ],
+    "position": {
+     "x": 660.0,
+     "y": 2380.0
+    },
+    "category_dependency_profiles": {
+     "crews": {
+      "dependency_level": 4,
+      "priority": 8
+     }
+    }
+   },
+   "ph_pumps": {
+    "id": "ph_pumps",
+    "functionality": 4,
+    "label": "Fire-water pump station",
+    "node_type": "Source",
+    "node_categories": [
+     "firewater"
+    ],
+    "position": {
+     "x": 880.0,
+     "y": 2380.0
+    },
+    "supply_capacity": {
+     "firewater": 400.0
+    }
+   },
+   "ph_hydrants": {
+    "id": "ph_hydrants",
+    "functionality": 4,
+    "label": "Hydrant ring, tanks 52-54",
+    "node_type": "Infrastructure",
+    "node_categories": [
+     "firewater"
+    ],
+    "position": {
+     "x": 1100.0,
+     "y": 2380.0
+    }
+   },
+   "ph_trucks": {
+    "id": "ph_trucks",
+    "functionality": 4,
+    "label": "Firetruck water tanks",
+    "node_type": "Source",
+    "node_categories": [
+     "firewater"
+    ],
+    "position": {
+     "x": 1320.0,
+     "y": 2380.0
+    },
+    "supply_capacity": {
+     "firewater": 80.0
+    }
+   },
+   "ph_cooling": {
+    "id": "ph_cooling",
+    "functionality": 4,
+    "label": "Cooling of Tank 63",
+    "node_type": "Service",
+    "node_categories": [
+     "firewater"
+    ],
+    "position": {
+     "x": 1540.0,
+     "y": 2380.0
+    },
+    "category_dependency_profiles": {
+     "firewater": {
+      "dependency_level": 4,
+      "demand": 120.0,
+      "priority": 8
+     }
+    }
+   }
+  },
+  "edges": {
+   "e_0": {
+    "id": "e_0",
+    "source": "fn_22",
+    "target": "o_0",
+    "functionality": 4
+   },
+   "e_1": {
+    "id": "e_1",
+    "source": "fn_23",
+    "target": "o_1",
+    "functionality": 4
+   },
+   "e_2": {
+    "id": "e_2",
+    "source": "fn_0",
+    "target": "o_2",
+    "functionality": 4
+   },
+   "e_3": {
+    "id": "e_3",
+    "source": "fn_24",
+    "target": "o_3",
+    "functionality": 4
+   },
+   "e_4": {
+    "id": "e_4",
+    "source": "fn_25",
+    "target": "o_4",
+    "functionality": 4
+   },
+   "e_5": {
+    "id": "e_5",
+    "source": "fn_26",
+    "target": "o_5",
+    "functionality": 4
+   },
+   "e_6": {
+    "id": "e_6",
+    "source": "fn_1",
+    "target": "o_6",
+    "functionality": 4
+   },
+   "e_7": {
+    "id": "e_7",
+    "source": "fn_27",
+    "target": "o_7",
+    "functionality": 4
+   },
+   "e_8": {
+    "id": "e_8",
+    "source": "fn_28",
+    "target": "o_8",
+    "functionality": 4
+   },
+   "e_9": {
+    "id": "e_9",
+    "source": "fn_29",
+    "target": "o_9",
+    "functionality": 4
+   },
+   "e_10": {
+    "id": "e_10",
+    "source": "fn_3",
+    "target": "o_10",
+    "functionality": 4
+   },
+   "e_11": {
+    "id": "e_11",
+    "source": "fn_30",
+    "target": "o_11",
+    "functionality": 4
+   },
+   "e_12": {
+    "id": "e_12",
+    "source": "fn_31",
+    "target": "o_12",
+    "functionality": 4
+   },
+   "e_13": {
+    "id": "e_13",
+    "source": "fn_2",
+    "target": "o_13",
+    "functionality": 4
+   },
+   "e_14": {
+    "id": "e_14",
+    "source": "fn_4",
+    "target": "o_14",
+    "functionality": 4
+   },
+   "e_15": {
+    "id": "e_15",
+    "source": "fn_32",
+    "target": "o_15",
+    "functionality": 4
+   },
+   "e_16": {
+    "id": "e_16",
+    "source": "fn_33",
+    "target": "o_16",
+    "functionality": 4
+   },
+   "e_17": {
+    "id": "e_17",
+    "source": "fn_6",
+    "target": "o_17",
+    "functionality": 4
+   },
+   "e_18": {
+    "id": "e_18",
+    "source": "fn_34",
+    "target": "o_18",
+    "functionality": 4
+   },
+   "e_19": {
+    "id": "e_19",
+    "source": "fn_35",
+    "target": "o_19",
+    "functionality": 4
+   },
+   "e_20": {
+    "id": "e_20",
+    "source": "fn_36",
+    "target": "o_20",
+    "functionality": 4
+   },
+   "e_21": {
+    "id": "e_21",
+    "source": "fn_5",
+    "target": "o_21",
+    "functionality": 4
+   },
+   "e_22": {
+    "id": "e_22",
+    "source": "fn_8",
+    "target": "o_22",
+    "functionality": 4
+   },
+   "e_23": {
+    "id": "e_23",
+    "source": "fn_9",
+    "target": "o_23",
+    "functionality": 4
+   },
+   "e_24": {
+    "id": "e_24",
+    "source": "fn_10",
+    "target": "o_24",
+    "functionality": 4
+   },
+   "e_25": {
+    "id": "e_25",
+    "source": "fn_11",
+    "target": "o_25",
+    "functionality": 4
+   },
+   "e_26": {
+    "id": "e_26",
+    "source": "fn_37",
+    "target": "o_26",
+    "functionality": 4
+   },
+   "e_27": {
+    "id": "e_27",
+    "source": "fn_12",
+    "target": "o_27",
+    "functionality": 4
+   },
+   "e_28": {
+    "id": "e_28",
+    "source": "fn_38",
+    "target": "o_28",
+    "functionality": 4
+   },
+   "e_29": {
+    "id": "e_29",
+    "source": "fn_39",
+    "target": "o_29",
+    "functionality": 4
+   },
+   "e_30": {
+    "id": "e_30",
+    "source": "fn_40",
+    "target": "o_30",
+    "functionality": 4
+   },
+   "e_31": {
+    "id": "e_31",
+    "source": "fn_13",
+    "target": "o_31",
+    "functionality": 4
+   },
+   "e_32": {
+    "id": "e_32",
+    "source": "fn_14",
+    "target": "o_32",
+    "functionality": 4
+   },
+   "e_33": {
+    "id": "e_33",
+    "source": "fn_41",
+    "target": "o_33",
+    "functionality": 4
+   },
+   "e_34": {
+    "id": "e_34",
+    "source": "fn_42",
+    "target": "o_34",
+    "functionality": 4
+   },
+   "e_35": {
+    "id": "e_35",
+    "source": "fn_16",
+    "target": "o_35",
+    "functionality": 4
+   },
+   "e_36": {
+    "id": "e_36",
+    "source": "fn_43",
+    "target": "o_36",
+    "functionality": 4
+   },
+   "e_37": {
+    "id": "e_37",
+    "source": "fn_17",
+    "target": "o_37",
+    "functionality": 4
+   },
+   "e_38": {
+    "id": "e_38",
+    "source": "fn_44",
+    "target": "o_38",
+    "functionality": 4
+   },
+   "e_39": {
+    "id": "e_39",
+    "source": "fn_18",
+    "target": "o_39",
+    "functionality": 4
+   },
+   "e_40": {
+    "id": "e_40",
+    "source": "fn_45",
+    "target": "o_40",
+    "functionality": 4
+   },
+   "e_41": {
+    "id": "e_41",
+    "source": "fn_19",
+    "target": "o_41",
+    "functionality": 4
+   },
+   "e_42": {
+    "id": "e_42",
+    "source": "fn_15",
+    "target": "o_42",
+    "functionality": 4
+   },
+   "e_43": {
+    "id": "e_43",
+    "source": "fn_46",
+    "target": "o_43",
+    "functionality": 4
+   },
+   "e_44": {
+    "id": "e_44",
+    "source": "fn_20",
+    "target": "o_44",
+    "functionality": 4
+   },
+   "e_45": {
+    "id": "e_45",
+    "source": "o_0",
+    "target": "fn_0",
+    "functionality": 4
+   },
+   "e_46": {
+    "id": "e_46",
+    "source": "o_1",
+    "target": "fn_0",
+    "functionality": 4
+   },
+   "e_47": {
+    "id": "e_47",
+    "source": "o_2",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_48": {
+    "id": "e_48",
+    "source": "o_3",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_49": {
+    "id": "e_49",
+    "source": "o_4",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_50": {
+    "id": "e_50",
+    "source": "o_5",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_51": {
+    "id": "e_51",
+    "source": "o_6",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_52": {
+    "id": "e_52",
+    "source": "o_7",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_53": {
+    "id": "e_53",
+    "source": "o_8",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_54": {
+    "id": "e_54",
+    "source": "o_6",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_55": {
+    "id": "e_55",
+    "source": "o_3",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_56": {
+    "id": "e_56",
+    "source": "o_9",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_57": {
+    "id": "e_57",
+    "source": "o_10",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_58": {
+    "id": "e_58",
+    "source": "o_3",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_59": {
+    "id": "e_59",
+    "source": "o_11",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_60": {
+    "id": "e_60",
+    "source": "o_6",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_61": {
+    "id": "e_61",
+    "source": "o_12",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_62": {
+    "id": "e_62",
+    "source": "o_13",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_63": {
+    "id": "e_63",
+    "source": "o_14",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_64": {
+    "id": "e_64",
+    "source": "o_12",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_65": {
+    "id": "e_65",
+    "source": "o_15",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_66": {
+    "id": "e_66",
+    "source": "o_10",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_67": {
+    "id": "e_67",
+    "source": "o_12",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_68": {
+    "id": "e_68",
+    "source": "o_16",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_69": {
+    "id": "e_69",
+    "source": "o_17",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_70": {
+    "id": "e_70",
+    "source": "o_18",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_71": {
+    "id": "e_71",
+    "source": "o_12",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_72": {
+    "id": "e_72",
+    "source": "o_19",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_73": {
+    "id": "e_73",
+    "source": "o_17",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_74": {
+    "id": "e_74",
+    "source": "o_18",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_75": {
+    "id": "e_75",
+    "source": "o_12",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_76": {
+    "id": "e_76",
+    "source": "o_20",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_77": {
+    "id": "e_77",
+    "source": "o_17",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_78": {
+    "id": "e_78",
+    "source": "o_18",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_79": {
+    "id": "e_79",
+    "source": "o_12",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_80": {
+    "id": "e_80",
+    "source": "o_19",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_81": {
+    "id": "e_81",
+    "source": "o_21",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_82": {
+    "id": "e_82",
+    "source": "o_22",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_83": {
+    "id": "e_83",
+    "source": "o_23",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_84": {
+    "id": "e_84",
+    "source": "o_24",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_85": {
+    "id": "e_85",
+    "source": "o_18",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_86": {
+    "id": "e_86",
+    "source": "o_4",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_87": {
+    "id": "e_87",
+    "source": "o_25",
+    "target": "fn_12",
+    "functionality": 4
+   },
+   "e_88": {
+    "id": "e_88",
+    "source": "o_26",
+    "target": "fn_12",
+    "functionality": 4
+   },
+   "e_89": {
+    "id": "e_89",
+    "source": "o_27",
+    "target": "fn_13",
+    "functionality": 4
+   },
+   "e_90": {
+    "id": "e_90",
+    "source": "o_28",
+    "target": "fn_13",
+    "functionality": 4
+   },
+   "e_91": {
+    "id": "e_91",
+    "source": "o_27",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_92": {
+    "id": "e_92",
+    "source": "o_29",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_93": {
+    "id": "e_93",
+    "source": "o_30",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_94": {
+    "id": "e_94",
+    "source": "o_31",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_95": {
+    "id": "e_95",
+    "source": "o_32",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_96": {
+    "id": "e_96",
+    "source": "o_33",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_97": {
+    "id": "e_97",
+    "source": "o_25",
+    "target": "fn_16",
+    "functionality": 4
+   },
+   "e_98": {
+    "id": "e_98",
+    "source": "o_34",
+    "target": "fn_16",
+    "functionality": 4
+   },
+   "e_99": {
+    "id": "e_99",
+    "source": "o_35",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_100": {
+    "id": "e_100",
+    "source": "o_25",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_101": {
+    "id": "e_101",
+    "source": "o_36",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_102": {
+    "id": "e_102",
+    "source": "o_37",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_103": {
+    "id": "e_103",
+    "source": "o_25",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_104": {
+    "id": "e_104",
+    "source": "o_38",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_105": {
+    "id": "e_105",
+    "source": "o_39",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_106": {
+    "id": "e_106",
+    "source": "o_25",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_107": {
+    "id": "e_107",
+    "source": "o_35",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_108": {
+    "id": "e_108",
+    "source": "o_40",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_109": {
+    "id": "e_109",
+    "source": "o_41",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_110": {
+    "id": "e_110",
+    "source": "o_42",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_111": {
+    "id": "e_111",
+    "source": "o_35",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_112": {
+    "id": "e_112",
+    "source": "o_43",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_113": {
+    "id": "e_113",
+    "source": "o_39",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_114": {
+    "id": "e_114",
+    "source": "o_27",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_115": {
+    "id": "e_115",
+    "source": "o_25",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_116": {
+    "id": "e_116",
+    "source": "o_31",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_117": {
+    "id": "e_117",
+    "source": "o_32",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_118": {
+    "id": "e_118",
+    "source": "o_37",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_119": {
+    "id": "e_119",
+    "source": "o_39",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_120": {
+    "id": "e_120",
+    "source": "o_41",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_121": {
+    "id": "e_121",
+    "source": "o_44",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_122": {
+    "id": "e_122",
+    "source": "o_0",
+    "target": "d_0",
+    "functionality": 4
+   },
+   "e_123": {
+    "id": "e_123",
+    "source": "d_0",
+    "target": "fn_0",
+    "functionality": 4
+   },
+   "e_124": {
+    "id": "e_124",
+    "source": "o_1",
+    "target": "d_1",
+    "functionality": 4
+   },
+   "e_125": {
+    "id": "e_125",
+    "source": "d_1",
+    "target": "fn_0",
+    "functionality": 4
+   },
+   "e_126": {
+    "id": "e_126",
+    "source": "o_2",
+    "target": "d_2",
+    "functionality": 4
+   },
+   "e_127": {
+    "id": "e_127",
+    "source": "d_2",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_128": {
+    "id": "e_128",
+    "source": "o_3",
+    "target": "d_3",
+    "functionality": 4
+   },
+   "e_129": {
+    "id": "e_129",
+    "source": "d_3",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_130": {
+    "id": "e_130",
+    "source": "o_4",
+    "target": "d_4",
+    "functionality": 4
+   },
+   "e_131": {
+    "id": "e_131",
+    "source": "d_4",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_132": {
+    "id": "e_132",
+    "source": "o_5",
+    "target": "d_5",
+    "functionality": 4
+   },
+   "e_133": {
+    "id": "e_133",
+    "source": "d_5",
+    "target": "fn_1",
+    "functionality": 4
+   },
+   "e_134": {
+    "id": "e_134",
+    "source": "o_6",
+    "target": "d_6",
+    "functionality": 4
+   },
+   "e_135": {
+    "id": "e_135",
+    "source": "d_6",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_136": {
+    "id": "e_136",
+    "source": "o_7",
+    "target": "d_7",
+    "functionality": 4
+   },
+   "e_137": {
+    "id": "e_137",
+    "source": "d_7",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_138": {
+    "id": "e_138",
+    "source": "o_8",
+    "target": "d_8",
+    "functionality": 4
+   },
+   "e_139": {
+    "id": "e_139",
+    "source": "d_8",
+    "target": "fn_2",
+    "functionality": 4
+   },
+   "e_140": {
+    "id": "e_140",
+    "source": "o_6",
+    "target": "d_9",
+    "functionality": 4
+   },
+   "e_141": {
+    "id": "e_141",
+    "source": "d_9",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_142": {
+    "id": "e_142",
+    "source": "o_3",
+    "target": "d_10",
+    "functionality": 4
+   },
+   "e_143": {
+    "id": "e_143",
+    "source": "d_10",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_144": {
+    "id": "e_144",
+    "source": "o_9",
+    "target": "d_11",
+    "functionality": 4
+   },
+   "e_145": {
+    "id": "e_145",
+    "source": "d_11",
+    "target": "fn_3",
+    "functionality": 4
+   },
+   "e_146": {
+    "id": "e_146",
+    "source": "o_10",
+    "target": "d_12",
+    "functionality": 4
+   },
+   "e_147": {
+    "id": "e_147",
+    "source": "d_12",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_148": {
+    "id": "e_148",
+    "source": "o_3",
+    "target": "d_13",
+    "functionality": 4
+   },
+   "e_149": {
+    "id": "e_149",
+    "source": "d_13",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_150": {
+    "id": "e_150",
+    "source": "o_11",
+    "target": "d_14",
+    "functionality": 4
+   },
+   "e_151": {
+    "id": "e_151",
+    "source": "d_14",
+    "target": "fn_4",
+    "functionality": 4
+   },
+   "e_152": {
+    "id": "e_152",
+    "source": "o_6",
+    "target": "d_15",
+    "functionality": 4
+   },
+   "e_153": {
+    "id": "e_153",
+    "source": "d_15",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_154": {
+    "id": "e_154",
+    "source": "o_12",
+    "target": "d_16",
+    "functionality": 4
+   },
+   "e_155": {
+    "id": "e_155",
+    "source": "d_16",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_156": {
+    "id": "e_156",
+    "source": "o_13",
+    "target": "d_17",
+    "functionality": 4
+   },
+   "e_157": {
+    "id": "e_157",
+    "source": "d_17",
+    "target": "fn_5",
+    "functionality": 4
+   },
+   "e_158": {
+    "id": "e_158",
+    "source": "o_14",
+    "target": "d_18",
+    "functionality": 4
+   },
+   "e_159": {
+    "id": "e_159",
+    "source": "d_18",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_160": {
+    "id": "e_160",
+    "source": "o_12",
+    "target": "d_19",
+    "functionality": 4
+   },
+   "e_161": {
+    "id": "e_161",
+    "source": "d_19",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_162": {
+    "id": "e_162",
+    "source": "o_15",
+    "target": "d_20",
+    "functionality": 4
+   },
+   "e_163": {
+    "id": "e_163",
+    "source": "d_20",
+    "target": "fn_6",
+    "functionality": 4
+   },
+   "e_164": {
+    "id": "e_164",
+    "source": "o_10",
+    "target": "d_21",
+    "functionality": 4
+   },
+   "e_165": {
+    "id": "e_165",
+    "source": "d_21",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_166": {
+    "id": "e_166",
+    "source": "o_12",
+    "target": "d_22",
+    "functionality": 4
+   },
+   "e_167": {
+    "id": "e_167",
+    "source": "d_22",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_168": {
+    "id": "e_168",
+    "source": "o_16",
+    "target": "d_23",
+    "functionality": 4
+   },
+   "e_169": {
+    "id": "e_169",
+    "source": "d_23",
+    "target": "fn_7",
+    "functionality": 4
+   },
+   "e_170": {
+    "id": "e_170",
+    "source": "o_17",
+    "target": "d_24",
+    "functionality": 4
+   },
+   "e_171": {
+    "id": "e_171",
+    "source": "d_24",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_172": {
+    "id": "e_172",
+    "source": "o_18",
+    "target": "d_25",
+    "functionality": 4
+   },
+   "e_173": {
+    "id": "e_173",
+    "source": "d_25",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_174": {
+    "id": "e_174",
+    "source": "o_12",
+    "target": "d_26",
+    "functionality": 4
+   },
+   "e_175": {
+    "id": "e_175",
+    "source": "d_26",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_176": {
+    "id": "e_176",
+    "source": "o_19",
+    "target": "d_27",
+    "functionality": 4
+   },
+   "e_177": {
+    "id": "e_177",
+    "source": "d_27",
+    "target": "fn_8",
+    "functionality": 4
+   },
+   "e_178": {
+    "id": "e_178",
+    "source": "o_17",
+    "target": "d_28",
+    "functionality": 4
+   },
+   "e_179": {
+    "id": "e_179",
+    "source": "d_28",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_180": {
+    "id": "e_180",
+    "source": "o_18",
+    "target": "d_29",
+    "functionality": 4
+   },
+   "e_181": {
+    "id": "e_181",
+    "source": "d_29",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_182": {
+    "id": "e_182",
+    "source": "o_12",
+    "target": "d_30",
+    "functionality": 4
+   },
+   "e_183": {
+    "id": "e_183",
+    "source": "d_30",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_184": {
+    "id": "e_184",
+    "source": "o_20",
+    "target": "d_31",
+    "functionality": 4
+   },
+   "e_185": {
+    "id": "e_185",
+    "source": "d_31",
+    "target": "fn_9",
+    "functionality": 4
+   },
+   "e_186": {
+    "id": "e_186",
+    "source": "o_17",
+    "target": "d_32",
+    "functionality": 4
+   },
+   "e_187": {
+    "id": "e_187",
+    "source": "d_32",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_188": {
+    "id": "e_188",
+    "source": "o_18",
+    "target": "d_33",
+    "functionality": 4
+   },
+   "e_189": {
+    "id": "e_189",
+    "source": "d_33",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_190": {
+    "id": "e_190",
+    "source": "o_12",
+    "target": "d_34",
+    "functionality": 4
+   },
+   "e_191": {
+    "id": "e_191",
+    "source": "d_34",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_192": {
+    "id": "e_192",
+    "source": "o_19",
+    "target": "d_35",
+    "functionality": 4
+   },
+   "e_193": {
+    "id": "e_193",
+    "source": "d_35",
+    "target": "fn_10",
+    "functionality": 4
+   },
+   "e_194": {
+    "id": "e_194",
+    "source": "o_21",
+    "target": "d_36",
+    "functionality": 4
+   },
+   "e_195": {
+    "id": "e_195",
+    "source": "d_36",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_196": {
+    "id": "e_196",
+    "source": "o_22",
+    "target": "d_37",
+    "functionality": 4
+   },
+   "e_197": {
+    "id": "e_197",
+    "source": "d_37",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_198": {
+    "id": "e_198",
+    "source": "o_23",
+    "target": "d_38",
+    "functionality": 4
+   },
+   "e_199": {
+    "id": "e_199",
+    "source": "d_38",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_200": {
+    "id": "e_200",
+    "source": "o_24",
+    "target": "d_39",
+    "functionality": 4
+   },
+   "e_201": {
+    "id": "e_201",
+    "source": "d_39",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_202": {
+    "id": "e_202",
+    "source": "o_18",
+    "target": "d_40",
+    "functionality": 4
+   },
+   "e_203": {
+    "id": "e_203",
+    "source": "d_40",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_204": {
+    "id": "e_204",
+    "source": "o_4",
+    "target": "d_41",
+    "functionality": 4
+   },
+   "e_205": {
+    "id": "e_205",
+    "source": "d_41",
+    "target": "fn_11",
+    "functionality": 4
+   },
+   "e_206": {
+    "id": "e_206",
+    "source": "o_25",
+    "target": "d_42",
+    "functionality": 4
+   },
+   "e_207": {
+    "id": "e_207",
+    "source": "d_42",
+    "target": "fn_12",
+    "functionality": 4
+   },
+   "e_208": {
+    "id": "e_208",
+    "source": "o_26",
+    "target": "d_43",
+    "functionality": 4
+   },
+   "e_209": {
+    "id": "e_209",
+    "source": "d_43",
+    "target": "fn_12",
+    "functionality": 4
+   },
+   "e_210": {
+    "id": "e_210",
+    "source": "o_27",
+    "target": "d_44",
+    "functionality": 4
+   },
+   "e_211": {
+    "id": "e_211",
+    "source": "d_44",
+    "target": "fn_13",
+    "functionality": 4
+   },
+   "e_212": {
+    "id": "e_212",
+    "source": "o_28",
+    "target": "d_45",
+    "functionality": 4
+   },
+   "e_213": {
+    "id": "e_213",
+    "source": "d_45",
+    "target": "fn_13",
+    "functionality": 4
+   },
+   "e_214": {
+    "id": "e_214",
+    "source": "o_27",
+    "target": "d_46",
+    "functionality": 4
+   },
+   "e_215": {
+    "id": "e_215",
+    "source": "d_46",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_216": {
+    "id": "e_216",
+    "source": "o_29",
+    "target": "d_47",
+    "functionality": 4
+   },
+   "e_217": {
+    "id": "e_217",
+    "source": "d_47",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_218": {
+    "id": "e_218",
+    "source": "o_30",
+    "target": "d_48",
+    "functionality": 4
+   },
+   "e_219": {
+    "id": "e_219",
+    "source": "d_48",
+    "target": "fn_14",
+    "functionality": 4
+   },
+   "e_220": {
+    "id": "e_220",
+    "source": "o_31",
+    "target": "d_49",
+    "functionality": 4
+   },
+   "e_221": {
+    "id": "e_221",
+    "source": "d_49",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_222": {
+    "id": "e_222",
+    "source": "o_32",
+    "target": "d_50",
+    "functionality": 4
+   },
+   "e_223": {
+    "id": "e_223",
+    "source": "d_50",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_224": {
+    "id": "e_224",
+    "source": "o_33",
+    "target": "d_51",
+    "functionality": 4
+   },
+   "e_225": {
+    "id": "e_225",
+    "source": "d_51",
+    "target": "fn_15",
+    "functionality": 4
+   },
+   "e_226": {
+    "id": "e_226",
+    "source": "o_25",
+    "target": "d_52",
+    "functionality": 4
+   },
+   "e_227": {
+    "id": "e_227",
+    "source": "d_52",
+    "target": "fn_16",
+    "functionality": 4
+   },
+   "e_228": {
+    "id": "e_228",
+    "source": "o_34",
+    "target": "d_53",
+    "functionality": 4
+   },
+   "e_229": {
+    "id": "e_229",
+    "source": "d_53",
+    "target": "fn_16",
+    "functionality": 4
+   },
+   "e_230": {
+    "id": "e_230",
+    "source": "o_35",
+    "target": "d_54",
+    "functionality": 4
+   },
+   "e_231": {
+    "id": "e_231",
+    "source": "d_54",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_232": {
+    "id": "e_232",
+    "source": "o_25",
+    "target": "d_55",
+    "functionality": 4
+   },
+   "e_233": {
+    "id": "e_233",
+    "source": "d_55",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_234": {
+    "id": "e_234",
+    "source": "o_36",
+    "target": "d_56",
+    "functionality": 4
+   },
+   "e_235": {
+    "id": "e_235",
+    "source": "d_56",
+    "target": "fn_17",
+    "functionality": 4
+   },
+   "e_236": {
+    "id": "e_236",
+    "source": "o_37",
+    "target": "d_57",
+    "functionality": 4
+   },
+   "e_237": {
+    "id": "e_237",
+    "source": "d_57",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_238": {
+    "id": "e_238",
+    "source": "o_25",
+    "target": "d_58",
+    "functionality": 4
+   },
+   "e_239": {
+    "id": "e_239",
+    "source": "d_58",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_240": {
+    "id": "e_240",
+    "source": "o_38",
+    "target": "d_59",
+    "functionality": 4
+   },
+   "e_241": {
+    "id": "e_241",
+    "source": "d_59",
+    "target": "fn_18",
+    "functionality": 4
+   },
+   "e_242": {
+    "id": "e_242",
+    "source": "o_39",
+    "target": "d_60",
+    "functionality": 4
+   },
+   "e_243": {
+    "id": "e_243",
+    "source": "d_60",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_244": {
+    "id": "e_244",
+    "source": "o_25",
+    "target": "d_61",
+    "functionality": 4
+   },
+   "e_245": {
+    "id": "e_245",
+    "source": "d_61",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_246": {
+    "id": "e_246",
+    "source": "o_35",
+    "target": "d_62",
+    "functionality": 4
+   },
+   "e_247": {
+    "id": "e_247",
+    "source": "d_62",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_248": {
+    "id": "e_248",
+    "source": "o_40",
+    "target": "d_63",
+    "functionality": 4
+   },
+   "e_249": {
+    "id": "e_249",
+    "source": "d_63",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "e_250": {
+    "id": "e_250",
+    "source": "o_41",
+    "target": "d_64",
+    "functionality": 4
+   },
+   "e_251": {
+    "id": "e_251",
+    "source": "d_64",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_252": {
+    "id": "e_252",
+    "source": "o_42",
+    "target": "d_65",
+    "functionality": 4
+   },
+   "e_253": {
+    "id": "e_253",
+    "source": "d_65",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_254": {
+    "id": "e_254",
+    "source": "o_35",
+    "target": "d_66",
+    "functionality": 4
+   },
+   "e_255": {
+    "id": "e_255",
+    "source": "d_66",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_256": {
+    "id": "e_256",
+    "source": "o_43",
+    "target": "d_67",
+    "functionality": 4
+   },
+   "e_257": {
+    "id": "e_257",
+    "source": "d_67",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_258": {
+    "id": "e_258",
+    "source": "o_39",
+    "target": "d_68",
+    "functionality": 4
+   },
+   "e_259": {
+    "id": "e_259",
+    "source": "d_68",
+    "target": "fn_20",
+    "functionality": 4
+   },
+   "e_260": {
+    "id": "e_260",
+    "source": "o_27",
+    "target": "d_69",
+    "functionality": 4
+   },
+   "e_261": {
+    "id": "e_261",
+    "source": "d_69",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_262": {
+    "id": "e_262",
+    "source": "o_25",
+    "target": "d_70",
+    "functionality": 4
+   },
+   "e_263": {
+    "id": "e_263",
+    "source": "d_70",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_264": {
+    "id": "e_264",
+    "source": "o_31",
+    "target": "d_71",
+    "functionality": 4
+   },
+   "e_265": {
+    "id": "e_265",
+    "source": "d_71",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_266": {
+    "id": "e_266",
+    "source": "o_32",
+    "target": "d_72",
+    "functionality": 4
+   },
+   "e_267": {
+    "id": "e_267",
+    "source": "d_72",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_268": {
+    "id": "e_268",
+    "source": "o_37",
+    "target": "d_73",
+    "functionality": 4
+   },
+   "e_269": {
+    "id": "e_269",
+    "source": "d_73",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_270": {
+    "id": "e_270",
+    "source": "o_39",
+    "target": "d_74",
+    "functionality": 4
+   },
+   "e_271": {
+    "id": "e_271",
+    "source": "d_74",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_272": {
+    "id": "e_272",
+    "source": "o_41",
+    "target": "d_75",
+    "functionality": 4
+   },
+   "e_273": {
+    "id": "e_273",
+    "source": "d_75",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "e_274": {
+    "id": "e_274",
+    "source": "o_44",
+    "target": "d_76",
+    "functionality": 4
+   },
+   "e_275": {
+    "id": "e_275",
+    "source": "d_76",
+    "target": "fn_21",
+    "functionality": 4
+   },
+   "tl_radio": {
+    "id": "tl_radio",
+    "source": "ph_radio",
+    "target": "fn_24",
+    "functionality": 4
+   },
+   "tl_phone_v": {
+    "id": "tl_phone_v",
+    "source": "ph_phone",
+    "target": "fn_24",
+    "functionality": 4
+   },
+   "tl_fibre": {
+    "id": "tl_fibre",
+    "source": "ph_fibre",
+    "target": "fn_31",
+    "functionality": 4
+   },
+   "tl_phone_d": {
+    "id": "tl_phone_d",
+    "source": "ph_phone",
+    "target": "fn_31",
+    "functionality": 4
+   },
+   "cr_other": {
+    "id": "cr_other",
+    "source": "ph_crews",
+    "target": "ph_other_areas",
+    "functionality": 4
+   },
+   "cr_f17": {
+    "id": "cr_f17",
+    "source": "ph_crews",
+    "target": "fn_16",
+    "functionality": 4
+   },
+   "pipe_main": {
+    "id": "pipe_main",
+    "source": "ph_pumps",
+    "target": "ph_hydrants",
+    "functionality": 4,
+    "capacity": 400.0
+   },
+   "fw_ph_hydrants_f20": {
+    "id": "fw_ph_hydrants_f20",
+    "source": "ph_hydrants",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "fw_ph_hydrants_cool": {
+    "id": "fw_ph_hydrants_cool",
+    "source": "ph_hydrants",
+    "target": "ph_cooling",
+    "functionality": 4
+   },
+   "fw_ph_trucks_f20": {
+    "id": "fw_ph_trucks_f20",
+    "source": "ph_trucks",
+    "target": "fn_19",
+    "functionality": 4
+   },
+   "fw_ph_trucks_cool": {
+    "id": "fw_ph_trucks_cool",
+    "source": "ph_trucks",
+    "target": "ph_cooling",
+    "functionality": 4
+   }
+  },
+  "canvases": [
+   {
+    "id": "cv_fram",
+    "label": "FRAM: Zheng 2024 emergency response",
+    "graph": {
+     "graph_type": "generic",
+     "node_ids": [
+      "fn_0",
+      "fn_1",
+      "fn_2",
+      "fn_3",
+      "fn_4",
+      "fn_5",
+      "fn_6",
+      "fn_7",
+      "fn_8",
+      "fn_9",
+      "fn_10",
+      "fn_11",
+      "fn_12",
+      "fn_13",
+      "fn_14",
+      "fn_15",
+      "fn_16",
+      "fn_17",
+      "fn_18",
+      "fn_19",
+      "fn_20",
+      "fn_21",
+      "fn_22",
+      "fn_23",
+      "fn_24",
+      "fn_25",
+      "fn_26",
+      "fn_27",
+      "fn_28",
+      "fn_29",
+      "fn_30",
+      "fn_31",
+      "fn_32",
+      "fn_33",
+      "fn_34",
+      "fn_35",
+      "fn_36",
+      "fn_37",
+      "fn_38",
+      "fn_39",
+      "fn_40",
+      "fn_41",
+      "fn_42",
+      "fn_43",
+      "fn_44",
+      "fn_45",
+      "fn_46",
+      "o_0",
+      "o_1",
+      "o_2",
+      "o_3",
+      "o_4",
+      "o_5",
+      "o_6",
+      "o_7",
+      "o_8",
+      "o_9",
+      "o_10",
+      "o_11",
+      "o_12",
+      "o_13",
+      "o_14",
+      "o_15",
+      "o_16",
+      "o_17",
+      "o_18",
+      "o_19",
+      "o_20",
+      "o_21",
+      "o_22",
+      "o_23",
+      "o_24",
+      "o_25",
+      "o_26",
+      "o_27",
+      "o_28",
+      "o_29",
+      "o_30",
+      "o_31",
+      "o_32",
+      "o_33",
+      "o_34",
+      "o_35",
+      "o_36",
+      "o_37",
+      "o_38",
+      "o_39",
+      "o_40",
+      "o_41",
+      "o_42",
+      "o_43",
+      "o_44",
+      "d_0",
+      "d_1",
+      "d_2",
+      "d_3",
+      "d_4",
+      "d_5",
+      "d_6",
+      "d_7",
+      "d_8",
+      "d_9",
+      "d_10",
+      "d_11",
+      "d_12",
+      "d_13",
+      "d_14",
+      "d_15",
+      "d_16",
+      "d_17",
+      "d_18",
+      "d_19",
+      "d_20",
+      "d_21",
+      "d_22",
+      "d_23",
+      "d_24",
+      "d_25",
+      "d_26",
+      "d_27",
+      "d_28",
+      "d_29",
+      "d_30",
+      "d_31",
+      "d_32",
+      "d_33",
+      "d_34",
+      "d_35",
+      "d_36",
+      "d_37",
+      "d_38",
+      "d_39",
+      "d_40",
+      "d_41",
+      "d_42",
+      "d_43",
+      "d_44",
+      "d_45",
+      "d_46",
+      "d_47",
+      "d_48",
+      "d_49",
+      "d_50",
+      "d_51",
+      "d_52",
+      "d_53",
+      "d_54",
+      "d_55",
+      "d_56",
+      "d_57",
+      "d_58",
+      "d_59",
+      "d_60",
+      "d_61",
+      "d_62",
+      "d_63",
+      "d_64",
+      "d_65",
+      "d_66",
+      "d_67",
+      "d_68",
+      "d_69",
+      "d_70",
+      "d_71",
+      "d_72",
+      "d_73",
+      "d_74",
+      "d_75",
+      "d_76"
+     ],
+     "edge_ids": [
+      "e_0",
+      "e_1",
+      "e_2",
+      "e_3",
+      "e_4",
+      "e_5",
+      "e_6",
+      "e_7",
+      "e_8",
+      "e_9",
+      "e_10",
+      "e_11",
+      "e_12",
+      "e_13",
+      "e_14",
+      "e_15",
+      "e_16",
+      "e_17",
+      "e_18",
+      "e_19",
+      "e_20",
+      "e_21",
+      "e_22",
+      "e_23",
+      "e_24",
+      "e_25",
+      "e_26",
+      "e_27",
+      "e_28",
+      "e_29",
+      "e_30",
+      "e_31",
+      "e_32",
+      "e_33",
+      "e_34",
+      "e_35",
+      "e_36",
+      "e_37",
+      "e_38",
+      "e_39",
+      "e_40",
+      "e_41",
+      "e_42",
+      "e_43",
+      "e_44",
+      "e_45",
+      "e_46",
+      "e_47",
+      "e_48",
+      "e_49",
+      "e_50",
+      "e_51",
+      "e_52",
+      "e_53",
+      "e_54",
+      "e_55",
+      "e_56",
+      "e_57",
+      "e_58",
+      "e_59",
+      "e_60",
+      "e_61",
+      "e_62",
+      "e_63",
+      "e_64",
+      "e_65",
+      "e_66",
+      "e_67",
+      "e_68",
+      "e_69",
+      "e_70",
+      "e_71",
+      "e_72",
+      "e_73",
+      "e_74",
+      "e_75",
+      "e_76",
+      "e_77",
+      "e_78",
+      "e_79",
+      "e_80",
+      "e_81",
+      "e_82",
+      "e_83",
+      "e_84",
+      "e_85",
+      "e_86",
+      "e_87",
+      "e_88",
+      "e_89",
+      "e_90",
+      "e_91",
+      "e_92",
+      "e_93",
+      "e_94",
+      "e_95",
+      "e_96",
+      "e_97",
+      "e_98",
+      "e_99",
+      "e_100",
+      "e_101",
+      "e_102",
+      "e_103",
+      "e_104",
+      "e_105",
+      "e_106",
+      "e_107",
+      "e_108",
+      "e_109",
+      "e_110",
+      "e_111",
+      "e_112",
+      "e_113",
+      "e_114",
+      "e_115",
+      "e_116",
+      "e_117",
+      "e_118",
+      "e_119",
+      "e_120",
+      "e_121",
+      "e_122",
+      "e_123",
+      "e_124",
+      "e_125",
+      "e_126",
+      "e_127",
+      "e_128",
+      "e_129",
+      "e_130",
+      "e_131",
+      "e_132",
+      "e_133",
+      "e_134",
+      "e_135",
+      "e_136",
+      "e_137",
+      "e_138",
+      "e_139",
+      "e_140",
+      "e_141",
+      "e_142",
+      "e_143",
+      "e_144",
+      "e_145",
+      "e_146",
+      "e_147",
+      "e_148",
+      "e_149",
+      "e_150",
+      "e_151",
+      "e_152",
+      "e_153",
+      "e_154",
+      "e_155",
+      "e_156",
+      "e_157",
+      "e_158",
+      "e_159",
+      "e_160",
+      "e_161",
+      "e_162",
+      "e_163",
+      "e_164",
+      "e_165",
+      "e_166",
+      "e_167",
+      "e_168",
+      "e_169",
+      "e_170",
+      "e_171",
+      "e_172",
+      "e_173",
+      "e_174",
+      "e_175",
+      "e_176",
+      "e_177",
+      "e_178",
+      "e_179",
+      "e_180",
+      "e_181",
+      "e_182",
+      "e_183",
+      "e_184",
+      "e_185",
+      "e_186",
+      "e_187",
+      "e_188",
+      "e_189",
+      "e_190",
+      "e_191",
+      "e_192",
+      "e_193",
+      "e_194",
+      "e_195",
+      "e_196",
+      "e_197",
+      "e_198",
+      "e_199",
+      "e_200",
+      "e_201",
+      "e_202",
+      "e_203",
+      "e_204",
+      "e_205",
+      "e_206",
+      "e_207",
+      "e_208",
+      "e_209",
+      "e_210",
+      "e_211",
+      "e_212",
+      "e_213",
+      "e_214",
+      "e_215",
+      "e_216",
+      "e_217",
+      "e_218",
+      "e_219",
+      "e_220",
+      "e_221",
+      "e_222",
+      "e_223",
+      "e_224",
+      "e_225",
+      "e_226",
+      "e_227",
+      "e_228",
+      "e_229",
+      "e_230",
+      "e_231",
+      "e_232",
+      "e_233",
+      "e_234",
+      "e_235",
+      "e_236",
+      "e_237",
+      "e_238",
+      "e_239",
+      "e_240",
+      "e_241",
+      "e_242",
+      "e_243",
+      "e_244",
+      "e_245",
+      "e_246",
+      "e_247",
+      "e_248",
+      "e_249",
+      "e_250",
+      "e_251",
+      "e_252",
+      "e_253",
+      "e_254",
+      "e_255",
+      "e_256",
+      "e_257",
+      "e_258",
+      "e_259",
+      "e_260",
+      "e_261",
+      "e_262",
+      "e_263",
+      "e_264",
+      "e_265",
+      "e_266",
+      "e_267",
+      "e_268",
+      "e_269",
+      "e_270",
+      "e_271",
+      "e_272",
+      "e_273",
+      "e_274",
+      "e_275"
+     ]
+    }
+   },
+   {
+    "id": "cv_telecom",
+    "label": "Telecom",
+    "graph": {
+     "graph_type": "generic",
+     "node_ids": [
+      "ph_radio",
+      "ph_phone",
+      "ph_fibre"
+     ],
+     "edge_ids": [
+      "tl_radio",
+      "tl_phone_v",
+      "tl_fibre",
+      "tl_phone_d"
+     ]
+    }
+   },
+   {
+    "id": "cv_crews",
+    "label": "Firefighter crews",
+    "graph": {
+     "graph_type": "generic",
+     "node_ids": [
+      "ph_crews",
+      "ph_other_areas"
+     ],
+     "edge_ids": [
+      "cr_other",
+      "cr_f17"
+     ]
+    }
+   },
+   {
+    "id": "cv_water",
+    "label": "Fire water",
+    "graph": {
+     "graph_type": "generic",
+     "node_ids": [
+      "ph_pumps",
+      "ph_hydrants",
+      "ph_trucks",
+      "ph_cooling"
+     ],
+     "edge_ids": [
+      "pipe_main",
+      "fw_ph_hydrants_f20",
+      "fw_ph_hydrants_cool",
+      "fw_ph_trucks_f20",
+      "fw_ph_trucks_cool"
+     ]
+    }
+   }
+  ],
+  "update_history": [],
+  "scorecard": [],
+  "temporal_simulations": [
+   {
+    "id": "simulation-earthquake",
+    "format": "cascade.temporal-simulation/v1",
+    "timeline": {
+     "name": "Earthquake: the first 12 hours",
+     "steps": [
+      {
+       "label": "2024-05-01T00",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [
+          {
+           "event": "evt-earthquake",
+           "every": 1
+          },
+          {
+           "event": "evt-one-way",
+           "every": 1
+          }
+         ],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T01",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T02",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T03",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T04",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [
+          {
+           "event": "evt-radio-restored",
+           "every": 1
+          }
+         ],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T05",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T06",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [
+          {
+           "event": "evt-phone-restored",
+           "every": 1
+          },
+          {
+           "event": "evt-crews-released",
+           "every": 1
+          }
+         ],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T07",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T08",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [
+          {
+           "event": "evt-main-repaired",
+           "every": 1
+          }
+         ],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T09",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T10",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [
+          {
+           "event": "evt-fibre-restored",
+           "every": 1
+          }
+         ],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T11",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      },
+      {
+       "label": "2024-05-01T12",
+       "unit": "hour",
+       "repeat": 1,
+       "phases": [
+        {
+         "events": [],
+         "propagate": true
+        }
+       ]
+      }
+     ]
+    },
+    "profile": {},
+    "metrics": [],
+    "scope": "global"
+   }
+  ],
+  "series": [],
+  "expectations": []
+ },
+ "config": {
+  "version": "1.0",
+  "meta": {
+   "name": "fram-zheng_2024_natech"
+  },
+  "functionality_scale": [
+   {
+    "level": 1,
+    "label": "not performed",
+    "color": "#ef4444"
+   },
+   {
+    "level": 2,
+    "label": "severe",
+    "color": "#f97316"
+   },
+   {
+    "level": 3,
+    "label": "variable",
+    "color": "#eab308"
+   },
+   {
+    "level": 4,
+    "label": "nominal",
+    "color": "#22c55e"
+   }
+  ],
+  "categories": [
+   {
+    "name": "fn_0",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_1",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_2",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_3",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_4",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_5",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_6",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_7",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_8",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_9",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_10",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_11",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_12",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_13",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_14",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_15",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_16",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_17",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_18",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_19",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_20",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_21",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_22",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_23",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_24",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_25",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_26",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_27",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_28",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_29",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_30",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_31",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_32",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_33",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_34",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_35",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_36",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_37",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_38",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_39",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_40",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_41",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_42",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_43",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_44",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_45",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "fn_46",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_0",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_1",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_2",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_3",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_4",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_5",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_6",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_7",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_8",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_9",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_10",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_11",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_12",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_13",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_14",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_15",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_16",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_17",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_18",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_19",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_20",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_21",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_22",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_23",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_24",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_25",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_26",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_27",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_28",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_29",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_30",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_31",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_32",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_33",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_34",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_35",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_36",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_37",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_38",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_39",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_40",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_41",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_42",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_43",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "out_44",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_0",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_1",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_2",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_3",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_4",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_5",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_6",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_7",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_8",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_9",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_10",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_11",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_12",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_13",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_14",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_15",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_16",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_17",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_18",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_19",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_20",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_21",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_22",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_23",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_24",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_25",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_26",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_27",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_28",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_29",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_30",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_31",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_32",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_33",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_34",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_35",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_36",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_37",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_38",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_39",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_40",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_41",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_42",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_43",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_44",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_45",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_46",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_47",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_48",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_49",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_50",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_51",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_52",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_53",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_54",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_55",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_56",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_57",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_58",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_59",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_60",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_61",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_62",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_63",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_64",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_65",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_66",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_67",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_68",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_69",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_70",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_71",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_72",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_73",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_74",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_75",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "dmp_76",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "voice",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "data",
+    "category_type": "Requisite"
+   },
+   {
+    "name": "crews",
+    "category_type": "SourceToDemands"
+   },
+   {
+    "name": "firewater",
+    "category_type": "SourceToDemands"
+   }
+  ],
+  "events": [
+   {
+    "id": "evt-earthquake",
+    "label": "Earthquake: telecom damaged, fire-water main destroyed, crews drawn away",
+    "type": "hazard",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": false,
+    "attribute_operations": [
+     {
+      "element": "ph_phone",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 3
+     },
+     {
+      "element": "ph_radio",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 3
+     },
+     {
+      "element": "ph_fibre",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 1
+     },
+     {
+      "element": "pipe_main",
+      "path": [
+       "capacity"
+      ],
+      "op": "set",
+      "value": 0
+     },
+     {
+      "element": "ph_other_areas",
+      "path": [
+       "category_dependency_profiles",
+       "crews",
+       "demand"
+      ],
+      "op": "set",
+      "value": 20
+     }
+    ]
+   },
+   {
+    "id": "evt-one-way",
+    "label": "F5 one-way communication with the fire department",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "fn_4",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "evt-radio-restored",
+    "label": "Radio repeater restored",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "ph_radio",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "evt-phone-restored",
+    "label": "Telephone exchange restored",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "ph_phone",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "evt-crews-released",
+    "label": "Other areas release their crews",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "ph_other_areas",
+      "path": [
+       "category_dependency_profiles",
+       "crews",
+       "demand"
+      ],
+      "op": "set",
+      "value": 0
+     }
+    ]
+   },
+   {
+    "id": "evt-main-repaired",
+    "label": "Fire-water main repaired",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "pipe_main",
+      "path": [
+       "capacity"
+      ],
+      "op": "set",
+      "value": 400
+     }
+    ]
+   },
+   {
+    "id": "evt-fibre-restored",
+    "label": "Fibre link restored",
+    "type": "disservice",
+    "frequency_per_10y": 0.0,
+    "temporal_simulation_only": true,
+    "attribute_operations": [
+     {
+      "element": "ph_fibre",
+      "path": [
+       "functionality"
+      ],
+      "op": "set",
+      "value": 4
+     }
+    ]
+   }
+  ],
+  "graph_types": [],
+  "level_scale": [
+   {
+    "label": "large deficit",
+    "below": -0.5,
+    "role": "danger",
+    "step": 600
+   },
+   {
+    "label": "deficit",
+    "below": -0.1,
+    "role": "danger",
+    "step": 300
+   },
+   {
+    "label": "balanced",
+    "below": 0.1,
+    "role": "neutral",
+    "step": 500
+   },
+   {
+    "label": "surplus",
+    "below": 0.5,
+    "role": "accent",
+    "step": 300
+   },
+   {
+    "label": "large surplus",
+    "role": "accent",
+    "step": 600
+   }
+  ],
+  "node_defaults": {}
+ }
+}

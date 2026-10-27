@@ -232,6 +232,37 @@ Raw: `results/e2b_attribution.csv`.
 - **Koriyama's Shapley failure is a design error, declared and kept.** Fig. 6's "contained" functions had internal variability, but their outputs did not deviate; adaptive responses at the scene controlled them. The declared design entered that variability as output deviations, which is the opposite of what happened. E1f, which leaves those outputs nominal, reproduces Fig. 6 exactly.
 - **What the model adds is a different question from ranking.** Given a scenario, the model says which functions absorb a deviation and which pass it on: contained vs resonated (Koriyama), uninvolved downstream modules (Wenzhou M12, M13), positives kept (Zheng). No topological score can express this. The topological baseline for that question is reachability, which is what S0 effectively computes, and it fails each time (Koriyama 0/2, Wenzhou 0/2, Zheng 0/8 positives).
 
+## 3c. Demonstration D: Zheng's earthquake with the physical damage modelled (`demo_zheng.py`)
+
+The FRAM canvas is the v2 translation of Zheng's Table 1. Three physical canvases replace the resources the paper names as damaged. Quantities are illustrative, since the paper gives none:
+- **Telecom (Requisite).** Radio repeater, telephone exchange and fibre link. *Radio/Telephone* takes the best of voice; *Internet/Telephone* the best of data or voice.
+- **Firefighter crews (SourceToDemands).** 40 crews serve F17 (demand 30) and the other earthquake-affected areas (demand 20, served first).
+- **Fire water (SourceToDemands).** Pump station → main (400 m³/h) → hydrant ring → F20 foam (240, priority 9) and the cooling of Tank 63 (120). Firetruck tanks (80) are a second source. This gives a coupling to the destroyed network, which Zheng's Table 1 lacks (issue 4).
+
+Physical flows have `dependency_level` N, because a shortfall is a shortfall; FRAM couplings keep v2's damping.
+
+**Timeline.** Twelve hours as a Temporal Simulation of Events:
+- earthquake and F5's one-way communication at 0 h;
+- radio restored at 4 h;
+- exchange restored and crews released at 6 h;
+- main repaired at 8 h;
+- fibre restored at 10 h.
+
+The remedy variant is Zheng's Fig. 9: two-way information updates (no F5 deviation), plus a new function that mobilises other organisations' crews (15 more). Both bundles (`demo/zheng_natech*.json`) validate against the backend schemas and the app's own bundle parser, so the run can be repeated in the app. Raw: `results/d_*.csv`.
+
+**Testable claim, from physical damage alone (hour 0).** Neg 8/8, pos 6/8, bal. acc 0.875: F12 = 3, F17 = 3, F20 = 2, while F2, F14 and F15 = 4. This is the RQ1 result, now produced by the physical layer and not by hand-set severities.
+
+| Hour | 0–3 | 4–5 | 6–7 | 8–12 |
+|---|---|---|---|---|
+| Operativity, as planned | 0.80 | 0.80 | 0.92 | 0.985 |
+| Operativity, remedy | 0.94 | 0.94 | 0.94 | 1.00 |
+| F20 (foam), both variants | severe | severe | severe | nominal |
+| Tank 63 cooling, both variants | not performed | not performed | not performed | nominal |
+
+- **The remedy fixes the organisational chain (F12, F17 nominal from hour 0) but not F20.** With the main destroyed, foam injection gets only the trucks' water (80 of 240), and priority sends all of it to F20. Tank 63's cooling therefore gets nothing. This is the paper's "radiation may fail Tank 63", reached through a physical mechanism that its FRAM could not express.
+- **Shapley of the hour-0 damage on Operativity loss (0.197 in total):** F5 one-way communication 0.051, fire-water main 0.049, telephone exchange 0.036, fibre link 0.036, crews drawn away 0.026, radio repeater 0. The radio repeater is redundant with the exchange.
+- **The point for the paper.** The collapsed output stays the FRAM's, function levels on one scale. The modelling underneath is physical (capacities, priorities, repair times), and it adds a finding the expert analysis missed: Fig. 9's remedy leaves the fire unextinguished until the fire water returns.
+
 ## 4. Issues found
 
 1. **Engine behaviour (by design, documented):** a parent passes all its Requisite categories to every child, so the translation needs one output node per (function, output text).
@@ -244,4 +275,3 @@ Raw: `results/e2b_attribution.csv`.
 
 - Transcriptions: the FRW toy.
 - The FRW oracle; Shapley Value (only Vitality so far).
-- The demonstration's Temporal Simulation and SourceToDemands resources.
