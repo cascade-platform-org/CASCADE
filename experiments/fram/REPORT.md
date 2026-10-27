@@ -94,7 +94,7 @@ The two claims are expressible once the path is drawn, and the model shows they 
 - At × 0.5 it resolves 8 (ρ = 0.26; finds F7 and F5).
 - A small change in *how variable* a function is rarely crosses a level band.
 
-**Why single-failure rankings carry little model content.** Single-knockout Vitality is a topological measure in disguise:
+**Why single-failure rankings carry little model content here.** On these converted models one failure alone meets only damping, so single-knockout Vitality reduces to a topological measure:
 - under S0 it equals out-reach (ρ ≥ 0.99 on all five cases);
 - under v2 it tracks reverse Katz (ρ = 0.74–1.00), because a lone failure loses one level per hop and dies after N − 1.
 
