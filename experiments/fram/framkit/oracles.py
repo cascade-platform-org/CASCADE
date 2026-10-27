@@ -128,3 +128,61 @@ def khakzad_top_event() -> float:
             ok *= 1 - KHAKZAD_BASIC[e]
         return 1 - ok
     return or_gate(KHAKZAD_AUTO) * or_gate(KHAKZAD_MANUAL)
+
+
+# --- Kim & Yoon 2021: quantitative FRAM by system simulation (Sect. 3) ------
+
+class KimV(float):
+    """A variability value (>= 1 nominal). `+` is the paper's additive
+    relationship, a + b -> (a - 1) + (b - 1) + 1; `*` stays multiplicative."""
+
+    def __add__(self, other):  # type: ignore[override]
+        return KimV(float(self) + float(other) - 1)
+
+    __radd__ = __add__
+
+    def __mul__(self, other):  # type: ignore[override]
+        return KimV(float(self) * float(other))
+
+    __rmul__ = __mul__
+
+
+def kim_rule(expr: str, ov: dict[str, float]) -> float:
+    """Evaluate a Table 3 aggregation rule r_i(CV_i,t) over upstream outputs."""
+    env = {f: KimV(v) for f, v in ov.items()}
+    return float(eval(expr, {"__builtins__": {}, "min": min, "max": max}, env))  # noqa: S307 - our own transcription
+
+
+def kim_step(rows: list[dict[str, str]], ov: dict[str, float], iev: dict[str, float]
+             ) -> tuple[dict[str, float], dict[str, float]]:
+    """One time point (Eqs. 2-5). Returns (aggregated, output) variabilities."""
+    agg, out = {}, {}
+    for r in rows:
+        f = r["function"]
+        if not r["rule"]:
+            agg[f] = out[f] = 1.0          # background functions F1, F14 do not vary
+            continue
+        a = kim_rule(r["rule"], ov) * iev[f]
+        agg[f] = a
+        out[f] = max(1.0, iev[f]) if a <= float(r["theta"]) else a
+    return agg, out
+
+
+def kim_simulate(rows: list[dict[str, str]], sigma: dict[str, float], rng, criterion: float = 10.0,
+                 max_t: int = 10_000) -> dict[str, object]:
+    """One trial: |N(0, sigma_i)| per function per time point until any output
+    exceeds the criterion. Returns duration, the functions over the criterion
+    and the per-function count of time points with aggregated > theta."""
+    fids = [r["function"] for r in rows]
+    ov = {f: 1.0 for f in fids}
+    high = {f: 0 for f in fids}
+    for t in range(1, max_t + 1):
+        iev = {f: abs(rng.gauss(0.0, sigma[f])) for f in fids}
+        agg, ov = kim_step(rows, ov, iev)
+        for r in rows:
+            if r["rule"] and agg[r["function"]] > float(r["theta"]):
+                high[r["function"]] += 1
+        over = [f for f in fids if ov[f] > criterion]
+        if over:
+            return {"duration": t, "over": over, "high": high}
+    return {"duration": max_t, "over": [], "high": high}

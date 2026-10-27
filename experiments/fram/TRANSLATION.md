@@ -129,3 +129,25 @@ Model: Li & Huang 2025 Fig. 4, digitised (`models/li_2025_wenzhou.csv`, 20 modul
 - Functions (scenario A). Positives: Table 1's influenced modules and the accident's chain {M5, M8, M11, M16, M17, M19, M20} (M20 = D301 fails to brake, the collision). Negatives: the downstream modules with no variability in Table 4 {M12, M13}. M15 and M18 are reported but not scored: the paper gives them only transmitted variability (~10⁻⁸), and the report is silent on them.
 - Couplings (scenario A). A coupling is flagged when its source and its target are both below 4. Truth: Table 1's five broken connections; secondary truth: Table 3's twelve transmission paths.
 - Critical modules (scenario B). Shapley value of the seven origins for the collision, v(S) = 4 − level(M20) when only the origins in S deviate. Top-4 vs {M5, M7, M8, M10} (Table 5, which the authors state agrees with the report).
+
+---
+
+# Kim & Yoon 2021: two translations compared (declared 2026-10-27, before the run)
+
+Model: Table 3 (14 functions, aggregation rules, θ, IEV_p). An oracle re-implements their simulation (Sect. 3, Eqs. 1–6). It reproduces Table 7's shares within about 2 points; durations run about 1.25× Table 5's. Run deterministically, their recurrence has a sharp threshold: nothing propagates at IEV ≤ IEV_p, and everything except F2 and F6 resonates from about 1.25·IEV_p. Resonance in their model is therefore a tail event of the sampling.
+
+**Common choices**
+- Scale: logarithmic between nominal (V = 1) and Kim's resonance criterion (V = 10). Level k stands for V = 10^((N−k)/(N−1)). N = 4 primary, N = 7 secondary.
+- IEV fixed at the published IEV_p. The effective threshold on the aggregated coupling variability is θ_i / IEV_p,i.
+- Scenario events: F3, F4, F5 start at the level of their 95th-percentile own variability, 1.96·IEV_p (from Table 2). Sensitivity: one level worse.
+
+**Translations**
+- **A, Specific Rules:** Kim's rule, θ and IEV_p, evaluated on the level representatives and compiled into minimal monotone Specific Rules. Couplings carry dependency_level 1.
+- **B, structural:** the formula's shape becomes one nested rule (max, +, × → worst_of; min → best_of). Damping = the level of θ_i / IEV_p,i.
+- **References:** S0 and the generic v2 candidate (no formulas).
+
+**Ground truth (the paper's published results) and metrics**
+- G1, pattern (Table 7, share of high-variability time points). Positives: F7–F13 (≥ 5 % in every scenario). Negatives: F2 (≤ 1.6 %) and F6 (0 %). Score = degraded (< N) on positives and nominal on negatives, union over S1–S3.
+- G2, resonance (Table 6, > 10 in any scenario). Positives: F4, F5, F7–F12. Negatives: F2, F3, F6, F13. Predicted = level 1.
+- G3, influence (Fig. 8 and Sect. 4.4.3): F7 and F11 most influential; F11 critical. Vitality under S2 (drop from the S2 state when a function is set to 1) over the 12 non-background functions: top-2 vs {F7, F11}, and the rank of F11.
+- G4, scenario order (Table 5): total deficit S1 ≤ S2 ≤ S3, strict at least once.
