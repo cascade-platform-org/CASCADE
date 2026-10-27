@@ -263,6 +263,34 @@ The remedy variant is Zheng's Fig. 9: two-way information updates (no F5 deviati
 - **Shapley of the hour-0 damage on Operativity loss (0.197 in total):** F5 one-way communication 0.051, fire-water main 0.049, telephone exchange 0.036, fibre link 0.036, crews drawn away 0.026, radio repeater 0. The radio repeater is redundant with the exchange.
 - **The point for the paper.** The collapsed output stays the FRAM's, function levels on one scale. The modelling underneath is physical (capacities, priorities, repair times), and it adds a finding the expert analysis missed: Fig. 9's remedy leaves the fire unextinguished until the fire water returns.
 
+## 3d. E3 layer 1: exact counterfactuals (declared at 9e5c3e2 before the run)
+
+RQ2 is now about consequences: what each function's deviation costs. FRAM papers rank where variability is born and amplified, so they are not the ground truth here. Layer 1 uses executable oracles. Raw: `results/e3a_*.csv`, `results/e3b_*.csv`.
+
+**E3a, Smith / Khakzad: importance measures** (the truth is the closed-form fault tree).
+
+| Metric | Spearman vs FT Birnbaum | First | Manual backup S2 first? |
+|---|---|---|---|
+| CASCADE Birnbaum | **1.00** | S2 | yes |
+| CASCADE Shapley (structural, top event) | 0.71 | S2 | yes |
+| Single-knockout Vitality | −0.67 | S8 | no |
+| Degree / betweenness | 0.72 / 0.00 | S3 | no |
+| Out-reach / reverse PageRank / reverse Katz | −0.70 / −0.50 / −0.30 | S8 / S9 / S3 | no |
+
+- **Outcome-specific, joint-failure measures capture redundancy; single-knockout and topological measures cannot.** S2, the manual valve, matters only together with an automatic failure, so it is invisible to any one-at-a-time or link-counting measure. The criticality importance gives the same picture.
+- CASCADE Birnbaum = FT is expected from V1, since CASCADE reproduces the structure function. This case shows the ranking inherits that exactness.
+- **Shared sensor (variant c, Smith's open question).** S8's Birnbaum rises from 0.12 to **0.75** and overtakes S2 (0.57): the transmitter becomes the most critical component. The FT, which hides the dependency, still says S2. All topological scores move only slightly. Quantifying this is the paper's own "is the monitored pressure from the same sensor?".
+
+**E3b, Kim & Yoon: interventions against the oracle** (IEV_p × factor in S2).
+
+| Factor | Spearman (12 functions) | Oracle top-3 | Model top-3 | Functions the model resolves |
+|---|---|---|---|---|
+| 0.9 (Fig. 8) | −0.35 | F7 F5 F3 | F2 … | 1 of 12 |
+| 0.5 | 0.26 | F7 F5 F8 | F3 F5 F7 | 8 of 12 |
+
+- **The collapse cannot resolve small changes in variability magnitude.** A 10 % change rarely crosses a level band. At 50 % the model finds F7 and F5 but correlates weakly.
+- This intervention changes *how variable* a function is: the "born and amplified" side, which is FRAM's quantity, not a consequence of deviation. The result fits the positioning; it is not a counterexample to it.
+
 ## 4. Issues found
 
 1. **Engine behaviour (by design, documented):** a parent passes all its Requisite categories to every child, so the translation needs one output node per (function, output text).

@@ -1,0 +1,35 @@
+case,truth,metric,spearman,first,S2_first,scores
+Smith b_triggers,FT Birnbaum,cascade_birnbaum,1.0,S2,True,S8:0.119 S9:0.138 S6:0.117 S3:0.189 S2:0.733
+Smith b_triggers,FT Birnbaum,cascade_shapley,0.71,S2,True,S8:0.05 S9:0.05 S6:0.05 S3:0.05 S2:0.8
+Smith b_triggers,FT Birnbaum,cascade_vitality,-0.67,S8,False,S8:0.4 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+Smith b_triggers,FT Birnbaum,degree,0.72,S3,False,S8:1 S9:3 S6:2 S3:4 S2:3
+Smith b_triggers,FT Birnbaum,out_reach,-0.7,S8,False,S8:7 S9:6 S6:5 S3:4 S2:1
+Smith b_triggers,FT Birnbaum,betweenness,0.0,S3,False,S8:0 S9:0.125 S6:0.167 S3:0.181 S2:0.0556
+Smith b_triggers,FT Birnbaum,pagerank_rev,-0.5,S9,False,S8:0.115 S9:0.169 S6:0.149 S3:0.124 S2:0.061
+Smith b_triggers,FT Birnbaum,katz_rev,-0.3,S3,False,S8:0.306 S9:0.307 S6:0.312 S3:0.364 S2:0.303
+Smith b_triggers,FT criticality,cascade_birnbaum,1.0,S2,True,S8:0.119 S9:0.138 S6:0.117 S3:0.189 S2:0.733
+Smith b_triggers,FT criticality,cascade_shapley,0.71,S2,True,S8:0.05 S9:0.05 S6:0.05 S3:0.05 S2:0.8
+Smith b_triggers,FT criticality,cascade_vitality,-0.67,S8,False,S8:0.4 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+Smith b_triggers,FT criticality,degree,0.72,S3,False,S8:1 S9:3 S6:2 S3:4 S2:3
+Smith b_triggers,FT criticality,out_reach,-0.7,S8,False,S8:7 S9:6 S6:5 S3:4 S2:1
+Smith b_triggers,FT criticality,betweenness,0.0,S3,False,S8:0 S9:0.125 S6:0.167 S3:0.181 S2:0.0556
+Smith b_triggers,FT criticality,pagerank_rev,-0.5,S9,False,S8:0.115 S9:0.169 S6:0.149 S3:0.124 S2:0.061
+Smith b_triggers,FT criticality,katz_rev,-0.3,S3,False,S8:0.306 S9:0.307 S6:0.312 S3:0.364 S2:0.303
+Smith b_triggers,(values),FT,,S2,,S8:B=0.119/C=0.072 S9:B=0.138/C=0.143 S6:B=0.117/C=0.0663 S3:B=0.189/C=0.328 S2:B=0.733/C=1
+Smith c_shared_sensor,FT Birnbaum,cascade_birnbaum,0.4,S8,False,S8:0.748 S9:0.138 S6:0.117 S3:0.189 S2:0.568
+Smith c_shared_sensor,FT Birnbaum,cascade_shapley,0.11,S8,False,S8:0.55 S9:0.05 S6:0.05 S3:0.05 S2:0.3
+Smith c_shared_sensor,FT Birnbaum,cascade_vitality,-0.67,S8,False,S8:0.7 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+Smith c_shared_sensor,FT Birnbaum,degree,0.79,S3,False,S8:2 S9:3 S6:2 S3:4 S2:3
+Smith c_shared_sensor,FT Birnbaum,out_reach,-0.7,S8,False,S8:7 S9:6 S6:5 S3:4 S2:1
+Smith c_shared_sensor,FT Birnbaum,betweenness,0.0,S3,False,S8:0 S9:0.0833 S6:0.125 S3:0.139 S2:0.0694
+Smith c_shared_sensor,FT Birnbaum,pagerank_rev,-0.7,S9,False,S8:0.127 S9:0.168 S6:0.146 S3:0.121 S2:0.0619
+Smith c_shared_sensor,FT Birnbaum,katz_rev,-0.3,S3,False,S8:0.334 S9:0.304 S6:0.309 S3:0.361 S2:0.3
+Smith c_shared_sensor,FT criticality,cascade_birnbaum,0.4,S8,False,S8:0.748 S9:0.138 S6:0.117 S3:0.189 S2:0.568
+Smith c_shared_sensor,FT criticality,cascade_shapley,0.11,S8,False,S8:0.55 S9:0.05 S6:0.05 S3:0.05 S2:0.3
+Smith c_shared_sensor,FT criticality,cascade_vitality,-0.67,S8,False,S8:0.7 S9:0.3 S6:0.2 S3:0.1 S2:0.1
+Smith c_shared_sensor,FT criticality,degree,0.79,S3,False,S8:2 S9:3 S6:2 S3:4 S2:3
+Smith c_shared_sensor,FT criticality,out_reach,-0.7,S8,False,S8:7 S9:6 S6:5 S3:4 S2:1
+Smith c_shared_sensor,FT criticality,betweenness,0.0,S3,False,S8:0 S9:0.0833 S6:0.125 S3:0.139 S2:0.0694
+Smith c_shared_sensor,FT criticality,pagerank_rev,-0.7,S9,False,S8:0.127 S9:0.168 S6:0.146 S3:0.121 S2:0.0619
+Smith c_shared_sensor,FT criticality,katz_rev,-0.3,S3,False,S8:0.334 S9:0.304 S6:0.309 S3:0.361 S2:0.3
+Smith c_shared_sensor,(values),FT,,S2,,S8:B=0.119/C=0.072 S9:B=0.138/C=0.143 S6:B=0.117/C=0.0663 S3:B=0.189/C=0.328 S2:B=0.733/C=1
