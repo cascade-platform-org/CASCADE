@@ -4,6 +4,20 @@ Branch `feat/fram-experiments`. Translation frozen in [TRANSLATION.md](TRANSLATI
 (commit 96fda35) before any ground-truth run. Raw numbers in `results/`.
 Re-run: `CASCADE-backend/.venv/bin/python experiments/fram/run_v1.py` (then `run_e1.py`, `run_e2.py`).
 
+## 0. v2: one translation, every case (`run_v2.py`, `results/v2_all_cases.csv`)
+
+The translation is specified in [TRANSLATION.md](TRANSLATION.md), section v2. The only case-specific content is rules read from each paper's description.
+
+| Case | Ground truth | v2 result |
+|---|---|---|
+| Zheng 2024 | Table 2 expert judgements | neg 8/8, pos 6/8, bal. acc 0.875 (misses F18, F19: adaptation) |
+| Tian 2016 | model-checking scenarios + accident report | 6/6, no spurious violation |
+| Smith 2017 | fault tree 0.2720 | 0.2720; shared sensor 0.3756 |
+| Kaya 2020 | workshop {F1, F2, F8, F9} | 2/4 (VPN re-run 3/4): probability mass beyond the scale |
+| **Wenzhou 2011 (held out)** | accident report (Tables 1, 3, 4) | chain 7/7, uninvolved 2/2, coupling P/R vs Table 3 1.00/0.83 |
+| Kim & Yoon 2021 (N = 7) | Tables 6–7 (method output) | pattern 8/9, resonance 8/12 |
+| V1 (FMI, fault tree) | fixed points, closed form | 2,624/2,624; 0.272042 |
+
 ## 1. Verification (V1) — passes
 
 **FMI.** 11 models, 2,624 scenarios (baseline, every single knockout, 200 random pairs each).

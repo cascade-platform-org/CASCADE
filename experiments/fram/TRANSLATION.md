@@ -151,3 +151,34 @@ Model: Table 3 (14 functions, aggregation rules, θ, IEV_p). An oracle re-implem
 - G2, resonance (Table 6, > 10 in any scenario). Positives: F4, F5, F7–F12. Negatives: F2, F3, F6, F13. Predicted = level 1.
 - G3, influence (Fig. 8 and Sect. 4.4.3): F7 and F11 most influential; F11 critical. Vitality under S2 (drop from the S2 state when a function is set to 1) over the 12 non-background functions: top-2 vs {F7, F11}, and the rank of F11.
 - G4, scenario order (Table 5): total deficit S1 ≤ S2 ≤ S3, strict at least once.
+
+---
+
+# v2 — the translation the paper uses (fixed 2026-10-27, approved by Cristian at Gate 1)
+
+One translation for every case. Case-specific content enters only as rules read from the source paper's description, listed per case below.
+
+**Structure.** As v0 §1: function nodes, one output node per (function, output text), background nodes for external texts.
+
+**Semantics** (`resonance_config(mode="nested")`):
+- every coupling absorbs one level (`dependency_level` N − 1);
+- each function follows the second-worst of its distinct inputs, as one nested intercategorical rule over damped copies of its inputs; level = min(worst + 1, second worst);
+- **trigger couplings:** an Input the function acts on when it deviates (a monitor watching what it monitors) has `dependency_level` 1 and no rule.
+
+**Scale.**
+- N = 4 (nominal, variable, severe, not performed) for qualitative sources.
+- N = 7, logarithmic between V = 1 and the source's resonance criterion, when the source propagates variability as a ratio-scale quantity through formulas (Kim).
+- N = 2 with every coupling blocking for binary sources (fault-tree events), where one-level damping does not exist (V1, Smith).
+
+**Events.** A deviation the source calls "damaged/delayed/variable" is one level; "failed / not delivered" is level 1; quantitative sources use their own distributions (Kaya: SPC scenarios; Kim: 95th percentile of the published variability).
+
+**Rules from the description** (the only case-specific content):
+
+| Case | Rule | Source |
+|---|---|---|
+| Zheng | F12 and F17 below nominal → F20 severe | §4.2.1 |
+| Tian | F7 below nominal → F5 not performed; F7 below nominal → F2 not performed | text; Table 3 |
+| Smith | Monitor and Alert read the automatic feed as a trigger; *Controlled propane flow* takes its two Inputs as alternatives | App. A descriptions |
+| Kaya | per-coupling amplification (E[A_T·A_P | deviated] > 1 passes, else one more level absorbed) | Appendix 1 |
+| Kim | each function's aggregation rule, θ and IEV_p, compiled to Specific Rules | Table 3 |
+| Wenzhou | none | — |
