@@ -15,6 +15,7 @@ The translation is specified in [TRANSLATION.md](TRANSLATION.md), section v2. Th
 | Smith 2017 | fault tree 0.2720 | 0.2720; shared sensor 0.3756 |
 | Kaya 2020 | workshop {F1, F2, F8, F9} | 2/4 (VPN re-run 3/4): probability mass beyond the scale |
 | **Wenzhou 2011 (held out)** | accident report (Tables 1, 3, 4) | chain 7/7, uninvolved 2/2, coupling P/R vs Table 3 1.00/0.83 |
+| **Koriyama 2019 (held out)** | Fig. 6 (retrospective report, interviews) | resonated 3/3, contained 2/2, uninvolved 2/2, coupling P/R 1.00/1.00 |
 | Kim & Yoon 2021 (N = 7) | Tables 6–7 (method output) | pattern 8/9, resonance 8/12 |
 | V1 (FMI, fault tree) | fixed points, closed form | 2,624/2,624; 0.272042 |
 
@@ -175,6 +176,20 @@ Raw: `results/e1e_*.csv`.
   - **The paper's F11 claim does not reproduce in its own method.** The oracle at 1,500 trials ranks F7 first (as the paper does), then F5, and F11 only 8th. Table 6 puts F11 at 3 % in every scenario. The "F11 critical" conclusion rests on 20 trials per scenario.
 
 **Choice for the paper:** A. Rules written from a paper's quantitative description are the faithful channel, and the case argues for N = 7 when the source is quantitative.
+
+## 2f. Second held-out case: Koriyama 2019 (E1f — declared at afc1bf5 before the run)
+
+Togawa et al. 2023, Typhoon Hagibis. The model is Fig. 5 with Table 2's texts (9 functions, a vector figure read directly). Fig. 6 is an unusually clean ground truth: it colours each function and coupling as resonated, present but contained, or uninvolved, from the city's retrospective report and the interviews. The event is the deviations named in Sects. 3.3 and 4.4.1, one level each. Raw: `results/e1f_koriyama.csv`.
+
+| | S0 = v0 | **v2** |
+|---|---|---|
+| Resonated degraded (Evacuation Preparation, Evacuation Behavior, Rescue) | 3/3 | **3/3** |
+| Contained stay nominal (Shelters, Care Needs) | 0/2 | **2/2** |
+| Uninvolved stay nominal (PC5, Emergency Deployment) | 2/2 | 2/2 |
+| Couplings P / R vs the red couplings | 0.44 / 1.00 | **1.00 / 1.00** |
+
+- **v2 reproduces Fig. 6 exactly.** The Level-3 alert reaches Shelters and Care Needs as one deviating input each, and both absorb it, which is the paper's "variability absorbed" reading. Evacuation Preparation receives two coinciding deviations (the alert and the immediate environment), and they pass.
+- **Sensitivity (alerts read as timely).** Evacuation Preparation stays nominal (2/3), so the paper's reading that the alerts deviated is needed. This is the same lesson as Zheng's communications severity: the event description carries weight.
 
 ## 3. RQ2 — model-based centrality (E2): no, and the reason is informative
 

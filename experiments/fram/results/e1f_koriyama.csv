@@ -1,0 +1,5 @@
+semantics,scenario,resonated_degraded,contained_nominal,uninvolved_nominal,couplings_P/R,levels
+S0_v0,primary,3/3,0/2,2/2,0.44/1.00,T1:3 T2:3 T3:4 T4:4 T5:3 T6:3 T7:3 T8:3 T9:3
+S0_v0,no_PC_deviation,3/3,2/2,2/2,1.00/0.50,T1:4 T2:4 T3:4 T4:4 T5:3 T6:3 T7:4 T8:4 T9:3
+v2,primary,3/3,2/2,2/2,1.00/1.00,T1:3 T2:3 T3:4 T4:4 T5:3 T6:3 T7:4 T8:4 T9:3
+v2,no_PC_deviation,2/3,2/2,2/2,1.00/0.25,T1:4 T2:4 T3:4 T4:4 T5:4 T6:3 T7:4 T8:4 T9:3
