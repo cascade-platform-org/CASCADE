@@ -51,7 +51,7 @@ history keeps each declaration verbatim (log at the end). Code: `framkit/transla
 | **Wenzhou 2011** (held out) | Li & Huang 2025 Fig. 4, digitised: 20 modules, 35 couplings | lightning: M7, M10 = 1 | report via Tables 1, 3, 4: chain M5, M8, M11, M16, M17, M19, M20; M12, M13 uninvolved |
 | **Koriyama 2019** (held out) | Togawa 2023 Fig. 5, 9 functions | PC3, PC4, environment, night, 119 calls (3) | Fig. 6: resonated / contained / uninvolved |
 
-Transcriptions live in `docs/paper/FRAM/models/` (gitignored: some are © Elsevier).
+Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored `docs/paper/FRAM/models/`, whose licences do not allow redistribution.
 
 ## 4. RQ2 protocol
 

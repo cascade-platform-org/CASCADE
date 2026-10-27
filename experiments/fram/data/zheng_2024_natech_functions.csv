@@ -1,0 +1,109 @@
+# Zheng, Liu, Yang, Wang, Adriaensen 2024, Process Safety and Environmental Protection 188:514-527, doi 10.1016/j.psep.2024.05.132, Table 1 (p. 521). CC BY 4.0.
+# Seismic Natech fire in the bund wall of tanks 52-54 of a fuel storage tank farm; emergency-response plan of Baser & Behnam (2020).
+# Long format: one row per (function, aspect, value). value = "Fk(O)" for a coupling from function k's output, otherwise the external resource/condition text as printed.
+# Every Time aspect reads "As soon as possible" and is omitted. Task: M = mobilization, A = alert, C = combat.
+# Expert findings (Section 4.2.1, Table 2, Fig. 8): F12 (response guidelines) and F20 (inject foam) perform negatively; F2, F14, F15 perform well.
+#   F12 is late because damaged communications and limited time prevent calling more firefighters; F17 assembles too few firefighters;
+#   coupled F12 + F17 -> F20 cannot extinguish within the specified time -> radiation may fail Tank 63 and spread the fire; firefighters exceed working hours.
+#   F5 one-way communication with the fire department delays F7 and everything downstream along the coupling path.
+#   Fig. 8 = the set of functions related to the negative performance of F12 and F20 (upstream closure). Fig. 9 = updated plan with added firefighter-mobilisation functions.
+task,function,name,aspect,value
+M,F1,Confirm location of fire,R,Alarm information
+M,F1,Confirm location of fire,P,Well-performed monitoring system
+M,F1,Confirm location of fire,O,Fire information
+M,F2,Contact the control room and shift officer for immediate action guidelines,I,F1(O)
+M,F2,Contact the control room and shift officer for immediate action guidelines,R,Radio/Telephone
+M,F2,Contact the control room and shift officer for immediate action guidelines,C,Rescue rules and regulations
+M,F2,Contact the control room and shift officer for immediate action guidelines,P,All relative officers stand by
+M,F2,Contact the control room and shift officer for immediate action guidelines,O,Immediate action guidelines
+M,F3,Actuate siren,I,F2(O)
+M,F3,Actuate siren,R,Alarm system
+M,F3,Actuate siren,P,Well-performed warning systems
+M,F3,Actuate siren,O,Publication of information
+A,F4,Contact fire department,I,F2(O)
+A,F4,Contact fire department,R,Radio/Telephone
+A,F4,Contact fire department,P,Fire department standing by
+A,F4,Contact fire department,O,Successful connection with fire department
+A,F5,Contact the fire marshal for instructions and actions,I,F4(O)
+A,F5,Contact the fire marshal for instructions and actions,R,Radio/Telephone
+A,F5,Contact the fire marshal for instructions and actions,P,Fire marshal standing by
+A,F5,Contact the fire marshal for instructions and actions,O,Specific action description
+A,F6,Establish if any missing persons at assembly muster and advise fire officer,I,F2(O)
+A,F6,Establish if any missing persons at assembly muster and advise fire officer,R,Internet/Telephone
+A,F6,Establish if any missing persons at assembly muster and advise fire officer,P,F3(O)
+A,F6,Establish if any missing persons at assembly muster and advise fire officer,O,Confirming a person's status
+A,F7,Establish incident command post and advise fire team leaders,I,F5(O)
+A,F7,Establish incident command post and advise fire team leaders,R,Internet/Telephone
+A,F7,Establish incident command post and advise fire team leaders,P,All related departments standing by
+A,F7,Establish incident command post and advise fire team leaders,O,Incident command post
+A,F8,Post the accident location and information,I,F4(O)
+A,F8,Post the accident location and information,R,Internet/Telephone
+A,F8,Post the accident location and information,C,Principles of releasing accident information
+A,F8,Post the accident location and information,O,Publication of accident information
+A,F9,Check extent of fire and escalation potential,I,F7(O)
+A,F9,Check extent of fire and escalation potential,R,Experts with process experience and knowledge
+A,F9,Check extent of fire and escalation potential,R,Internet/Telephone
+A,F9,Check extent of fire and escalation potential,P,"Information on fire, fuel, and facilities"
+A,F9,Check extent of fire and escalation potential,O,The fire risk evaluation results and prediction results
+A,F10,Evaluate the availability of equipment and resources,I,F7(O)
+A,F10,Evaluate the availability of equipment and resources,R,Experts with process experience and knowledge
+A,F10,Evaluate the availability of equipment and resources,R,Internet/Telephone
+A,F10,Evaluate the availability of equipment and resources,P,Information on equipment and resources
+A,F10,Evaluate the availability of equipment and resources,O,The evaluation results on available equipment and resources
+A,F11,Assess flame or heat affected facilities,I,F7(O)
+A,F11,Assess flame or heat affected facilities,R,Experts with process experience and knowledge
+A,F11,Assess flame or heat affected facilities,R,Internet/Telephone
+A,F11,Assess flame or heat affected facilities,P,"Information on fire, fuel, and facilities"
+A,F11,Assess flame or heat affected facilities,O,The evaluation results of facilities
+A,F12,Develop response guidelines,I,F6(O)
+A,F12,Develop response guidelines,I,F9(O)
+A,F12,Develop response guidelines,I,F10(O)
+A,F12,Develop response guidelines,I,F11(O)
+A,F12,Develop response guidelines,R,Experts with process experience and knowledge
+A,F12,Develop response guidelines,C,Rescue rules and regulations
+A,F12,Develop response guidelines,O,Response guidelines
+C,F13,Send technician to stand-by with equipment and resource,I,F12(O)
+C,F13,Send technician to stand-by with equipment and resource,R,Sufficient technician
+C,F13,Send technician to stand-by with equipment and resource,O,Technician standing by
+C,F14,Isolate equipment and commence shutdown of affected and related facilities,I,F13(O)
+C,F14,Isolate equipment and commence shutdown of affected and related facilities,P,Information on equipment and facilities
+C,F14,Isolate equipment and commence shutdown of affected and related facilities,O,Successfully isolating and shutting down all equipment and facilities
+C,F15,"Pump the product of tanks 52, 53 and 54 to other tanks",I,F13(O)
+C,F15,"Pump the product of tanks 52, 53 and 54 to other tanks",R,Pump facilities
+C,F15,"Pump the product of tanks 52, 53 and 54 to other tanks",C,Standard of pump operation
+C,F15,"Pump the product of tanks 52, 53 and 54 to other tanks",O,Successfully transferring the product to another tank
+C,F16,Respond to the incident area for shutdown supervision,I,F14(O)
+C,F16,Respond to the incident area for shutdown supervision,I,F15(O)
+C,F16,Respond to the incident area for shutdown supervision,R,Technician
+C,F16,Respond to the incident area for shutdown supervision,O,Shutdown supervision in real-time
+C,F17,Assemble the fire team with equipment and resource,I,F12(O)
+C,F17,Assemble the fire team with equipment and resource,R,"Firetruck; firefighter; PPE, SCBAS, etc."
+C,F17,Assemble the fire team with equipment and resource,O,"Successfully assembling enough SCBAS, PPE, firefighters, firetrucks, etc."
+C,F18,"All members don firefighting PPE, and SCBAS for firefighters in the hot zone",I,F17(O)
+C,F18,"All members don firefighting PPE, and SCBAS for firefighters in the hot zone",R,F12(O)
+C,F18,"All members don firefighting PPE, and SCBAS for firefighters in the hot zone",C,Standard of wearing firefighting PPE and SCBAS
+C,F18,"All members don firefighting PPE, and SCBAS for firefighters in the hot zone",O,Firefighters wearing PPE and SCBAS
+C,F19,Ensure all members don firefighting PPE,I,F18(O)
+C,F19,Ensure all members don firefighting PPE,R,F12(O)
+C,F19,Ensure all members don firefighting PPE,C,Standard of wearing firefighting PPE SCBAS
+C,F19,Ensure all members don firefighting PPE,O,Ensuring that firefighters wear PPE
+C,F20,Direct fire team to inject foam to the bund wall under fire,I,F19(O)
+C,F20,Direct fire team to inject foam to the bund wall under fire,R,F12(O)
+C,F20,Direct fire team to inject foam to the bund wall under fire,R,F17(O)
+C,F20,Direct fire team to inject foam to the bund wall under fire,C,Operation specifications of firetrucks
+C,F20,Direct fire team to inject foam to the bund wall under fire,O,Successfully extinguishing the fire
+C,F21,Fire teams remain on standby until the area is declared safe,I,F20(O)
+C,F21,Fire teams remain on standby until the area is declared safe,R,F16(O)
+C,F21,Fire teams remain on standby until the area is declared safe,R,F17(O)
+C,F21,Fire teams remain on standby until the area is declared safe,C,Standard of security
+C,F21,Fire teams remain on standby until the area is declared safe,P,F19(O)
+C,F21,Fire teams remain on standby until the area is declared safe,O,Safe storage tank area
+C,F22,Monitor the response actions,I,F13(O)
+C,F22,Monitor the response actions,I,F12(O)
+C,F22,Monitor the response actions,R,F14(O)
+C,F22,Monitor the response actions,R,F15(O)
+C,F22,Monitor the response actions,R,F18(O)
+C,F22,Monitor the response actions,R,F19(O)
+C,F22,Monitor the response actions,R,F20(O)
+C,F22,Monitor the response actions,R,F21(O)
+C,F22,Monitor the response actions,O,Monitoring information in real-time

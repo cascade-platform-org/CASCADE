@@ -1,10 +1,11 @@
 """
 framkit/readers.py — load the published models into a FramModel.
 
-Sources live outside the repository, in the gitignored paper folder
-(`docs/paper/FRAM/models/` and `FRAM_Model_Examples-main/`), because two of the
-transcriptions are (c) Elsevier and stay private. Override the folder with the
-FRAM_DATA environment variable.
+Openly licensed sources (Zheng 2024, Grabbe 2022: CC BY) are tracked in
+`data/`. The others live in the gitignored paper folder
+(`docs/paper/FRAM/models/` and `FRAM_Model_Examples-main/`), because their
+licences do not allow redistribution. Override that folder with the FRAM_DATA
+environment variable.
 
 Readers keep the papers' own identifiers (F1, P4, ...) as function ids.
 """
@@ -65,7 +66,7 @@ def read_xfmv(path: Path) -> FramModel:
 def read_zheng() -> FramModel:
     """Zheng et al. 2024 Table 1: values are either F_k(O) or an external text."""
     model = FramModel("zheng_2024_natech")
-    rows = _rows(MODELS / "zheng_2024_natech_functions.csv")
+    rows = _rows(LOCAL / "zheng_2024_natech_functions.csv")
     out_text: dict[str, str] = {}
     for r in rows:
         model.add_function(r["function"], r["name"])
@@ -174,4 +175,4 @@ def library_models() -> list[Path]:
 
 
 def grabbe_path() -> Path:
-    return MODELS / "grabbe_2022_overtaking.xfmv"
+    return LOCAL / "grabbe_2022_overtaking.xfmv"

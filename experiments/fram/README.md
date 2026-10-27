@@ -13,8 +13,8 @@ models (plan: `docs/paper/FRAM/PLAN.md`, gitignored). It calls the real engine
 | `run_rq1.py` | RQ1: every case, S0 vs v2 |
 | `run_rq2.py` | RQ2: exact importance, Kim interventions, expert claims, Vitality vs topology |
 | `demo_zheng.py` | demonstration: Zheng with telecom, crews and fire water; writes `demo/*.json` (open in the app) |
-| `data/` | Zheng Table 2 judgements; the frozen RQ2 claim list |
+| `data/` | the redistributable inputs (Zheng, Grabbe: CC BY) and the frozen RQ2 claim list; sources and licences in `data/README.md` |
 | `results/` | CSV outputs |
 
-The transcriptions stay in the gitignored paper folder, some being © Elsevier; results derived from them are tracked.
+The other transcriptions stay in the gitignored paper folder, as their licences do not allow redistribution; results derived from them are tracked.
 Run from the repository root, e.g. `CASCADE-backend/.venv/bin/python experiments/fram/run_rq1.py`.
