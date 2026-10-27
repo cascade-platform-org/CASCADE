@@ -216,3 +216,25 @@ Question: what do model-based metrics reveal that topological rankings miss? Tes
 - **Wenzhou.** Players: the seven Table 2 origins (M7, M10 = 1; M5, M8, M11, M16, M19 = 3). Outcome: M20. Truth: {M5, M7, M8, M10}; top-4 overlap.
 - **Koriyama.** Players: PC3, PC4, Shelters, Care Needs (the functions with variability in Fig. 6, one level each), plus the context conditions of E1f (*Immediate environment*, night, 119 calls). Outcome: Evacuation Behavior + Rescue. Truth: the resonated PC3 and PC4 rank above the contained Shelters and Care Needs. Score = the share of correctly ordered (red, blue) pairs (4 pairs; ties count ½).
 - **Tian.** Players: F7 early call (3), assistant bosun absent (F2 = 1), late loading (F1 = 3). Outcome: F2, F5, F8 (the safety constraint), with the v2 description rules. Truth: F7 ranks first ("fixing door closing alone would not avoid the hazard").
+
+---
+
+# E3 — consequence-based criticality, layer 1: exact counterfactuals (declared 2026-10-27, before the run)
+
+RQ2 now asks about consequences: what each function's deviation costs. FRAM papers rank something else (where variability is born and amplified). Layer 1 checks the model's counterfactuals against executable oracles.
+
+**E3a, Smith / Khakzad.** Function-level fault tree: TOP = AND(OR(S8, S9, S6, S3), S2), with the v2 binary translation (variant b, triggers).
+- Truth: the closed-form Birnbaum importance I_B(i) = P(TOP | i failed) − P(TOP | i working), and the criticality importance I_B · p_i / P(TOP).
+- Compared:
+  - CASCADE Birnbaum (the same quantity, by engine enumeration);
+  - CASCADE Shapley over the five failure events, with v(S) = 1 when TOP fails with exactly S failed;
+  - single-knockout Vitality (Operativity drop);
+  - topology (degree, out-reach, betweenness, reverse PageRank, reverse Katz).
+- Metric: Spearman over the five events, and whether the manual branch S2 ranks first. S2 is the redundancy no topological measure sees.
+- Variant c (shared sensor) is reported as the counterfactual consequence of the hidden dependency. Its only truth is the paper's direction (worse).
+
+**E3b, Kim & Yoon.** The intervention is Fig. 8's: function i's IEV_p × 0.9, in scenario S2.
+- Truth: the oracle's % increase in mean duration (1,500 trials, common random numbers; `results/e1e_kim_oracle_sensitivity.csv`).
+- Model: translation A, N = 7, rules and events recompiled with the reduced IEV_p. Effect = reduction of the total deficit in S2.
+- Metric: Spearman over the 12 rule-bearing functions, and top-3 overlap.
+- Robustness: IEV_p × 0.5 in both the oracle and the model.
