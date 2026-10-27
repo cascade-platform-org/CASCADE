@@ -62,6 +62,10 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
   - Extraction rules (3afa017). A claim is a statement in the paper's own analysis or recommendations that a named change would move a named outcome. It must map to a model edit (remove a deviation, hold a function nominal, add or remove a coupling or function) and to outcome functions. Statements with no stated effect, or with effects outside the model, are excluded.
   - Verdict on the case's RQ1 scenario. *Improve* means at least one outcome function rises and none falls; *avoid* means the outcome returns to nominal; *stays degraded* means it stays below nominal.
   - The list (`data/e3_claims.csv`, 15 claims, 7 exclusions) was frozen at c2249b7.
+- **Exploratory, declared after the claims run: protective information as an alternative path** (Wenzhou C10, C11). It tests whether the two claims fail because the method cannot express them or because Fig. 4 does not draw the path they act through. The verdicts in the frozen list stay as they are.
+  - The path: a function W *warn dispatch of an M8 failure* takes M8's output as a trigger (it acts when M8 deviates). A function D *dispatch warns the D301 driver* takes W's output (I) and the communication channel, M10's output (R). D delivers the occupancy information to M20's Precondition as an alternative to M8's (`best_of`).
+  - The alternative channel: a function ALT, which the lightning does not reach, produces M10's output as an alternative for every consumer.
+  - Runs on the RQ1 event (M7, M10 = 1): (a) the path alone, which is C11; (b) ALT alone, which is C10; (c) the path with ALT. Outcome M20, verdict *avoid*. The RQ1 scores of the base case are recomputed with the path drawn and no ALT. W, D and ALT are not scored.
 
 ## 5. Declaration log
 
@@ -76,3 +80,4 @@ Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored 
 | 5b31c45 | scenario attribution vs topology (superseded by RQ2) |
 | 9e5c3e2 | RQ2 exact counterfactuals |
 | 3afa017, c2249b7 | RQ2 extraction rules; frozen claim list |
+| this commit | exploratory: protective information as an alternative path (Wenzhou) |
