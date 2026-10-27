@@ -210,6 +210,28 @@ Togawa et al. 2023, Typhoon Hagibis. The model is Fig. 5 with Table 2's texts (9
   - Li's top is P5, cross-department coordination.
 - **Saturation again:** in Grabbe's 162-function loop, one knockout costs about 50 % of operativity for almost every function, so Vitality barely discriminates there.
 
+## 3b. RQ2 reframed: scenario attribution vs topology (E2b — declared at 5b31c45 before the run)
+
+On every case that reports which deviations produced the outcome, I ranked the candidate deviations by:
+- scenario-conditioned Shapley;
+- structural Vitality on v2;
+- five topological measures.
+
+Raw: `results/e2b_attribution.csv`.
+
+| Metric | Wenzhou (top-4 of 7 vs report) | Koriyama (resonated > contained pairs) | Tian (F7 first) |
+|---|---|---|---|
+| Shapley (scenario) | 3/4 | 0.12 | **hit** |
+| Vitality (v2) | 3/4 | 0.62 | **hit** |
+| Out-reach | **4/4** | 0.62 | F1 |
+| Reverse Katz | 3/4 | 0.62 | **hit** |
+| Reverse PageRank | 3/4 | 0.62 | F1 |
+| Degree / betweenness | 1/4 | 0.12 / 0.50 | F2 |
+
+- **Model-based rankings do not beat topology at ranking reported causes.** Reverse Katz matches Vitality on all three cases, and out-reach is best on Wenzhou. This repeats E2: ranking which functions matter is largely a topological question.
+- **Koriyama's Shapley failure is a design error, declared and kept.** Fig. 6's "contained" functions had internal variability, but their outputs did not deviate; adaptive responses at the scene controlled them. The declared design entered that variability as output deviations, which is the opposite of what happened. E1f, which leaves those outputs nominal, reproduces Fig. 6 exactly.
+- **What the model adds is a different question from ranking.** Given a scenario, the model says which functions absorb a deviation and which pass it on: contained vs resonated (Koriyama), uninvolved downstream modules (Wenzhou M12, M13), positives kept (Zheng). No topological score can express this. The topological baseline for that question is reachability, which is what S0 effectively computes, and it fails each time (Koriyama 0/2, Wenzhou 0/2, Zheng 0/8 positives).
+
 ## 4. Issues found
 
 1. **Engine behaviour (by design, documented):** a parent passes all its Requisite categories to every child, so the translation needs one output node per (function, output text).
