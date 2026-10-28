@@ -221,7 +221,8 @@ def run(request: PropagationRequest) -> PropagationResult:
             )
 
             # Nested intercategorical override: a rule whose outer function contains
-            # sub-functions (e.g. worst_of(best_of(A, B), best_of(C, B))). This
+            # sub-functions (e.g. worst_of(best_of(A, B), best_of(C, B))) or a level
+            # offset on any term (worst_of(A, B) + 1, ADR-0025). This
             # replaces the compose result because it defines a richer grouping that
             # the flat (operator, categories) API cannot represent.
             nested_ast = rules.nested_inter_ast(nid)
