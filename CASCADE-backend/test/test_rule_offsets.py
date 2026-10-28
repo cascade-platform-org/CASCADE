@@ -50,6 +50,7 @@ def _function(rule: str):
 
 @pytest.mark.parametrize("written, offset", [
     ("+ 1", 1), ("+1", 1), ("- 2", -2), ("-2", -2), ("+ 3", 3),
+    ("+ 12", 12), ("-250", -250),       # any whole number: the scale clamps, not the grammar
 ])
 def test_offset_after_the_outer_function(written, offset):
     fn = _function(f"worst_of(water, power) {written} propagates to hub")
@@ -68,6 +69,12 @@ def test_offset_after_a_nested_function():
 def test_offset_on_a_reference_in_every_spelling(written):
     fn = _function(f"worst_of({written}, b) propagates to hub")
     assert fn["arguments"][0] == {"type": "reference_node", "name": "a", "raw_name": "a", "offset": 1}
+
+
+@pytest.mark.parametrize("written, offset", [("a+17", 17), ("a -40", -40), ("a+ 305", 305)])
+def test_multi_digit_offsets_on_a_reference(written, offset):
+    fn = _function(f"worst_of({written}, b) propagates to hub")
+    assert fn["arguments"][0]["offset"] == offset
 
 
 def test_glued_offset_on_a_spaced_display_label():
@@ -125,6 +132,13 @@ def test_minus_amplifies_a_deviation_and_clamps_at_one():
 
 def test_minus_leaves_a_nominal_term_nominal():
     assert apply_offset(N, {}, -1, N) == (N, {})
+
+
+@pytest.mark.parametrize("level, offset, n, expected", [
+    (6, 3, 10, 9), (6, 4, 10, 10), (6, -4, 10, 2), (6, -40, 10, 1), (10, -7, 10, 10), (2, 250, 7, 7),
+])
+def test_offsets_work_for_any_size_on_any_scale(level, offset, n, expected):
+    assert apply_offset(level, {}, offset, n)[0] == expected
 
 
 # --- evaluation through the engine ----------------------------------------------
