@@ -514,9 +514,14 @@ worst_of(node-reservoir, node-substation-a) propagates to node-hospital
 
 # Intercategorical propagation rule
 worst_of(water, electricity) propagates to node-hospital
+
+# Level offsets (ADR-0025): +k absorbs k levels, -k worsens a degraded term
+# (a nominal term stays nominal); one offset per term
+worst_of(water, electricity) + 1 propagates to node-hospital
+worst_of(water + 1, best_of(electricity, digital) - 1) propagates to node-hospital
 ```
 
-A rule referencing a label not defined in `functionality_scale` is ignored and a warning is returned in `PropagationResult.warnings`.
+A rule referencing a label not defined in `functionality_scale` is ignored and a warning is returned in `PropagationResult.warnings`. Offsets are part of the rule string, so the stored schema is unchanged.
 
 ---
 
