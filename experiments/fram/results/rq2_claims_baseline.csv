@@ -1,0 +1,12 @@
+id,paper,direction,v2,v2 detail,S0,S0 detail
+C1,Tian 2016,stay degraded,agree,F5:1->1 F8:3->3,agree,F5:1->1 F8:1->1
+C2,Tian 2016,improve,agree,F2:2->4,agree,F2:2->4
+C4,Togawa 2023,improve,disagree,T6:3->3,disagree,T6:3->3
+C5,Togawa 2023,improve,agree,T5:3->4 T6:3->3 T9:3->3,disagree,T5:3->3 T6:3->3 T9:3->3
+C6,Togawa 2023,improve,disagree,T9:3->3,disagree,T9:3->3
+C8,Zheng 2024,improve,agree,F7:3->4 F9:3->4 F10:3->4 F11:3->4 F12:3->4,disagree,F7:3->3 F9:3->3 F10:3->3 F11:3->3 F12:3->3
+C9,Zheng 2024,avoid (nominal),agree,F20:2->4 (direction improves),disagree,F20:2->2 (direction does not improve)
+C10,Li & Huang 2025,avoid (nominal),disagree,M20:2->3 (direction improves),disagree,M20:1->1 (direction does not improve)
+C12,Li & Huang 2025,avoid (nominal),agree,M20:2->4 (direction improves),agree,M20:1->4 (direction improves)
+C13,Smith 2017,worse,agree,P(top) 0.2720 -> 0.3756,agree,P(top) 0.2720 -> 0.3756
+C14,Li 2026,PEP > DER > PER reduction,disagree,deficit reduction DER:6.0 PER:6.0 PEP:5.0,disagree,deficit reduction PEP:7.0 PER:6.0 DER:5.0

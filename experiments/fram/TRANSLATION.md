@@ -104,4 +104,4 @@ The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 w
 | c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |
 | d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |
 | (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
-| (this commit) | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |
+| 7f5c33a | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |

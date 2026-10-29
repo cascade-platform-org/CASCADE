@@ -2,7 +2,8 @@
 V1 — verification of the translation (PLAN §4.4, §6).
 
 (a) FMI. For every model in the FMV library plus Grabbe 2022 (285 functions,
-    non-default profiles), run the baseline, every single-function knockout and
+    non-default profiles) and, when present, the private Falegnami 2020 and
+    Simone 2025 models (TRANSLATION.md §4b), run the baseline, every single-function knockout and
     200 random knockout pairs. In each scenario compare the set of functions
     CASCADE leaves operational (N = 2, FMI mode) with
       - the greatest fixed point of the FMI activation operator (P1/P3: CASCADE
@@ -99,7 +100,7 @@ def fault_tree_check() -> tuple[float, float]:
 def main() -> None:
     RESULTS.mkdir(exist_ok=True)
     rows = []
-    for path in readers.library_models() + [readers.grabbe_path()]:
+    for path in readers.library_models() + [readers.grabbe_path()] + readers.private_models():
         model = readers.read_xfmv(path)
         if not model.couplings:
             continue

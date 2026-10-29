@@ -1,0 +1,13 @@
+weights,walks,alpha_x_rho,spearman_vs_table2,top15_overlap,top5
+published,leaving,0.1,0.851,9,Train/inform_employees Manage_documentation Mantain Check_PPEcondition Remove_cap
+published,leaving,0.5,0.857,9,Train/inform_employees Manage_documentation Remove_cap Check_PPEcondition Mantain
+published,leaving,0.99999,0.988,15,Train/inform_employees Manage_documentation Check_PPEcondition Fill_chemicals Clean_floor
+published,arriving,0.1,0.151,5,Move_container Remove_molds Lay_cap Clean_machine Clean_pavement&machineMovingParts
+published,arriving,0.5,0.163,4,Move_container Remove_molds Clean_machine Lay_cap Check&clean_coolingWaterFilter
+published,arriving,0.99999,0.052,4,Run_machine Remove_molds SwitchOff_machine Complete_setupOperations Insert_newMolds
+all 1,leaving,0.1,0.289,9,Perform_scheduleOperations Check_PPEcondition Train/inform_employees Wear_basicPPE Manage_documentation
+all 1,leaving,0.5,0.268,9,Perform_scheduleOperations Check_PPEcondition Train/inform_employees Wear_basicPPE Manage_documentation
+all 1,leaving,0.99999,0.276,10,Perform_scheduleOperations Create_managementSystem Manage_documentation Adopt_legislation Train/inform_employees
+all 1,arriving,0.1,0.246,3,Run_machine Clean_pavement&machineMovingParts Check&clean_coolingWaterFilter Clean_machine Check_OilLevel
+all 1,arriving,0.5,0.23,3,Run_machine Clean_pavement&machineMovingParts Check&clean_coolingWaterFilter Clean_machine Check_OilLevel
+all 1,arriving,0.99999,0.077,2,Run_machine Transport&heating_blank Move_toForgingArea Forge Clean_floor

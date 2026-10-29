@@ -10,6 +10,7 @@ RQ2 — does the converted model correctly predict the effect of interventions?
               (the reason rankings by single failures carry little model content).
   paths       exploratory (declared at c8e8c2b, after the claims run): Wenzhou's
               protective information drawn as an alternative path.
+  baseline    the claims under S0 beside v2 (declared at 7f5c33a).
 
 Run from the repository root:
     CASCADE-backend/.venv/bin/python experiments/fram/run_rq2.py
@@ -274,6 +275,14 @@ def claims(tc: TranslationConfig | None = None) -> list[dict[str, object]]:
     return out
 
 
+def claims_baseline() -> list[dict[str, object]]:
+    """TRANSLATION.md §4b: the expressible claims under S0 beside v2."""
+    v2, s0 = claims(), claims(default_config())
+    return [{"id": a["id"], "paper": a["paper"], "direction": a["direction"],
+             "v2": a["verdict"], "v2 detail": a["detail"], "S0": b["verdict"], "S0 detail": b["detail"]}
+            for a, b in zip(v2, s0) if a["verdict"] not in ("not expressible", "see kim")]
+
+
 def paths() -> list[dict[str, object]]:
     base = wenzhou([])
     out = []
@@ -316,7 +325,8 @@ def write(name: str, rows: list[dict[str, object]]) -> None:
 
 def main() -> None:
     for name, fn in (("rq2_importance.csv", importance), ("rq2_claims.csv", claims),
-                     ("rq2_topology.csv", topology_check), ("rq2_kim.csv", kim), ("rq2_paths.csv", paths)):
+                     ("rq2_topology.csv", topology_check), ("rq2_kim.csv", kim), ("rq2_paths.csv", paths),
+                     ("rq2_claims_baseline.csv", claims_baseline)):
         rows = fn()
         write(name, rows)
         print(f"== {name}")

@@ -211,3 +211,14 @@ def library_models() -> list[Path]:
 
 def grabbe_path() -> Path:
     return LOCAL / "grabbe_2022_overtaking.xfmv"
+
+
+# Shared by A. Tomassi and A. Falegnami for this study only: private, never
+# redistributed (TRANSLATION.md §4b). Absent from a fresh checkout.
+FALEGNAMI_XFMV = MODELS / "Falegnami2020_WAD_forging.xfmv"
+FALEGNAMI_XLSX = MODELS / "Falegnami2020_WAD_phenotypes.xlsx"
+SIMONE_XFMV = MODELS / "Simone2025_WAD_aluminium_grinding.xfmv"
+
+
+def private_models() -> list[Path]:
+    return [p for p in (FALEGNAMI_XFMV, SIMONE_XFMV) if p.exists()]

@@ -10,6 +10,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_rq2.py` | RQ2 | ~3 min |
 | `run_cumulative.py` | sensitivity: cumulative worsening | 6 s |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
+| `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
 | `demo_zheng.py` | demonstration | 4 s |
 
 ## Research questions
@@ -20,10 +21,10 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 
 ## V1. Verification (`results/v1_*.csv`)
 
-- **FMI semantics.** 11 models, 2,613 scenarios.
+- **FMI semantics.** 13 models, 3,152 scenarios, including two real FMV models shared privately (TRANSLATION.md §4b): Falegnami 2020 (52 functions, 290 couplings) and Simone 2025 (85 functions, 191 couplings).
   - CASCADE equals the greatest fixed point of the FMI activation operator in every scenario.
   - It equals the FMI's least fixed point on every acyclic model.
-  - The divergences are cyclic deadlocks the modellers break by hand (Resilience potentials v0; Grabbe's 162-function loop).
+  - The divergences are cyclic deadlocks: Resilience potentials v0 and Grabbe's 162-function loop, which their modellers break by hand; Falegnami (229/253 scenarios equal); Simone, where most functions never start under the FMI (20/286 equal). Between the two walker papers Simone et al. changed the rule to "one Input suffices", which this deadlock would require.
 - **Fault tree.** Khakzad 2011 gives a top event of 0.272042 in CASCADE, equal to the closed form and to the published 0.2720.
 
 ## RQ1. Preserving the analysis (`results/rq1.csv`)
@@ -65,6 +66,16 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | **agree (7)** | Tian: fixing the door alone would not avoid the accident; a direct order helps. Togawa: better public communication reduces resonance. Zheng: two-way updates improve the chain; cancelling F5 plus mutual aid lets F20 extinguish in time. Wenzhou: barriers on M5, M7, M8, M10 prevent the accident. Smith: a shared sensor worsens both branches. |
 | disagree (4) | Wenzhou: an alternative channel avoids the accident (model: M20 2 → 3, direction right, not nominal). Togawa: preparation time affected evacuation (evacuation behaviour is overdetermined by three other deviations). Togawa: better evacuation relieves rescue (the paper's map has 119 calls as exogenous). Both Togawa claims agree under cumulative worsening (below). Li 2026: the stage hierarchy (a learned policy's frequency, a different quantity). |
 | not expressible (3) | berth renewal; community engagement (no such functions); failure warnings to dispatch (a protective information flow) |
+
+**Baseline, declared at 7f5c33a** (`results/rq2_claims_baseline.csv`). The same edits under S0 (reachability) agree on 4 of 11. C13, Smith's fault tree, is binary and identical under both, so on the 10 claims the translation affects v2 agrees on 6 and S0 on 3. The three v2 adds (Togawa's public communication, Zheng's two-way updates, cancelling F5) are cases where damping absorbs the one deviation the edit leaves. S0 agrees nowhere v2 disagrees.
+
+| Direction | v2 | S0 |
+|---|---|---|
+| improve (C2, C4, C5, C6, C8) | 3/5 | 1/5 |
+| stays degraded (C1) | 1/1 | 1/1 |
+| avoid (C9, C10, C12) | 2/3 | 1/3 |
+| worse (C13, binary) | 1/1 | 1/1 |
+| ordering (C14) | 0/1 | 0/1 |
 
 **Exploratory, declared after the run (c8e8c2b): protective information as an alternative path** (`results/rq2_paths.csv`). Fig. 4 draws no link by which dispatch reaches the D301 driver. Drawn as an alternative source of the occupancy information for M20, with the failure warning as a trigger:
 
@@ -115,7 +126,7 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 | FRAM keeps | Evidence |
 |---|---|
 | adaptation and positive variability | Zheng F18, F19 |
-| where variability is born and amplified, and how likely it is | Kaya's probability mass; Kim's small variability changes |
+| where variability is born and amplified, and how likely it is | Kaya's probability mass; Kim's small variability changes; Falegnami's ranking is carried by its variability scores |
 | the paths that information takes, which the analyst must draw | Wenzhou's warning path, absent from Fig. 4 |
 | the events themselves | the severity of the triggering deviations is the largest sensitivity |
 
@@ -162,5 +173,6 @@ The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, a
 | Dropped | Why |
 |---|---|
 | Ranking comparisons on Grabbe 2022, Li 2026, Zinetullina 2021 | the published rankings are their methods' topological outputs (Grabbe ≈ degree; Li ≈ reverse Katz); one sentence in the discussion |
+| Falegnami 2020's Katz ranking as ground truth | it is a method output (the focus group confirmed its top 15). Checked instead (declared at 7f5c33a, `results/falegnami_katz.csv`): the authors' weighted edge list reproduces Table 2 (Spearman 0.988, top 15 identical); with every coupling at weight 1 it falls to 0.28 (top 15: 10). This published ranking is carried by its variability scores, so the discussion sentence above excludes it. Weight 1 also restores the 104 couplings the authors left unscored; the declared test does not separate the two effects |
 | Scenario attribution vs topology (5b31c45) | superseded by RQ2's counterfactual design |
 | The FRW toy | related work only |
