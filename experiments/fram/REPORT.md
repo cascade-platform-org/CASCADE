@@ -9,6 +9,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_rq1.py` | RQ1 | 4 s |
 | `run_rq2.py` | RQ2 | ~3 min |
 | `run_cumulative.py` | sensitivity: cumulative worsening | 6 s |
+| `run_ablation.py` | ablations, severity grid, claim tiers, reference check | ~60 min (Grabbe under the cumulative members) |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
 | `demo_zheng.py` | demonstration | 4 s |
@@ -151,6 +152,32 @@ The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, a
 
 - **The remedy fixes F12 and F17 from hour 0, not F20.** With the main destroyed, foam gets the trucks' 80 of 240 m³/h until the repair at hour 8. Tank 63's cooling gets nothing: the paper's "radiation may fail Tank 63", through a mechanism its FRAM cannot express.
 - **Shapley on the hour-0 damage** (Operativity loss 0.197 in total): F5 one-way 0.051, fire-water main 0.049, exchange 0.036, fibre 0.036, crews 0.026, radio repeater 0. The repeater is redundant with the exchange.
+
+## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
+
+**Reference evaluator** (`results/reference_check.csv`): the printed formula, re-implemented without the engine, equals the engine in every function level of 13,864 Scenarios (8 semantics × the three grids and 100 random Scenarios on each of 13 `.xfmv` models). 0 differences.
+
+**RQ1 under the family** (`results/ablation_rq1.csv`), balanced accuracy at the declared event coding:
+
+| | Zheng | Tian | Wenzhou | Koriyama |
+|---|---|---|---|---|
+| S0 reachability | 0.50 | 1 | 0.50 | 0.75 |
+| D1 damping only | 0.56 | 1 | 1 | 0.50 |
+| K2 coincidence only | 0.88 | 0.50 | 0.50 | 1 |
+| **v2** (= v2+3 = v2+c) | **0.88** | **1** | **1** | **1** |
+| v2-D2 | 0.88 | 0.50 | 0.93 | 1 |
+| v2-typed (FRW) | 0.50 | 1 | 0.50 | 0.75 |
+| FMI | 0.50 | 0.50 | 0.50 | 0.50 |
+
+- v2 is the only rule that passes all four. On the two cases it was not designed on, removing coincidence loses Koriyama and removing damping loses Wenzhou.
+- FRW-typed damping behaves as reachability (I, P, R pass the drop undamped); the FMI degrades nothing, since no event is a failure.
+- Severity grid: v2's mean is 0.72 (Zheng), 0.83 (Wenzhou, Koriyama), minimum 0.5. K2 and v2-D2 are more robust on the Zheng and Koriyama grids and fail Wenzhou or Tian at the declared coding. The reading of the event is the main sensitivity.
+- Kaya top-4: 2/4 for every coincidence or damping member, 1/4 for S0 and v2-typed.
+- Hand reading at 44fc0bc: D1, K2, v2-typed and FMI as predicted; v2's grid fall as predicted.
+
+**Claims by tier** (`results/ablation_claims.csv`): rule-decided C1; entailed C12, C13; discriminating C2, C4–C6, C8–C10, C14. Agreements on the 8 discriminating: S0 1, v2-typed 1, D1 3, **v2 4**, K2 4, v2+3 5, v2-D2 5, v2+c 6. The claims separate coincidence-based rules from reachability, not v2 from its variants. Strict verdict: C5 is 1/3 under v2 (2/3 under v2+3, v2+c).
+
+**New held-out cases:** none qualified (TRANSLATION.md §4c); by the declared rule the v2 / v2+3 / v2+c contest is inconclusive and v2 stays.
 
 ## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 

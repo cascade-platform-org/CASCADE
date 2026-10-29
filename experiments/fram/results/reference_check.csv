@@ -1,0 +1,137 @@
+source,member,scenarios,differences
+Zheng,S0,81,0
+Zheng,D1,81,0
+Zheng,K2,81,0
+Zheng,v2,81,0
+Zheng,v2-D2,81,0
+Zheng,v2-typed,81,0
+Zheng,v2+3,81,0
+Zheng,v2+c,81,0
+Wenzhou,S0,9,0
+Wenzhou,D1,9,0
+Wenzhou,K2,9,0
+Wenzhou,v2,9,0
+Wenzhou,v2-D2,9,0
+Wenzhou,v2-typed,9,0
+Wenzhou,v2+3,9,0
+Wenzhou,v2+c,9,0
+Koriyama,S0,243,0
+Koriyama,D1,243,0
+Koriyama,K2,243,0
+Koriyama,v2,243,0
+Koriyama,v2-D2,243,0
+Koriyama,v2-typed,243,0
+Koriyama,v2+3,243,0
+Koriyama,v2+c,243,0
+Cup Noodles,S0,100,0
+Cup Noodles,D1,100,0
+Cup Noodles,K2,100,0
+Cup Noodles,v2,100,0
+Cup Noodles,v2-D2,100,0
+Cup Noodles,v2-typed,100,0
+Cup Noodles,v2+3,100,0
+Cup Noodles,v2+c,100,0
+Resilience potentials 0,S0,100,0
+Resilience potentials 0,D1,100,0
+Resilience potentials 0,K2,100,0
+Resilience potentials 0,v2,100,0
+Resilience potentials 0,v2-D2,100,0
+Resilience potentials 0,v2-typed,100,0
+Resilience potentials 0,v2+3,100,0
+Resilience potentials 0,v2+c,100,0
+Resilience potentials 1,S0,100,0
+Resilience potentials 1,D1,100,0
+Resilience potentials 1,K2,100,0
+Resilience potentials 1,v2,100,0
+Resilience potentials 1,v2-D2,100,0
+Resilience potentials 1,v2-typed,100,0
+Resilience potentials 1,v2+3,100,0
+Resilience potentials 1,v2+c,100,0
+Resilience potentials 2,S0,100,0
+Resilience potentials 2,D1,100,0
+Resilience potentials 2,K2,100,0
+Resilience potentials 2,v2,100,0
+Resilience potentials 2,v2-D2,100,0
+Resilience potentials 2,v2-typed,100,0
+Resilience potentials 2,v2+3,100,0
+Resilience potentials 2,v2+c,100,0
+leave_harbour_example,S0,100,0
+leave_harbour_example,D1,100,0
+leave_harbour_example,K2,100,0
+leave_harbour_example,v2,100,0
+leave_harbour_example,v2-D2,100,0
+leave_harbour_example,v2-typed,100,0
+leave_harbour_example,v2+3,100,0
+leave_harbour_example,v2+c,100,0
+prepare_work_example,S0,100,0
+prepare_work_example,D1,100,0
+prepare_work_example,K2,100,0
+prepare_work_example,v2,100,0
+prepare_work_example,v2-D2,100,0
+prepare_work_example,v2-typed,100,0
+prepare_work_example,v2+3,100,0
+prepare_work_example,v2+c,100,0
+render_options_test,S0,100,0
+render_options_test,D1,100,0
+render_options_test,K2,100,0
+render_options_test,v2,100,0
+render_options_test,v2-D2,100,0
+render_options_test,v2-typed,100,0
+render_options_test,v2+3,100,0
+render_options_test,v2+c,100,0
+F1Pit Stop WAD 231,S0,100,0
+F1Pit Stop WAD 231,D1,100,0
+F1Pit Stop WAD 231,K2,100,0
+F1Pit Stop WAD 231,v2,100,0
+F1Pit Stop WAD 231,v2-D2,100,0
+F1Pit Stop WAD 231,v2-typed,100,0
+F1Pit Stop WAD 231,v2+3,100,0
+F1Pit Stop WAD 231,v2+c,100,0
+Safety-II Figure 6.4,S0,100,0
+Safety-II Figure 6.4,D1,100,0
+Safety-II Figure 6.4,K2,100,0
+Safety-II Figure 6.4,v2,100,0
+Safety-II Figure 6.4,v2-D2,100,0
+Safety-II Figure 6.4,v2-typed,100,0
+Safety-II Figure 6.4,v2+3,100,0
+Safety-II Figure 6.4,v2+c,100,0
+Safety-II Figure 6.5,S0,100,0
+Safety-II Figure 6.5,D1,100,0
+Safety-II Figure 6.5,K2,100,0
+Safety-II Figure 6.5,v2,100,0
+Safety-II Figure 6.5,v2-D2,100,0
+Safety-II Figure 6.5,v2-typed,100,0
+Safety-II Figure 6.5,v2+3,100,0
+Safety-II Figure 6.5,v2+c,100,0
+Safety-II Figure 6.6,S0,100,0
+Safety-II Figure 6.6,D1,100,0
+Safety-II Figure 6.6,K2,100,0
+Safety-II Figure 6.6,v2,100,0
+Safety-II Figure 6.6,v2-D2,100,0
+Safety-II Figure 6.6,v2-typed,100,0
+Safety-II Figure 6.6,v2+3,100,0
+Safety-II Figure 6.6,v2+c,100,0
+grabbe_2022_overtaking,S0,100,0
+grabbe_2022_overtaking,D1,100,0
+grabbe_2022_overtaking,K2,100,0
+grabbe_2022_overtaking,v2,100,0
+grabbe_2022_overtaking,v2-D2,100,0
+grabbe_2022_overtaking,v2-typed,100,0
+grabbe_2022_overtaking,v2+3,100,0
+grabbe_2022_overtaking,v2+c,100,0
+Falegnami2020_WAD_forging,S0,100,0
+Falegnami2020_WAD_forging,D1,100,0
+Falegnami2020_WAD_forging,K2,100,0
+Falegnami2020_WAD_forging,v2,100,0
+Falegnami2020_WAD_forging,v2-D2,100,0
+Falegnami2020_WAD_forging,v2-typed,100,0
+Falegnami2020_WAD_forging,v2+3,100,0
+Falegnami2020_WAD_forging,v2+c,100,0
+Simone2025_WAD_aluminium_grinding,S0,100,0
+Simone2025_WAD_aluminium_grinding,D1,100,0
+Simone2025_WAD_aluminium_grinding,K2,100,0
+Simone2025_WAD_aluminium_grinding,v2,100,0
+Simone2025_WAD_aluminium_grinding,v2-D2,100,0
+Simone2025_WAD_aluminium_grinding,v2-typed,100,0
+Simone2025_WAD_aluminium_grinding,v2+3,100,0
+Simone2025_WAD_aluminium_grinding,v2+c,100,0

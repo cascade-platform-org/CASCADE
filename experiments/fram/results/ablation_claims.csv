@@ -1,0 +1,12 @@
+id,paper,direction,tier,v2 without rules,S0,S0 strict,D1,D1 strict,K2,K2 strict,v2,v2 strict,v2-D2,v2-D2 strict,v2-typed,v2-typed strict,v2+3,v2+3 strict,v2+c,v2+c strict
+C1,Tian 2016,stay degraded,rule-decided,disagree,agree,2/2,agree,2/2,disagree,1/2,agree,2/2,disagree,1/2,agree,2/2,agree,2/2,agree,2/2
+C2,Tian 2016,improve,discriminating,agree,agree,1/1,agree,1/1,disagree,0/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1
+C4,Togawa 2023,improve,discriminating,disagree,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,agree,1/1
+C5,Togawa 2023,improve,discriminating,agree,disagree,0/3,disagree,0/3,agree,1/3,agree,1/3,agree,1/3,disagree,0/3,agree,2/3,agree,2/3
+C6,Togawa 2023,improve,discriminating,disagree,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,disagree,0/1,agree,1/1,agree,1/1
+C8,Zheng 2024,improve,discriminating,agree,disagree,0/5,disagree,0/5,agree,5/5,agree,5/5,agree,5/5,disagree,0/5,agree,5/5,agree,5/5
+C9,Zheng 2024,avoid (nominal),discriminating,agree,disagree,0/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1,disagree,0/1,agree,1/1,agree,1/1
+C10,Li & Huang 2025,avoid (nominal),discriminating,disagree,disagree,0/1,disagree,0/1,agree,1/1,disagree,0/1,agree,1/1,disagree,0/1,disagree,0/1,disagree,0/1
+C12,Li & Huang 2025,avoid (nominal),entailed,agree,agree,1/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1,agree,1/1
+C14,Li 2026,PEP > DER > PER reduction,discriminating,disagree,disagree,-,agree,-,disagree,-,disagree,-,disagree,-,disagree,-,disagree,-,disagree,-
+C13,Smith 2017,worse,entailed (monotonicity),agree,agree,,agree,,agree,,agree,,agree,,agree,,agree,,agree,

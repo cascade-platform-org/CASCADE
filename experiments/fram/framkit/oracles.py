@@ -8,15 +8,22 @@ framkit/oracles.py — independent reference computations the engine is checked 
   point. On a binary scale this is what CASCADE should compute (P1/P3).
 * The one-hop VPN of Patriarca 2017 / Kaya 2020, enumerated exactly over the
   81 SPC scenarios (no sampling).
+* The conversion's own formula (TRANSLATION.md §2, §4a, §4c), written from the
+  paper's text as a plain fixed point, to check that the engine computes what
+  the paper prints.
 
-These re-implement FRAM-side methods only; no CASCADE propagation logic is
-reproduced here.
+These re-implement FRAM-side methods and the published conversion formula; no
+CASCADE propagation logic (propose, guards, commit, rules) is reproduced here.
 """
 from __future__ import annotations
 
 import itertools
+from typing import TYPE_CHECKING
 
 from .model import ASPECTS, FramModel, incoming
+
+if TYPE_CHECKING:
+    from .translate import TranslationConfig
 
 
 def _satisfied(model: FramModel, fid: str, active: set[str]) -> bool:
@@ -67,6 +74,55 @@ def activation(model: FramModel, knocked_out: set[str], start: str) -> set[str]:
                 active.discard(f)
                 changed = True
     return active
+
+
+# --- The conversion's formula (TRANSLATION.md §2, §4a, §4c) ---------------------
+
+def conversion_levels(model: FramModel, tc: TranslationConfig, start: dict[str, int]) -> dict[str, int]:
+    """Every function's level under the conversion, from its definition.
+
+    Each function reads each distinct output text it receives at the best of
+    that text's producers (same text = alternatives). Under a resonance
+    semantics its level is the worst of those inputs, each lifted by the levels
+    its aspect absorbs (N - dependency), and the m-th worst input moved by
+    2 - m for m = 2 and for 3 <= m <= tc.cumulative (a nominal input stays
+    nominal). Otherwise it is the worst of the lifted inputs. Trigger inputs
+    are ignored. Levels start at the event and only fall: the greatest fixed
+    point below it. Description rules are not covered.
+    """
+    n = tc.n
+    producers: dict[tuple[str, str], set[str]] = {}    # (consumer, text) -> producers
+    aspects: dict[tuple[str, str], set[str]] = {}      # (consumer, text) -> aspects it enters by
+    triggers: set[tuple[str, str]] = set()
+    for c in model.couplings:
+        key = (c.target, c.output)
+        producers.setdefault(key, set()).add(c.source)
+        aspects.setdefault(key, set()).add(c.aspect)
+        if (c.target, c.source) in tc.triggers:
+            triggers.add(key)
+    received: dict[str, list[tuple[str, str]]] = {}
+    for key in producers:
+        if key not in triggers:
+            received.setdefault(key[0], []).append(key)
+    level = {f: start.get(f, n) for f in model.functions}
+    changed = True
+    while changed:
+        changed = False
+        for f, keys in received.items():
+            inputs = [(max(level[p] for p in producers[k]), n - max(tc.dependency(a) for a in aspects[k]))
+                      for k in keys]
+            new = min(min(n, lv + k) for lv, k in inputs)
+            if tc.resonance:
+                ordered = sorted(lv for lv, _ in inputs)
+                for m in range(2, len(ordered) + 1):
+                    if m >= 3 and m > tc.cumulative:
+                        break
+                    x = ordered[m - 1]
+                    new = min(new, x if x >= n else max(1, x + 2 - m))
+            if new < level[f]:
+                level[f] = new
+                changed = True
+    return level
 
 
 # --- Kaya & Hocaoglu 2020 one-hop VPN ------------------------------------------

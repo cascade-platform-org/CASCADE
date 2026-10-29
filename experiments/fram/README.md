@@ -12,6 +12,7 @@ models (plan: `docs/paper/FRAM/PLAN.md`, gitignored). It calls the real engine
 | `run_v1.py` | verification: FMI fixed points, fault tree |
 | `run_rq1.py` | RQ1: every case, S0 vs v2 |
 | `run_rq2.py` | RQ2: exact importance, Kim interventions, expert claims (v2 and the S0 baseline), Vitality vs topology; exploratory alternative path (Wenzhou) |
+| `run_ablation.py` | the ablation family (9 semantics) on RQ1 with the event-severity grid, the claims by tier, and the engine against the printed formula (`framkit.oracles.conversion_levels`) |
 | `run_cumulative.py` | sensitivity: cumulative worsening (v2+3, v2+c) beside v2, on RQ1 and the claims |
 | `check_falegnami.py` | Falegnami et al. 2020's Katz ranking reproduced from the authors' private edge list, then with structure only |
 | `check_kim.py` | Kim & Yoon's "F11 is critical" on our re-implementation of their simulation (a footnote) |

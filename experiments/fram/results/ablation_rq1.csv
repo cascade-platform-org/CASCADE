@@ -1,0 +1,45 @@
+case,member,declared,grid_mean,grid_min,grid_ge_v2
+Zheng,S0,0.5,0.5,0.5,6/81
+Zheng,D1,0.562,0.704,0.438,52/81
+Zheng,K2,0.875,0.875,0.875,81/81
+Zheng,v2,0.875,0.715,0.5,81/81
+Zheng,v2-D2,0.875,0.799,0.688,81/81
+Zheng,v2-typed,0.5,0.5,0.5,6/81
+Zheng,v2+3,0.875,0.625,0.5,42/81
+Zheng,v2+c,0.875,0.569,0.5,18/81
+Zheng,FMI,0.5,0.546,0.5,15/81
+Wenzhou,S0,0.5,0.5,0.5,1/9
+Wenzhou,D1,1.0,0.802,0.5,6/9
+Wenzhou,K2,0.5,0.5,0.5,1/9
+Wenzhou,v2,1.0,0.833,0.5,9/9
+Wenzhou,v2-D2,0.929,0.627,0.5,1/9
+Wenzhou,v2-typed,0.5,0.5,0.5,1/9
+Wenzhou,v2+3,1.0,0.833,0.5,9/9
+Wenzhou,v2+c,1.0,0.833,0.5,9/9
+Wenzhou,FMI,0.5,0.484,0.429,1/9
+Koriyama,S0,0.75,0.75,0.75,162/243
+Koriyama,D1,0.5,0.802,0.417,204/243
+Koriyama,K2,1.0,1.0,1.0,243/243
+Koriyama,v2,1.0,0.833,0.75,243/243
+Koriyama,v2-D2,1.0,0.917,0.75,243/243
+Koriyama,v2-typed,0.75,0.75,0.75,162/243
+Koriyama,v2+3,1.0,0.833,0.75,243/243
+Koriyama,v2+c,1.0,0.833,0.75,243/243
+Koriyama,FMI,0.5,0.788,0.5,165/243
+Tian,S0,1.0,-,-,-
+Tian,D1,1.0,-,-,-
+Tian,K2,0.5,-,-,-
+Tian,v2,1.0,-,-,-
+Tian,v2-D2,0.5,-,-,-
+Tian,v2-typed,1.0,-,-,-
+Tian,v2+3,1.0,-,-,-
+Tian,v2+c,1.0,-,-,-
+Tian,FMI,0.5,-,-,-
+Kaya (top-4 of the workshop),S0,1/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),D1,2/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),K2,2/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),v2,2/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),v2-D2,2/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),v2-typed,1/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),v2+3,2/4 in top-4,-,-,-
+Kaya (top-4 of the workshop),v2+c,2/4 in top-4,-,-,-

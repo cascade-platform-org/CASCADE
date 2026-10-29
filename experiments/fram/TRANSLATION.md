@@ -134,6 +134,8 @@ Answers the Gate 3 pre-mortem: is v2 better than simpler semantics anyone could 
 
 The owner approves each case. Then, per case and before any run, a commit holds: the transcription, the event under the §2 convention, the truth, and the case's description rules if the text states any.
 
+**Screening result (2026-10-29): no case qualifies.** Criterion 3 failed everywhere: the Kunshan dust explosion (PLOS ONE 2023, 10.1371/journal.pone.0287328, CC BY: only F1 unaffected); Manchester Arena 2024 (no aspects, no labels); de Carvalho 2011 and Herrera & Woltjer 2010 (no function named unaffected); Bouasla et al. (AJSS: no event); Yu et al. 2023 (Milano Bridge, Appl. Sci., CC BY: network ranking, no labels); Fargnoli et al. 2024 (hyperbaric fire, Appl. Sci., CC BY: Fig. 5 marks every function downstream of the origins); Salihoglu & Bal Beşikçi 2021 (Prestige: hypothetical variants, model in figures only). Owner: stop and report. Only Togawa and Li & Huang, among the event analyses screened, name contained or uninvolved functions; the paper says so.
+
 **Decision rule among v2, v2+3 and v2+c, fixed now.** The paper's main semantics is the candidate with the highest mean balanced accuracy over the new held-out cases at the declared event coding; ties go to the simpler (v2, then v2+3, then v2+c). With fewer than two new cases the contest is reported as inconclusive and v2 stays. Every family member is reported on the new cases, with their grid.
 
 ## 5. Declaration log
