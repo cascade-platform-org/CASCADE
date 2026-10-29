@@ -55,7 +55,7 @@ const MODEL_METRICS = [
     id: "vitality" as const,
     label: "Vitality Centrality",
     description:
-      "Drop in Operativity Score when each element is removed. Requires one engine call per element.",
+      "Drop in Operativity Score when each element fails (driven to the worst level). Requires one engine call per element.",
   },
   {
     id: "shapley" as const,
@@ -250,16 +250,8 @@ export function SectionModelBased() {
     const { values } = await computeVitality(
       elements,
       baselineScore,
-      async ({ id, kind }) => {
-        const snap = { ...baseline };
-        if (kind === "node") {
-          const { [id]: _removed, ...rest } = snap.nodes;
-          snap.nodes = rest;
-        } else {
-          const { [id]: _removed, ...rest } = snap.edges;
-          snap.edges = rest;
-        }
-        const after = (await propagateSnapshot(snap, ctx)).snapshot;
+      async ({ id }) => {
+        const after = (await propagateSnapshot(applyCoalition(baseline, [id]), ctx)).snapshot;
         outcomes[id] = captureOutcome(baseline, after);
         return computeOperativityScore(after, n, weightAttr) / 100;
       },

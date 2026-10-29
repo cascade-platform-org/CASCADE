@@ -673,7 +673,7 @@ Losses are distributed backwards along **transitive blame chains**: the fraction
 Two families of Analysis Metrics (see CONTEXT.md → *Analysis Metric*):
 
 - **Topological** (client-side, graphology): degree/in/out/k-core, betweenness, closeness, eigenvector, reachability, community detection, articulation points, percolation.
-- **Model-based** (engine-side): Vitality Centrality (Operativity drop from removing one Element and re-propagating) and Shapley Values (Monte Carlo estimate over sampled failure orders; no exact 2^N path).
+- **Model-based** (engine-side): Vitality Centrality (Operativity drop from failing one Element — driven to Functionality 1, a Coalition of one — and re-propagating; failing rather than deleting, because the engine reads a missing input as nominal, so a deletion would leave every rule-based consumer untouched) and Shapley Values (Monte Carlo estimate over sampled failure orders; no exact 2^N path).
 
 Scores render as an **Analysis Heatmap** overlay on the canvas (colours mean scores, not Functionality), applied as soon as the metric finishes: the scores are why the metric was run, and the Analysis window floats, so there is nothing to move out of the way first. The overlay is repainted whenever the scores beneath it change — re-weighting a model-based run (ADR-0018) moves the colours with the numbers. Reset clears it: the colours describe a Scenario that no longer exists, so leaving them on the canvas is a key to numbers nothing on screen has. Closing the Analysis window does not clear it — the window floats over the canvas, so closing it says nothing about the overlay; the explicit **Clear heatmap** control does.
 

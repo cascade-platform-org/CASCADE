@@ -29,25 +29,19 @@ describe("captureOutcome", () => {
   it("records only the nodes whose Functionality moved", () => {
     const baseline = snap([node("a", 5), node("b", 5), node("c", 5)]);
     const after = snap([node("a", 5), node("b", 2), node("c", 5)]);
-    expect(captureOutcome(baseline, after)).toEqual({ changed: { b: 2 }, removed: [] });
-  });
-
-  it("records a node missing from the propagated Scenario as removed", () => {
-    const baseline = snap([node("a", 5), node("b", 5)]);
-    const after = snap([node("b", 3)]);
-    expect(captureOutcome(baseline, after)).toEqual({ changed: { b: 3 }, removed: ["a"] });
+    expect(captureOutcome(baseline, after)).toEqual({ changed: { b: 2 } });
   });
 
   it("is empty when the cascade changed nothing", () => {
     const baseline = snap([node("a", 5), node("b", 5)]);
-    expect(captureOutcome(baseline, baseline)).toEqual({ changed: {}, removed: [] });
+    expect(captureOutcome(baseline, baseline)).toEqual({ changed: {} });
   });
 });
 
 describe("rebuildSnapshot", () => {
   it("shares untouched node objects with the baseline rather than cloning", () => {
     const baseline = snap([node("a", 5), node("b", 5)]);
-    const out = rebuildSnapshot(baseline, { changed: { b: 1 }, removed: [] });
+    const out = rebuildSnapshot(baseline, { changed: { b: 1 } });
     expect(out.nodes.a).toBe(baseline.nodes.a);
     expect(out.nodes.b).not.toBe(baseline.nodes.b);
     expect(out.nodes.b.functionality).toBe(1);
@@ -55,14 +49,8 @@ describe("rebuildSnapshot", () => {
 
   it("never mutates the baseline", () => {
     const baseline = snap([node("a", 5)]);
-    rebuildSnapshot(baseline, { changed: { a: 1 }, removed: [] });
+    rebuildSnapshot(baseline, { changed: { a: 1 } });
     expect(baseline.nodes.a.functionality).toBe(5);
-  });
-
-  it("drops removed nodes", () => {
-    const baseline = snap([node("a", 5), node("b", 5)]);
-    const out = rebuildSnapshot(baseline, { changed: {}, removed: ["a"] });
-    expect(Object.keys(out.nodes)).toEqual(["b"]);
   });
 });
 
@@ -98,7 +86,7 @@ describe("scoreOutcome", () => {
       node("b", 5, { importance: 9 } as Partial<Node>),
     ]);
     // b, the heavily weighted node, is the one that failed.
-    const outcome = { changed: { b: 1 }, removed: [] };
+    const outcome = { changed: { b: 1 } };
 
     const uniform = scoreOutcome(baseline, outcome, N, "constant");
     const weighted = scoreOutcome(baseline, outcome, N, "importance");
@@ -109,9 +97,9 @@ describe("scoreOutcome", () => {
     expect(scoreOutcome(baseline, outcome, N, "constant")).toBe(uniform);
   });
 
-  it("scores a removed Element's Scenario over the surviving nodes only", () => {
+  it("scores a failed Element at the worst level, inside the denominator", () => {
+    // Vitality fails an Element (a Coalition of one): it stays in the score at 1.
     const baseline = snap([node("a", 5), node("b", 5)]);
-    const out = scoreOutcome(baseline, { changed: {}, removed: ["a"] }, N, "constant");
-    expect(out).toBe(100);
+    expect(scoreOutcome(baseline, { changed: { a: 1 } }, N, "constant")).toBe(60);
   });
 });

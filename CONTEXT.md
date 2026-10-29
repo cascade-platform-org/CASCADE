@@ -278,7 +278,7 @@ A set of Elements failed together — driven to Functionality 1 — and the unit
 _Avoid_: "failure set", "removal set"; "scenario" (a Coalition is the input, the Scenario is the result of applying it)
 
 **Vitality Centrality**:
-Model-based metric: Operativity Score drop from removing one Element and re-propagating. One engine call per Element; ranks nodes and edges.
+Model-based metric: Operativity Score drop from failing one Element (a **Coalition** of one) and re-propagating. One engine call per Element; ranks nodes and edges.
 _Avoid_: "vitality score" (Recovery Value is the intervention metric; Vitality is analysis)
 
 **Shapley Value**:

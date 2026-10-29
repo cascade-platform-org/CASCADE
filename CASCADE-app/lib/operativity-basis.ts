@@ -24,8 +24,6 @@ import { computeOperativityScore } from "@/lib/scorecard-utils";
 export interface EvaluationOutcome {
   /** nodeId → post-cascade Functionality, only where it differs from baseline. */
   changed: Record<string, number>;
-  /** Nodes absent from the evaluated Scenario (the removed Elements). */
-  removed: string[];
 }
 
 /**
@@ -35,17 +33,11 @@ export interface EvaluationOutcome {
  */
 export function captureOutcome(baseline: GraphSnapshot, after: GraphSnapshot): EvaluationOutcome {
   const changed: Record<string, number> = {};
-  const removed: string[] = [];
-
   for (const [id, node] of Object.entries(baseline.nodes)) {
     const post = after.nodes[id];
-    if (!post) {
-      removed.push(id);
-      continue;
-    }
-    if (post.functionality !== node.functionality) changed[id] = post.functionality as number;
+    if (post && post.functionality !== node.functionality) changed[id] = post.functionality as number;
   }
-  return { changed, removed };
+  return { changed };
 }
 
 /**
@@ -54,10 +46,8 @@ export function captureOutcome(baseline: GraphSnapshot, after: GraphSnapshot): E
  * clone. Edges are untouched — the Operativity Score does not read them.
  */
 export function rebuildSnapshot(baseline: GraphSnapshot, outcome: EvaluationOutcome): GraphSnapshot {
-  const gone = new Set(outcome.removed);
   const nodes: GraphSnapshot["nodes"] = {};
   for (const [id, node] of Object.entries(baseline.nodes)) {
-    if (gone.has(id)) continue;
     const fn = outcome.changed[id];
     nodes[id] = fn === undefined ? node : { ...node, functionality: fn };
   }
