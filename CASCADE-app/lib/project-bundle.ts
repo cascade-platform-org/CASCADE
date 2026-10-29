@@ -8,6 +8,7 @@
  * - File → Open, the New Project screen, a sample, a tour;
  * - Recent saves, a cloud version, the Working Copy, the restore prompt;
  * - an EPANET import that replaces the project;
+ * - an FMV (FRAM) import;
  * - LLM Design.
  * Before, each of those wired the loaders by hand, and they disagreed: some
  * ran the reference checks and some did not, and only one kept the active Canvas.

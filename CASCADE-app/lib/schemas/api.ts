@@ -87,6 +87,25 @@ export const ImportInpResponseSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// FMV (FRAM) import — POST /api/import/xfmv (ADR-0026)
+// ---------------------------------------------------------------------------
+
+/** How the importer reads a FRAM model: the FRAM paper's v2 (damping and
+ *  second-worst resonance, 4 levels), plain reachability, or the FMI's binary
+ *  reading with the file's All/Any/None profiles. Mirrors
+ *  `core.importers.xfmv.Semantics`. */
+export const XfmvSemanticsSchema = z.enum(["v2", "reachability", "fmi"]);
+
+/** Server response for the FMV importer: the converted bundle plus counts and
+ *  warnings for the toast. */
+export const ImportXfmvResponseSchema = z.object({
+  bundle: ProjectBundleSchema,
+  warnings: z.array(z.string()).default([]),
+  functions: z.number().int(),
+  couplings: z.number().int(),
+});
+
+// ---------------------------------------------------------------------------
 // Propagation — POST /api/propagate
 // ---------------------------------------------------------------------------
 
@@ -205,6 +224,8 @@ export type ProjectVersionSummary = z.infer<typeof ProjectVersionSummarySchema>;
 export type ProjectVersionDetail = z.infer<typeof ProjectVersionDetailSchema>;
 export type WorkingCopyDetail = z.infer<typeof WorkingCopyDetailSchema>;
 export type ImportInpResponse = z.infer<typeof ImportInpResponseSchema>;
+export type ImportXfmvResponse = z.infer<typeof ImportXfmvResponseSchema>;
+export type XfmvSemantics = z.infer<typeof XfmvSemanticsSchema>;
 export type PropagationRequest = z.infer<typeof PropagationRequestSchema>;
 export type BatchPropagationRequest = z.infer<typeof BatchPropagationRequestSchema>;
 export type HeuristicParamMeta = z.infer<typeof HeuristicParamMetaSchema>;

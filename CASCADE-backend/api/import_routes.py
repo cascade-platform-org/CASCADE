@@ -1,5 +1,8 @@
 """
-api/import_routes.py — EPANET .inp → CASCADE ProjectBundle importer.
+api/import_routes.py — external model formats → CASCADE ProjectBundle.
+
+POST /api/import/xfmv — an FMV (FRAM Model Visualiser) file, converted with a
+declared semantics (ADR-0026). Same contract as the .inp importer below.
 
 POST /api/import/inp — parse, (optionally) skeletonize to a node budget, run a
 hydraulic sweep for edge orientation, and map to the CASCADE schema. Pure
@@ -28,8 +31,10 @@ from core.importers.inp import (
     skeletonize_to_target,
 )
 from core.importers.inp.temporal import to_temporal_simulation
+from core.importers.xfmv import XfmvParseError, build_bundle as build_fram_bundle, parse_xfmv
 from schemas.auth import AuthUser
 from schemas.import_inp import ImportInpRequest, ImportInpResponse
+from schemas.import_xfmv import ImportXfmvRequest, ImportXfmvResponse
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -153,3 +158,38 @@ async def import_inp_temporal(
     user: AuthUser = Depends(get_current_user),
 ) -> ImportInpResponse:
     return await _import(body, user, temporal=True)
+
+
+def _run_xfmv(body: ImportXfmvRequest) -> ImportXfmvResponse:
+    name = body.filename.rsplit(".", 1)[0] or "Imported FRAM model"
+    model = parse_xfmv(body.content, name)
+    warnings: list[str] = []
+    if not model.couplings:
+        warnings.append("The file has functions but no couplings: nothing can propagate.")
+    profiled = sum(bool(f.profiles) for f in model.functions.values())
+    if profiled and body.semantics != "fmi":
+        warnings.append(
+            f"{profiled} function(s) carry FMI profiles (Any/None); only the 'fmi' semantics reads them."
+        )
+    return ImportXfmvResponse(
+        bundle=build_fram_bundle(model, body.semantics),
+        warnings=warnings,
+        functions=len(model.functions),
+        couplings=len(model.couplings),
+    )
+
+
+@router.post(
+    "/xfmv",
+    response_model=ImportXfmvResponse,
+    response_model_exclude_none=True,
+    summary="Convert an FMV (FRAM Model Visualiser) .xfmv model to a CASCADE project",
+)
+async def import_xfmv(
+    body: ImportXfmvRequest,
+    user: AuthUser = Depends(get_current_user),
+) -> ImportXfmvResponse:
+    try:
+        return await run_in_threadpool(_run_xfmv, body)
+    except XfmvParseError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc

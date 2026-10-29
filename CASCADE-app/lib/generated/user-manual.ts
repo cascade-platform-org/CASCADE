@@ -2779,7 +2779,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " file."
+                  "text": " file or a FRAM model ("
+                },
+                {
+                  "kind": "code",
+                  "text": ".xfmv"
+                },
+                {
+                  "kind": "text",
+                  "text": ", §7.4)."
                 }
               ]
             ],
@@ -3455,6 +3463,107 @@ export const USER_MANUAL: ManualDoc = {
                 {
                   "kind": "text",
                   "text": "What you show the agent leaves your computer for wherever that agent's LLM runs: choose one you trust with your organisation's names."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "sub",
+          "title": "7.4 Importing a FRAM model",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "File → Import → "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Import FRAM model (.xfmv)"
+                },
+                {
+                  "kind": "text",
+                  "text": " opens a model saved by the FRAM Model Visualiser and replaces the current project with it. Each function becomes a node where you drew it; each of its outputs becomes a small node of its own, and each coupling an edge. Two functions producing the same output text are alternatives: the consumer stays up while either does."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "Choose how the model is read:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Damping + resonance"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " (default): one degraded input is absorbed by a level, two coinciding ones pass in full. The rule on each function says so, with level offsets (§3.2). Four levels: nominal, variable, severe, not performed."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "Reachability"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": every deviation reaches everything downstream. A baseline."
+                  }
+                ],
+                [
+                  {
+                    "kind": "strong",
+                    "text": "FMI (binary)"
+                  },
+                  {
+                    "kind": "text",
+                    "text": ": performed or not, with the file's All / Any / None profiles."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "A FRAM file holds no scenario. To run one, add an Event (Config → Events) and set the vulnerability of the functions it reaches: a function the analysis calls "
+                },
+                {
+                  "kind": "em",
+                  "text": "variable"
+                },
+                {
+                  "kind": "text",
+                  "text": " or "
+                },
+                {
+                  "kind": "em",
+                  "text": "delayed"
+                },
+                {
+                  "kind": "text",
+                  "text": " drops one level, one "
+                },
+                {
+                  "kind": "em",
+                  "text": "not performed"
+                },
+                {
+                  "kind": "text",
+                  "text": " drops to the bottom. A rule your analysis states only in words (\"if F12 and F17 are both degraded, F20 is severe\") is an ordinary Specific rule. Needs a signed-in account (the conversion runs on the server)."
                 }
               ]
             }

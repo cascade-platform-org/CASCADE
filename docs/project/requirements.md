@@ -886,7 +886,7 @@ A person describes their organisation or a question in their own words; an LLM, 
 
 **Null-free bundle contract (Load):** the Load response must serialise the bundle **without `null` keys**, so it is byte-shape-identical to a local file save. See [api-reference.md → Server Sync](api-reference.md) for the mechanism and the failure it prevents.
 
-### 13.5 Network importers — EPANET .inp (implemented)
+### 13.5 Network importers — EPANET .inp, FMV .xfmv (implemented)
 
 `POST /api/import/inp` converts an EPANET water-network `.inp` file into a
 CASCADE `ProjectBundle` (same envelope as local save / Server Sync — §13.4
@@ -947,6 +947,8 @@ network — no code/UI needed to reach for a common water-utility scenario:
   forced to the current project's own `functionality_scale.length` in this
   mode so imported values land on the right scale; the target's scale is
   never replaced.
+
+**FMV .xfmv — FRAM models** *(implemented, ADR-0026)*. `POST /api/import/xfmv` converts a FRAM model saved by the FRAM Model Visualiser into a `ProjectBundle`, same contract as above. UI entry point: "Import FRAM model (.xfmv)" in the File I/O panel, replace only. A function becomes a node, each output text its own node and Category (producers of the same text are alternatives), each coupling an edge. The semantics is chosen at import: **v2** (default; one level of damping per coupling and second-worst resonance, one rule per function with level offsets, 4 levels — the conversion the FRAM paper evaluates), **reachability**, or **FMI** (binary, with the file's All/Any/None profiles). Functions keep their FMV positions. The file holds no scenario: Events, and any rule stated only in an analysis's prose, are added after import. Pipeline: `CASCADE-backend/core/importers/xfmv/`, which the paper's harness also uses.
 
 ### 13.6 EPANET-mode canvas — live hydraulic comparison (implemented, ADR-0013)
 
