@@ -166,9 +166,13 @@ function CategoryIcons({
   categories: CategoryItem[];
   size: number;
 }) {
-  if (categories.length === 0) return null;
+  // Only categories that resolve to an icon take a slot; the rest show nothing.
+  const visible = categories
+    .map(({ name, icon }) => ({ name, Icon: categoryToIcon(name, icon) }))
+    .filter((c): c is { name: string; Icon: NonNullable<typeof c.Icon> } => c.Icon !== null)
+    .slice(0, 3);
+  if (visible.length === 0) return null;
 
-  const visible = categories.slice(0, 3);
   const gap = 3;
   const maxTotalW = size * 0.78;
   const iconSize = Math.max(8, Math.min(
@@ -181,8 +185,7 @@ function CategoryIcons({
 
   return (
     <>
-      {visible.map(({ name, icon }, i) => {
-        const Icon = categoryToIcon(name, icon);
+      {visible.map(({ name, Icon }, i) => {
         return (
           <div
             key={name}

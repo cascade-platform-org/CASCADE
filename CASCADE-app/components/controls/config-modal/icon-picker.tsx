@@ -49,7 +49,8 @@ export function IconPickerButton({
   onChange,
 }: {
   value: string | undefined;
-  onChange: (name: string) => void;
+  /** `undefined` clears the icon: the default is none. */
+  onChange: (name: string | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -57,10 +58,10 @@ export function IconPickerButton({
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const Tag = ICON_REGISTRY["Tag"] as React.FC<{ size?: number; strokeWidth?: number }>;
+  // No stored icon (or one that no longer resolves) shows an empty button.
   const CurrentIcon = value
-    ? ((iconPool[value] ?? ICON_REGISTRY[value] ?? Tag) as React.FC<{ size?: number; strokeWidth?: number }>)
-    : Tag;
+    ? ((iconPool[value] ?? ICON_REGISTRY[value]) as React.FC<{ size?: number; strokeWidth?: number }> | undefined)
+    : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -106,10 +107,13 @@ export function IconPickerButton({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        title="Choose icon"
-        className="flex h-7 w-7 items-center justify-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        title={value ? `Icon: ${value}` : "No icon — choose one"}
+        className={cn(
+          "flex h-7 w-7 items-center justify-center rounded border bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700",
+          CurrentIcon ? "border-zinc-200 dark:border-zinc-700" : "border-dashed border-zinc-300 dark:border-zinc-600",
+        )}
       >
-        <CurrentIcon size={14} strokeWidth={2} />
+        {CurrentIcon && <CurrentIcon size={14} strokeWidth={2} />}
       </button>
 
       {open && (
@@ -117,14 +121,23 @@ export function IconPickerButton({
           className="absolute right-0 top-8 z-50 flex flex-col rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
           style={{ width: 220 }}
         >
-          <div className="border-b border-zinc-100 p-2 dark:border-zinc-800">
+          <div className="flex items-center gap-1.5 border-b border-zinc-100 p-2 dark:border-zinc-800">
             <input
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search all Lucide icons…"
-              className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              className="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-2 py-1 text-xs focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             />
+            {value && (
+              <button
+                onClick={() => { onChange(undefined); setOpen(false); }}
+                title="Remove the icon"
+                className="shrink-0 rounded px-1.5 py-1 text-[10px] text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                None
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-6 gap-0.5 overflow-y-auto p-1.5" style={{ maxHeight: 240 }}>

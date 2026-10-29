@@ -91,6 +91,7 @@ Each category entry carries:
 | `name` | Label (e.g. `electricity`, `water`, `ICT`) |
 | `category_type` | `SourceToDemands` \| `Requisite` \| … (extensible) |
 | `color` | Default display colour |
+| `icon` | Lucide icon drawn on the Category's nodes (optional). Unset: an icon guessed from the name (water, electric, heat, …), otherwise none |
 
 `category_type` is a **config-level** property. Nodes reference a category by name; the engine looks up its type from the config.
 

@@ -4,7 +4,7 @@
  * ICON_REGISTRY   — map of icon name → LucideIcon component, used by both the
  *                   canvas renderer and the config-modal icon picker.
  * categoryToIcon  — resolves an icon for a category: stored name wins, then
- *                   keyword heuristic, then Tag fallback.
+ *                   keyword heuristic, then none.
  */
 
 import {
@@ -57,8 +57,8 @@ export const ICON_REGISTRY: Record<string, LucideIcon> = {
   ShieldAlert,
 };
 
-/** Keyword heuristic — used as fallback when no icon is explicitly set. */
-function byKeyword(name: string): LucideIcon {
+/** Keyword heuristic — used as fallback when no icon is explicitly set; null when no keyword matches. */
+function byKeyword(name: string): LucideIcon | null {
   const n = name.toLowerCase();
   if (n.includes("water") || n.includes("acqua") || n.includes("idric") || n.includes("idrau")) return Droplet;
   if (n.includes("electric") || n.includes("power") || n.includes("energy") || n.includes("elettr") || n.includes("energ")) return Zap;
@@ -71,7 +71,7 @@ function byKeyword(name: string): LucideIcon {
   if (n.includes("waste") || n.includes("sewer") || n.includes("fogna") || n.includes("rifiut")) return Waves;
   if (n.includes("civil") || n.includes("struct") || n.includes("infrastruttura") || n.includes("edil")) return Building2;
   if (n.includes("factor") || n.includes("industri") || n.includes("produzione")) return Factory;
-  return Tag;
+  return null;
 }
 
 /**
@@ -84,7 +84,7 @@ let _allIconsCache: Record<string, LucideIcon> | null = null;
  * The same icons under every name lucide-react exports them as. `_allIconsCache`
  * holds one entry per icon (canonical name only), so a project that stored an
  * alias — `DropletIcon`, `LucideDroplet`, or a name Lucide has since renamed —
- * resolves through here instead of falling back to the Tag placeholder.
+ * resolves through here instead of showing no icon.
  */
 let _aliasCache: Record<string, LucideIcon> | null = null;
 
@@ -145,11 +145,13 @@ function lookup(name: string): LucideIcon | undefined {
 }
 
 /**
- * Resolve the Lucide icon for a category.
+ * Resolve the Lucide icon for a category, or null: a category with no stored
+ * icon and no recognisable name shows none (an imported FRAM model has one
+ * Category per output text, and a placeholder on every node is noise).
  * @param name  The category name string.
  * @param icon  The stored icon name from CategoryDefinition.icon (optional).
  */
-export function categoryToIcon(name: string, icon?: string): LucideIcon {
+export function categoryToIcon(name: string, icon?: string): LucideIcon | null {
   if (icon) {
     const found = lookup(icon);
     if (found) return found;
