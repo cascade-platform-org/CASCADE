@@ -65,7 +65,7 @@ Event application (client-side) is always applied to the full registry regardles
 
 ### 3.3 Global Display Mode *(implemented)*
 
-`components/canvas/global-view-canvas.tsx` renders all Canvases together in a single React Flow instance, each Canvas laid out as its own group region with nodes at their stored positions. Because element IDs are globally unique (ADR-0001) and each element lives once in the registry, a node that appears in multiple Canvases is shown exactly once — no deduplication step needed. Inter-canvas edges render as dashed connectors. **Collapsing a Canvas** (− on its region, *Collapse all* / *Expand all* in the top-centre bar that also switches Merged / Grouped, `global-view-toolbar.tsx`) draws it as one cluster node showing the Operativity of its nodes (the Analysis page's weighting) and their count; edges into it are bundled, one per pair of drawn ends, painted at the worst level among them and labelled ×k (`lib/canvas-clusters.ts`). Collapsing is a session view state, never saved. The view is **read-only** (no editing, no tool interactions); it is also what the Scorecard captures as its snapshot PNGs (§12.4). Pure render-time operation, no data model change.
+`components/canvas/global-view-canvas.tsx` renders all Canvases together in a single React Flow instance, each Canvas laid out as its own group region with nodes at their stored positions. Because element IDs are globally unique (ADR-0001) and each element lives once in the registry, a node that appears in multiple Canvases is shown exactly once — no deduplication step needed. Inter-canvas edges render as dashed connectors. Canvas regions and clusters can be **dragged** (the nodes follow their region; *Re-arrange* restores the row). **Collapsing a Canvas** (− on its region, *Collapse all* / *Expand all* beside the read-only badge, top left) draws it as one cluster node showing the Operativity of its nodes (the Analysis page's weighting) and their count; edges into it are bundled, one per pair of drawn ends, painted at the worst level among them and labelled ×k (`lib/canvas-clusters.ts`). Collapsing and dragging are session view states, never saved. The view is **read-only** (no editing, no tool interactions); it is also what the Scorecard captures as its snapshot PNGs (§12.4). Pure render-time operation, no data model change.
 
 ---
 
@@ -345,7 +345,7 @@ The engine records for each degraded Element which upstream Elements or Events a
 
 ### 8.1a Navigating the canvas *(implemented)*
 
-Zoom is on the scroll wheel and the zoom cluster (bottom-left); panning is on the **middle
+Zoom is on the scroll wheel and the zoom cluster (bottom-left), from 5 % to 400 % in every view (`zoom-slider.tsx` holds the range; a georeferenced Canvas keeps a higher floor for its map); panning is on the **middle
 mouse button** or the **Hand tool** (`H`). Neither is discoverable, and a laptop trackpad has
 no middle button at all, so the cluster also carries a **Fit** control (`F`, or the ⤢ button)
 that frames the whole network — the way back from a canvas scrolled off-screen. Starting a

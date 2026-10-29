@@ -44,7 +44,7 @@ import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
 import { edgeTypes } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
-import { ZoomSlider } from "./zoom-slider";
+import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
 import { CanvasLegend } from "./canvas-legend";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
@@ -52,7 +52,6 @@ import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/net
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
-import { GlobalViewToolbar } from "./global-view-toolbar";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
 
@@ -405,8 +404,8 @@ function MergedViewCanvas() {
         nodesDraggable={!runShown}
         onlyRenderVisibleElements
         fitView
-        minZoom={0.1}
-        maxZoom={4}
+        minZoom={geoCanvasId ? 0.1 : MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
       >
         {!geoCanvasId && (
@@ -435,9 +434,6 @@ function MergedViewCanvas() {
           Every canvas view needs it: an Analysis Heatmap applies to the Element
           registry, so its colours show here as much as in the single-canvas view. */}
       <CanvasLegend />
-
-      {/* Layout switch: Grouped is where Canvases collapse */}
-      <GlobalViewToolbar />
 
       {contextMenu && (
         <CanvasContextMenu

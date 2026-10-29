@@ -12,9 +12,10 @@ import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Panel, useReactFlow, useViewport } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
-// Keep in sync with the ReactFlow minZoom/maxZoom in flow-canvas.tsx.
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 4;
+// One zoom range for every canvas view (flow, merged, grouped). A georeferenced
+// canvas keeps its own floor, set where its map is synced.
+export const MIN_ZOOM = 0.05;
+export const MAX_ZOOM = 4;
 
 export function ZoomSlider() {
   const { zoomIn, zoomOut, zoomTo, fitView } = useReactFlow();

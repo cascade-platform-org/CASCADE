@@ -39,7 +39,7 @@ import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { NodeSearch } from "./node-search";
-import { ZoomSlider } from "./zoom-slider";
+import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
 import { Lasso } from "./lasso";
 import { useNetworkStore } from "@/store/network-store";
 import { useClipboardStore } from "@/store/clipboard-store";
@@ -705,8 +705,8 @@ function FlowCanvas() {
         nodesConnectable={!runShown}
         onlyRenderVisibleElements
         fitView
-        minZoom={0.25}
-        maxZoom={4}
+        minZoom={activeCanvas.georeferenced ? 0.25 : MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
       >
         {!activeCanvas.georeferenced && (

@@ -32,6 +32,7 @@ import {
   Handle,
   Position,
   type EdgeTypes,
+  type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -43,8 +44,7 @@ import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
-import { ZoomSlider } from "./zoom-slider";
-import { GlobalViewToolbar } from "./global-view-toolbar";
+import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
@@ -212,6 +212,17 @@ function GlobalViewCanvas() {
   const weightAttr = useAnalysisStore((s) => s.oiWeightAttr);
   // Collapsed Canvases, by id: a view state of this session, never saved.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  // Where the user dragged each Canvas (region or cluster), by Canvas id: a view state too.
+  const [moved, setMoved] = useState<Readonly<Record<string, { x: number; y: number }>>>({});
+  const onNodesChange = (changes: NodeChange[]) => {
+    const drags = changes.flatMap((c) => {
+      if (c.type !== "position" || !c.position) return [];
+      const canvasId = c.id.startsWith("group-") ? c.id.slice("group-".length)
+        : c.id.startsWith(clusterNodeId("")) ? c.id.slice(clusterNodeId("").length) : null;
+      return canvasId === null ? [] : [[canvasId, c.position] as const];
+    });
+    if (drags.length) setMoved((prev) => ({ ...prev, ...Object.fromEntries(drags) }));
+  };
   const toggle = (canvasId: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -289,7 +300,8 @@ function GlobalViewCanvas() {
         nodes.push({
           id: clusterNodeId(canvas.id),
           type: "canvasCluster",
-          position: { x: groupOffsetX, y: 60 },
+          position: moved[canvas.id] ?? { x: groupOffsetX, y: 60 },
+          draggable: true,
           data: { label: canvas.label ?? canvas.id, color, onToggle, operativity, count,
                   levelColor: operativityColor(operativity, config) },
         });
@@ -306,7 +318,8 @@ function GlobalViewCanvas() {
         nodes.push({
           id: `group-${canvas.id}`,
           type: "canvasGroup",
-          position: { x: groupOffsetX, y: 60 },
+          position: moved[canvas.id] ?? { x: groupOffsetX, y: 60 },
+          draggable: true,
           data: { label: canvas.label ?? canvas.id, color },
           style: { width: 200, height: 120 },
         });
@@ -333,7 +346,8 @@ function GlobalViewCanvas() {
       nodes.push({
         id: `group-${canvas.id}`,
         type: "canvasGroup",
-        position: { x: groupOffsetX, y: 60 },
+        position: moved[canvas.id] ?? { x: groupOffsetX, y: 60 },
+          draggable: true,
         data: { label: canvas.label ?? canvas.id, color, onToggle },
         style: { width: groupW, height: groupH },
       });
@@ -376,7 +390,7 @@ function GlobalViewCanvas() {
     });
 
     return { rfNodes: nodes, rfEdges: edges };
-  }, [canvases, allNodes, allEdges, scaleLevels, collapsed, config, weightAttr]);
+  }, [canvases, allNodes, allEdges, scaleLevels, collapsed, config, weightAttr, moved]);
 
   return (
     <div className="h-full w-full">
@@ -389,8 +403,12 @@ function GlobalViewCanvas() {
         edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         connectionMode={ConnectionMode.Loose}
+        // Only Canvas regions and clusters drag (draggable on those nodes); their nodes follow.
         nodesDraggable={false}
+        onNodesChange={onNodesChange}
         nodesConnectable={false}
         elementsSelectable={false}
         panOnScroll={false}
@@ -406,18 +424,25 @@ function GlobalViewCanvas() {
           registry, so its colours show here as much as in the single-canvas view. */}
       <CanvasLegend />
 
-      {/* Layout switch, and collapse or expand every Canvas at once */}
-      <GlobalViewToolbar>
-        <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          title="Draw every Canvas as one node"
-          onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
-        <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          onClick={() => setCollapsed(new Set())}>Expand all</button>
-      </GlobalViewToolbar>
 
-      {/* Read-only badge */}
-      <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:ring-zinc-700">
-        Read-only · All canvases
+      {/* Read-only badge, then the collapse controls (top centre is search, top right the Situation window) */}
+      <div className="absolute left-3 top-3 flex items-center gap-2">
+        <div className="pointer-events-none flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:ring-zinc-700">
+          Read-only · All canvases
+        </div>
+        {canvases.length > 1 && (
+          <div data-export-ignore className="flex items-center gap-0.5 rounded-md bg-white/90 px-1 py-1 text-xs font-medium text-zinc-600 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-300 dark:ring-zinc-700">
+            <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Draw every Canvas as one node"
+              onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
+            <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setCollapsed(new Set())}>Expand all</button>
+            {Object.keys(moved).length > 0 && (
+              <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                title="Put every Canvas back in a row" onClick={() => setMoved({})}>Re-arrange</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

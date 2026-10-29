@@ -1521,7 +1521,23 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " tab shows every Canvas together. The switch at its top centre picks the layout: "
+                  "text": " tab shows every Canvas together. Its layout is set in the Inspector ("
+                },
+                {
+                  "kind": "em",
+                  "text": "View mode"
+                },
+                {
+                  "kind": "text",
+                  "text": ", or right-click "
+                },
+                {
+                  "kind": "strong",
+                  "text": "All"
+                },
+                {
+                  "kind": "text",
+                  "text": "): "
                 },
                 {
                   "kind": "em",
@@ -1545,15 +1561,50 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " and collapse a Canvas (− beside its name, or "
-                },
-                {
-                  "kind": "em",
-                  "text": "Collapse all"
-                },
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "kind": "text",
+                    "text": "collapse a Canvas (− beside its name, or "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "Collapse all"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " top left): it becomes one box with the Operativity of its nodes and how many it holds, and the edges into it merge into one, drawn at their worst level and marked ×k; expand it again with +;"
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "text": "drag a region or a box to put related Canvases side by side; "
+                  },
+                  {
+                    "kind": "em",
+                    "text": "Re-arrange"
+                  },
+                  {
+                    "kind": "text",
+                    "text": " puts them back in a row."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
                 {
                   "kind": "text",
-                  "text": " in the switch bar): it becomes one box with the Operativity of its nodes and how many it holds, and the edges into it merge into one, drawn at their worst level and marked ×k. Expand it again with +. Collapsing only changes the picture; it is not saved and propagation is unchanged."
+                  "text": "Neither is saved, and propagation is unchanged. Every view zooms out to 5 % (a map-backed Canvas stops earlier)."
                 }
               ]
             }
