@@ -26,7 +26,7 @@ from pathlib import Path
 
 from framkit import readers
 from framkit.engine import function_levels, propagate
-from framkit.model import FramModel
+from framkit.model import FramModel, is_acyclic
 from framkit.oracles import KHAKZAD_AUTO, KHAKZAD_BASIC, KHAKZAD_MANUAL, activation, khakzad_top_event
 from framkit.translate import fmi_config, translate
 
@@ -56,7 +56,7 @@ def fmi_check(model: FramModel) -> dict[str, object]:
         "model": model.name,
         "functions": len(fids),
         "couplings": len(model.couplings),
-        "acyclic": model.is_acyclic(),
+        "acyclic": is_acyclic(model),
         "non_default_profiles": sum(bool(f.profiles) for f in model.functions.values()),
         "scenarios": len(scenarios),
         "cascade_eq_gfp": eq_gfp,

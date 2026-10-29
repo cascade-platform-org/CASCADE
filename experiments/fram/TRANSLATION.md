@@ -2,7 +2,7 @@
 
 The single translation the paper uses (approved at Gate 1, 2026-10-27). Every
 experiment was declared in this file and committed **before** it ran; the git
-history keeps each declaration verbatim (log at the end). Code: `framkit/translate.py`.
+history keeps each declaration verbatim (log at the end). Code: the product's FMV importer, `CASCADE-backend/core/importers/xfmv/map.py` (ADR-0026), which `framkit/translate.py` re-exports; moving it there changed no result.
 
 ## 1. Structure
 

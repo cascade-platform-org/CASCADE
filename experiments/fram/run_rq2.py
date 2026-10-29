@@ -166,23 +166,41 @@ def verdict(base, edit, outcome, direction) -> tuple[str, str]:
     return ("agree" if all(y == N for y in e) else "disagree"), detail + f" (direction {'improves' if improves else 'does not improve'})"
 
 
-def tian(barrier_f2=False, order=True, f7=3, tc: TranslationConfig | None = None):
-    t = translate(readers.read_tian(), tc or resonance_config())
+# Each case has a builder returning (model, translation, event as starting
+# levels) and a runner propagating it. export_bundles.py opens the builders'
+# output in the platform, so what is checked there is what is scored here.
+Case = tuple[FramModel, Translated, dict[str, int]]
+
+
+def tian_case(barrier_f2=False, order=True, f7=3, tc: TranslationConfig | None = None) -> Case:
+    model = readers.read_tian()
+    t = translate(model, tc or resonance_config())
     for fid in ("F5", "F2"):
         add_rule(t, fid, f"if {t.fn_node['F7']}.functionality is <4 then {t.fn_node[fid]} is not performed")
     if barrier_f2:
         barrier(t, "F2")
-    return levels(t, {"F7": f7, "F1": 4} | ({} if order else {"F3": 1}))
+    return model, t, {"F7": f7, "F1": 4} | ({} if order else {"F3": 1})
+
+
+def tian(barrier_f2=False, order=True, f7=3, tc: TranslationConfig | None = None):
+    _, t, start = tian_case(barrier_f2, order, f7, tc)
+    return levels(t, start)
+
+
+def koriyama_case(held: list[str], tc: TranslationConfig | None = None) -> Case:
+    model = readers.read_togawa()
+    t = translate(model, tc or resonance_config())
+    for f in held:
+        barrier(t, f)
+    return model, t, {k: v for k, v in KORIYAMA_EVENT.items() if k not in held}
 
 
 def koriyama(held: list[str], tc: TranslationConfig | None = None):
-    t = translate(readers.read_togawa(), tc or resonance_config())
-    for f in held:
-        barrier(t, f)
-    return levels(t, {k: v for k, v in KORIYAMA_EVENT.items() if k not in held})
+    _, t, start = koriyama_case(held, tc)
+    return levels(t, start)
 
 
-def zheng(edit=None, tc: TranslationConfig | None = None):
+def zheng_case(edit=None, tc: TranslationConfig | None = None) -> Case:
     model = readers.read_zheng()
     if edit == "C9":                                   # cancel F5: F7 takes F4's output
         model.couplings = [c for c in model.couplings if not (c.source == "F5" and c.target == "F7")]
@@ -192,10 +210,16 @@ def zheng(edit=None, tc: TranslationConfig | None = None):
     add_rule(t, "F20", f"if {f['F12']}.functionality is <4 and {f['F17']}.functionality is <4 then {f['F20']} is severe")
     start = {"X:Radio/Telephone": 3, "X:Internet/Telephone": 3, "X:Firetruck; firefighter; PPE, SCBAS, etc.": 3, "F5": 3}
     drop = {"C8": ["F5"], "C9": ["F5", "X:Firetruck; firefighter; PPE, SCBAS, etc."]}.get(edit, [])
-    return levels(t, {k: v for k, v in start.items() if k not in drop})
+    return model, t, {k: v for k, v in start.items() if k not in drop}
 
 
-def wenzhou(held: list[str], path: bool = False, alt: bool = False, tc: TranslationConfig | None = None):
+def zheng(edit=None, tc: TranslationConfig | None = None):
+    _, t, start = zheng_case(edit, tc)
+    return levels(t, start)
+
+
+def wenzhou_case(held: list[str], path: bool = False, alt: bool = False,
+                 tc: TranslationConfig | None = None) -> Case:
     model, cfg = readers.read_wenzhou(), tc or resonance_config()
     if path:                                           # M8 failure -> dispatch -> D301 driver
         model.add_function("W", "Warn dispatch of an M8 failure")
@@ -212,7 +236,12 @@ def wenzhou(held: list[str], path: bool = False, alt: bool = False, tc: Translat
     t = translate(model, cfg)
     for f in held:
         barrier(t, f)
-    return levels(t, {k: v for k, v in {"M7": 1, "M10": 1}.items() if k not in held})
+    return model, t, {k: v for k, v in {"M7": 1, "M10": 1}.items() if k not in held}
+
+
+def wenzhou(held: list[str], path: bool = False, alt: bool = False, tc: TranslationConfig | None = None):
+    _, t, start = wenzhou_case(held, path, alt, tc)
+    return levels(t, start)
 
 
 def li_stages(tc: TranslationConfig | None = None) -> dict[str, float]:

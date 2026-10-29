@@ -16,18 +16,18 @@ from __future__ import annotations
 
 import itertools
 
-from .model import ASPECTS, FramModel
+from .model import ASPECTS, FramModel, incoming
 
 
 def _satisfied(model: FramModel, fid: str, active: set[str]) -> bool:
     fn = model.functions[fid]
-    incoming = model.incoming(fid)
+    arriving = incoming(model, fid)
     for aspect in ASPECTS:
         profile = fn.profile(aspect)
         if profile == "None":
             continue
         slots: dict[str, list[str]] = {}
-        for c in incoming:
+        for c in arriving:
             if c.aspect == aspect:
                 slots.setdefault(c.output, []).append(c.source)
         if not slots:

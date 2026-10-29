@@ -12,6 +12,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
 | `demo_zheng.py` | demonstration | 4 s |
+| `export_bundles.py` | the core cases as projects for the platform, with `CHECKS.md` | 5 s |
 
 ## Research questions
 

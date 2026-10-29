@@ -22,7 +22,7 @@ from pathlib import Path
 from framkit import readers
 from framkit.engine import function_levels, propagate
 from framkit.kim import to_level, translate_kim
-from framkit.model import ASPECTS
+from framkit.model import ASPECTS, FramModel
 from framkit.oracles import CONFIDENCE, e_factor, spc_scenarios, vpn_exceedance
 from framkit.translate import TranslationConfig, Translated, default_config, resonance_config, translate
 from schemas.network import CategoryDependencyProfile
@@ -84,13 +84,18 @@ SMITH_EVENTS = {"S8": 0.1647, "S9": 0.2818, "S6": 0.1538,
                 "S3": 1 - (1 - 0.3403) * (1 - 0.2015), "S2": 1 - (1 - 0.2696) * (1 - 0.1393)}
 
 
-def smith_translation(shared_sensor: bool) -> Translated:
+def smith_model(shared_sensor: bool) -> FramModel:
     model = readers.read_smith()
     model.functions["S1"].profiles["I"] = "Any"           # its two Inputs are alternatives
     if shared_sensor:
         model.add_coupling("S8", "Pressure measured", "S10", "R")
-    return translate(model, TranslationConfig(n=2, dep={a: 2 for a in ASPECTS}, fmi_mode=True,
-                                              triggers=frozenset({("S10", "S3"), ("S5", "S3")})))
+    return model
+
+
+def smith_translation(shared_sensor: bool) -> Translated:
+    return translate(smith_model(shared_sensor),
+                     TranslationConfig(n=2, dep={a: 2 for a in ASPECTS}, fmi_mode=True,
+                                       triggers=frozenset({("S10", "S3"), ("S5", "S3")})))
 
 
 def smith_ptop(shared_sensor: bool) -> float:

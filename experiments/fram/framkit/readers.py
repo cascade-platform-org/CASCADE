@@ -14,10 +14,10 @@ from __future__ import annotations
 import csv
 import os
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from .model import FramModel
+from core.importers.xfmv.parse import parse_xfmv  # model.py put CASCADE-backend on sys.path
 
 REPO = Path(__file__).resolve().parents[3]
 DATA = Path(os.environ.get("FRAM_DATA", REPO / "docs" / "paper" / "FRAM"))
@@ -33,69 +33,9 @@ def _rows(path: Path) -> list[dict[str, str]]:
     return list(csv.DictReader(lines))
 
 
-_ASPECT_LISTS = {"Inputs": "I", "Preconditions": "P", "Resources": "R", "Controls": "C", "Times": "T"}
-
-
-def _xml_root(path: Path) -> ET.Element:
-    """Parse an FMV file. Some FMV versions write cp1252 bytes under an XML
-    declaration without an encoding, which the parser reads as UTF-8."""
-    data = path.read_bytes()
-    try:
-        data.decode("utf-8")
-        return ET.fromstring(data)
-    except UnicodeDecodeError:
-        return ET.fromstring(data.decode("cp1252"))
-
-
 def read_xfmv(path: Path) -> FramModel:
-    """FMV file: functions with FMI profiles; one <Aspect> per drawn coupling.
-
-    An Aspect's <Name> is `outputFn|output text|toFn|TYPE`; the text may itself
-    contain '|', so the first and the last two fields are split off.
-
-    A file whose <Aspects> list is empty stores each function's aspects as
-    texts instead (<Outputs>, <Inputs>, <Preconditions>, …); FMV then draws a
-    coupling wherever an Output's text equals another function's aspect text,
-    and so does this reader.
-    """
-    root = _xml_root(path)
-    model = FramModel(path.stem)
-    for f in root.find("Functions") or []:
-        fid = f.findtext("IDNr").strip()
-        fn = model.add_function(fid, (f.findtext("IDName") or "").strip(),
-                                background=(f.findtext("FunctionType") or "0").strip() == "2")
-        for aspect in "IPRCT":
-            value = f.get(f"profile{aspect}")
-            if value and value != "All":
-                fn.profiles[aspect] = value
-    aspects = root.find("Aspects")
-    for a in (aspects if aspects is not None else []):
-        name = a.findtext("Name") or ""
-        head, rest = name.split("|", 1)
-        text, to_fn, kind = rest.rsplit("|", 2)
-        src, dst = a.get("outputFn"), a.get("toFn")
-        if src is None or dst is None or kind not in "IPRCT" or not kind:
-            continue
-        if src not in model.functions or dst not in model.functions:
-            continue
-        model.add_coupling(src, text.strip(), dst, kind)
-    if aspects is None or len(aspects) == 0:
-        _couple_by_text(root, model)
-    return model
-
-
-def _couple_by_text(root: ET.Element, model: FramModel) -> None:
-    def entries(tag: str):
-        for e in root.find(tag) or []:
-            yield (e.findtext("IDName") or "").strip(), (e.findtext("FunctionIDNr") or "").strip()
-    producers: dict[str, list[str]] = {}
-    for text, fid in entries("Outputs"):
-        producers.setdefault(text, []).append(fid)
-    for tag, kind in _ASPECT_LISTS.items():
-        for text, dst in entries(tag):
-            for src in producers.get(text, []):
-                if src in model.functions and dst in model.functions:
-                    model.add_coupling(src, text, dst, kind)
+    """An FMV file, through the product's importer (core/importers/xfmv/parse.py)."""
+    return parse_xfmv(path.read_bytes(), path.stem)
 
 
 def read_zheng() -> FramModel:
