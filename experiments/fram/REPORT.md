@@ -12,7 +12,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_ablation.py` | ablations, severity grid, claim tiers, reference check | ~60 min (Grabbe under the cumulative members) |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
-| `demo_zheng.py` | demonstration | 4 s |
+| `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) | 6 s |
 | `export_bundles.py` | the core cases as projects for the platform, with `CHECKS.md` | 5 s |
 
 ## Research questions
@@ -118,7 +118,7 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 | The propagation model adds | Evidence |
 |---|---|
 | answers to questions the FRAM raises but cannot settle | Smith's shared sensor: +38 % P(top); the sensor becomes the most critical component |
-| mechanisms a FRAM table cannot express | demonstration: fire water decides F20 and Tank 63 (below) |
+| comparison of recommendations under resources and a deadline | decision model: two-way updates suffice below half the brigade drawn away; beyond, mutual aid within 30 min (below) |
 | criticality that accounts for redundancy and coincidence | Smith's backup first by Birnbaum; topology misses it |
 | repeatable what-ifs that expose gaps in the map | 7/11 claims agree; Wenzhou's warnings need a path Fig. 4 lacks |
 | an explicit rule for how coinciding deviations combine | Togawa's two claims turn on it (cumulative worsening: 9/11); RQ1 does not |
@@ -132,26 +132,28 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 | the paths that information takes, which the analyst must draw | Wenzhou's warning path, absent from Fig. 4 |
 | the events themselves | the severity of the triggering deviations is the largest sensitivity |
 
-## Demonstration: Zheng with physical networks (`demo_zheng.py`, `demo/*.json`, `results/d_*.csv`)
+## Decision model: Zheng's recommendations under firefighters and time (`decide_zheng.py`; declared at 882d4a1, TRANSLATION.md §4d)
 
-**Setup.** Zheng's FRAM (v2) on three physical canvases. Quantities are illustrative:
-- telecom (Requisite);
-- firefighter crews (SourceToDemands; other affected areas served first);
-- fire water (SourceToDemands; main → hydrants → F20 foam and the cooling of Tank 63; firetruck tanks as a small second source).
+Replaces the earlier demonstration, whose telecom and fire-water canvases and quantities were ours (Table 1 gives F20 no water aspect). Imported: the converted FRAM and its event, firefighters as F17's Resource with other affected areas served first, Tank 63's time to failure (33–117 min), the four options. Swept: share of the brigade drawn away d, mutual-aid arrival a, telecom severity s.
 
-The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, and the bundle opens in the app.
+**F20 by option** (`results/decision_map.csv`), telecom at the declared level 3:
 
-**Results.**
-- **Claim from physical damage alone** (hour 0): 8/8 negatives, 6/8 positives, F12 = 3, F17 = 3, F20 = 2, with F2, F14, F15 nominal. This is RQ1, produced by the physical layer.
-- **Operativity, as planned / with Zheng's Fig. 9 remedy:**
+| d | O0 plan | O1 two-way updates | O2, O3 + mutual aid |
+|---|---|---|---|
+| < 0.25 | nominal | nominal | nominal |
+| 0.25–0.49 | severe (F12 and F17 coincide: the rule) | nominal | nominal |
+| ≥ 0.5 | severe | 3 | 3, nominal from a: the whole deadline band if a ≤ 30 min, part of it if a ≤ 110 |
 
-  | Hour | 0 | 6 | 8 |
-  |---|---|---|---|
-  | as planned | 0.80 | 0.92 | 0.985 |
-  | remedy | 0.94 | 0.94 | 1.00 |
+- Telecom at 2: two-way updates stop sufficing from d = 0.3 (F12 degrades again); mutual aid restores F20 up to d = 0.6 and not at 0.7, where the damaged telecom degrades the mobilisation.
+- O2 and O3 coincide everywhere: cancelling F5 and making it two-way have the same effect here.
+- Every line of the hand reading recorded at 882d4a1 held.
+- The thresholds 0.25 and 0.5 are the 4-level scale's served-ratio steps (ceil(ratio · 4)) acting through v2's damping; the paper reports them as where the choice changes on this scale.
 
-- **The remedy fixes F12 and F17 from hour 0, not F20.** With the main destroyed, foam gets the trucks' 80 of 240 m³/h until the repair at hour 8. Tank 63's cooling gets nothing: the paper's "radiation may fail Tank 63", through a mechanism its FRAM cannot express.
-- **Shapley on the hour-0 damage** (Operativity loss 0.197 in total): F5 one-way 0.051, fire-water main 0.049, exchange 0.036, fibre 0.036, crews 0.026, radio repeater 0. The repeater is redundant with the exchange.
+**Reference point** (d = 0.4, a = 30, s = 3; `results/decision_timeline.csv`): Operativity of the FRAM functions 0.80 under the plan throughout; 0.985 with two-way updates; 0.986 then 1.00 from minute 30 with mutual aid.
+
+**Shapley on the plan at t = 0** (`results/decision_shapley.csv`; Operativity loss 0.197): F5 one-way 0.083, telecom 0.068, firefighters drawn away 0.046.
+
+The four options open in the app with their Temporal Simulation: `CASCADE-app/samples/public/fram/zheng_decision_O*.json`.
 
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
 
@@ -181,7 +183,7 @@ The 12-hour Temporal Simulation of damage and repairs is stored in the bundle, a
 
 ## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 
-- **Resonance as one rule per function.** First written over damped copy nodes, identical to a compiled-Specific-Rule version (0 of 864 scenarios differ). Now written with level offsets (ADR-0025), `worst_of(worst_of(a, b, …) + 1, <second worst>)`, with no copy or helper nodes: every result byte-identical, and the demonstration model shrinks from 178 to 101 nodes.
+- **Resonance as one rule per function.** First written over damped copy nodes, identical to a compiled-Specific-Rule version (0 of 864 scenarios differ). Now written with level offsets (ADR-0025), `worst_of(worst_of(a, b, …) + 1, <second worst>)`, with no copy or helper nodes: every result byte-identical, and the earlier demonstration model shrank from 178 to 101 nodes.
 - **N = 4 for qualitative sources.** A wider scale gave no gain: what matters is the ratio of damping to the event's deficit.
 - **One level of damping.** Two levels fit Zheng at every severity but break Tian (2/6).
 - **No common-cause pruning.** Dropping coincidences with a shared origin made results worse: the experts do pass shared-origin delays.
