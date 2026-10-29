@@ -13,6 +13,10 @@
     "node_categories": [
      "confirm_location_of_fire"
     ],
+    "position": {
+     "x": 320.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(alarm_information_2, well_performed_monitoring_system_2) + 1, best_of(alarm_information_2, well_performed_monitoring_system_2)) propagates to fn_0"
     ]
@@ -24,6 +28,10 @@
     "node_categories": [
      "contact_the_control_room_and_shift_offic"
     ],
+    "position": {
+     "x": 640.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(fire_information, radio_telephone_2, rescue_rules_and_regulations_2, all_relative_officers_stand_by_2) + 1, worst_of(best_of(fire_information, radio_telephone_2), best_of(fire_information, rescue_rules_and_regulations_2), best_of(fire_information, all_relative_officers_stand_by_2), best_of(radio_telephone_2, rescue_rules_and_regulations_2), best_of(radio_telephone_2, all_relative_officers_stand_by_2), best_of(rescue_rules_and_regulations_2, all_relative_officers_stand_by_2))) propagates to fn_1"
     ]
@@ -35,6 +43,10 @@
     "node_categories": [
      "actuate_siren"
     ],
+    "position": {
+     "x": 960.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(immediate_action_guidelines, alarm_system_2, well_performed_warning_systems_2) + 1, worst_of(best_of(immediate_action_guidelines, alarm_system_2), best_of(immediate_action_guidelines, well_performed_warning_systems_2), best_of(alarm_system_2, well_performed_warning_systems_2))) propagates to fn_2"
     ]
@@ -46,6 +58,10 @@
     "node_categories": [
      "contact_fire_department"
     ],
+    "position": {
+     "x": 960.0,
+     "y": 140.0
+    },
     "rules": [
      "worst_of(worst_of(immediate_action_guidelines, radio_telephone_2, fire_department_standing_by_2) + 1, worst_of(best_of(immediate_action_guidelines, radio_telephone_2), best_of(immediate_action_guidelines, fire_department_standing_by_2), best_of(radio_telephone_2, fire_department_standing_by_2))) propagates to fn_3"
     ]
@@ -57,6 +73,10 @@
     "node_categories": [
      "contact_the_fire_marshal_for_instruction"
     ],
+    "position": {
+     "x": 1280.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(successful_connection_with_fire_departme, radio_telephone_2, fire_marshal_standing_by_2) + 1, worst_of(best_of(successful_connection_with_fire_departme, radio_telephone_2), best_of(successful_connection_with_fire_departme, fire_marshal_standing_by_2), best_of(radio_telephone_2, fire_marshal_standing_by_2))) propagates to fn_4"
     ]
@@ -68,6 +88,10 @@
     "node_categories": [
      "establish_if_any_missing_persons_at_asse"
     ],
+    "position": {
+     "x": 1280.0,
+     "y": 140.0
+    },
     "rules": [
      "worst_of(worst_of(immediate_action_guidelines, internet_telephone_2, publication_of_information) + 1, worst_of(best_of(immediate_action_guidelines, internet_telephone_2), best_of(immediate_action_guidelines, publication_of_information), best_of(internet_telephone_2, publication_of_information))) propagates to fn_5"
     ]
@@ -79,6 +103,10 @@
     "node_categories": [
      "establish_incident_command_post_and_advi"
     ],
+    "position": {
+     "x": 1600.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(specific_action_description, internet_telephone_2, all_related_departments_standing_by_2) + 1, worst_of(best_of(specific_action_description, internet_telephone_2), best_of(specific_action_description, all_related_departments_standing_by_2), best_of(internet_telephone_2, all_related_departments_standing_by_2))) propagates to fn_6"
     ]
@@ -90,6 +118,10 @@
     "node_categories": [
      "post_the_accident_location_and_informati"
     ],
+    "position": {
+     "x": 1280.0,
+     "y": 280.0
+    },
     "rules": [
      "worst_of(worst_of(successful_connection_with_fire_departme, internet_telephone_2, principles_of_releasing_accident_informa_2) + 1, worst_of(best_of(successful_connection_with_fire_departme, internet_telephone_2), best_of(successful_connection_with_fire_departme, principles_of_releasing_accident_informa_2), best_of(internet_telephone_2, principles_of_releasing_accident_informa_2))) propagates to fn_7"
     ]
@@ -101,6 +133,10 @@
     "node_categories": [
      "check_extent_of_fire_and_escalation_pote"
     ],
+    "position": {
+     "x": 1920.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(incident_command_post, experts_with_process_experience_and_know_2, internet_telephone_2, information_on_fire_fuel_and_facilities_2) + 1, worst_of(best_of(incident_command_post, experts_with_process_experience_and_know_2), best_of(incident_command_post, internet_telephone_2), best_of(incident_command_post, information_on_fire_fuel_and_facilities_2), best_of(experts_with_process_experience_and_know_2, internet_telephone_2), best_of(experts_with_process_experience_and_know_2, information_on_fire_fuel_and_facilities_2), best_of(internet_telephone_2, information_on_fire_fuel_and_facilities_2))) propagates to fn_8"
     ]
@@ -112,6 +148,10 @@
     "node_categories": [
      "evaluate_the_availability_of_equipment_a"
     ],
+    "position": {
+     "x": 1920.0,
+     "y": 140.0
+    },
     "rules": [
      "worst_of(worst_of(incident_command_post, experts_with_process_experience_and_know_2, internet_telephone_2, information_on_equipment_and_resources_2) + 1, worst_of(best_of(incident_command_post, experts_with_process_experience_and_know_2), best_of(incident_command_post, internet_telephone_2), best_of(incident_command_post, information_on_equipment_and_resources_2), best_of(experts_with_process_experience_and_know_2, internet_telephone_2), best_of(experts_with_process_experience_and_know_2, information_on_equipment_and_resources_2), best_of(internet_telephone_2, information_on_equipment_and_resources_2))) propagates to fn_9"
     ]
@@ -123,6 +163,10 @@
     "node_categories": [
      "assess_flame_or_heat_affected_facilities"
     ],
+    "position": {
+     "x": 1920.0,
+     "y": 280.0
+    },
     "rules": [
      "worst_of(worst_of(incident_command_post, experts_with_process_experience_and_know_2, internet_telephone_2, information_on_fire_fuel_and_facilities_2) + 1, worst_of(best_of(incident_command_post, experts_with_process_experience_and_know_2), best_of(incident_command_post, internet_telephone_2), best_of(incident_command_post, information_on_fire_fuel_and_facilities_2), best_of(experts_with_process_experience_and_know_2, internet_telephone_2), best_of(experts_with_process_experience_and_know_2, information_on_fire_fuel_and_facilities_2), best_of(internet_telephone_2, information_on_fire_fuel_and_facilities_2))) propagates to fn_10"
     ]
@@ -134,6 +178,10 @@
     "node_categories": [
      "develop_response_guidelines"
     ],
+    "position": {
+     "x": 2240.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(confirming_a_person_s_status, the_fire_risk_evaluation_results_and_pre, the_evaluation_results_on_available_equi, the_evaluation_results_of_facilities, experts_with_process_experience_and_know_2, rescue_rules_and_regulations_2) + 1, worst_of(best_of(confirming_a_person_s_status, the_fire_risk_evaluation_results_and_pre), best_of(confirming_a_person_s_status, the_evaluation_results_on_available_equi), best_of(confirming_a_person_s_status, the_evaluation_results_of_facilities), best_of(confirming_a_person_s_status, experts_with_process_experience_and_know_2), best_of(confirming_a_person_s_status, rescue_rules_and_regulations_2), best_of(the_fire_risk_evaluation_results_and_pre, the_evaluation_results_on_available_equi), best_of(the_fire_risk_evaluation_results_and_pre, the_evaluation_results_of_facilities), best_of(the_fire_risk_evaluation_results_and_pre, experts_with_process_experience_and_know_2), best_of(the_fire_risk_evaluation_results_and_pre, rescue_rules_and_regulations_2), best_of(the_evaluation_results_on_available_equi, the_evaluation_results_of_facilities), best_of(the_evaluation_results_on_available_equi, experts_with_process_experience_and_know_2), best_of(the_evaluation_results_on_available_equi, rescue_rules_and_regulations_2), best_of(the_evaluation_results_of_facilities, experts_with_process_experience_and_know_2), best_of(the_evaluation_results_of_facilities, rescue_rules_and_regulations_2), best_of(experts_with_process_experience_and_know_2, rescue_rules_and_regulations_2))) propagates to fn_11"
     ]
@@ -145,6 +193,10 @@
     "node_categories": [
      "send_technician_to_stand_by_with_equipme"
     ],
+    "position": {
+     "x": 2560.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(response_guidelines, sufficient_technician_2) + 1, best_of(response_guidelines, sufficient_technician_2)) propagates to fn_12"
     ]
@@ -156,6 +208,10 @@
     "node_categories": [
      "isolate_equipment_and_commence_shutdown"
     ],
+    "position": {
+     "x": 2880.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(technician_standing_by, information_on_equipment_and_facilities_2) + 1, best_of(technician_standing_by, information_on_equipment_and_facilities_2)) propagates to fn_13"
     ]
@@ -167,6 +223,10 @@
     "node_categories": [
      "pump_the_product_of_tanks_52_53_and_54_t"
     ],
+    "position": {
+     "x": 2880.0,
+     "y": 140.0
+    },
     "rules": [
      "worst_of(worst_of(technician_standing_by, pump_facilities_2, standard_of_pump_operation_2) + 1, worst_of(best_of(technician_standing_by, pump_facilities_2), best_of(technician_standing_by, standard_of_pump_operation_2), best_of(pump_facilities_2, standard_of_pump_operation_2))) propagates to fn_14"
     ]
@@ -178,6 +238,10 @@
     "node_categories": [
      "respond_to_the_incident_area_for_shutdow"
     ],
+    "position": {
+     "x": 3200.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(successfully_isolating_and_shutting_down, successfully_transferring_the_product_to, technician_2) + 1, worst_of(best_of(successfully_isolating_and_shutting_down, successfully_transferring_the_product_to), best_of(successfully_isolating_and_shutting_down, technician_2), best_of(successfully_transferring_the_product_to, technician_2))) propagates to fn_15"
     ]
@@ -189,6 +253,10 @@
     "node_categories": [
      "assemble_the_fire_team_with_equipment_an"
     ],
+    "position": {
+     "x": 2560.0,
+     "y": 140.0
+    },
     "category_dependency_profiles": {
      "crews": {
       "dependency_level": 4,
@@ -207,6 +275,10 @@
     "node_categories": [
      "all_members_don_firefighting_ppe_and_scb"
     ],
+    "position": {
+     "x": 2880.0,
+     "y": 280.0
+    },
     "rules": [
      "worst_of(worst_of(successfully_assembling_enough_scbas_ppe, response_guidelines, standard_of_wearing_firefighting_ppe_and_2) + 1, worst_of(best_of(successfully_assembling_enough_scbas_ppe, response_guidelines), best_of(successfully_assembling_enough_scbas_ppe, standard_of_wearing_firefighting_ppe_and_2), best_of(response_guidelines, standard_of_wearing_firefighting_ppe_and_2))) propagates to fn_17"
     ]
@@ -218,6 +290,10 @@
     "node_categories": [
      "ensure_all_members_don_firefighting_ppe"
     ],
+    "position": {
+     "x": 3200.0,
+     "y": 140.0
+    },
     "rules": [
      "worst_of(worst_of(firefighters_wearing_ppe_and_scbas, response_guidelines, standard_of_wearing_firefighting_ppe_scb_2) + 1, worst_of(best_of(firefighters_wearing_ppe_and_scbas, response_guidelines), best_of(firefighters_wearing_ppe_and_scbas, standard_of_wearing_firefighting_ppe_scb_2), best_of(response_guidelines, standard_of_wearing_firefighting_ppe_scb_2))) propagates to fn_18"
     ]
@@ -229,6 +305,10 @@
     "node_categories": [
      "direct_fire_team_to_inject_foam_to_the_b"
     ],
+    "position": {
+     "x": 3520.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(ensuring_that_firefighters_wear_ppe, response_guidelines, successfully_assembling_enough_scbas_ppe, operation_specifications_of_firetrucks_2) + 1, worst_of(best_of(ensuring_that_firefighters_wear_ppe, response_guidelines), best_of(ensuring_that_firefighters_wear_ppe, successfully_assembling_enough_scbas_ppe), best_of(ensuring_that_firefighters_wear_ppe, operation_specifications_of_firetrucks_2), best_of(response_guidelines, successfully_assembling_enough_scbas_ppe), best_of(response_guidelines, operation_specifications_of_firetrucks_2), best_of(successfully_assembling_enough_scbas_ppe, operation_specifications_of_firetrucks_2))) propagates to fn_19",
      "if fn_11.functionality is <4 and fn_16.functionality is <4 then fn_19 is severe"
@@ -241,6 +321,10 @@
     "node_categories": [
      "fire_teams_remain_on_standby_until_the_a"
     ],
+    "position": {
+     "x": 3840.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(successfully_extinguishing_the_fire, shutdown_supervision_in_real_time, successfully_assembling_enough_scbas_ppe, standard_of_security_2, ensuring_that_firefighters_wear_ppe) + 1, worst_of(best_of(successfully_extinguishing_the_fire, shutdown_supervision_in_real_time), best_of(successfully_extinguishing_the_fire, successfully_assembling_enough_scbas_ppe), best_of(successfully_extinguishing_the_fire, standard_of_security_2), best_of(successfully_extinguishing_the_fire, ensuring_that_firefighters_wear_ppe), best_of(shutdown_supervision_in_real_time, successfully_assembling_enough_scbas_ppe), best_of(shutdown_supervision_in_real_time, standard_of_security_2), best_of(shutdown_supervision_in_real_time, ensuring_that_firefighters_wear_ppe), best_of(successfully_assembling_enough_scbas_ppe, standard_of_security_2), best_of(successfully_assembling_enough_scbas_ppe, ensuring_that_firefighters_wear_ppe), best_of(standard_of_security_2, ensuring_that_firefighters_wear_ppe))) propagates to fn_20"
     ]
@@ -252,6 +336,10 @@
     "node_categories": [
      "monitor_the_response_actions"
     ],
+    "position": {
+     "x": 4160.0,
+     "y": 0.0
+    },
     "rules": [
      "worst_of(worst_of(technician_standing_by, response_guidelines, successfully_isolating_and_shutting_down, successfully_transferring_the_product_to, firefighters_wearing_ppe_and_scbas, ensuring_that_firefighters_wear_ppe, successfully_extinguishing_the_fire, safe_storage_tank_area) + 1, worst_of(best_of(technician_standing_by, response_guidelines), best_of(technician_standing_by, successfully_isolating_and_shutting_down), best_of(technician_standing_by, successfully_transferring_the_product_to), best_of(technician_standing_by, firefighters_wearing_ppe_and_scbas), best_of(technician_standing_by, ensuring_that_firefighters_wear_ppe), best_of(technician_standing_by, successfully_extinguishing_the_fire), best_of(technician_standing_by, safe_storage_tank_area), best_of(response_guidelines, successfully_isolating_and_shutting_down), best_of(response_guidelines, successfully_transferring_the_product_to), best_of(response_guidelines, firefighters_wearing_ppe_and_scbas), best_of(response_guidelines, ensuring_that_firefighters_wear_ppe), best_of(response_guidelines, successfully_extinguishing_the_fire), best_of(response_guidelines, safe_storage_tank_area), best_of(successfully_isolating_and_shutting_down, successfully_transferring_the_product_to), best_of(successfully_isolating_and_shutting_down, firefighters_wearing_ppe_and_scbas), best_of(successfully_isolating_and_shutting_down, ensuring_that_firefighters_wear_ppe), best_of(successfully_isolating_and_shutting_down, successfully_extinguishing_the_fire), best_of(successfully_isolating_and_shutting_down, safe_storage_tank_area), best_of(successfully_transferring_the_product_to, firefighters_wearing_ppe_and_scbas), best_of(successfully_transferring_the_product_to, ensuring_that_firefighters_wear_ppe), best_of(successfully_transferring_the_product_to, successfully_extinguishing_the_fire), best_of(successfully_transferring_the_product_to, safe_storage_tank_area), best_of(firefighters_wearing_ppe_and_scbas, ensuring_that_firefighters_wear_ppe), best_of(firefighters_wearing_ppe_and_scbas, successfully_extinguishing_the_fire), best_of(firefighters_wearing_ppe_and_scbas, safe_storage_tank_area), best_of(ensuring_that_firefighters_wear_ppe, successfully_extinguishing_the_fire), best_of(ensuring_that_firefighters_wear_ppe, safe_storage_tank_area), best_of(successfully_extinguishing_the_fire, safe_storage_tank_area))) propagates to fn_21"
     ]
@@ -262,7 +350,11 @@
     "label": "Alarm information",
     "node_categories": [
      "alarm_information"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 0.0
+    }
    },
    "fn_23": {
     "id": "fn_23",
@@ -270,7 +362,11 @@
     "label": "Well-performed monitoring system",
     "node_categories": [
      "well_performed_monitoring_system"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 140.0
+    }
    },
    "fn_24": {
     "id": "fn_24",
@@ -278,7 +374,11 @@
     "label": "Radio/Telephone",
     "node_categories": [
      "radio_telephone"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 280.0
+    }
    },
    "fn_25": {
     "id": "fn_25",
@@ -286,7 +386,11 @@
     "label": "Rescue rules and regulations",
     "node_categories": [
      "rescue_rules_and_regulations"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 420.0
+    }
    },
    "fn_26": {
     "id": "fn_26",
@@ -294,7 +398,11 @@
     "label": "All relative officers stand by",
     "node_categories": [
      "all_relative_officers_stand_by"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 560.0
+    }
    },
    "fn_27": {
     "id": "fn_27",
@@ -302,7 +410,11 @@
     "label": "Alarm system",
     "node_categories": [
      "alarm_system"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 700.0
+    }
    },
    "fn_28": {
     "id": "fn_28",
@@ -310,7 +422,11 @@
     "label": "Well-performed warning systems",
     "node_categories": [
      "well_performed_warning_systems"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 840.0
+    }
    },
    "fn_29": {
     "id": "fn_29",
@@ -318,7 +434,11 @@
     "label": "Fire department standing by",
     "node_categories": [
      "fire_department_standing_by"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 980.0
+    }
    },
    "fn_30": {
     "id": "fn_30",
@@ -326,7 +446,11 @@
     "label": "Fire marshal standing by",
     "node_categories": [
      "fire_marshal_standing_by"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1120.0
+    }
    },
    "fn_31": {
     "id": "fn_31",
@@ -334,7 +458,11 @@
     "label": "Internet/Telephone",
     "node_categories": [
      "internet_telephone"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1260.0
+    }
    },
    "fn_32": {
     "id": "fn_32",
@@ -342,7 +470,11 @@
     "label": "All related departments standing by",
     "node_categories": [
      "all_related_departments_standing_by"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1400.0
+    }
    },
    "fn_33": {
     "id": "fn_33",
@@ -350,7 +482,11 @@
     "label": "Principles of releasing accident information",
     "node_categories": [
      "principles_of_releasing_accident_informa"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1540.0
+    }
    },
    "fn_34": {
     "id": "fn_34",
@@ -358,7 +494,11 @@
     "label": "Experts with process experience and knowledge",
     "node_categories": [
      "experts_with_process_experience_and_know"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1680.0
+    }
    },
    "fn_35": {
     "id": "fn_35",
@@ -366,7 +506,11 @@
     "label": "Information on fire, fuel, and facilities",
     "node_categories": [
      "information_on_fire_fuel_and_facilities"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1820.0
+    }
    },
    "fn_36": {
     "id": "fn_36",
@@ -374,7 +518,11 @@
     "label": "Information on equipment and resources",
     "node_categories": [
      "information_on_equipment_and_resources"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 1960.0
+    }
    },
    "fn_37": {
     "id": "fn_37",
@@ -382,7 +530,11 @@
     "label": "Sufficient technician",
     "node_categories": [
      "sufficient_technician"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2100.0
+    }
    },
    "fn_38": {
     "id": "fn_38",
@@ -390,7 +542,11 @@
     "label": "Information on equipment and facilities",
     "node_categories": [
      "information_on_equipment_and_facilities"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2240.0
+    }
    },
    "fn_39": {
     "id": "fn_39",
@@ -398,7 +554,11 @@
     "label": "Pump facilities",
     "node_categories": [
      "pump_facilities"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2380.0
+    }
    },
    "fn_40": {
     "id": "fn_40",
@@ -406,7 +566,11 @@
     "label": "Standard of pump operation",
     "node_categories": [
      "standard_of_pump_operation"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2520.0
+    }
    },
    "fn_41": {
     "id": "fn_41",
@@ -414,7 +578,11 @@
     "label": "Technician",
     "node_categories": [
      "technician"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2660.0
+    }
    },
    "fn_42": {
     "id": "fn_42",
@@ -422,7 +590,11 @@
     "label": "Firetruck; firefighter; PPE, SCBAS, etc.",
     "node_categories": [
      "firetruck_firefighter_ppe_scbas_etc"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2800.0
+    }
    },
    "fn_43": {
     "id": "fn_43",
@@ -430,7 +602,11 @@
     "label": "Standard of wearing firefighting PPE and SCBAS",
     "node_categories": [
      "standard_of_wearing_firefighting_ppe_and"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 2940.0
+    }
    },
    "fn_44": {
     "id": "fn_44",
@@ -438,7 +614,11 @@
     "label": "Standard of wearing firefighting PPE SCBAS",
     "node_categories": [
      "standard_of_wearing_firefighting_ppe_scb"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 3080.0
+    }
    },
    "fn_45": {
     "id": "fn_45",
@@ -446,7 +626,11 @@
     "label": "Operation specifications of firetrucks",
     "node_categories": [
      "operation_specifications_of_firetrucks"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 3220.0
+    }
    },
    "fn_46": {
     "id": "fn_46",
@@ -454,7 +638,11 @@
     "label": "Standard of security",
     "node_categories": [
      "standard_of_security"
-    ]
+    ],
+    "position": {
+     "x": 0.0,
+     "y": 3360.0
+    }
    },
    "o_0": {
     "id": "o_0",
@@ -462,7 +650,11 @@
     "label": "Alarm information (output of Alarm information)",
     "node_categories": [
      "alarm_information_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 0.0
+    }
    },
    "o_1": {
     "id": "o_1",
@@ -470,7 +662,11 @@
     "label": "Well-performed monitoring system (output of Well-performed monitoring system)",
     "node_categories": [
      "well_performed_monitoring_system_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 140.0
+    }
    },
    "o_2": {
     "id": "o_2",
@@ -478,7 +674,11 @@
     "label": "Fire information",
     "node_categories": [
      "fire_information"
-    ]
+    ],
+    "position": {
+     "x": 470.0,
+     "y": 0.0
+    }
    },
    "o_3": {
     "id": "o_3",
@@ -486,7 +686,11 @@
     "label": "Radio/Telephone (output of Radio/Telephone)",
     "node_categories": [
      "radio_telephone_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 280.0
+    }
    },
    "o_4": {
     "id": "o_4",
@@ -494,7 +698,11 @@
     "label": "Rescue rules and regulations (output of Rescue rules and regulations)",
     "node_categories": [
      "rescue_rules_and_regulations_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 420.0
+    }
    },
    "o_5": {
     "id": "o_5",
@@ -502,7 +710,11 @@
     "label": "All relative officers stand by (output of All relative officers stand by)",
     "node_categories": [
      "all_relative_officers_stand_by_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 560.0
+    }
    },
    "o_6": {
     "id": "o_6",
@@ -510,7 +722,11 @@
     "label": "Immediate action guidelines",
     "node_categories": [
      "immediate_action_guidelines"
-    ]
+    ],
+    "position": {
+     "x": 790.0,
+     "y": 0.0
+    }
    },
    "o_7": {
     "id": "o_7",
@@ -518,7 +734,11 @@
     "label": "Alarm system (output of Alarm system)",
     "node_categories": [
      "alarm_system_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 700.0
+    }
    },
    "o_8": {
     "id": "o_8",
@@ -526,7 +746,11 @@
     "label": "Well-performed warning systems (output of Well-performed warning systems)",
     "node_categories": [
      "well_performed_warning_systems_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 840.0
+    }
    },
    "o_9": {
     "id": "o_9",
@@ -534,7 +758,11 @@
     "label": "Fire department standing by (output of Fire department standing by)",
     "node_categories": [
      "fire_department_standing_by_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 980.0
+    }
    },
    "o_10": {
     "id": "o_10",
@@ -542,7 +770,11 @@
     "label": "Successful connection with fire department",
     "node_categories": [
      "successful_connection_with_fire_departme"
-    ]
+    ],
+    "position": {
+     "x": 1110.0,
+     "y": 140.0
+    }
    },
    "o_11": {
     "id": "o_11",
@@ -550,7 +782,11 @@
     "label": "Fire marshal standing by (output of Fire marshal standing by)",
     "node_categories": [
      "fire_marshal_standing_by_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1120.0
+    }
    },
    "o_12": {
     "id": "o_12",
@@ -558,7 +794,11 @@
     "label": "Internet/Telephone (output of Internet/Telephone)",
     "node_categories": [
      "internet_telephone_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1260.0
+    }
    },
    "o_13": {
     "id": "o_13",
@@ -566,7 +806,11 @@
     "label": "Publication of information",
     "node_categories": [
      "publication_of_information"
-    ]
+    ],
+    "position": {
+     "x": 1110.0,
+     "y": 0.0
+    }
    },
    "o_14": {
     "id": "o_14",
@@ -574,7 +818,11 @@
     "label": "Specific action description",
     "node_categories": [
      "specific_action_description"
-    ]
+    ],
+    "position": {
+     "x": 1430.0,
+     "y": 0.0
+    }
    },
    "o_15": {
     "id": "o_15",
@@ -582,7 +830,11 @@
     "label": "All related departments standing by (output of All related departments standing by)",
     "node_categories": [
      "all_related_departments_standing_by_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1400.0
+    }
    },
    "o_16": {
     "id": "o_16",
@@ -590,7 +842,11 @@
     "label": "Principles of releasing accident information (output of Principles of releasing accident information)",
     "node_categories": [
      "principles_of_releasing_accident_informa_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1540.0
+    }
    },
    "o_17": {
     "id": "o_17",
@@ -598,7 +854,11 @@
     "label": "Incident command post",
     "node_categories": [
      "incident_command_post"
-    ]
+    ],
+    "position": {
+     "x": 1750.0,
+     "y": 0.0
+    }
    },
    "o_18": {
     "id": "o_18",
@@ -606,7 +866,11 @@
     "label": "Experts with process experience and knowledge (output of Experts with process experience and knowledge)",
     "node_categories": [
      "experts_with_process_experience_and_know_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1680.0
+    }
    },
    "o_19": {
     "id": "o_19",
@@ -614,7 +878,11 @@
     "label": "Information on fire, fuel, and facilities (output of Information on fire, fuel, and facilities)",
     "node_categories": [
      "information_on_fire_fuel_and_facilities_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1820.0
+    }
    },
    "o_20": {
     "id": "o_20",
@@ -622,7 +890,11 @@
     "label": "Information on equipment and resources (output of Information on equipment and resources)",
     "node_categories": [
      "information_on_equipment_and_resources_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 1960.0
+    }
    },
    "o_21": {
     "id": "o_21",
@@ -630,7 +902,11 @@
     "label": "Confirming a person's status",
     "node_categories": [
      "confirming_a_person_s_status"
-    ]
+    ],
+    "position": {
+     "x": 1430.0,
+     "y": 140.0
+    }
    },
    "o_22": {
     "id": "o_22",
@@ -638,7 +914,11 @@
     "label": "The fire risk evaluation results and prediction results",
     "node_categories": [
      "the_fire_risk_evaluation_results_and_pre"
-    ]
+    ],
+    "position": {
+     "x": 2070.0,
+     "y": 0.0
+    }
    },
    "o_23": {
     "id": "o_23",
@@ -646,7 +926,11 @@
     "label": "The evaluation results on available equipment and resources",
     "node_categories": [
      "the_evaluation_results_on_available_equi"
-    ]
+    ],
+    "position": {
+     "x": 2070.0,
+     "y": 140.0
+    }
    },
    "o_24": {
     "id": "o_24",
@@ -654,7 +938,11 @@
     "label": "The evaluation results of facilities",
     "node_categories": [
      "the_evaluation_results_of_facilities"
-    ]
+    ],
+    "position": {
+     "x": 2070.0,
+     "y": 280.0
+    }
    },
    "o_25": {
     "id": "o_25",
@@ -662,7 +950,11 @@
     "label": "Response guidelines",
     "node_categories": [
      "response_guidelines"
-    ]
+    ],
+    "position": {
+     "x": 2390.0,
+     "y": 0.0
+    }
    },
    "o_26": {
     "id": "o_26",
@@ -670,7 +962,11 @@
     "label": "Sufficient technician (output of Sufficient technician)",
     "node_categories": [
      "sufficient_technician_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2100.0
+    }
    },
    "o_27": {
     "id": "o_27",
@@ -678,7 +974,11 @@
     "label": "Technician standing by",
     "node_categories": [
      "technician_standing_by"
-    ]
+    ],
+    "position": {
+     "x": 2710.0,
+     "y": 0.0
+    }
    },
    "o_28": {
     "id": "o_28",
@@ -686,7 +986,11 @@
     "label": "Information on equipment and facilities (output of Information on equipment and facilities)",
     "node_categories": [
      "information_on_equipment_and_facilities_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2240.0
+    }
    },
    "o_29": {
     "id": "o_29",
@@ -694,7 +998,11 @@
     "label": "Pump facilities (output of Pump facilities)",
     "node_categories": [
      "pump_facilities_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2380.0
+    }
    },
    "o_30": {
     "id": "o_30",
@@ -702,7 +1010,11 @@
     "label": "Standard of pump operation (output of Standard of pump operation)",
     "node_categories": [
      "standard_of_pump_operation_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2520.0
+    }
    },
    "o_31": {
     "id": "o_31",
@@ -710,7 +1022,11 @@
     "label": "Successfully isolating and shutting down all equipment and facilities",
     "node_categories": [
      "successfully_isolating_and_shutting_down"
-    ]
+    ],
+    "position": {
+     "x": 3030.0,
+     "y": 0.0
+    }
    },
    "o_32": {
     "id": "o_32",
@@ -718,7 +1034,11 @@
     "label": "Successfully transferring the product to another tank",
     "node_categories": [
      "successfully_transferring_the_product_to"
-    ]
+    ],
+    "position": {
+     "x": 3030.0,
+     "y": 140.0
+    }
    },
    "o_33": {
     "id": "o_33",
@@ -726,7 +1046,11 @@
     "label": "Technician (output of Technician)",
     "node_categories": [
      "technician_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2660.0
+    }
    },
    "o_34": {
     "id": "o_34",
@@ -734,7 +1058,11 @@
     "label": "Firetruck; firefighter; PPE, SCBAS, etc. (output of Firetruck; firefighter; PPE, SCBAS, etc.)",
     "node_categories": [
      "firetruck_firefighter_ppe_scbas_etc_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2800.0
+    }
    },
    "o_35": {
     "id": "o_35",
@@ -742,7 +1070,11 @@
     "label": "Successfully assembling enough SCBAS, PPE, firefighters, firetrucks, etc.",
     "node_categories": [
      "successfully_assembling_enough_scbas_ppe"
-    ]
+    ],
+    "position": {
+     "x": 2710.0,
+     "y": 140.0
+    }
    },
    "o_36": {
     "id": "o_36",
@@ -750,7 +1082,11 @@
     "label": "Standard of wearing firefighting PPE and SCBAS (output of Standard of wearing firefighting PPE and SCBAS)",
     "node_categories": [
      "standard_of_wearing_firefighting_ppe_and_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 2940.0
+    }
    },
    "o_37": {
     "id": "o_37",
@@ -758,7 +1094,11 @@
     "label": "Firefighters wearing PPE and SCBAS",
     "node_categories": [
      "firefighters_wearing_ppe_and_scbas"
-    ]
+    ],
+    "position": {
+     "x": 3030.0,
+     "y": 280.0
+    }
    },
    "o_38": {
     "id": "o_38",
@@ -766,7 +1106,11 @@
     "label": "Standard of wearing firefighting PPE SCBAS (output of Standard of wearing firefighting PPE SCBAS)",
     "node_categories": [
      "standard_of_wearing_firefighting_ppe_scb_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 3080.0
+    }
    },
    "o_39": {
     "id": "o_39",
@@ -774,7 +1118,11 @@
     "label": "Ensuring that firefighters wear PPE",
     "node_categories": [
      "ensuring_that_firefighters_wear_ppe"
-    ]
+    ],
+    "position": {
+     "x": 3350.0,
+     "y": 140.0
+    }
    },
    "o_40": {
     "id": "o_40",
@@ -782,7 +1130,11 @@
     "label": "Operation specifications of firetrucks (output of Operation specifications of firetrucks)",
     "node_categories": [
      "operation_specifications_of_firetrucks_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 3220.0
+    }
    },
    "o_41": {
     "id": "o_41",
@@ -790,7 +1142,11 @@
     "label": "Successfully extinguishing the fire",
     "node_categories": [
      "successfully_extinguishing_the_fire"
-    ]
+    ],
+    "position": {
+     "x": 3670.0,
+     "y": 0.0
+    }
    },
    "o_42": {
     "id": "o_42",
@@ -798,7 +1154,11 @@
     "label": "Shutdown supervision in real-time",
     "node_categories": [
      "shutdown_supervision_in_real_time"
-    ]
+    ],
+    "position": {
+     "x": 3350.0,
+     "y": 0.0
+    }
    },
    "o_43": {
     "id": "o_43",
@@ -806,7 +1166,11 @@
     "label": "Standard of security (output of Standard of security)",
     "node_categories": [
      "standard_of_security_2"
-    ]
+    ],
+    "position": {
+     "x": 150.0,
+     "y": 3360.0
+    }
    },
    "o_44": {
     "id": "o_44",
@@ -814,7 +1178,11 @@
     "label": "Safe storage tank area",
     "node_categories": [
      "safe_storage_tank_area"
-    ]
+    ],
+    "position": {
+     "x": 3990.0,
+     "y": 0.0
+    }
    },
    "brigade": {
     "id": "brigade",
@@ -824,6 +1192,10 @@
     "node_categories": [
      "crews"
     ],
+    "position": {
+     "x": 2240.0,
+     "y": 0.0
+    },
     "supply_capacity": {
      "crews": 100.0
     }
@@ -836,6 +1208,10 @@
     "node_categories": [
      "crews"
     ],
+    "position": {
+     "x": 2240.0,
+     "y": 140.0
+    },
     "category_dependency_profiles": {
      "crews": {
       "dependency_level": 4,
@@ -1814,6 +2190,21 @@
       "e_119",
       "e_120",
       "e_121"
+     ]
+    }
+   },
+   {
+    "id": "cv_crews",
+    "label": "Firefighters",
+    "graph": {
+     "graph_type": "fram",
+     "node_ids": [
+      "brigade",
+      "other_areas"
+     ],
+     "edge_ids": [
+      "cr_other",
+      "cr_f17"
      ]
     }
    }

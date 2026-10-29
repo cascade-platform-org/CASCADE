@@ -34,8 +34,9 @@ from pathlib import Path
 from framkit import readers
 from framkit.engine import propagate
 from framkit.translate import Translated, resonance_config, translate
+from core.importers.xfmv.map import layout
 from schemas.config import CategoryDefinition, EventDefinition, ModelConfiguration
-from schemas.network import CategoryDependencyProfile, Edge, Node, Project
+from schemas.network import Canvas, CategoryDependencyProfile, Edge, Graph, Node, Position, Project
 from schemas.temporal_simulation import Timeline
 
 HERE = Path(__file__).resolve().parent
@@ -64,6 +65,7 @@ def build(option: str) -> Translated:
         model.add_coupling("F2", "Immediate action guidelines", "F23", "I")
         model.add_coupling(RADIO, "Radio/Telephone", "F23", "R")
     t = translate(model, resonance_config())
+    t = replace(t, project=layout(model, t))           # the importer's layout, readable in the app
     f = t.fn_node
     nodes, edges = dict(t.project.nodes), dict(t.project.edges)
     nodes[f["F20"]] = nodes[f["F20"]].model_copy(update={"rules": list(nodes[f["F20"]].rules or []) + [
@@ -94,7 +96,19 @@ def build(option: str) -> Translated:
              supply_capacity={"crews": 0})
         edge("ma_gate", f["F23"], "mutual_aid")       # no mobilisation, no mutual aid
         edge("cr_mutual", "mutual_aid", f["F17"])
-    project = t.project.model_copy(update={"nodes": nodes, "edges": edges})
+    fram = t.project.canvases[0]
+    added = [n for n in ("brigade", "other_areas", "mutual_aid") if n in nodes]
+    crews = Canvas(id="cv_crews", label="Firefighters", graph=Graph(
+        graph_type=fram.graph.graph_type, node_ids=added,
+        edge_ids=[e for e in ("cr_other", "cr_f17", "cr_mutual", "ma_gate") if e in edges]))
+    for k, nid in enumerate(added):                    # beside F17
+        at = nodes[f["F17"]].position or Position(x=0, y=0)
+        nodes[nid] = nodes[nid].model_copy(update={"position": Position(x=at.x - 320, y=at.y + 140 * (k - 1))})
+    project = t.project.model_copy(update={"nodes": nodes, "edges": edges, "canvases": [fram, crews]})
+    on_canvas = {i for c in project.canvases for i in c.graph.node_ids + c.graph.edge_ids}
+    missing = (set(nodes) | set(edges)) - on_canvas
+    if missing:    # the app propagates only what a canvas holds
+        raise ValueError(f"elements on no canvas: {sorted(missing)}")
     config = t.config.model_copy(update={"categories": list(t.config.categories) + [
         CategoryDefinition(name="crews", category_type="SourceToDemands")]})
     return replace(t, project=project, config=config)
