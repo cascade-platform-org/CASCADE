@@ -1,0 +1,4 @@
+# Quarto build output; regenerate with `quarto render presentation.qmd`
+presentation.html
+presentation_files/
+.quarto/
