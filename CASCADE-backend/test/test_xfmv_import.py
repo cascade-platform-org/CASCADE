@@ -115,6 +115,60 @@ def test_models_without_positions_are_laid_out_by_depth():
     assert xs["Main supply"] == xs["Tank supply"] < xs["Run pump"]
 
 
+# FMV groups: a parent function collapses its children; groups nest. "Prepare"
+# (0) holds 1, and "Respond" (2) holds 3, which holds 4: 4 belongs to its
+# outermost group. 5 is ungrouped, 6 is a background function.
+GROUPED = """<?xml version="1.0" standalone="yes"?>
+<FM>
+  <Functions>
+    <Function><IDNr>0</IDNr><FunctionType>0</FunctionType><IDName>Prepare</IDName></Function>
+    <Function><IDNr>1</IDNr><FunctionType>0</FunctionType><IDName>Brief crew</IDName></Function>
+    <Function><IDNr>2</IDNr><FunctionType>0</FunctionType><IDName>Respond</IDName></Function>
+    <Function><IDNr>3</IDNr><FunctionType>0</FunctionType><IDName>Drive</IDName></Function>
+    <Function><IDNr>4</IDNr><FunctionType>0</FunctionType><IDName>Repair</IDName></Function>
+    <Function><IDNr>5</IDNr><FunctionType>0</FunctionType><IDName>Report</IDName></Function>
+    <Function><IDNr>6</IDNr><FunctionType>2</FunctionType><IDName>Weather</IDName></Function>
+  </Functions>
+  <Groups>
+    <Group active="false"><FunctionIDNr>0</FunctionIDNr><CHILD>1</CHILD></Group>
+    <Group active="false"><FunctionIDNr>3</FunctionIDNr><CHILD>4</CHILD></Group>
+    <Group active="false"><FunctionIDNr>2</FunctionIDNr><CHILD>3</CHILD></Group>
+  </Groups>
+  <Aspects>
+    <Aspect outputFn="0" toFn="1"><Name>0|Plan|1|I</Name></Aspect>
+    <Aspect outputFn="1" toFn="3"><Name>1|Crew briefed|3|P</Name></Aspect>
+    <Aspect outputFn="3" toFn="4"><Name>3|On site|4|I</Name></Aspect>
+    <Aspect outputFn="4" toFn="5"><Name>4|Repaired|5|I</Name></Aspect>
+    <Aspect outputFn="6" toFn="3"><Name>6|Visibility|3|C</Name></Aspect>
+  </Aspects>
+</FM>"""
+
+
+def test_fmv_groups_take_the_outermost_parent():
+    m = parse_xfmv(GROUPED, "grouped")
+    assert {fid: f.group for fid, f in m.functions.items()} == {
+        "0": "Prepare", "1": "Prepare", "2": "Respond", "3": "Respond", "4": "Respond", "5": "", "6": ""}
+
+
+def test_groups_and_background_become_canvases():
+    project = build_bundle(parse_xfmv(GROUPED, "grouped")).project
+    canvases = {c.label: c.graph for c in project.canvases}
+    assert list(canvases) == ["Prepare", "Respond", "Functions", "Background"]
+    assert {project.nodes[n].label for n in canvases["Respond"].node_ids} == {
+        "Respond", "Drive", "Repair", "On site", "Repaired"}
+    assert {project.nodes[n].label for n in canvases["Background"].node_ids} == {"Weather", "Visibility"}
+    # every element on a canvas; a crossing edge on both of its canvases, as the Inter-Canvas Edge tool does
+    on = [i for g in canvases.values() for i in g.node_ids + g.edge_ids]
+    assert set(project.nodes) | set(project.edges) <= set(on)
+    briefed = next(e for e in project.edges.values()
+                   if project.nodes[e.source].label == "Crew briefed" and project.nodes[e.target].label == "Drive")
+    assert briefed.id in canvases["Prepare"].edge_ids and briefed.id in canvases["Respond"].edge_ids
+
+
+def test_a_model_without_groups_or_background_keeps_one_canvas():
+    assert len(build_bundle(parse_xfmv(DRAWN, "drawn")).project.canvases) == 1
+
+
 def test_fmi_semantics_is_binary_and_reads_profiles():
     bundle = build_bundle(parse_xfmv(DRAWN, "drawn"), "fmi")
     assert len(bundle.config.functionality_scale) == 2

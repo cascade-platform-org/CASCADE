@@ -1507,6 +1507,31 @@ export const USER_MANUAL: ManualDoc = {
                   "text": " The scope selector sits in front of Propagate, Simulate and Analyse, and sets the scope of all three."
                 }
               ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "kind": "text",
+                  "text": "The "
+                },
+                {
+                  "kind": "strong",
+                  "text": "All"
+                },
+                {
+                  "kind": "text",
+                  "text": " tab shows every Canvas together, read-only, each in its own region. To read a large model, collapse a Canvas (− beside its name, or "
+                },
+                {
+                  "kind": "em",
+                  "text": "Collapse all"
+                },
+                {
+                  "kind": "text",
+                  "text": " top right): it becomes one box with the Operativity of its nodes and how many it holds, and the edges into it merge into one, drawn at their worst level and marked ×k. Expand it again with +. Collapsing only changes the picture; it is not saved and propagation is unchanged."
+                }
+              ]
             }
           ]
         }
@@ -3485,7 +3510,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " opens a model saved by the FRAM Model Visualiser and replaces the current project with it. Each function becomes a node where you drew it; each of its outputs becomes a small node of its own, and each coupling an edge. Two functions producing the same output text are alternatives: the consumer stays up while either does."
+                  "text": " opens a model saved by the FRAM Model Visualiser and replaces the current project with it. Each function becomes a node where you drew it; each of its outputs becomes a small node of its own, and each coupling an edge. Two functions producing the same output text are alternatives: the consumer stays up while either does. If you grouped functions in FMV, each group becomes a Canvas of its own (a nested group joins its outermost one); ungrouped functions and background functions get a Canvas each. In the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "All"
+                },
+                {
+                  "kind": "text",
+                  "text": " view, collapse a Canvas to read the model group by group (§2.6)."
                 }
               ]
             },

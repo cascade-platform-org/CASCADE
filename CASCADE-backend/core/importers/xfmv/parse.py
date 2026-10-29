@@ -77,7 +77,29 @@ def parse_xfmv(data: bytes | str, name: str) -> FramModel:
         model.add_coupling(src, text.strip(), dst, kind)
     if aspects is None or len(aspects) == 0:
         _couple_by_text(root, model)
+    _read_groups(root, model)
     return model
+
+
+def _read_groups(root: Element, model: FramModel) -> None:
+    """FMV collapses a Group's children into its parent function, and Groups
+    nest; each function takes the name of its outermost parent."""
+    parent: dict[str, str] = {}
+    listing = root.find("Groups")
+    for g in (listing if listing is not None else []):
+        p = (g.findtext("FunctionIDNr") or "").strip()
+        for child in (g.findtext("CHILD") or "").split("|"):
+            if child.strip() and p:
+                parent[child.strip()] = p
+    for fid, fn in model.functions.items():
+        if fid not in parent and fid not in parent.values():
+            continue
+        seen = {fid}
+        while fid in parent and parent[fid] not in seen:
+            fid = parent[fid]
+            seen.add(fid)
+        if fid in model.functions:
+            fn.group = model.functions[fid].name
 
 
 def _root(data: bytes | str) -> Element:

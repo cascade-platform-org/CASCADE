@@ -39,6 +39,7 @@ and parseable.
 from __future__ import annotations
 
 import itertools
+import math
 import re
 from dataclasses import dataclass, field
 from typing import Literal
@@ -321,26 +322,81 @@ def _resonance_rule(inputs: list[tuple[str, int]], cumulative: int) -> str:
 # --- the bundle the importer returns ---------------------------------------------
 
 _COLUMN, _ROW, _OUTPUT_DX, _OUTPUT_DY = 320.0, 140.0, 150.0, 45.0
+_MAX_ROWS = 8          # a taller column wraps into the next one
+_UNGROUPED, _BACKGROUND = "Functions", "Background"
+
+
+def _home(model: FramModel, fid: str) -> str:
+    fn = model.functions[fid]
+    return _BACKGROUND if fn.background else (fn.group or _UNGROUPED)
+
+
+def group_canvases(model: FramModel, t: Translated) -> list[Canvas]:
+    """One Canvas per modeller's group (FMV Groups), one for the ungrouped
+    functions and one for the background functions, each output node with its
+    producer; a single Canvas when the model has neither groups nor background.
+    An edge between two Canvases is listed on both, as the Inter-Canvas Edge
+    tool does. Display only: global propagation is the same either way."""
+    homes = [_home(model, fid) for fid in model.functions]
+    if set(homes) <= {_UNGROUPED}:
+        return list(t.project.canvases)
+    labels = [h for h in dict.fromkeys(homes) if h not in (_UNGROUPED, _BACKGROUND)]
+    labels += [h for h in (_UNGROUPED, _BACKGROUND) if h in homes]
+    home = {nid: _home(model, fid) for fid, nid in t.fn_node.items()}
+    home.update({oid: _home(model, src) for (src, _), oid in t.out_node.items()})
+    members: dict[str, tuple[list[str], list[str]]] = {h: ([], []) for h in labels}
+    for nid in t.project.nodes:
+        members[home[nid]][0].append(nid)
+    for eid, e in t.project.edges.items():
+        for h in dict.fromkeys((home[e.source], home[e.target])):
+            members[h][1].append(eid)
+    graph_type = t.project.canvases[0].graph.graph_type
+    return [Canvas(id=f"cv_{k}", label=h, graph=Graph(graph_type=graph_type, node_ids=n, edge_ids=e))
+            for k, (h, (n, e)) in enumerate(members.items())]
+
+
+def _layered(model: FramModel, fids: list[str]) -> dict[str, tuple[float, float]]:
+    """Columns by upstream depth within `fids` (loops collapsed), each column
+    ordered by its predecessors' rows so that couplings cross less, a column
+    taller than _MAX_ROWS wrapped into the next."""
+    inside = set(fids)
+    g = nx.DiGraph((c.source, c.target) for c in model.couplings
+                   if c.source in inside and c.target in inside and c.source != c.target)
+    g.add_nodes_from(fids)
+    dag = nx.condensation(g)
+    depth: dict[int, int] = {}
+    for comp in nx.topological_sort(dag):
+        depth[comp] = max((depth[p] + 1 for p in dag.predecessors(comp)), default=0)
+    columns: dict[int, list[str]] = {}
+    for fid in fids:
+        columns.setdefault(depth[dag.graph["mapping"][fid]], []).append(fid)
+    row: dict[str, float] = {}
+    where: dict[str, tuple[float, float]] = {}
+    x = 0
+    for d in sorted(columns):
+        col = columns[d]
+        if d > 0:   # barycentre of the predecessors already placed; a stable sort keeps the rest in order
+            col.sort(key=lambda f: sum(row[p] for p in g.predecessors(f) if p in row)
+                     / max(1, sum(p in row for p in g.predecessors(f))))
+        for i, fid in enumerate(col):
+            row[fid] = i % _MAX_ROWS
+            where[fid] = ((x + i // _MAX_ROWS) * _COLUMN, row[fid] * _ROW)
+        x += math.ceil(len(col) / _MAX_ROWS)
+    return where
 
 
 def layout(model: FramModel, t: Translated) -> Project:
-    """Place every node: a function where the modeller drew it in FMV, else in
-    columns by upstream depth (loops collapsed); its output nodes beside it."""
+    """Split into group Canvases and place every node: a function where the
+    modeller drew it in FMV, else in layered columns within its Canvas; its
+    output nodes beside it."""
+    canvases = group_canvases(model, t)
     where: dict[str, tuple[float, float]] = {}
     if all(f.position for f in model.functions.values()):
         where = {fid: f.position for fid, f in model.functions.items() if f.position}
     else:
-        g = nx.DiGraph((c.source, c.target) for c in model.couplings)
-        g.add_nodes_from(model.functions)
-        dag = nx.condensation(g)
-        depth: dict[int, int] = {}
-        for comp in nx.topological_sort(dag):
-            depth[comp] = max((depth[p] + 1 for p in dag.predecessors(comp)), default=0)
-        rows: dict[int, int] = {}
-        for fid in model.functions:
-            d = depth[dag.graph["mapping"][fid]]
-            where[fid] = (d * _COLUMN, rows.get(d, 0) * _ROW)
-            rows[d] = rows.get(d, 0) + 1
+        node_fid = {nid: fid for fid, nid in t.fn_node.items()}
+        for canvas in canvases:
+            where.update(_layered(model, [node_fid[n] for n in canvas.graph.node_ids if n in node_fid]))
     nodes = dict(t.project.nodes)
     for fid, nid in t.fn_node.items():
         x, y = where[fid]
@@ -351,7 +407,7 @@ def layout(model: FramModel, t: Translated) -> Project:
         k = per_fn.get(src, 0)
         per_fn[src] = k + 1
         nodes[oid] = nodes[oid].model_copy(update={"position": Position(x=x + _OUTPUT_DX, y=y + k * _OUTPUT_DY)})
-    return t.project.model_copy(update={"nodes": nodes})
+    return t.project.model_copy(update={"nodes": nodes, "canvases": canvases})
 
 
 def build_bundle(model: FramModel, semantics: Semantics = "v2") -> ProjectBundle:

@@ -41,6 +41,16 @@ same before sending). The XML is parsed with `defusedxml`: the file is user inpu
   readable; node ids stay machine keys;
 - functions sit where the modeller drew them in FMV; a model without
   positions is laid out in columns by upstream depth.
+- **Canvases from the modeller's groups** (2026-10-29). An FMV Group is a
+  parent function whose children FMV collapses into it; groups nest. Each
+  function goes on the Canvas of its outermost group, with one Canvas for
+  ungrouped functions and one for background functions; a model with neither
+  keeps one Canvas. Output nodes sit with their producer; an edge between two
+  Canvases is listed on both, as the Inter-Canvas Edge tool does. Layout is per
+  Canvas, columns ordered by the predecessors' rows. Display only: global
+  propagation is unchanged (every FRAM paper result byte-identical). With the
+  Global view's collapsible Canvases this carries FMV's own collapsing into
+  CASCADE.
 
 **What the file cannot carry**, and the user adds as ordinary Events and Rules
 after importing: the scenario (which functions deviate, and how much), and any

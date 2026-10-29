@@ -42,6 +42,9 @@ class Function:
     description: str = ""
     # Where the modeller drew the hexagon in FMV, when the model comes from a file.
     position: tuple[float, float] | None = None
+    # The modeller's grouping (an FMV Group's outermost parent, by name); "" when
+    # ungrouped. Display only: it decides the Canvas, never the propagation.
+    group: str = ""
 
     def profile(self, aspect: str) -> str:
         return self.profiles.get(aspect, "All")

@@ -202,6 +202,13 @@ The Inspector states it in words, and the repair ranking is computed from it.
 appears only under Global.** The scope selector sits in front of Propagate,
 Simulate and Analyse, and sets the scope of all three.
 
+The **All** tab shows every Canvas together, read-only, each in its own
+region. To read a large model, collapse a Canvas (− beside its name, or
+*Collapse all* top right): it becomes one box with the Operativity of its nodes
+and how many it holds, and the edges into it merge into one, drawn at their
+worst level and marked ×k. Expand it again with +. Collapsing only changes the
+picture; it is not saved and propagation is unchanged.
+
 ## 3. Rules
 
 Rules cover what the graph alone cannot express. The grammar reference is the
@@ -546,7 +553,11 @@ File → Import → **Import FRAM model (.xfmv)** opens a model saved by the FRA
 Model Visualiser and replaces the current project with it. Each function
 becomes a node where you drew it; each of its outputs becomes a small node of
 its own, and each coupling an edge. Two functions producing the same output
-text are alternatives: the consumer stays up while either does.
+text are alternatives: the consumer stays up while either does. If you
+grouped functions in FMV, each group becomes a Canvas of its own (a nested
+group joins its outermost one); ungrouped functions and background functions
+get a Canvas each. In the **All** view, collapse a Canvas to read the model
+group by group (§2.6).
 
 Choose how the model is read:
 

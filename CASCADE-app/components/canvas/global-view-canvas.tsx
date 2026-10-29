@@ -9,10 +9,12 @@
  * The same custom node renderers as FlowCanvas are reused so shapes,
  * colours, and direct-damage overlays are consistent.
  * Inter-canvas edges are rendered dashed.
+ * A Canvas can be collapsed into one cluster node showing its Operativity;
+ * edges into it are bundled (lib/canvas-clusters.ts). Display only.
  * This view is read-only: no editing, no tool interactions.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -27,6 +29,8 @@ import {
   type Edge as RFEdge,
   getBezierPath,
   BaseEdge,
+  Handle,
+  Position,
   type EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -43,12 +47,37 @@ import { ZoomSlider } from "./zoom-slider";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
+import { clusterNodeId, clusterSummary, drawnEdges, homeCanvases } from "@/lib/canvas-clusters";
+import { operativityColor } from "@/lib/scorecard-utils";
+import { useAnalysisStore } from "@/store/analysis-store";
 
 // ---------------------------------------------------------------------------
 // Group node — coloured background labelled with the canvas name
 // ---------------------------------------------------------------------------
 
-function CanvasGroupNode({ data }: { data: { label: string; color: string } }) {
+interface GroupData {
+  label: string;
+  color: string;
+  onToggle?: () => void;
+}
+
+/** The collapse / expand control on a Canvas region or cluster. */
+function ToggleButton({ collapsed, onToggle, color }: { collapsed: boolean; onToggle: () => void; color: string }) {
+  return (
+    <button
+      type="button"
+      className="nodrag nopan pointer-events-auto rounded px-1 leading-none hover:bg-black/5"
+      style={{ color }}
+      title={collapsed ? "Expand this canvas" : "Collapse this canvas into one node"}
+      aria-label={collapsed ? "Expand canvas" : "Collapse canvas"}
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+    >
+      {collapsed ? "+" : "−"}
+    </button>
+  );
+}
+
+function CanvasGroupNode({ data }: { data: GroupData }) {
   return (
     <div
       style={{
@@ -69,10 +98,51 @@ function CanvasGroupNode({ data }: { data: { label: string; color: string } }) {
           fontWeight: 600,
           color: data.color,
           whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
         }}
       >
+        {data.onToggle && <ToggleButton collapsed={false} onToggle={data.onToggle} color={data.color} />}
         {data.label}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cluster node — a collapsed Canvas: its name, Operativity and size
+// ---------------------------------------------------------------------------
+
+interface ClusterData extends GroupData {
+  operativity: number;
+  count: number;
+  levelColor: string;
+}
+
+function CanvasClusterNode({ data }: { data: ClusterData }) {
+  return (
+    <div
+      style={{
+        width: CLUSTER_W,
+        border: `2px solid ${data.color}`,
+        borderRadius: 12,
+        background: `${data.color}18`,
+        padding: "8px 10px",
+      }}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: data.color }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: data.color }}>
+        {data.onToggle && <ToggleButton collapsed onToggle={data.onToggle} color={data.color} />}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.label}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+        <span style={{ fontSize: 20, fontWeight: 700, color: data.levelColor }}>{data.operativity}%</span>
+        <span style={{ fontSize: 10, color: brandColor("neutral", 500) }}>
+          Operativity · {data.count} nodes
+        </span>
+      </div>
+      <Handle type="source" position={Position.Right} style={{ background: data.color }} />
     </div>
   );
 }
@@ -125,6 +195,7 @@ const edgeTypes: EdgeTypes = { globalEdge: GlobalEdge as EdgeTypes[string] };
 const GROUP_PADDING = 60;      // px padding around the nodes within each group
 const GROUP_COL_GAP = 120;     // horizontal gap between adjacent canvas groups
 const NODE_BOX = 72;           // conservative bounding-box size per node (px)
+const CLUSTER_W = 190;         // width of a collapsed Canvas's cluster node
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -136,6 +207,16 @@ function GlobalViewCanvas() {
   const levelPaint = useLevelPaint();
   const canvases = useCanvasStore(useShallow(selectOrderedCanvases));
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
+  const config = useConfigStore((s) => s.config);
+  const weightAttr = useAnalysisStore((s) => s.oiWeightAttr);
+  // Collapsed Canvases, by id: a view state of this session, never saved.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (canvasId: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(canvasId)) next.add(canvasId);
+      return next;
+    });
 
   const { getNodes } = useReactFlow();
 
@@ -193,14 +274,28 @@ function GlobalViewCanvas() {
   const { rfNodes, rfEdges } = useMemo(() => {
     const nodes: RFNode[] = [];
     const edges: RFEdge[] = [];
-    const renderedNodeIds = new Set<string>();
-    // Maps nodeId -> the canvasId of the group it was placed in.
-    // Used to decide isInterCanvas by visual position, not data-model membership.
-    const nodeGroupMap = new Map<string, string>();
+    // A node shared by several Canvases is drawn once, in its home (the first).
+    const home = homeCanvases(canvases, allNodes);
+    const n = scaleLevels.length;
 
     let groupOffsetX = 40;
 
     canvases.forEach((canvas) => {
+      const color = canvas.color ?? brandColor("neutral", 400);
+      const onToggle = () => toggle(canvas.id);
+      if (collapsed.has(canvas.id)) {
+        const { operativity, count } = clusterSummary(canvas, allNodes, n, weightAttr);
+        nodes.push({
+          id: clusterNodeId(canvas.id),
+          type: "canvasCluster",
+          position: { x: groupOffsetX, y: 60 },
+          data: { label: canvas.label ?? canvas.id, color, onToggle, operativity, count,
+                  levelColor: operativityColor(operativity, config) },
+        });
+        groupOffsetX += CLUSTER_W + GROUP_COL_GAP;
+        return;
+      }
+
       const canvasNodes = canvas.graph.node_ids
         .map((id) => allNodes[id])
         .filter(Boolean);
@@ -211,7 +306,7 @@ function GlobalViewCanvas() {
           id: `group-${canvas.id}`,
           type: "canvasGroup",
           position: { x: groupOffsetX, y: 60 },
-          data: { label: canvas.label ?? canvas.id, color: canvas.color ?? brandColor("neutral", 400) },
+          data: { label: canvas.label ?? canvas.id, color },
           style: { width: 200, height: 120 },
         });
         groupOffsetX += 200 + GROUP_COL_GAP;
@@ -238,14 +333,12 @@ function GlobalViewCanvas() {
         id: `group-${canvas.id}`,
         type: "canvasGroup",
         position: { x: groupOffsetX, y: 60 },
-        data: { label: canvas.label ?? canvas.id, color: canvas.color ?? brandColor("neutral", 400) },
+        data: { label: canvas.label ?? canvas.id, color, onToggle },
         style: { width: groupW, height: groupH },
       });
 
       positioned.forEach(({ node, x, y }) => {
-        if (renderedNodeIds.has(node.id)) return; // shared node — render only once in first canvas
-        renderedNodeIds.add(node.id);
-        nodeGroupMap.set(node.id, canvas.id);
+        if (home.get(node.id) !== canvas.id) return; // shared node — drawn in its home canvas
         nodes.push({
           id: node.id,
           type: node.node_type?.toLowerCase() ?? "service",
@@ -262,37 +355,27 @@ function GlobalViewCanvas() {
       groupOffsetX += groupW + GROUP_COL_GAP;
     });
 
-    // Edges — deduplicated across canvases.
-    // isInterCanvas is true when source and target land in different visual groups,
-    // regardless of which canvas's edge_ids the edge came from.
-    const seenEdgeIds = new Set<string>();
-
-    canvases.forEach((canvas) => {
-      canvas.graph.edge_ids.forEach((eid) => {
-        if (seenEdgeIds.has(eid)) return;
-        seenEdgeIds.add(eid);
-        const edge = allEdges[eid];
-        if (!edge) return;
-        // Skip if either endpoint was never rendered
-        if (!renderedNodeIds.has(edge.source) || !renderedNodeIds.has(edge.target)) return;
-        // Inter-canvas = endpoints are in different visual groups
-        const isInterCanvas = nodeGroupMap.get(edge.source) !== nodeGroupMap.get(edge.target);
-        const edgeColor = levelColor(scaleLevels, edge.functionality);
-        edges.push({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle ?? null,
-          targetHandle: edge.targetHandle ?? null,
-          type: "globalEdge",
-          data: { isInterCanvas, color: edgeColor },
-          markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor, width: 14, height: 10 },
-        });
+    // Edges — once each; into a collapsed Canvas they are bundled onto its cluster.
+    // isInterCanvas compares the endpoints' home canvases, not the edge's canvas lists.
+    drawnEdges(canvases, allEdges, home, collapsed).forEach((d) => {
+      const single = d.members.length === 1 ? allEdges[d.members[0]] : undefined;
+      const exact = single !== undefined && single.source === d.source && single.target === d.target;
+      const edgeColor = levelColor(scaleLevels, d.functionality);
+      edges.push({
+        id: d.id,
+        source: d.source,
+        target: d.target,
+        sourceHandle: exact ? single.sourceHandle ?? null : null,
+        targetHandle: exact ? single.targetHandle ?? null : null,
+        type: "globalEdge",
+        label: d.members.length > 1 ? `×${d.members.length}` : undefined,
+        data: { isInterCanvas: d.isInterCanvas, color: edgeColor },
+        markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor, width: 14, height: 10 },
       });
     });
 
     return { rfNodes: nodes, rfEdges: edges };
-  }, [canvases, allNodes, allEdges, scaleLevels]);
+  }, [canvases, allNodes, allEdges, scaleLevels, collapsed, config, weightAttr]);
 
   return (
     <div className="h-full w-full">
@@ -301,7 +384,7 @@ function GlobalViewCanvas() {
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
-        nodeTypes={{ ...nodeTypes, canvasGroup: CanvasGroupNode as never }}
+        nodeTypes={{ ...nodeTypes, canvasGroup: CanvasGroupNode as never, canvasCluster: CanvasClusterNode as never }}
         edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
@@ -321,6 +404,17 @@ function GlobalViewCanvas() {
           Every canvas view needs it: an Analysis Heatmap applies to the Element
           registry, so its colours show here as much as in the single-canvas view. */}
       <CanvasLegend />
+
+      {/* Collapse or expand every Canvas at once */}
+      {canvases.length > 1 && (
+        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-white/80 px-1.5 py-1 text-xs font-medium text-zinc-600 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:text-zinc-300 dark:ring-zinc-700">
+          <button type="button" className="rounded px-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
+          <span aria-hidden>·</span>
+          <button type="button" className="rounded px-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            onClick={() => setCollapsed(new Set())}>Expand all</button>
+        </div>
+      )}
 
       {/* Read-only badge */}
       <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:ring-zinc-700">
