@@ -77,6 +77,17 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 - **Scope.** Every N = 4 run under v2: RQ1 (Zheng, Tian, Kaya, Wenzhou, Koriyama) and the claims run on v2 (C1, C2, C4–C6, C8–C10, C12, C14). Kim (N = 7, compiled rules) and Smith (N = 2) are unaffected.
 - **Recorded before running: the hand reading behind v2+c.** Under v2 Koriyama's T6 has four inputs deviating at level 3 (immediate environment, PC4, night, T5), and T9 has three (119 calls, night, T6). Expected: v2+3 flips C6 (T9) but not C4, since holding T5 leaves three deviations on T6; v2+c flips both. The cost to watch: lower levels travel further, so RQ1 precision may fall, notably on the held-out cases.
 
+## 4b. Declared 2026-10-29: S0 on the claims, two more verification models, Falegnami's ranking
+
+The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 were shared by A. Tomassi and A. Falegnami for this study only and stay private (`docs/paper/FRAM/models/`, gitignored). The scripts skip what is missing.
+
+- **S0 baseline on the frozen claims.** The 11 expressible claims run as model edits under S0 (reachability, the RQ1 baseline), with the same description rules, events and verdict rules as v2. Reported beside v2, grouped by direction. It answers whether v2's agreement comes from damping and resonance or from structure alone. A monotone model can never make an outcome worse by holding a function nominal, so "improve" claims are the easy direction; "stays degraded" (C1) and "avoid" are the hard ones.
+- **Verification on two more real models.** Falegnami 2020 (52 functions, 290 couplings) and Simone 2025 (85 functions, 191 couplings) join V1 under the same protocol: the baseline, every single knockout and 200 random pairs. The reader rebuilds couplings from aspect texts, as FMV does when a file stores no drawn couplings; it gives 290 and 191, the counts Table 1 and the authors report. Expected, as on the other models: CASCADE equals the greatest fixed point everywhere, and the FMI except where a loop deadlocks.
+- **Falegnami's Katz ranking: reproduction, then topology** (exploratory; Discussion only).
+  - (a) *Reproduce* Table 2 from the authors' weighted edge list: a node-aligned five-layer multiplex, intralayer weights from the list, interlayer links of weight 1 between every pair of a node's replicas, and Katz on the supra-adjacency matrix with α = 0.99999/ρ (muxViz's choice as we understand it), counting walks that leave each node, summed over replicas. Spearman ρ with Table 2 and the overlap with its top 15. Robustness grid: α × {0.1, 0.5, 0.99999}/ρ, walks leaving or arriving.
+  - (b) *Topology*: the same computation with every coupling at weight 1, which drops the phenotype scores and keeps the structure. If (b) matches Table 2 about as well as (a), the published ranking is carried by the network's shape.
+- **Not used.** Falegnami's three alternative instantiations, which are ranked by sums of weight differences with no event or outcome to propagate; Simone's walker results, whose inputs are not held; Simone's spreadsheet, which the authors state is not the 2025 input.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -93,3 +104,4 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 | c8e8c2b | exploratory: protective information as an alternative path (Wenzhou) |
 | d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |
 | (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
+| (this commit) | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |

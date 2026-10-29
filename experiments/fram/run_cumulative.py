@@ -12,7 +12,6 @@ Run from the repository root:
 from __future__ import annotations
 
 import csv
-from contextlib import contextmanager
 from pathlib import Path
 
 import run_rq1
@@ -24,27 +23,15 @@ VARIANTS = {"v2": resonance_config, "v2+3": lambda: cumulative_config(3), "v2+c"
 CLAIMS = {"C1", "C2", "C4", "C5", "C6", "C8", "C9", "C10", "C12", "C14"}
 
 
-@contextmanager
-def variant(name: str):
-    """The RQ2 runners build their translation with resonance_config(): swap it."""
-    saved = run_rq2.resonance_config
-    run_rq2.resonance_config = VARIANTS[name]
-    try:
-        yield
-    finally:
-        run_rq2.resonance_config = saved
-
-
 def main() -> None:
     run_rq1.SEMANTICS.update(VARIANTS)
     rq1 = [{"case": case, "variant": v, **fn(v)} for case, _, fn in run_rq1.CASES for v in VARIANTS]
     claims: dict[str, dict[str, str]] = {}
-    for v in VARIANTS:
-        with variant(v):
-            for r in run_rq2.claims():
-                if r["id"] in CLAIMS:
-                    claims.setdefault(r["id"], {"id": r["id"], "paper": r["paper"], "direction": r["direction"]})
-                    claims[r["id"]] |= {v: r["verdict"], f"{v} detail": r["detail"]}
+    for v, cfg in VARIANTS.items():
+        for r in run_rq2.claims(cfg()):
+            if r["id"] in CLAIMS:
+                claims.setdefault(r["id"], {"id": r["id"], "paper": r["paper"], "direction": r["direction"]})
+                claims[r["id"]] |= {v: r["verdict"], f"{v} detail": r["detail"]}
     for name, rows in (("cumulative_rq1.csv", rq1), ("cumulative_claims.csv", list(claims.values()))):
         with open(RESULTS / name, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(rows[0]))

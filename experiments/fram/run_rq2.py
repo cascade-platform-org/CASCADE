@@ -32,7 +32,7 @@ from framkit.engine import function_levels, propagate
 from framkit.kim import to_level, translate_kim
 from framkit.model import FramModel
 from framkit.oracles import kim_simulate
-from framkit.translate import Translated, default_config, resonance_config, translate
+from framkit.translate import Translated, TranslationConfig, default_config, resonance_config, translate
 from run_rq1 import (KORIYAMA_EVENT, N, SMITH_EVENTS, WZ_DEGRADED, WZ_NOMINAL, add_rule, levels, score,
                      smith_ptop, smith_translation)
 from schemas.network import CategoryDependencyProfile
@@ -165,8 +165,8 @@ def verdict(base, edit, outcome, direction) -> tuple[str, str]:
     return ("agree" if all(y == N for y in e) else "disagree"), detail + f" (direction {'improves' if improves else 'does not improve'})"
 
 
-def tian(barrier_f2=False, order=True, f7=3):
-    t = translate(readers.read_tian(), resonance_config())
+def tian(barrier_f2=False, order=True, f7=3, tc: TranslationConfig | None = None):
+    t = translate(readers.read_tian(), tc or resonance_config())
     for fid in ("F5", "F2"):
         add_rule(t, fid, f"if {t.fn_node['F7']}.functionality is <4 then {t.fn_node[fid]} is not performed")
     if barrier_f2:
@@ -174,19 +174,19 @@ def tian(barrier_f2=False, order=True, f7=3):
     return levels(t, {"F7": f7, "F1": 4} | ({} if order else {"F3": 1}))
 
 
-def koriyama(held: list[str]):
-    t = translate(readers.read_togawa(), resonance_config())
+def koriyama(held: list[str], tc: TranslationConfig | None = None):
+    t = translate(readers.read_togawa(), tc or resonance_config())
     for f in held:
         barrier(t, f)
     return levels(t, {k: v for k, v in KORIYAMA_EVENT.items() if k not in held})
 
 
-def zheng(edit=None):
+def zheng(edit=None, tc: TranslationConfig | None = None):
     model = readers.read_zheng()
     if edit == "C9":                                   # cancel F5: F7 takes F4's output
         model.couplings = [c for c in model.couplings if not (c.source == "F5" and c.target == "F7")]
         model.add_coupling("F4", "Successful connection with fire department", "F7", "I")
-    t = translate(model, resonance_config())
+    t = translate(model, tc or resonance_config())
     f = t.fn_node
     add_rule(t, "F20", f"if {f['F12']}.functionality is <4 and {f['F17']}.functionality is <4 then {f['F20']} is severe")
     start = {"X:Radio/Telephone": 3, "X:Internet/Telephone": 3, "X:Firetruck; firefighter; PPE, SCBAS, etc.": 3, "F5": 3}
@@ -194,8 +194,8 @@ def zheng(edit=None):
     return levels(t, {k: v for k, v in start.items() if k not in drop})
 
 
-def wenzhou(held: list[str], path: bool = False, alt: bool = False):
-    model, cfg = readers.read_wenzhou(), resonance_config()
+def wenzhou(held: list[str], path: bool = False, alt: bool = False, tc: TranslationConfig | None = None):
+    model, cfg = readers.read_wenzhou(), tc or resonance_config()
     if path:                                           # M8 failure -> dispatch -> D301 driver
         model.add_function("W", "Warn dispatch of an M8 failure")
         model.add_function("D", "Dispatch warns the D301 driver")
@@ -214,7 +214,7 @@ def wenzhou(held: list[str], path: bool = False, alt: bool = False):
     return levels(t, {k: v for k, v in {"M7": 1, "M10": 1}.items() if k not in held})
 
 
-def li_stages() -> dict[str, float]:
+def li_stages(tc: TranslationConfig | None = None) -> dict[str, float]:
     rows = [r for r in csv.DictReader(line for line in open(readers.MODELS / "li_2026_metro_rainfall.csv")
                                         if not line.startswith("#"))]
     model = FramModel("li_2026")
@@ -229,7 +229,7 @@ def li_stages() -> dict[str, float]:
             model.add_coupling(r["upstream"], r["function_name"], r["downstream"], r["aspect"])
 
     def deficit(held_stage):
-        t = translate(model, resonance_config())
+        t = translate(model, tc or resonance_config())
         for f, s in stage.items():
             if s == held_stage:
                 barrier(t, f)
@@ -239,7 +239,9 @@ def li_stages() -> dict[str, float]:
     return {s: base - deficit(s) for s in ("PEP", "DER", "PER")}
 
 
-def claims() -> list[dict[str, object]]:
+def claims(tc: TranslationConfig | None = None) -> list[dict[str, object]]:
+    """The frozen claims as model edits, under v2 unless another translation is
+    given (the S0 baseline, the cumulative-worsening variants)."""
     c = {r["id"]: r for r in csv.DictReader(line for line in open(HERE / "data" / "e3_claims.csv")
                                              if not line.startswith("#"))}
     out = []
@@ -247,24 +249,24 @@ def claims() -> list[dict[str, object]]:
     def rec(cid, v, d):
         out.append({"id": cid, "paper": c[cid]["paper"], "claim": c[cid]["quote"][:90], "direction": c[cid]["direction"],
                     "verdict": v, "detail": d})
-    rec("C1", *verdict(tian(), tian(barrier_f2=True), ["F5", "F8"], "stay degraded"))
-    rec("C2", *verdict(tian(order=False, f7=4), tian(f7=4), ["F2"], "improve"))
+    rec("C1", *verdict(tian(tc=tc), tian(barrier_f2=True, tc=tc), ["F5", "F8"], "stay degraded"))
+    rec("C2", *verdict(tian(order=False, f7=4, tc=tc), tian(f7=4, tc=tc), ["F2"], "improve"))
     rec("C3", "not expressible", c["C3"]["edit"])
-    kb = koriyama([])
-    rec("C4", *verdict(kb, koriyama(["T5"]), ["T6"], "improve"))
-    rec("C5", *verdict(kb, koriyama(["T1", "T2"]), ["T5", "T6", "T9"], "improve"))
-    rec("C6", *verdict(kb, koriyama(["T6"]), ["T9"], "improve"))
+    kb = koriyama([], tc)
+    rec("C4", *verdict(kb, koriyama(["T5"], tc), ["T6"], "improve"))
+    rec("C5", *verdict(kb, koriyama(["T1", "T2"], tc), ["T5", "T6", "T9"], "improve"))
+    rec("C6", *verdict(kb, koriyama(["T6"], tc), ["T9"], "improve"))
     rec("C7", "not expressible", c["C7"]["edit"])
-    zb = zheng()
-    rec("C8", *verdict(zb, zheng("C8"), ["F7", "F9", "F10", "F11", "F12"], "improve"))
-    rec("C9", *verdict(zb, zheng("C9"), ["F20"], "avoid"))
-    wb = wenzhou([])
-    rec("C10", *verdict(wb, wenzhou(["M10"]), ["M20"], "avoid"))
+    zb = zheng(tc=tc)
+    rec("C8", *verdict(zb, zheng("C8", tc), ["F7", "F9", "F10", "F11", "F12"], "improve"))
+    rec("C9", *verdict(zb, zheng("C9", tc), ["F20"], "avoid"))
+    wb = wenzhou([], tc=tc)
+    rec("C10", *verdict(wb, wenzhou(["M10"], tc=tc), ["M20"], "avoid"))
     rec("C11", "not expressible", c["C11"]["edit"])
-    rec("C12", *verdict(wb, wenzhou(["M5", "M7", "M8", "M10"]), ["M20"], "avoid"))
+    rec("C12", *verdict(wb, wenzhou(["M5", "M7", "M8", "M10"], tc=tc), ["M20"], "avoid"))
     pb, pc = smith_ptop(False), smith_ptop(True)
     rec("C13", "agree" if pc > pb else "disagree", f"P(top) {pb:.4f} -> {pc:.4f}")
-    red = li_stages()
+    red = li_stages(tc)
     order = sorted(red, key=lambda s: -red[s])
     rec("C14", "agree" if order == ["PEP", "DER", "PER"] else "disagree",
         "deficit reduction " + " ".join(f"{s}:{red[s]:.1f}" for s in order))
