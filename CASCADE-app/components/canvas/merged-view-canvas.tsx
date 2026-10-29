@@ -45,6 +45,7 @@ import { edgeTypes } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
 import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
+import { CanvasMiniMap } from "./canvas-minimap";
 import { CanvasLegend } from "./canvas-legend";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
@@ -412,6 +413,7 @@ function MergedViewCanvas() {
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         )}
         <ZoomSlider />
+        <CanvasMiniMap />
         <NodeSearch nodes={mergedNodes} />
 
         {/* Freehand lasso — same as single-canvas FlowCanvas */}

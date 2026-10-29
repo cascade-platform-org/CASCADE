@@ -64,6 +64,10 @@ export interface UiState {
   globalViewActive: boolean;
   /** Layout for the global view. "merged" = flat editable canvas (default); "grouped" = read-only coloured boxes. */
   globalViewLayout: "merged" | "grouped";
+  /** Grouped layout: the Canvases drawn collapsed, by id. Kept for the session, cleared when a project loads. */
+  groupedCollapsed: string[];
+  /** Grouped layout: where the user dragged each Canvas region or cluster, by Canvas id. Same lifetime. */
+  groupedMoved: Record<string, { x: number; y: number }>;
 
   // --- Active tool ---
   activeTool: ActiveTool;
@@ -249,6 +253,13 @@ export interface UiActions {
   // --- Global view ---
   setGlobalViewActive: (active: boolean) => void;
   setGlobalViewLayout: (layout: "merged" | "grouped") => void;
+  toggleGroupedCollapsed: (canvasId: string) => void;
+  setGroupedCollapsed: (canvasIds: string[]) => void;
+  moveGroupedCanvases: (moves: Record<string, { x: number; y: number }>) => void;
+  /** Re-arrange: every Canvas back in a row. */
+  clearGroupedMoves: () => void;
+  /** A new project's Canvases are not the old ones (imported FRAM models all use cv_0, cv_1…). */
+  resetGroupedView: () => void;
 
   // --- Active tool ---
   setActiveTool: (tool: ActiveTool) => void;
@@ -377,6 +388,8 @@ const initialState: UiState = {
   serverReachable: false,
   globalViewActive: false,
   globalViewLayout: "merged",
+  groupedCollapsed: [],
+  groupedMoved: {},
   activeTool: "select",
   configModalOpen: false,
   configModalTab: "functionality-scale",
@@ -455,6 +468,25 @@ export const useUiStore = create<UiStore>()(
       // the Inspector shows the "All canvases" summary (with the toggle back to
       // merged) rather than an editable node/edge panel.
       if (layout === "grouped") useNetworkStore.getState().clearSelection();
+    },
+    toggleGroupedCollapsed(canvasId) {
+      set((state) => {
+        const i = state.groupedCollapsed.indexOf(canvasId);
+        if (i >= 0) state.groupedCollapsed.splice(i, 1);
+        else state.groupedCollapsed.push(canvasId);
+      });
+    },
+    setGroupedCollapsed(canvasIds) {
+      set((state) => { state.groupedCollapsed = [...canvasIds]; });
+    },
+    moveGroupedCanvases(moves) {
+      set((state) => { Object.assign(state.groupedMoved, moves); });
+    },
+    clearGroupedMoves() {
+      set((state) => { state.groupedMoved = {}; });
+    },
+    resetGroupedView() {
+      set((state) => { state.groupedCollapsed = []; state.groupedMoved = {}; });
     },
 
     // -------------------------------------------------------------------------

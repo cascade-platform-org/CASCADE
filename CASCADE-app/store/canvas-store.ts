@@ -791,6 +791,7 @@ export const useCanvasStore = create<CanvasStore>()(
       // Every source is parsed before it opens (lib/project-bundle.ts), and
       // ProjectSchema's preprocessor already migrated a single `temporal_simulation`.
       useTemporalSimulationStore.getState().loadFromProject(project.temporal_simulations);
+      useUiStore.getState().resetGroupedView();
     },
 
     mergeImportedProject(project) {
@@ -862,6 +863,7 @@ export const useCanvasStore = create<CanvasStore>()(
       useScorecardStore.getState().reset();
       useTemporalSimulationStore.getState().loadFromProject(undefined);
       useProjectDataStore.getState().loadFromProject({});
+      useUiStore.getState().resetGroupedView();
     },
   })),
 );

@@ -40,6 +40,7 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { NodeSearch } from "./node-search";
 import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
+import { CanvasMiniMap } from "./canvas-minimap";
 import { Lasso } from "./lasso";
 import { useNetworkStore } from "@/store/network-store";
 import { useClipboardStore } from "@/store/clipboard-store";
@@ -714,6 +715,7 @@ function FlowCanvas() {
         )}
         <NodeSearch />
         <ZoomSlider />
+        <CanvasMiniMap />
         {/* Freehand lasso — active in select tool, replaces rect-select */}
         <Lasso
           active={activeTool === "select"}

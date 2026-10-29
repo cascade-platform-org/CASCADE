@@ -214,8 +214,11 @@ read a large model, use *Grouped*:
 - drag a region or a box to put related Canvases side by side; *Re-arrange*
   puts them back in a row.
 
-Neither is saved, and propagation is unchanged. Every view zooms out to 5 %
-(a map-backed Canvas stops earlier).
+Both last while the app is open, across tabs, and are cleared when you reload
+or open another project; neither is saved in the file, and propagation is
+unchanged. Every view zooms out to 5 % (a map-backed Canvas stops earlier),
+and the overview map bottom left shows the whole network: drag or scroll in it
+to move.
 
 ## 3. Rules
 

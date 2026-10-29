@@ -14,7 +14,7 @@
  * This view is read-only: no editing, no tool interactions.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -45,6 +45,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
+import { CanvasMiniMap } from "./canvas-minimap";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
@@ -210,10 +211,12 @@ function GlobalViewCanvas() {
   const scaleLevels = useConfigStore(useShallow((s) => s.config.functionality_scale));
   const config = useConfigStore((s) => s.config);
   const weightAttr = useAnalysisStore((s) => s.oiWeightAttr);
-  // Collapsed Canvases, by id: a view state of this session, never saved.
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  // Where the user dragged each Canvas (region or cluster), by Canvas id: a view state too.
-  const [moved, setMoved] = useState<Readonly<Record<string, { x: number; y: number }>>>({});
+  // Collapsed Canvases and dragged positions: session view state in ui-store, so
+  // they survive leaving the All tab; never saved, cleared when a project loads.
+  const collapsedIds = useUiStore((s) => s.groupedCollapsed);
+  const collapsed = useMemo(() => new Set(collapsedIds), [collapsedIds]);
+  const moved = useUiStore((s) => s.groupedMoved);
+  const toggle = (canvasId: string) => useUiStore.getState().toggleGroupedCollapsed(canvasId);
   const onNodesChange = (changes: NodeChange[]) => {
     const drags = changes.flatMap((c) => {
       if (c.type !== "position" || !c.position) return [];
@@ -221,14 +224,8 @@ function GlobalViewCanvas() {
         : c.id.startsWith(clusterNodeId("")) ? c.id.slice(clusterNodeId("").length) : null;
       return canvasId === null ? [] : [[canvasId, c.position] as const];
     });
-    if (drags.length) setMoved((prev) => ({ ...prev, ...Object.fromEntries(drags) }));
+    if (drags.length) useUiStore.getState().moveGroupedCanvases(Object.fromEntries(drags));
   };
-  const toggle = (canvasId: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(canvasId)) next.add(canvasId);
-      return next;
-    });
 
   const { getNodes } = useReactFlow();
 
@@ -416,6 +413,7 @@ function GlobalViewCanvas() {
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color={brandColor("neutral", 300)} />
         <ZoomSlider />
+        <CanvasMiniMap />
       </ReactFlow>
       </SnapshotColorsProvider>
 
@@ -434,12 +432,12 @@ function GlobalViewCanvas() {
           <div data-export-ignore className="flex items-center gap-0.5 rounded-md bg-white/90 px-1 py-1 text-xs font-medium text-zinc-600 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-300 dark:ring-zinc-700">
             <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               title="Draw every Canvas as one node"
-              onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
+              onClick={() => useUiStore.getState().setGroupedCollapsed(canvases.map((c) => c.id))}>Collapse all</button>
             <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              onClick={() => setCollapsed(new Set())}>Expand all</button>
+              onClick={() => useUiStore.getState().setGroupedCollapsed([])}>Expand all</button>
             {Object.keys(moved).length > 0 && (
               <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                title="Put every Canvas back in a row" onClick={() => setMoved({})}>Re-arrange</button>
+                title="Put every Canvas back in a row" onClick={() => useUiStore.getState().clearGroupedMoves()}>Re-arrange</button>
             )}
           </div>
         )}
