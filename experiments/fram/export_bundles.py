@@ -9,8 +9,10 @@ case builders), laid out by the importer's own layout, with:
 CHECKS.md beside the bundles says, for each one, what to fire and the levels
 the scored functions should show after Propagate, with the paper's truth.
 
-The bundles hold transcriptions of © models, so they are written to the
-gitignored paper folder: docs/paper/FRAM/bundles/.
+A bundle is a derivative of its source model, so it goes where the source's
+licence allows: CASCADE-app/samples/public/fram/ for CC BY sources (tracked),
+CASCADE-app/samples/private/fram/ for the rest (never tracked). Each folder
+has its own CHECKS.md.
 
 Run from the repository root:
     CASCADE-backend/.venv/bin/python experiments/fram/export_bundles.py
@@ -27,7 +29,8 @@ from framkit.translate import Translated
 from schemas.config import EventDefinition
 from schemas.sync import ProjectBundle
 
-OUT = r1.readers.REPO / "docs" / "paper" / "FRAM" / "bundles"
+SAMPLES = r1.readers.REPO / "CASCADE-app" / "samples"
+OUT = {True: SAMPLES / "public" / "fram", False: SAMPLES / "private" / "fram"}
 
 
 def bundle(model, t: Translated, name: str, events: dict[str, tuple[str, dict[str, int]]]) -> ProjectBundle:
@@ -58,33 +61,35 @@ def expected(model, t: Translated, start: dict[str, int], fids: list[str]) -> st
 
 
 def main() -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
-    sheet = ["# Checking the core cases in the platform",
-             "",
-             "Open a bundle (File → Open), fire the listed Event(s) from the Action Bar, press Propagate, and read the "
-             "levels of the listed functions (Inspector, or the node colours). Expected levels come from the same "
-             "translation the paper's results use; truth is the source paper's. Written by "
-             "`experiments/fram/export_bundles.py`.",
-             ""]
+    header = ["# Checking the core cases in the platform",
+              "",
+              "Open a bundle (File → Open), fire the listed Event(s) from the Action Bar, press Propagate, and read the "
+              "levels of the listed functions (Inspector, or the node colours). Expected levels come from the same "
+              "translation the paper's results use; truth is the source paper's. Written by "
+              "`experiments/fram/export_bundles.py`.",
+              ""]
+    sheets = {public: list(header) for public in OUT}
 
-    def write(slug: str, b: ProjectBundle, fire: str, check: str, truth: str) -> None:
-        (OUT / f"{slug}.json").write_text(json.dumps(b.model_dump(mode="json", exclude_none=True), indent=1))
-        sheet.extend([f"## `{slug}.json` — {b.project.meta.name}", "", f"- **Fire:** {fire}",
-                      f"- **Expect:** {check}", f"- **Truth:** {truth}", ""])
+    def write(slug: str, model, b: ProjectBundle, fire: str, check: str, truth: str) -> None:
+        public = model.name in r1.readers.REDISTRIBUTABLE
+        OUT[public].mkdir(parents=True, exist_ok=True)
+        (OUT[public] / f"{slug}.json").write_text(json.dumps(b.model_dump(mode="json", exclude_none=True), indent=1))
+        sheets[public].extend([f"## `{slug}.json` — {b.project.meta.name}", "", f"- **Fire:** {fire}",
+                               f"- **Expect:** {check}", f"- **Truth:** {truth}", ""])
 
     # --- RQ1 -------------------------------------------------------------------------
     m, t, start = r2.zheng_case()
     truth = r1.readers.zheng_judgements()
     neg = [k for k, j in truth.items() if j == "negative"]
     pos = [k for k, j in truth.items() if j == "positive"]
-    write("rq1_zheng", bundle(m, t, "Zheng 2024 (RQ1)", {"ev": ("Earthquake: communications, firefighters, F5 one-way", start)}),
+    write("rq1_zheng", m, bundle(m, t, "Zheng 2024 (RQ1)", {"ev": ("Earthquake: communications, firefighters, F5 one-way", start)}),
           "Earthquake", expected(m, t, start, neg + pos),
           f"Table 2: negative {', '.join(neg)}; positive {', '.join(pos)} (v2 misses F18, F19: their staff adapt)")
 
     m, t, _ = r2.tian_case()
     events = {"f7v": ("F7 door-closing variable (3)", {"F7": 3}), "f7s": ("F7 door-closing severe (2)", {"F7": 2}),
               "bosun": ("Bosun absent (F2 not performed)", {"F2": 1}), "order": ("No order to close the door (F3 not performed)", {"F3": 1})}
-    write("rq1_tian", bundle(m, t, "Tian 2016 (RQ1, C2)", events),
+    write("rq1_tian", m, bundle(m, t, "Tian 2016 (RQ1, C2)", events),
           "F7 variable (with and without Bosun absent); then F7 severe",
           expected(m, t, {"F7": 3, "F1": 4}, ["F2", "F5", "F8"]) + " — for F7 variable, bosun present",
           "violation (F2, F5, F8 all degraded) whenever F7 < 4, bosun present or absent; none at F7 = 4")
@@ -93,7 +98,7 @@ def main() -> None:
         m = r1.smith_model(shared)
         t = r1.smith_translation(shared)
         events = {e.lower(): (f"{e} {label(m, e)} fails", {e: 1}) for e in r1.SMITH_EVENTS}
-        write("rq1_smith" + ("_shared_sensor" if shared else ""),
+        write("rq1_smith" + ("_shared_sensor" if shared else ""), m,
               bundle(m, t, "Smith 2017 / Khakzad 2011" + (" + shared sensor (C13)" if shared else " (RQ1)"), events),
               "any combination of the five failures",
               "S1 is not performed exactly when an automatic element (S8, S9, S6 or S3) fails AND S2 fails"
@@ -101,12 +106,12 @@ def main() -> None:
               "fault tree top event 0.2720" + (" → 0.3756 with the shared sensor" if shared else ""))
 
     m, t, start = r2.wenzhou_case([])
-    write("rq1_wenzhou", bundle(m, t, "Wenzhou 2011 (RQ1, held out)", {"ev": ("Lightning: M7, M10 not performed", start)}),
+    write("rq1_wenzhou", m, bundle(m, t, "Wenzhou 2011 (RQ1, held out)", {"ev": ("Lightning: M7, M10 not performed", start)}),
           "Lightning", expected(m, t, start, r1.WZ_DEGRADED + r1.WZ_NOMINAL),
           f"accident report: degraded {', '.join(r1.WZ_DEGRADED)}; uninvolved {', '.join(r1.WZ_NOMINAL)}")
 
     m, t, start = r2.koriyama_case([])
-    write("rq1_koriyama", bundle(m, t, "Koriyama 2019 (RQ1, held out)", {"ev": ("Typhoon Hagibis: alerts, environment, night, 119 calls", start)}),
+    write("rq1_koriyama", m, bundle(m, t, "Koriyama 2019 (RQ1, held out)", {"ev": ("Typhoon Hagibis: alerts, environment, night, 119 calls", start)}),
           "Typhoon Hagibis", expected(m, t, start, ["T5", "T6", "T9", "T3", "T4", "T7", "T8"]),
           "Fig. 6: T5, T6, T9 resonated; T7, T8 contained; T3, T4 uninvolved")
 
@@ -123,13 +128,15 @@ def main() -> None:
     ]
     quotes = {r["id"]: r for r in r2.claims()}
     for slug, cid, (m, t, start), outcome, direction in claims:
-        write(slug, bundle(m, t, f"{cid}: {quotes[cid]['claim'][:60]}…", {"ev": ("The case's event, minus what the edit removes", start)}),
+        write(slug, m, bundle(m, t, f"{cid}: {quotes[cid]['claim'][:60]}…", {"ev": ("The case's event, minus what the edit removes", start)}),
               "the Event, then compare with the matching rq1_ bundle",
               expected(m, t, start, outcome) + f" — verdict in the paper: **{quotes[cid]['verdict']}**",
               f"the claim says: {direction}")
 
-    (OUT / "CHECKS.md").write_text("\n".join(sheet))
-    print(f"wrote {len(list(OUT.glob('*.json')))} bundles and CHECKS.md to {OUT}")
+    for public, sheet in sheets.items():
+        if len(sheet) > len(header):
+            (OUT[public] / "CHECKS.md").write_text("\n".join(sheet))
+            print(f"wrote {len(sheet[len(header):]) // 6} bundles and CHECKS.md to {OUT[public]}")
 
 
 if __name__ == "__main__":

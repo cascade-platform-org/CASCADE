@@ -51,7 +51,7 @@ history keeps each declaration verbatim (log at the end). Code: the product's FM
 | **Wenzhou 2011** (held out) | Li & Huang 2025 Fig. 4, digitised: 20 modules, 35 couplings | lightning: M7, M10 = 1 | report via Tables 1, 3, 4: chain M5, M8, M11, M16, M17, M19, M20; M12, M13 uninvolved |
 | **Koriyama 2019** (held out) | Togawa 2023 Fig. 5, 9 functions | PC3, PC4, environment, night, 119 calls (3) | Fig. 6: resonated / contained / uninvolved |
 
-Transcriptions: Zheng and Grabbe (CC BY) in `data/`; the rest in the gitignored `docs/paper/FRAM/models/`, whose licences do not allow redistribution.
+Transcriptions: Zheng (CC BY) in `data/`, Grabbe's FMV file (CC BY) in `raw-networks/fram/`; the rest in the never-tracked `data/private/` and `raw-networks/fram/private/`, as their licences do not allow redistribution (README, "Where the inputs are").
 
 ## 4. RQ2 protocol
 
@@ -79,7 +79,7 @@ Declared before running, in answer to the owner's Gate 2 question (can resonance
 
 ## 4b. Declared 2026-10-29: S0 on the claims, two more verification models, Falegnami's ranking
 
-The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 were shared by A. Tomassi and A. Falegnami for this study only and stay private (`docs/paper/FRAM/models/`, gitignored). The scripts skip what is missing.
+The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 were shared by A. Tomassi and A. Falegnami for this study only and stay private (`raw-networks/fram/private/`, `data/private/`; never tracked). The scripts skip what is missing.
 
 - **S0 baseline on the frozen claims.** The 11 expressible claims run as model edits under S0 (reachability, the RQ1 baseline), with the same description rules, events and verdict rules as v2. Reported beside v2, grouped by direction. It answers whether v2's agreement comes from damping and resonance or from structure alone. A monotone model can never make an outcome worse by holding a function nominal, so "improve" claims are the easy direction; "stays degraded" (C1) and "avoid" are the hard ones.
 - **Verification on two more real models.** Falegnami 2020 (52 functions, 290 couplings) and Simone 2025 (85 functions, 191 couplings) join V1 under the same protocol: the baseline, every single knockout and 200 random pairs. The reader rebuilds couplings from aspect texts, as FMV does when a file stores no drawn couplings; it gives 290 and 191, the counts Table 1 and the authors report. Expected, as on the other models: CASCADE equals the greatest fixed point everywhere, and the FMI except where a loop deadlocks.

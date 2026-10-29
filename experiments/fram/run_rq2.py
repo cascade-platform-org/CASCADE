@@ -152,7 +152,7 @@ def barrier(t: Translated, fid: str) -> None:
     cats = {c for e in t.project.edges.values() if e.target == nid
             for c in t.project.nodes[e.source].node_categories or []}
     t.project.nodes[nid] = t.project.nodes[nid].model_copy(update={
-        "rules": [], "category_dependency_profiles": {c: CategoryDependencyProfile(dependency_level=1) for c in cats}})
+        "rules": [], "category_dependency_profiles": {c: CategoryDependencyProfile(dependency_level=1) for c in sorted(cats)}})
 
 
 def verdict(base, edit, outcome, direction) -> tuple[str, str]:
@@ -245,7 +245,7 @@ def wenzhou(held: list[str], path: bool = False, alt: bool = False, tc: Translat
 
 
 def li_stages(tc: TranslationConfig | None = None) -> dict[str, float]:
-    rows = [r for r in csv.DictReader(line for line in open(readers.MODELS / "li_2026_metro_rainfall.csv")
+    rows = [r for r in csv.DictReader(line for line in open(readers.PRIVATE / "li_2026_metro_rainfall.csv")
                                         if not line.startswith("#"))]
     model = FramModel("li_2026")
     stage = {}

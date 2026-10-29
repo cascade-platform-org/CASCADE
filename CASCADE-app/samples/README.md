@@ -17,6 +17,7 @@ Source data for the example projects offered in the "new project" wizard.
   | `rule-*.json`, `flow-power-scarcity.json`, `dependency-guard.json`, `backup-defer.json` | Engine regression fixtures, loaded by name in `CASCADE-backend/test/test_engine_samples.py` |
   | `Updated_Palmanova_New.json` | `BASE_JSON` for `generate_scenarios.py` |
   | `base_georef.json` | Georeferencing reference model |
+  | `fram/` | FRAM models converted for the FRAM paper, from CC BY sources only (Zheng et al. 2024, *Process Saf. Environ. Prot.* 188:514–527, doi 10.1016/j.psep.2024.05.132): the checks `experiments/fram/export_bundles.py` writes, with `CHECKS.md`, and the demonstration `demo_zheng.py` writes. Bundles of the other cases go to `private/fram/` |
 
   Adding a file here does not surface it in the app; only a manifest entry does.
   Nothing loads samples *through* the manifest except the wizard, so trimming it

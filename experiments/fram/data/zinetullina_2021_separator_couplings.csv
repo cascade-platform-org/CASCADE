@@ -1,0 +1,34 @@
+# Source: Zinetullina A., Yang M., Khakzad N., Golman B., Li X. (2021). Quantitative resilience assessment of chemical process systems using FRAM and Dynamic Bayesian network. RESS 205:107232. doi:10.1016/j.ress.2020.107232. CC BY 4.0. Transcribed from Table 5 (page 8) on 2026-10-23.
+# alpha_T / alpha_P = amplification factors (mean±sd, normal); cv_p5 = 5th-percentile cumulative variability from 1000 MC draws; critical if cv_p5 > 24.
+coupling,downstream,aspect,upstream,alpha_T_mean,alpha_T_sd,alpha_P_mean,alpha_P_sd,cv_p5
+C1,2-phase separator,Input,Feed (Sour gas + PHC),10,3,40,20,1.21
+C2,2-phase separator,Input,Methanol Injection,30,20,30,20,0.00
+C3,2-phase separator,Control,Operator at the Control Room,50,20,40,20,3.62
+C4,2-phase separator,Control,Operator at the unit area,50,20,50,20,7.40
+C5,2-phase separator,Control,Level controllers and Interlock systems,60,20,50,10,18.70
+C6,2-phase separator,Control,Hand/manual Valves,10,5,10,5,0.06
+C7,Feed (Sour gas + PHC),Control,Level controllers and Interlock systems,60,30,40,20,2.42
+C8,Pressure Indicators,Precondition,Feed (Sour gas + PHC),10,5,10,5,0.12
+C9,Pressure Indicators,Precondition,2-phase separator,10,6,10,6,0.01
+C10,Pressure Safety Valves,Input,Pressure Indicators,60,10,40,10,17.84
+C11,Pressure Safety Valves,Control,Operator at the Control Room,70,10,50,10,26.90
+C12,Pressure Safety Valves,Control,Operator at the unit area,60,20,50,20,12.88
+C13,Level Alarm Systems,Precondition,Feed (Sour gas + PHC),10,7,10,7,0.00
+C14,Level controllers and Interlock systems,Input,Level Alarm Systems,80,10,50,20,23.67
+C15,Level controllers and Interlock systems,Control,Operator at the Control Room,70,20,80,10,37.88
+C16,Toxic Flammable Gas Detection Systems,Precondition,2-phase separator,10,3,10,3,0.52
+C17,Operator at the Control Room,Precondition,Regular Equipment Comissioning,40,30,50,30,0.01
+C18,Operator at the Control Room,Resource,Toxic Flammable Gas Detection Systems,50,20,60,20,11.89
+C19,Operator at the Control Room,Resource,Pressure Indicators,50,20,60,30,4.93
+C20,Operator at the Control Room,Resource,2-phase separator,10,2,10,2,0.73
+C21,Operator at the Control Room,Control,Toxic Flammable Gas Detection Systems,40,20,50,20,3.57
+C22,Operator at the unit area,Resource,Pressure Indicators,10,3,60,20,3.19
+C23,Operator at the unit area,Control,Toxic Flammable Gas Detection Systems,70,10,60,20,26.03
+C24,Operator at the unit area,Precondition,2-phase separator,10,1,70,10,5.96
+C25,Regular Equipment Comissioning,Resource,Toxic Flammable Gas Detection Systems,10,6,50,30,0.01
+C26,Regular Equipment Comissioning,Resource,Pressure Indicators,10,7,60,30,0.02
+C27,Regular Equipment Comissioning,Time,Operator at the unit area,50,30,60,20,0.88
+C28,Coalescing Filter,Input,2-phase separator,10,1,20,10,0.74
+C29,Amine Contactor,Input,2-phase separator,10,3,30,20,0.01
+C30,Reflux Drum,Input,2-phase separator,30,10,40,10,7.02
+C31,Hand/manual Valves,Control,Operator at the unit area,50,30,60,20,0.06

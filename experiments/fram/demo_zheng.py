@@ -38,7 +38,7 @@ from schemas.network import Canvas, CategoryDependencyProfile, Edge, Graph, Node
 
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
-DEMO = HERE / "demo"
+DEMO = readers.REPO / "CASCADE-app" / "samples" / "public" / "fram"  # Zheng is CC BY
 N = 4
 RADIO, NET = "X:Radio/Telephone", "X:Internet/Telephone"
 FIRE_KIT = "X:Firetruck; firefighter; PPE, SCBAS, etc."
@@ -283,7 +283,7 @@ def write(name: str, rows: list[dict[str, object]]) -> None:
 
 
 def main() -> None:
-    DEMO.mkdir(exist_ok=True)
+    DEMO.mkdir(parents=True, exist_ok=True)
     for remedy in (False, True):
         name = "zheng_natech_remedy.json" if remedy else "zheng_natech.json"
         (DEMO / name).write_text(json.dumps(bundle(remedy), indent=1))

@@ -51,6 +51,12 @@ docs/paper/*
 !docs/paper/VitalityForInterdependentNetworks/
 !docs/paper/IJDRR-CASCADE/
 
+# FRAM sources whose licence forbids redistribution (© transcriptions, NC-ND,
+# the FMV library, models shared privately). Each folder also carries its own
+# `*` .gitignore, so it stays ignored on branches that lack these lines.
+raw-networks/fram/private/
+experiments/fram/data/private/
+
 # ── Experiments (repo-root, not deployed) ────────────────────────────────────
 # Harness scripts and ATTEMPTS.md ARE tracked. Ignored: investigation kits
 # (REAL aqueduct data — never commit), archived outputs, logs, caches.

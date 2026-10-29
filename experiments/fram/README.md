@@ -8,18 +8,25 @@ models (plan: `docs/paper/FRAM/PLAN.md`, gitignored). It calls the real engine
 |---|---|
 | `TRANSLATION.md` | translation v2, per-case mappings, RQ2 protocol, declaration log |
 | `REPORT.md` | results for V1, RQ1–RQ3 and the demonstration |
-| `framkit/` | readers for the published models (data path `FRAM_DATA`, default `docs/paper/FRAM`), the FRAM model and translation (re-exported from the importer), engine call, oracles (FMI, Kaya VPN, Khakzad FT, Kim simulation), Kim formula rules |
+| `framkit/` | readers for the published models (where each file sits: below), the FRAM model and translation (re-exported from the importer), engine call, oracles (FMI, Kaya VPN, Khakzad FT, Kim simulation), Kim formula rules |
 | `run_v1.py` | verification: FMI fixed points, fault tree |
 | `run_rq1.py` | RQ1: every case, S0 vs v2 |
 | `run_rq2.py` | RQ2: exact importance, Kim interventions, expert claims (v2 and the S0 baseline), Vitality vs topology; exploratory alternative path (Wenzhou) |
 | `run_cumulative.py` | sensitivity: cumulative worsening (v2+3, v2+c) beside v2, on RQ1 and the claims |
 | `check_falegnami.py` | Falegnami et al. 2020's Katz ranking reproduced from the authors' private edge list, then with structure only |
 | `check_kim.py` | Kim & Yoon's "F11 is critical" on our re-implementation of their simulation (a footnote) |
-| `export_bundles.py` | the core cases as projects to check in the platform, each with its event as Events and each claim's edit applied, plus `CHECKS.md` (what to fire, what to expect); written to the gitignored `docs/paper/FRAM/bundles/` |
-| `demo_zheng.py` | demonstration: Zheng with telecom, crews and fire water; writes `demo/*.json` (open in the app) |
-| `data/` | the redistributable inputs (Zheng, Grabbe: CC BY) and the frozen RQ2 claim list; sources and licences in `data/README.md` |
-| private inputs | Falegnami 2020 and Simone 2025 (FMV files, phenotype sheets), shared by A. Tomassi and A. Falegnami for this study only: kept in the gitignored `docs/paper/FRAM/models/`, never redistributed; `run_v1.py` and `check_falegnami.py` skip them when absent |
+| `export_bundles.py` | the core cases as projects to check in the platform, each with its event as Events and each claim's edit applied, plus `CHECKS.md` (what to fire, what to expect); written by licence to `CASCADE-app/samples/public/fram/` (CC BY sources) or the gitignored `samples/private/fram/` |
+| `demo_zheng.py` | demonstration: Zheng with telecom, crews and fire water; writes `CASCADE-app/samples/public/fram/zheng_natech*.json` (open in the app) |
+| `data/` | the transcriptions (Zheng, Zinetullina: CC BY) and the frozen RQ2 claim list; sources and licences in `data/README.md` |
 | `results/` | CSV outputs |
 
-The other transcriptions stay in the gitignored paper folder, as their licences do not allow redistribution; results derived from them are tracked.
+**Where the inputs are, by licence.** A file is tracked only if its licence lets it be redistributed, and so is anything built from it; results (numbers) are tracked for every case.
+
+| Kind | Tracked (CC BY, or ours) | Never tracked (`private/`, each with its own `.gitignore`) |
+|---|---|---|
+| FMV files (importable) | `raw-networks/fram/`: Grabbe 2022 | `raw-networks/fram/private/`: Falegnami 2020, Simone 2025, the FMV example library |
+| transcriptions | `data/`: Zheng 2024, Zinetullina 2021, the claim lists | `data/private/`: Kaya, Kim, Li 2025, Li 2026, Smith, Tian (© Elsevier), Togawa (CC BY-NC-ND), the Falegnami and Simone phenotype sheets |
+| CASCADE projects | `CASCADE-app/samples/public/fram/`: the Zheng cases and demo | `CASCADE-app/samples/private/fram/`: the other check bundles |
+
+Falegnami 2020 and Simone 2025 were shared by A. Tomassi and A. Falegnami for this study only, never to be redistributed; `run_v1.py` and `check_falegnami.py` skip them when absent. A fresh checkout runs the CC BY cases; the others need the private files.
 Run from the repository root, e.g. `CASCADE-backend/.venv/bin/python experiments/fram/run_rq1.py`.
