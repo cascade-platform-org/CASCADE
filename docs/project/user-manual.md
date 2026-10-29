@@ -202,9 +202,11 @@ The Inspector states it in words, and the repair ranking is computed from it.
 appears only under Global.** The scope selector sits in front of Propagate,
 Simulate and Analyse, and sets the scope of all three.
 
-The **All** tab shows every Canvas together, read-only, each in its own
-region. To read a large model, collapse a Canvas (− beside its name, or
-*Collapse all* top right): it becomes one box with the Operativity of its nodes
+The **All** tab shows every Canvas together. The switch at its top centre
+picks the layout: *Merged* puts every Canvas on one editable surface;
+*Grouped* draws each in its own region, read-only. To read a large model, use
+*Grouped* and collapse a Canvas (− beside its name, or *Collapse all* in the
+switch bar): it becomes one box with the Operativity of its nodes
 and how many it holds, and the edges into it merge into one, drawn at their
 worst level and marked ×k. Expand it again with +. Collapsing only changes the
 picture; it is not saved and propagation is unchanged.

@@ -52,6 +52,7 @@ import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/net
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
+import { GlobalViewToolbar } from "./global-view-toolbar";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
 
@@ -434,6 +435,9 @@ function MergedViewCanvas() {
           Every canvas view needs it: an Analysis Heatmap applies to the Element
           registry, so its colours show here as much as in the single-canvas view. */}
       <CanvasLegend />
+
+      {/* Layout switch: Grouped is where Canvases collapse */}
+      <GlobalViewToolbar />
 
       {contextMenu && (
         <CanvasContextMenu

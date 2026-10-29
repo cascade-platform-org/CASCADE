@@ -1521,7 +1521,31 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " tab shows every Canvas together, read-only, each in its own region. To read a large model, collapse a Canvas (− beside its name, or "
+                  "text": " tab shows every Canvas together. The switch at its top centre picks the layout: "
+                },
+                {
+                  "kind": "em",
+                  "text": "Merged"
+                },
+                {
+                  "kind": "text",
+                  "text": " puts every Canvas on one editable surface; "
+                },
+                {
+                  "kind": "em",
+                  "text": "Grouped"
+                },
+                {
+                  "kind": "text",
+                  "text": " draws each in its own region, read-only. To read a large model, use "
+                },
+                {
+                  "kind": "em",
+                  "text": "Grouped"
+                },
+                {
+                  "kind": "text",
+                  "text": " and collapse a Canvas (− beside its name, or "
                 },
                 {
                   "kind": "em",
@@ -1529,7 +1553,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " top right): it becomes one box with the Operativity of its nodes and how many it holds, and the edges into it merge into one, drawn at their worst level and marked ×k. Expand it again with +. Collapsing only changes the picture; it is not saved and propagation is unchanged."
+                  "text": " in the switch bar): it becomes one box with the Operativity of its nodes and how many it holds, and the edges into it merge into one, drawn at their worst level and marked ×k. Expand it again with +. Collapsing only changes the picture; it is not saved and propagation is unchanged."
                 }
               ]
             }

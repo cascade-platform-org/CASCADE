@@ -44,6 +44,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider } from "./zoom-slider";
+import { GlobalViewToolbar } from "./global-view-toolbar";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
@@ -405,16 +406,14 @@ function GlobalViewCanvas() {
           registry, so its colours show here as much as in the single-canvas view. */}
       <CanvasLegend />
 
-      {/* Collapse or expand every Canvas at once */}
-      {canvases.length > 1 && (
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-white/80 px-1.5 py-1 text-xs font-medium text-zinc-600 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:text-zinc-300 dark:ring-zinc-700">
-          <button type="button" className="rounded px-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
-          <span aria-hidden>·</span>
-          <button type="button" className="rounded px-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            onClick={() => setCollapsed(new Set())}>Expand all</button>
-        </div>
-      )}
+      {/* Layout switch, and collapse or expand every Canvas at once */}
+      <GlobalViewToolbar>
+        <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          title="Draw every Canvas as one node"
+          onClick={() => setCollapsed(new Set(canvases.map((c) => c.id)))}>Collapse all</button>
+        <button type="button" className="rounded px-1.5 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          onClick={() => setCollapsed(new Set())}>Expand all</button>
+      </GlobalViewToolbar>
 
       {/* Read-only badge */}
       <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur-sm dark:bg-zinc-900/80 dark:ring-zinc-700">

@@ -169,11 +169,12 @@ function ProjectNameEditor() {
   return (
     <button
       onClick={startEdit}
-      title="Click to rename"
-      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      title={`${projectName} — click to rename`}
+      className="flex min-w-0 max-w-[11rem] shrink items-center gap-1 rounded px-1.5 py-0.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
     >
-      {projectName}
-      <span className="text-xs text-zinc-400">✎</span>
+      {/* A long name is cut short so the Canvas tabs keep their room; the title shows it whole. */}
+      <span className="truncate">{projectName}</span>
+      <span className="shrink-0 text-xs text-zinc-400">✎</span>
     </button>
   );
 }
