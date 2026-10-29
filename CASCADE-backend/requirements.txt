@@ -40,6 +40,7 @@ httpx==0.28.1                      # async HTTP — fetches OIDC discovery docum
 # Graph algorithms (open, auditable core — not the engine)
 # ---------------------------------------------------------------------------
 
+defusedxml==0.7.1            # safe XML parsing of uploaded FMV (.xfmv) files (PSF-2.0)
 networkx==3.6.1              # centrality, clustering, and topological analysis
 
 # ---------------------------------------------------------------------------

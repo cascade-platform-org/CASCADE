@@ -409,7 +409,7 @@ The **File** button in the Topbar opens four tabs.
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Local**  | Save to your computer as `.json`, or open one; the last 10 saves kept in this browser. Plus a backup folder, written to every time you close the tab. |
 | **Cloud**  | Save to your account and open it on any device. Last 10 kept. Needs sign-in with Sync.                                                                |
-| **Import** | Build a project from an EPANET `.inp` file.                                                                                                           |
+| **Import** | Build a project from an EPANET `.inp` file or a FRAM model (`.xfmv`, §7.4).                                                                           |
 | **New**    | Start a fresh project. The current one stays open until the setup is finished, so Cancel costs nothing.                                               |
 
 Local and cloud saves are independent: clearing the browser does not touch the
@@ -539,6 +539,29 @@ in the Topbar is where you stay in charge of it.
 
 What you show the agent leaves your computer for wherever that agent's LLM
 runs: choose one you trust with your organisation's names.
+
+### 7.4 Importing a FRAM model
+
+File → Import → **Import FRAM model (.xfmv)** opens a model saved by the FRAM
+Model Visualiser and replaces the current project with it. Each function
+becomes a node where you drew it; each of its outputs becomes a small node of
+its own, and each coupling an edge. Two functions producing the same output
+text are alternatives: the consumer stays up while either does.
+
+Choose how the model is read:
+
+- **Damping + resonance** (default): one degraded input is absorbed by a level,
+  two coinciding ones pass in full. The rule on each function says so, with
+  level offsets (§3.2). Four levels: nominal, variable, severe, not performed.
+- **Reachability**: every deviation reaches everything downstream. A baseline.
+- **FMI (binary)**: performed or not, with the file's All / Any / None profiles.
+
+A FRAM file holds no scenario. To run one, add an Event (Config → Events) and
+set the vulnerability of the functions it reaches: a function the analysis
+calls *variable* or *delayed* drops one level, one *not performed* drops to the
+bottom. A rule your analysis states only in words ("if F12 and F17 are both
+degraded, F20 is severe") is an ordinary Specific rule. Needs a signed-in
+account (the conversion runs on the server).
 
 ## 8. Server and roles
 

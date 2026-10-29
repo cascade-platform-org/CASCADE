@@ -48,6 +48,7 @@ import {
 import type { ValidationIssue } from "@/lib/project-validation";
 import { currentBundle, openBundle } from "@/lib/project-bundle";
 import { ImportInpSection } from "./import-inp-section";
+import { ImportXfmvSection } from "./import-xfmv-section";
 import { loadRecoveryDir, saveRecoveryDir, clearRecoveryDir } from "@/lib/recovery-dir";
 import {
   syncSaveProject,
@@ -663,7 +664,12 @@ export function FileIoPanel() {
           )}
 
           {/* ── Import ────────────────────────────────────────────────── */}
-          {tab === "import" && <ImportInpSection />}
+          {tab === "import" && (
+            <div className="space-y-5">
+              <ImportInpSection />
+              <ImportXfmvSection />
+            </div>
+          )}
 
           {/* ── New ───────────────────────────────────────────────────── */}
           {tab === "new" && (

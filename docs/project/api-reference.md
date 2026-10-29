@@ -255,7 +255,7 @@ Deletes one version. `404` if it doesn't belong to the caller.
 
 ---
 
-## Network import — any authenticated user (requirements.md §13.5, ADR-0012)
+## Network import — any authenticated user (requirements.md §13.5, ADR-0012, ADR-0026)
 
 ### `POST /api/import/inp`
 
@@ -268,6 +268,14 @@ Returns `{ bundle: { project, config }, warnings, original_nodes, imported_nodes
 ### `POST /api/import/inp/temporal`
 
 The same body, pipeline and response, for a Temporal Simulation (ADR-0020, `core/importers/inp/temporal.py`). After the mapping above, each **tank becomes storage**: a Stock with `max_fill` whose `level`, `min` and `max` are the tank's volumes at its initial, minimum and maximum levels, written as the flow that moves them in one hour; `max_draw` and `max_fill` are what its outlet and inlet pipes carry, and each of its pipes gets an edge in both directions. No backup countdown and no reserve Event. The bundle's project also gets a **starting simulation**: hourly periods over `[TIMES]` duration; a profile setting each consumer's demand in every hour it changes, from the file's own demand timeseries; and each time-based control (`AT TIME`, `AT CLOCKTIME`) as a Temporal-Simulation-only Event opening or closing its link in its own one-hour Step. Level-based controls and `[RULES]` are listed in `warnings` as skipped. No Metrics and no hazards are added.
+
+### `POST /api/import/xfmv`
+
+Converts a FRAM model saved by the FRAM Model Visualiser (`.xfmv`) into a CASCADE `ProjectBundle` (ADR-0026, `core/importers/xfmv/`). Pure transformation — nothing persisted, engine never invoked.
+
+Body `{ filename, content, semantics? }` — `content` is the file's text, decoded by the client (UTF-8, else cp1252); `semantics` is `"v2"` (default: one level of damping per coupling and second-worst resonance, 4 levels), `"reachability"` or `"fmi"` (binary, with the file's All/Any/None profiles).
+
+Returns `{ bundle: { project, config }, warnings, functions, couplings }`, serialised null-free. Warnings name a file without couplings, and FMI profiles that only the `fmi` semantics reads. `422` with a human-readable detail on a file that is not well-formed, has no `<Functions>`, or declares XML entities or a DTD.
 
 ---
 
