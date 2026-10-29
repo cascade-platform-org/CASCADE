@@ -39,8 +39,8 @@ export interface ElementRef {
  */
 export type CoalitionEvaluator = (failed: ReadonlySet<string>) => Promise<number>;
 
-/** Scores Operativity with one Element removed from the multi-canvas entirely. */
-export type RemovalEvaluator = (element: ElementRef) => Promise<number>;
+/** Scores Operativity with one Element failed — its Coalition of one. */
+export type FailureEvaluator = (element: ElementRef) => Promise<number>;
 
 export interface AnalysisHooks {
   /** Called after each evaluation that actually reached the evaluator (cache misses only). */
@@ -133,8 +133,14 @@ export interface VitalityResult {
 }
 
 /**
- * Vitality Centrality: for each Element, the Operativity Score lost when it is
- * removed and the multi-canvas is re-propagated. One evaluation per Element.
+ * Vitality Centrality: for each Element, the Operativity Score lost when it
+ * fails (driven to Functionality 1, as in a Coalition) and the multi-canvas is
+ * re-propagated. One evaluation per Element.
+ *
+ * Failing, not deleting: the engine reads an input that is not there as
+ * nominal, so a deleted Element degrades none of its consumers under a rule —
+ * Vitality came out 0 everywhere on a logical model. Failing also makes it the
+ * Shapley Value's first marginal, `v({i}) − v(∅)`.
  *
  * An evaluation that throws scores 0 rather than aborting the run — one
  * unreachable engine call should not discard the other N−1 results.
@@ -142,7 +148,7 @@ export interface VitalityResult {
 export async function computeVitality(
   elements: readonly ElementRef[],
   baselineScore: number,
-  evaluate: RemovalEvaluator,
+  evaluate: FailureEvaluator,
   hooks: AnalysisHooks = {},
 ): Promise<VitalityResult> {
   const now = hooks.now ?? Date.now;

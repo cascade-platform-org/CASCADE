@@ -30,7 +30,7 @@ function CategoryRow({
   cat: { name: string; category_type: CategoryDefinition["category_type"]; icon?: string };
   onChangeName: (v: string) => void;
   onChangeType: (v: CategoryDefinition["category_type"]) => void;
-  onChangeIcon: (v: string) => void;
+  onChangeIcon: (v: string | undefined) => void;
   onRemove: () => void;
 }) {
   return (

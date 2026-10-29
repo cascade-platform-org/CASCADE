@@ -138,7 +138,7 @@ export function DirectDamageEditor({ defaultRepairTime, effects, onChangeDefault
                   ? "bg-zinc-700 text-white dark:bg-zinc-300 dark:text-zinc-900"
                   : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
               )}>
-              <Icon size={11} strokeWidth={2} />
+              {Icon && <Icon size={11} strokeWidth={2} />}
               {cat.name}
             </button>
           );
