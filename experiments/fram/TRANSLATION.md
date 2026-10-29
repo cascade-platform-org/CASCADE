@@ -138,6 +138,33 @@ The owner approves each case. Then, per case and before any run, a commit holds:
 
 **Decision rule among v2, v2+3 and v2+c, fixed now.** The paper's main semantics is the candidate with the highest mean balanced accuracy over the new held-out cases at the declared event coding; ties go to the simpler (v2, then v2+3, then v2+c). With fewer than two new cases the contest is reported as inconclusive and v2 stays. Every family member is reported on the new cases, with their grid.
 
+## 4d. Declared 2026-10-29: the Zheng decision model (paper §5)
+
+Compares the analysts' own recommendations under resources and time, on the converted model RQ1 checked. Replaces the demonstration (`demo_zheng.py`): its telecom and fire-water canvases and its quantities were ours, and Zheng's Table 1 gives F20 no water aspect.
+
+**Imported from Zheng 2024 (and its source plan, Baser & Behnam 2020).**
+- The converted FRAM under v2 with the F20 rule (§2): F20 is severe when F12 and F17 both deviate.
+- The event: Radio/Telephone and Internet/Telephone damaged (level 3), F5's one-way communication (level 3), firefighters limited because some are sent to other earthquake-affected areas (§4.2.1).
+- Firefighters are F17's Resource (Table 1); F20 receives them only through F17's output.
+- The deadline: Tank 63 and its neighbours fail 2,000–7,000 s after exposure (Fig. 6, after Cozzani 2006).
+- The options, from §4.2.1–4.2.2: **O0** the plan; **O1** two-way updates (F5 not deviating); **O2** the first-round remedy (Fig. 9): O1 plus a function locating and mobilising other organisations' firefighters (F23: Input F2's guidelines, Resource Radio/Telephone); **O3** the second round: F5 cancelled (F7 takes F4's output, as C9) plus F23.
+
+**The added layer.** Firefighters as a SourceToDemands flow, in units of F17's need (100): the brigade supplies 100; the other affected areas draw 100·d and are served first (priority); F17 demands 100, its served level entering its rule undamped (a shortfall is a shortfall). The event's level-3 on F17's background resource is replaced by this flow. Under O2 and O3 a mutual-aid source supplies 100·d from the arrival time a on, through a Requisite coupling from F23 (no mobilisation, no mutual aid). Nothing else is added.
+
+**Assumed and swept.** d ∈ {0, 0.1, …, 0.7} (share of the brigade drawn away); a ∈ {10, 20, …, 120} min; telecom severity s ∈ {3 (declared), 2}. Telecom is not repaired within the window. Time: 5-minute periods from 0 to 120 min.
+
+**Outputs.**
+- Per (option, d, a, s): t_F20, the first period from which F20 is nominal to the end of the window (or never). Deadline met for the whole band if t_F20 ≤ 33 min, for part of it if ≤ 117 min, not met otherwise.
+- At one reference point (d = 0.4, a = 30, s = 3): Operativity of the FRAM functions over time per option; Shapley attribution of the Operativity loss at t = 0 to the three damages (telecom, F5 one-way, firefighters drawn away).
+- The four options as projects with their Temporal Simulation, opening in the app (`CASCADE-app/samples/public/fram/`, Zheng is CC BY).
+
+**Recorded before running: the hand reading.**
+- O0: whenever more than a quarter of the brigade is drawn away (d ≥ 0.25: served ratio ≤ 0.75, F17 below nominal), F12 and F17 deviate together and the rule holds F20 severe: never met. With d < 0.25 F20 is nominal at once.
+- O1: F12 is nominal (as C8), so the rule never fires; F17's shortfall alone is damped. F20 nominal at once for d < 0.5, held at 3 for d ≥ 0.5: two-way updates suffice up to about half the brigade drawn away.
+- O2, O3: as O1 until the mutual aid arrives, nominal from a for every d. The deadline is met for d ≥ 0.5 only when a ≤ 117 min, and for the whole band when a ≤ 33 min.
+- s = 2: telecom severe reaches F12 even under O1 and degrades F23; two-way updates stop sufficing once d ≥ 0.25, and mutual aid may arrive reduced.
+- These thresholds follow from v2's one-level damping and the linear served-ratio levels (ceil(ratio · 4)); the paper says so.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -155,4 +182,5 @@ The owner approves each case. Then, per case and before any run, a commit holds:
 | d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |
 | (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
 | 7f5c33a | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |
-| (this commit) | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
+| 44fc0bc | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
+| (this commit) | the Zheng decision model: options, added layer, sweeps, outputs (§4d) |
