@@ -62,12 +62,18 @@ export function expandBoundsForLabels<T extends { x: number; y: number; width: n
 // ---------------------------------------------------------------------------
 
 export function toRFNode(node: CascadeNode, selected: boolean): RFNode {
+  // The views pass nodes rebuilt from the store, so React Flow's measurements
+  // never land on them; the MiniMap draws only nodes that carry a size, and
+  // initialWidth/Height give it one without touching the measured layout.
+  const size = nodeSize(node.importance);
   return {
     id: node.id,
     type: (node.node_type?.toLowerCase() ?? "service") as string,
     position: node.position ?? { x: 0, y: 0 },
     data: node,
     selected,
+    initialWidth: size,
+    initialHeight: size,
   };
 }
 

@@ -68,6 +68,8 @@ export interface UiState {
   groupedCollapsed: string[];
   /** Grouped layout: where the user dragged each Canvas region or cluster, by Canvas id. Same lifetime. */
   groupedMoved: Record<string, { x: number; y: number }>;
+  /** The canvas minimap is shown (true) or folded to its Map button (the default); every view shares it. */
+  minimapOpen: boolean;
 
   // --- Active tool ---
   activeTool: ActiveTool;
@@ -260,6 +262,7 @@ export interface UiActions {
   clearGroupedMoves: () => void;
   /** A new project's Canvases are not the old ones (imported FRAM models all use cv_0, cv_1…). */
   resetGroupedView: () => void;
+  setMinimapOpen: (open: boolean) => void;
 
   // --- Active tool ---
   setActiveTool: (tool: ActiveTool) => void;
@@ -390,6 +393,7 @@ const initialState: UiState = {
   globalViewLayout: "merged",
   groupedCollapsed: [],
   groupedMoved: {},
+  minimapOpen: false,
   activeTool: "select",
   configModalOpen: false,
   configModalTab: "functionality-scale",
@@ -487,6 +491,9 @@ export const useUiStore = create<UiStore>()(
     },
     resetGroupedView() {
       set((state) => { state.groupedCollapsed = []; state.groupedMoved = {}; });
+    },
+    setMinimapOpen(open) {
+      set((state) => { state.minimapOpen = open; });
     },
 
     // -------------------------------------------------------------------------

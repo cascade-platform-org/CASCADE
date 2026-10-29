@@ -43,7 +43,7 @@ import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
-import { nodeTypes, expandBoundsForLabels } from "./cascade-node";
+import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
 import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
 import { CanvasMiniMap } from "./canvas-minimap";
 import { CanvasLegend } from "./canvas-legend";
@@ -198,6 +198,7 @@ const GROUP_PADDING = 60;      // px padding around the nodes within each group
 const GROUP_COL_GAP = 120;     // horizontal gap between adjacent canvas groups
 const NODE_BOX = 72;           // conservative bounding-box size per node (px)
 const CLUSTER_W = 190;         // width of a collapsed Canvas's cluster node
+const CLUSTER_H = 72;          // its height, for the MiniMap (the box sizes itself)
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -301,6 +302,8 @@ function GlobalViewCanvas() {
           draggable: true,
           data: { label: canvas.label ?? canvas.id, color, onToggle, operativity, count,
                   levelColor: operativityColor(operativity, config) },
+          initialWidth: CLUSTER_W,
+          initialHeight: CLUSTER_H,
         });
         groupOffsetX += CLUSTER_W + GROUP_COL_GAP;
         return;
@@ -319,6 +322,8 @@ function GlobalViewCanvas() {
           draggable: true,
           data: { label: canvas.label ?? canvas.id, color },
           style: { width: 200, height: 120 },
+          initialWidth: 200,
+          initialHeight: 120,
         });
         groupOffsetX += 200 + GROUP_COL_GAP;
         return;
@@ -344,23 +349,23 @@ function GlobalViewCanvas() {
         id: `group-${canvas.id}`,
         type: "canvasGroup",
         position: moved[canvas.id] ?? { x: groupOffsetX, y: 60 },
-          draggable: true,
+        draggable: true,
         data: { label: canvas.label ?? canvas.id, color, onToggle },
         style: { width: groupW, height: groupH },
+        initialWidth: groupW,
+        initialHeight: groupH,
       });
 
       positioned.forEach(({ node, x, y }) => {
         if (home.get(node.id) !== canvas.id) return; // shared node — drawn in its home canvas
         nodes.push({
-          id: node.id,
-          type: node.node_type?.toLowerCase() ?? "service",
+          ...toRFNode(node, false),
           parentId: `group-${canvas.id}`,
           extent: "parent",
           position: {
             x: (x - minX) + GROUP_PADDING,
             y: (y - minY) + GROUP_PADDING,
           },
-          data: { ...node },
         });
       });
 

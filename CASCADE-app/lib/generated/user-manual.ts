@@ -1604,7 +1604,15 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "text",
-                  "text": "Both last while the app is open, across tabs, and are cleared when you reload or open another project; neither is saved in the file, and propagation is unchanged. Every view zooms out to 5 % (a map-backed Canvas stops earlier), and the overview map bottom left shows the whole network: drag or scroll in it to move."
+                  "text": "Both last while the app is open, across tabs, and are cleared when you reload or open another project; neither is saved in the file, and propagation is unchanged. Every view zooms out to 5 % (a map-backed Canvas stops earlier), and the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Map"
+                },
+                {
+                  "kind": "text",
+                  "text": " button bottom left opens an overview of the whole network: drag or scroll in it to move, − to fold it again."
                 }
               ]
             }

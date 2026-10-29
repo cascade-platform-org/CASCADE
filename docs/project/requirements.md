@@ -348,7 +348,7 @@ The engine records for each degraded Element which upstream Elements or Events a
 Zoom is on the scroll wheel and the zoom cluster (bottom-left), from 5 % to 400 % in every view (`zoom-slider.tsx` holds the range; a georeferenced Canvas keeps a higher floor for its map); panning is on the **middle
 mouse button** or the **Hand tool** (`H`). Neither is discoverable, and a laptop trackpad has
 no middle button at all, so the cluster also carries a **Fit** control (`F`, or the ⤢ button)
-that frames the whole network — the way back from a canvas scrolled off-screen. Every view also carries a **minimap** (bottom left, above the zoom cluster; `canvas-minimap.tsx`): nodes painted at their level, Canvas regions and clusters in their colour, pannable and zoomable, left out of canvas captures. Starting a
+that frames the whole network — the way back from a canvas scrolled off-screen. Every view also carries a **minimap** (bottom left, above the zoom cluster; `canvas-minimap.tsx`), folded to a *Map* button by default and for the session once toggled: nodes painted at their level, Canvas regions and clusters in their colour, pannable and zoomable, left out of canvas captures. React Flow's MiniMap draws only nodes that carry a size, and the views rebuild nodes from the store, so `toRFNode` and the Grouped view give theirs `initialWidth`/`initialHeight`. Starting a
 tour requests the same fit, because a project file carries the viewport it was saved with and
 that viewport is wrong on any other screen size.
 
