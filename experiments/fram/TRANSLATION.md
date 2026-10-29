@@ -88,6 +88,54 @@ The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 w
   - (b) *Topology*: the same computation with every coupling at weight 1, which drops the phenotype scores and keeps the structure. If (b) matches Table 2 about as well as (a), the published ranking is carried by the network's shape.
 - **Not used.** Falegnami's three alternative instantiations, which are ranked by sums of weight differences with no event or outcome to propagate; Simone's walker results, whose inputs are not held; Simone's spreadsheet, which the authors state is not the 2025 input.
 
+## 4c. Declared 2026-10-29: ablation family, severity grid, claim tiers, reference evaluator, new held-out cases
+
+Answers the Gate 3 pre-mortem: is v2 better than simpler semantics anyone could use, how much of RQ1 rests on our reading of the event, which claims test anything, and does the engine compute the formula the paper prints. v2, the frozen claim list and the verdict rules stay as they are; everything below is reported beside them.
+
+**Held-out status, corrected.** Wenzhou ran (e81e47d) under the v2 candidate before v2 was fixed (aebd4b0), and its result was in the table that approved v2. The paper reports it as "run before v2 was fixed"; Koriyama (afc1bf5, after aebd4b0) is the only held-out case.
+
+**The family.** Every member is a `TranslationConfig` of the importer; the description rules (§2) stay on in every member except FMI.
+
+| Member | Function level | Why it is in the family |
+|---|---|---|
+| S0 | worst of its inputs; C, T absorb one level | reachability, the existing baseline |
+| D1 | worst + 1 | damping only: distance decay, no coincidence |
+| K2 | second worst | coincidence only: a single deviation, however severe, is absorbed (a 2-of-n vote) |
+| **v2** | min(worst + 1, second worst) | the paper's semantics |
+| v2-D2 | min(worst + 2, second worst) | two levels of damping (reported at Gate 1 on Tian only) |
+| v2-typed | min over inputs of (level + 0 on I, P, R; + 1 on C, T), and the second worst | aspect-typed damping after the FRW (Patriarca 2024, DC3: P and R gate; DC4: C and T degrade without blocking) |
+| v2+3, v2+c | v2 and the cumulative terms of §4a | amplification (Patriarca 2018, Table 1: late, missing and imprecise outputs amplify on every aspect) |
+| FMI | N = 2, profiles from the model; only events at level 1 stop a function; no description rules (written on the 4-level scale) | the community's own executable semantics |
+
+**RQ1 under the family.** Zheng, Tian, Wenzhou, Koriyama with the existing truth; Kaya's top-4 reported. Score: balanced accuracy, (recall + specificity) / 2 over the labelled functions (Tian: over its six scenarios). FMI predicts a function degraded when it is at 1.
+
+**Event-severity grid (primary RQ1 result beside the declared coding).** Every event element independently at 1, 2 and 3: Zheng 3⁴ = 81 points, Wenzhou 3² = 9, Koriyama 3⁵ = 243. Tian (its scenarios are the truth) and Kaya (its own distributions) are not gridded. Per member and case: balanced accuracy at the declared coding, mean and minimum over the grid, share of grid points where the member does at least as well as v2.
+
+**Claims re-analysis (frozen list, verdicts unchanged).**
+- Every expressible N = 4 claim (C1, C2, C4–C6, C8–C10, C12, C14) under every N = 4 member. C13 (N = 2) is entailed by monotonicity: adding a dependency can only lower a level, so every monotone semantics says "worse".
+- Tiers, assigned mechanically: *rule-decided* if v2's verdict changes when the description rules are removed; else *entailed* if every N = 4 member gives v2's verdict; else *discriminating*. Each member's agreements are reported on the discriminating claims.
+- Strict verdict beside the frozen one: the share of named outcome functions that move as claimed (improve: rises; stay degraded: stays below N; avoid: reaches N).
+
+**Reference evaluator (verification of v2 itself).** A plain-Python fixed point of the formulas above, written from this file without calling the engine (`framkit/oracles.py`): a function reads `best_of` over the producers of each output text, damps it by N − dependency, takes `worst_of` across texts, or the coincidence and cumulative terms with their offsets; levels only fall, starting from the event. Compared with the engine on every N = 4 member, without description rules: every grid point of the three gridded cases, and 100 random scenarios (1 to 3 functions at random levels 1–3) on each N = 4-translated `.xfmv` model present. Pass: zero differences in any function level.
+
+**Recorded before running: the hand reading.**
+- D1 absorbs every level-3 event in one hop, so its recall collapses on Zheng and Koriyama at the declared coding.
+- K2 absorbs any single deviation, so on Wenzhou (two level-1 events with mostly single-input chains) its recall falls; on Zheng and Koriyama, where events are all at 3, it is close to v2.
+- v2-typed passes I, P, R undamped and so behaves close to S0, with S0's false positives.
+- FMI degrades nothing on Zheng and Koriyama (no event at 1) and behaves as reachability on Wenzhou.
+- On the grid, v2's exactness on the held-out cases holds near the declared coding and falls where events are read at 1 (more travels) or where single deviations are read at 2.
+
+**New held-out cases: selection criteria, declared before searching.**
+1. A published FRAM analysis of a specific event or instantiation, with at least six foreground functions.
+2. Couplings recoverable with their aspects, from a table or a legible figure.
+3. The authors judge, function by function, which outputs varied or resonated, and name at least two functions as unaffected or contained (precision needs negatives).
+4. The triggering deviations are described in the text.
+5. Never used to design or tune any translation. Licence noted; CC BY preferred.
+
+The owner approves each case. Then, per case and before any run, a commit holds: the transcription, the event under the §2 convention, the truth, and the case's description rules if the text states any.
+
+**Decision rule among v2, v2+3 and v2+c, fixed now.** The paper's main semantics is the candidate with the highest mean balanced accuracy over the new held-out cases at the declared event coding; ties go to the simpler (v2, then v2+3, then v2+c). With fewer than two new cases the contest is reported as inconclusive and v2 stays. Every family member is reported on the new cases, with their grid.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -105,3 +153,4 @@ The FMV files and spreadsheets of Falegnami et al. 2020 and Simone et al. 2025 w
 | d3312fa | sensitivity: cumulative worsening, v2+3 and v2+c |
 | (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
 | 7f5c33a | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |
+| (this commit) | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
