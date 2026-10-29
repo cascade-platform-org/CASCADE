@@ -28,6 +28,8 @@ LIBRARY = RAW / "private" / "fmv-library"
 REDISTRIBUTABLE = {"zheng_2024_natech", "grabbe_2022_overtaking"}
 
 _FN_REF = re.compile(r"^F(\d+)\(O\)$")
+# Zheng et al. 2024 group their functions by task type (Table 1).
+ZHENG_TASKS = {"M": "Mobilization", "A": "Alert", "C": "Combat"}
 
 
 def _rows(path: Path) -> list[dict[str, str]]:
@@ -46,7 +48,7 @@ def read_zheng() -> FramModel:
     rows = _rows(LOCAL / "zheng_2024_natech_functions.csv")
     out_text: dict[str, str] = {}
     for r in rows:
-        model.add_function(r["function"], r["name"])
+        model.add_function(r["function"], r["name"]).group = ZHENG_TASKS[r["task"]]
         if r["aspect"] == "O":
             out_text[r["function"]] = r["value"]
     for r in rows:

@@ -61,7 +61,8 @@ def build(option: str) -> Translated:
         model.couplings = [c for c in model.couplings if not (c.source == "F5" and c.target == "F7")]
         model.add_coupling("F4", "Successful connection with fire department", "F7", "I")
     if option in ("O2", "O3"):                         # locate and mobilise other organisations' firefighters
-        model.add_function("F23", "Locate and mobilise firefighters from other organisations")
+        # our placement: the remedy's function joins the mobilization task
+        model.add_function("F23", "Locate and mobilise firefighters from other organisations").group = "Mobilization"
         model.add_coupling("F2", "Immediate action guidelines", "F23", "I")
         model.add_coupling(RADIO, "Radio/Telephone", "F23", "R")
     t = translate(model, resonance_config())
@@ -96,15 +97,15 @@ def build(option: str) -> Translated:
              supply_capacity={"crews": 0})
         edge("ma_gate", f["F23"], "mutual_aid")       # no mobilisation, no mutual aid
         edge("cr_mutual", "mutual_aid", f["F17"])
-    fram = t.project.canvases[0]
+    fram = list(t.project.canvases)                    # the paper's task types, and Background
     added = [n for n in ("brigade", "other_areas", "mutual_aid") if n in nodes]
     crews = Canvas(id="cv_crews", label="Firefighters", graph=Graph(
-        graph_type=fram.graph.graph_type, node_ids=added,
+        graph_type=fram[0].graph.graph_type, node_ids=added,
         edge_ids=[e for e in ("cr_other", "cr_f17", "cr_mutual", "ma_gate") if e in edges]))
     for k, nid in enumerate(added):                    # beside F17
         at = nodes[f["F17"]].position or Position(x=0, y=0)
         nodes[nid] = nodes[nid].model_copy(update={"position": Position(x=at.x - 320, y=at.y + 140 * (k - 1))})
-    project = t.project.model_copy(update={"nodes": nodes, "edges": edges, "canvases": [fram, crews]})
+    project = t.project.model_copy(update={"nodes": nodes, "edges": edges, "canvases": [*fram, crews]})
     on_canvas = {i for c in project.canvases for i in c.graph.node_ids + c.graph.edge_ids}
     missing = (set(nodes) | set(edges)) - on_canvas
     if missing:    # the app propagates only what a canvas holds
