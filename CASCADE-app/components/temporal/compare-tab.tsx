@@ -11,6 +11,7 @@ import { STATISTICS, compareRuns, type Comparison, type Statistic } from "@/lib/
 import { cancelComparison, exportComparisonCsv, startComparison } from "@/lib/temporal-simulation-run";
 import { MAX_SWEEP_RUNS, compareRequests, parameterReads, parseSweepValues, pointLabel, sweepSize, type SweepAxis } from "@/lib/temporal-sweep";
 import { useConfigStore } from "@/store/config-store";
+import { cn } from "@/lib/utils";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { EXPLAIN_COMPARE, explainStatistic } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, inputCls } from "./fields";
@@ -290,7 +291,7 @@ function SweepRow({
     <div className="space-y-1 rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium text-zinc-600 dark:text-zinc-300">Sweep Parameters</span>
-        <select className={`${inputCls} w-auto`} value={sweep?.simulationId ?? ""} onChange={(e) => pick(e.target.value)}>
+        <select className={cn(inputCls, "w-auto")} value={sweep?.simulationId ?? ""} onChange={(e) => pick(e.target.value)}>
           <option value="">none</option>
           {withParameters.map((x) => <option key={x.id} value={x.id}>{x.timeline.name || x.id}</option>)}
         </select>
@@ -306,13 +307,13 @@ function SweepRow({
         return (
           <div key={i} className="space-y-0.5">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <select className={`${inputCls} w-auto font-mono`} value={axis.parameter} onChange={(e) => setAxis(i, { parameter: e.target.value })}>
+              <select className={cn(inputCls, "w-auto font-mono")} value={axis.parameter} onChange={(e) => setAxis(i, { parameter: e.target.value })}>
                 {chosen.parameters.filter((p) => p.name === axis.parameter || !used.has(p.name)).map((p) => (
                   <option key={p.name} value={p.name}>{p.name} ({p.value})</option>
                 ))}
               </select>
               <input
-                className={`${inputCls} w-64`}
+                className={cn(inputCls, "w-64")}
                 value={axis.text}
                 placeholder="0.10, 0.15, 0.20 — or 0.1 to 0.3 step 0.05"
                 onChange={(e) => setAxis(i, { text: e.target.value })}
@@ -369,7 +370,7 @@ function SweepChart({ comparison, metric, statistic }: { comparison: Comparison;
     <span className="flex flex-wrap items-center gap-2">
       {metric} — {STATISTIC_LABEL[statistic].toLowerCase()} of the run, against
       {swept.length > 1 ? (
-        <select className={`${inputCls} w-auto font-mono`} value={along} onChange={(e) => setPicked(e.target.value)}>
+        <select className={cn(inputCls, "w-auto font-mono")} value={along} onChange={(e) => setPicked(e.target.value)}>
           {swept.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
       ) : along}

@@ -1680,7 +1680,56 @@
      ]
     },
     "profile": {},
-    "metrics": [],
+    "metrics": [
+     {
+      "name": "F20 attack on the fire (level)",
+      "target": {
+       "label_contains": "Direct fire team to inject foam to the bund wall under fire"
+      },
+      "path": [
+       "functionality"
+      ],
+      "read": "state",
+      "aggregate": "min"
+     },
+     {
+      "name": "F20 nominal (1 = yes)",
+      "target": {
+       "label_contains": "Direct fire team to inject foam to the bund wall under fire"
+      },
+      "path": [
+       "functionality"
+      ],
+      "read": "state",
+      "aggregate": "share_where",
+      "value_filter": {
+       "cmp": ">=",
+       "value": 4
+      }
+     },
+     {
+      "name": "F17 fire team (level)",
+      "target": {
+       "label_contains": "Assemble the fire team with equipment and resource"
+      },
+      "path": [
+       "functionality"
+      ],
+      "read": "state",
+      "aggregate": "min"
+     },
+     {
+      "name": "F12 guidelines (level)",
+      "target": {
+       "label_contains": "Develop response guidelines"
+      },
+      "path": [
+       "functionality"
+      ],
+      "read": "state",
+      "aggregate": "min"
+     }
+    ],
     "scope": "global",
     "parameters": [
      {

@@ -214,9 +214,23 @@ def simulation_bundle(option: str, n: int = N) -> dict:
     project["temporal_simulations"] = [{
         "id": SIM, "format": "cascade.temporal-simulation/v1", "timeline": timeline_,
         "profile": {label(m): arrival for m in PERIODS} if option in ("O2", "O3") else {},
-        "metrics": [], "scope": "global",
+        "metrics": metrics(t, n), "scope": "global",
         "parameters": [{"name": k, "value": v} for k, v in defaults.items()]}]
     return {"project": project, "config": config.model_dump(mode="json", exclude_none=True)}
+
+
+def metrics(t: Translated, n: int) -> list[dict]:
+    """What Compare shows per run: F20, F17 and F12's levels, and whether F20 is nominal
+    (its mean over the run is the share of periods F20 is restored)."""
+    def of(fid: str) -> dict:
+        return {"label_contains": t.project.nodes[t.fn_node[fid]].label}
+    def lowest(name: str, fid: str) -> dict:
+        return {"name": name, "target": of(fid), "path": ["functionality"], "read": "state", "aggregate": "min"}
+
+    return [lowest("F20 attack on the fire (level)", "F20"),
+            {"name": "F20 nominal (1 = yes)", "target": of("F20"), "path": ["functionality"], "read": "state",
+             "aggregate": "share_where", "value_filter": {"cmp": ">=", "value": n}},
+            lowest("F17 fire team (level)", "F17"), lowest("F12 guidelines (level)", "F12")]
 
 
 def run_points(option: str, n: int, points: list[dict[str, float]]) -> list[list[dict[str, int]]]:
