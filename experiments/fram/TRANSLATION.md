@@ -6,9 +6,9 @@ history keeps each declaration verbatim (log at the end). Code: the product's FM
 
 ## 1. Structure
 
-- Function → node with its own Requisite category.
-- Each distinct (function, output text) → an output node carrying the category of that text. Consumers take `best_of` over producers of the same text (alternatives) and `worst_of` across texts.
-  - The output nodes are needed because the engine passes all of a parent's categories to every child.
+- Function → node. A function with one distinct output text carries the Requisite category of that text, and its consumers wire to it directly. Consumers take `best_of` over producers of the same text (alternatives) and `worst_of` across texts.
+- A function with several distinct output texts (or one that feeds an output back to itself) gets an output node per text, carrying that text's category and keeping the function's own category on the function.
+  - The output nodes are needed there because the engine passes all of a parent's categories to every child. With one output text the function and its output are the same thing, so the node is omitted (compression of 2026-11-02: every harness CSV byte-identical).
 - External resources and conditions that no function produces → background nodes, one per text.
 - Scores count function nodes only.
 

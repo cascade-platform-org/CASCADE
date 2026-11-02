@@ -1,5 +1,5 @@
 """The FMV (.xfmv) FRAM importer (ADR-0026): parse both FMV layouts, convert
-with a declared semantics, lay out, and serve it at POST /api/import/xfmv."""
+with the v2 conversion, lay out, and serve it at POST /api/import/xfmv."""
 from __future__ import annotations
 
 import httpx
@@ -91,7 +91,9 @@ def test_v2_bundle_is_readable_and_uses_offsets():
     nodes = bundle.project.nodes
     assert nodes["fn_0"].label == "Dispatch crew"
     assert nodes["fn_0"].properties == {"description": "The centre sends a crew."}
-    assert {nodes[n].label for n in nodes if n.startswith("o_")} == {"Crew dispatched", "Crew on site"}
+    # every function here has one output text: no output nodes, the function carries the text's category
+    assert not [n for n in nodes if n.startswith("o_")]
+    assert nodes["fn_0"].node_categories == ["crew_dispatched"]
     assert nodes["fn_2"].rules == [
         "worst_of(worst_of(crew_on_site, crew_dispatched) + 1, best_of(crew_on_site, crew_dispatched)) "
         "propagates to fn_2"]
@@ -102,11 +104,35 @@ def test_v2_bundle_is_readable_and_uses_offsets():
 
 
 def test_every_node_label_is_distinct():
-    # Both supplies produce "Water supplied": two output nodes, one text.
+    # Both supplies produce "Water supplied": one text, so one shared category.
     nodes = build_bundle(parse_xfmv(TEXTS, "texts")).project.nodes
     labels = [n.label for n in nodes.values()]
     assert len(labels) == len(set(labels))
-    assert "Water supplied (output of Main supply)" in labels
+    assert nodes["fn_0"].node_categories == nodes["fn_1"].node_categories == ["water_supplied"]
+
+
+# "Lab" has two output texts and "Loop" feeds itself: both keep output nodes.
+MULTI = """<?xml version="1.0" standalone="yes"?>
+<FM>
+  <Functions>
+    <Function><IDNr>0</IDNr><FunctionType>0</FunctionType><IDName>Lab</IDName></Function>
+    <Function><IDNr>1</IDNr><FunctionType>0</FunctionType><IDName>Report</IDName></Function>
+    <Function><IDNr>2</IDNr><FunctionType>0</FunctionType><IDName>Archive</IDName></Function>
+    <Function><IDNr>3</IDNr><FunctionType>0</FunctionType><IDName>Loop</IDName></Function>
+  </Functions>
+  <Aspects>
+    <Aspect outputFn="0" toFn="1"><Name>0|Result|1|I</Name></Aspect>
+    <Aspect outputFn="0" toFn="2"><Name>0|Sample|2|I</Name></Aspect>
+    <Aspect outputFn="3" toFn="3"><Name>3|Feedback|3|I</Name></Aspect>
+  </Aspects>
+</FM>"""
+
+
+def test_a_function_with_several_outputs_or_a_feedback_keeps_output_nodes():
+    nodes = build_bundle(parse_xfmv(MULTI, "multi")).project.nodes
+    assert {nodes[n].label for n in nodes if n.startswith("o_")} == {"Result", "Sample", "Feedback"}
+    # Report depends on Lab's Result alone, not on its Sample
+    assert nodes["fn_1"].rules == ["worst_of(result) + 1 propagates to fn_1"]
 
 
 def test_models_without_positions_are_laid_out_by_depth():
@@ -155,24 +181,18 @@ def test_groups_and_background_become_canvases():
     canvases = {c.label: c.graph for c in project.canvases}
     assert list(canvases) == ["Prepare", "Respond", "Functions", "Background"]
     assert {project.nodes[n].label for n in canvases["Respond"].node_ids} == {
-        "Respond", "Drive", "Repair", "On site", "Repaired"}
-    assert {project.nodes[n].label for n in canvases["Background"].node_ids} == {"Weather", "Visibility"}
+        "Respond", "Drive", "Repair"}
+    assert {project.nodes[n].label for n in canvases["Background"].node_ids} == {"Weather"}
     # every element on a canvas; a crossing edge on both of its canvases, as the Inter-Canvas Edge tool does
     on = [i for g in canvases.values() for i in g.node_ids + g.edge_ids]
     assert set(project.nodes) | set(project.edges) <= set(on)
     briefed = next(e for e in project.edges.values()
-                   if project.nodes[e.source].label == "Crew briefed" and project.nodes[e.target].label == "Drive")
+                   if project.nodes[e.source].label == "Brief crew" and project.nodes[e.target].label == "Drive")
     assert briefed.id in canvases["Prepare"].edge_ids and briefed.id in canvases["Respond"].edge_ids
 
 
 def test_a_model_without_groups_or_background_keeps_one_canvas():
     assert len(build_bundle(parse_xfmv(DRAWN, "drawn")).project.canvases) == 1
-
-
-def test_fmi_semantics_is_binary_and_reads_profiles():
-    bundle = build_bundle(parse_xfmv(DRAWN, "drawn"), "fmi")
-    assert len(bundle.config.functionality_scale) == 2
-    assert bundle.project.nodes["fn_2"].rules is not None
 
 
 def _propagate(bundle, levels: dict[str, int]) -> dict[str, int]:

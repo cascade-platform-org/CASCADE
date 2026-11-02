@@ -9,16 +9,19 @@ numbers it reports are computed by the code the importer ships.
 
 Shape of the CASCADE model:
 
-  function F  --->  output node O(F, text)  --->  every function that receives text
+  function F  --->  every function that receives F's output text
 
-* Each function is a node with its own Requisite category.
-* Each distinct (function, output text) is a small output node whose category
-  is named after the output TEXT: one node per service a function provides,
-  CASCADE's modelling standard. Two functions producing the same text supply
-  the same category, so a consumer takes `best_of` over them (same-named
-  outputs are alternatives). Wiring F straight to its consumers would make
-  each consumer depend on every output of F, since a parent passes all its
-  Requisite categories to every child (engine/logical.py).
+* Each function is a node. A function with ONE distinct output text carries a
+  Requisite category named after that TEXT, so its consumers wire to it
+  directly. Two functions producing the same text supply the same category, so
+  a consumer takes `best_of` over them (same-named outputs are alternatives).
+* A function with SEVERAL distinct output texts gets a small output node per
+  text (category named after the text) between itself and the consumers.
+  Wiring it straight to them would make each consumer depend on every output,
+  since a parent passes all its Requisite categories to every child
+  (engine/logical.py). Such a function keeps a category of its own name.
+  An output a function feeds back to itself also keeps its output node, so
+  the model has no self-loop.
 * A consumer combines its distinct outputs with `worst_of` (FMI profile All).
 * The aspect a coupling enters through sets the consumer's `dependency_level`
   for that output's category (TranslationConfig.dep).
@@ -42,7 +45,6 @@ import itertools
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Literal
 
 import networkx as nx
 
@@ -67,7 +69,6 @@ from schemas.network import (
 )
 from schemas.sync import ProjectBundle
 
-Semantics = Literal["v2", "reachability", "fmi"]
 GRAPH_TYPE_NAME = "fram"
 
 _FRAM_LABELS = {
@@ -119,16 +120,12 @@ def fmi_config() -> TranslationConfig:
     return TranslationConfig(n=2, dep={a: 2 for a in ASPECTS}, fmi_mode=True)
 
 
-def config_for(semantics: Semantics) -> TranslationConfig:
-    return {"v2": resonance_config, "reachability": default_config, "fmi": fmi_config}[semantics]()
-
-
 @dataclass
 class Translated:
     project: Project
     config: ModelConfiguration
     fn_node: dict[str, str]                        # function id -> node id
-    out_node: dict[tuple[str, str], str]           # (function id, text) -> node id
+    out_node: dict[tuple[str, str], str]           # (function id, text) -> its output node, or the function node itself when it has one output
     coupling_edge: dict[tuple[str, str, str, str], str]   # coupling -> edge id
     labels: dict[int, str]
 
@@ -170,13 +167,12 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
     categories: list[str] = []
     slug = _Slugs()
 
-    for i, (fid, fn) in enumerate(model.functions.items()):
-        nid = f"fn_{i}"
-        fn_node[fid] = nid
-        cat = slug(fn.name)
-        categories.append(cat)
-        nodes[nid] = Node(id=nid, label=fn.name, functionality=tc.n, node_categories=[cat],
-                          properties={"description": fn.description} if fn.description else None)
+    texts_of: dict[str, list[str]] = {}
+    for (src, text) in model.outputs():
+        texts_of.setdefault(src, []).append(text)
+    self_fed = {(c.source, c.output) for c in model.couplings if c.source == c.target}
+    merged = {src for src, texts in texts_of.items()
+              if len(texts) == 1 and (src, texts[0]) not in self_fed}
 
     def out_category(text: str) -> str:
         if text not in text_cat:
@@ -184,7 +180,21 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
             categories.append(text_cat[text])
         return text_cat[text]
 
+    for i, (fid, fn) in enumerate(model.functions.items()):
+        nid = f"fn_{i}"
+        fn_node[fid] = nid
+        if fid in merged:
+            cat = out_category(texts_of[fid][0])
+        else:
+            cat = slug(fn.name)
+            categories.append(cat)
+        nodes[nid] = Node(id=nid, label=fn.name, functionality=tc.n, node_categories=[cat],
+                          properties={"description": fn.description} if fn.description else None)
+
     for (src, text) in model.outputs():
+        if src in merged:
+            out_node[(src, text)] = fn_node[src]
+            continue
         oid = f"o_{len(out_node)}"
         out_node[(src, text)] = oid
         nodes[oid] = Node(id=oid, label=text, functionality=tc.n,
@@ -248,7 +258,8 @@ def translate(model: FramModel, tc: TranslationConfig) -> Translated:
         if update:
             nodes[nid] = nodes[nid].model_copy(update=update)
 
-    _unique_labels(nodes, {oid: model.functions[src].name for (src, _), oid in out_node.items()})
+    _unique_labels(nodes, {oid: model.functions[src].name for (src, _), oid in out_node.items()
+                           if src not in merged})
     project = Project(
         version="2.0", meta=ProjectMeta(name=model.name), nodes=nodes, edges=edges,
         canvases=[Canvas(id="cv", label=model.name,
@@ -403,6 +414,8 @@ def layout(model: FramModel, t: Translated) -> Project:
         nodes[nid] = nodes[nid].model_copy(update={"position": Position(x=x, y=y)})
     per_fn: dict[str, int] = {}
     for (src, _), oid in t.out_node.items():
+        if oid == t.fn_node[src]:
+            continue
         x, y = where[src]
         k = per_fn.get(src, 0)
         per_fn[src] = k + 1
@@ -410,7 +423,8 @@ def layout(model: FramModel, t: Translated) -> Project:
     return t.project.model_copy(update={"nodes": nodes, "canvases": canvases})
 
 
-def build_bundle(model: FramModel, semantics: Semantics = "v2") -> ProjectBundle:
-    """The importer's result: the converted model, laid out, ready to open."""
-    t = translate(model, config_for(semantics))
+def build_bundle(model: FramModel) -> ProjectBundle:
+    """The importer's result: the converted model (v2), laid out, ready to open.
+    The other configurations are the paper's baselines and live in the harness."""
+    t = translate(model, resonance_config())
     return ProjectBundle(project=layout(model, t), config=t.config)

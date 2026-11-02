@@ -27,15 +27,19 @@ XML declaration with no encoding are decoded as cp1252 (the client does the
 same before sending). The XML is parsed with `defusedxml`: the file is user input.
 
 **Mapping** (`map.py` docstring holds the details):
-- a function → a node; each distinct (function, output text) → an output node
-  whose Category is named after the text, so producers of the same text are
-  alternatives (`best_of`); a consumer needs all its distinct inputs;
-- the semantics is a request choice, default **v2**: one level of damping per
-  coupling and second-worst resonance, written as one rule per function with
-  level offsets (ADR-0025), on a 4-level scale. `reachability` (every deviation
-  reaches everything downstream) and `fmi` (the FMI's binary reading, with the
-  file's All/Any/None profiles) are the paper's baseline and verification
-  semantics;
+- a function → a node. A function with one distinct output text carries a
+  Category named after that text, so producers of the same text are
+  alternatives (`best_of`) and consumers wire to it directly. Only a function
+  with several output texts (or an output fed back to itself) gets an output
+  node per text, because a parent passes all its categories to every child
+  (amended 2026-11-02; before, every output had a node, and every paper result
+  is byte-identical without them). A consumer needs all its distinct inputs;
+- one conversion, **v2**: one level of damping per coupling and second-worst
+  resonance, written as one rule per function with level offsets (ADR-0025),
+  on a 4-level scale. (Amended 2026-11-02: the request used to choose between
+  v2, `reachability` and `fmi`. The latter two are the paper's baseline and
+  verification readings; they stay as configurations in `map.py` for the
+  harness and are no longer offered to users.)
 - labels are the function names and output texts (made distinct: the app
   flags shared labels); Category names are slugs of the texts, so rules stay
   readable; node ids stay machine keys;
@@ -65,8 +69,8 @@ into an existing project would mix scales.
   artefact, and the paper's harness is Python; one implementation means
   server-side.
 - **Reading FMI profiles under v2.** Not done: the paper's v2 does not, and the
-  importer ships what was evaluated. A file with profiles gets a warning naming
-  the `fmi` semantics.
+  importer ships what was evaluated. A file with profiles gets a warning that
+  they are ignored.
 
 ## Consequences
 

@@ -273,9 +273,9 @@ The same body, pipeline and response, for a Temporal Simulation (ADR-0020, `core
 
 Converts a FRAM model saved by the FRAM Model Visualiser (`.xfmv`) into a CASCADE `ProjectBundle` (ADR-0026, `core/importers/xfmv/`). Pure transformation — nothing persisted, engine never invoked.
 
-Body `{ filename, content, semantics? }` — `content` is the file's text, decoded by the client (UTF-8, else cp1252); `semantics` is `"v2"` (default: one level of damping per coupling and second-worst resonance, 4 levels), `"reachability"` or `"fmi"` (binary, with the file's All/Any/None profiles).
+Body `{ filename, content }` — `content` is the file's text, decoded by the client (UTF-8, else cp1252). The conversion is v2: one level of damping per coupling and second-worst resonance, 4 levels.
 
-Returns `{ bundle: { project, config }, warnings, functions, couplings }`, serialised null-free. Warnings name a file without couplings, and FMI profiles that only the `fmi` semantics reads. `422` with a human-readable detail on a file that is not well-formed, has no `<Functions>`, or declares XML entities or a DTD.
+Returns `{ bundle: { project, config }, warnings, functions, couplings }`, serialised null-free. Warnings name a file without couplings, and FMI profiles, which the import ignores. `422` with a human-readable detail on a file that is not well-formed, has no `<Functions>`, or declares XML entities or a DTD.
 
 ---
 

@@ -2,7 +2,7 @@
 api/import_routes.py — external model formats → CASCADE ProjectBundle.
 
 POST /api/import/xfmv — an FMV (FRAM Model Visualiser) file, converted with a
-declared semantics (ADR-0026). Same contract as the .inp importer below.
+the v2 conversion (ADR-0026). Same contract as the .inp importer below.
 
 POST /api/import/inp — parse, (optionally) skeletonize to a node budget, run a
 hydraulic sweep for edge orientation, and map to the CASCADE schema. Pure
@@ -167,12 +167,10 @@ def _run_xfmv(body: ImportXfmvRequest) -> ImportXfmvResponse:
     if not model.couplings:
         warnings.append("The file has functions but no couplings: nothing can propagate.")
     profiled = sum(bool(f.profiles) for f in model.functions.values())
-    if profiled and body.semantics != "fmi":
-        warnings.append(
-            f"{profiled} function(s) carry FMI profiles (Any/None); only the 'fmi' semantics reads them."
-        )
+    if profiled:
+        warnings.append(f"{profiled} function(s) carry FMI profiles (Any/None); the import ignores them.")
     return ImportXfmvResponse(
-        bundle=build_fram_bundle(model, body.semantics),
+        bundle=build_fram_bundle(model),
         warnings=warnings,
         functions=len(model.functions),
         couplings=len(model.couplings),

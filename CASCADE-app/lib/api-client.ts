@@ -32,7 +32,6 @@ import {
   type EngineAlgorithms,
   type ImportInpResponse,
   type ImportXfmvResponse,
-  type XfmvSemantics,
   type BatchPropagationRequest,
   type PropagationRequest,
   type ProjectVersionSummary,
@@ -713,18 +712,17 @@ export async function importInp(
 // ---------------------------------------------------------------------------
 
 /** POST /api/import/xfmv — convert an FMV (FRAM Model Visualiser) model to a
- *  CASCADE ProjectBundle with the chosen semantics. Pure transformation
+ *  CASCADE ProjectBundle (the v2 conversion). Pure transformation
  *  server-side: nothing persisted. `content` is the file already decoded to
  *  text (see `decodeXfmv`). */
 export async function importXfmv(
   filename: string,
   content: string,
-  semantics: XfmvSemantics = "v2",
 ): Promise<ImportXfmvResponse> {
   return unwrap(
     await request("/api/import/xfmv", {
       method: "POST",
-      body: { filename, content, semantics },
+      body: { filename, content },
       schema: ImportXfmvResponseSchema,
       timeoutMs: IMPORT_TIMEOUT_MS,
     }),

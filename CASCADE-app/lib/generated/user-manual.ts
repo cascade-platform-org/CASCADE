@@ -3593,7 +3593,7 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": " opens a model saved by the FRAM Model Visualiser and replaces the current project with it. Each function becomes a node where you drew it; each of its outputs becomes a small node of its own, and each coupling an edge. Two functions producing the same output text are alternatives: the consumer stays up while either does. If you grouped functions in FMV, each group becomes a Canvas of its own (a nested group joins its outermost one); ungrouped functions and background functions get a Canvas each. In the "
+                  "text": " opens a model saved by the FRAM Model Visualiser and replaces the current project with it. Each function becomes a node where you drew it, and each coupling an edge (a function with several different outputs gets a small node per output). Two functions producing the same output text are alternatives: the consumer stays up while either does. If you grouped functions in FMV, each group becomes a Canvas of its own (a nested group joins its outermost one); ungrouped functions and background functions get a Canvas each. In the "
                 },
                 {
                   "kind": "strong",
@@ -3610,44 +3610,8 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "text",
-                  "text": "Choose how the model is read:"
+                  "text": "The rule on each function says that one degraded input is absorbed by a level, while two coinciding ones pass in full (with level offsets, §3.2). Four levels: nominal, variable, severe, not performed. The file's FMI profiles (All / Any / None) are ignored."
                 }
-              ]
-            },
-            {
-              "type": "list",
-              "ordered": false,
-              "items": [
-                [
-                  {
-                    "kind": "strong",
-                    "text": "Damping + resonance"
-                  },
-                  {
-                    "kind": "text",
-                    "text": " (default): one degraded input is absorbed by a level, two coinciding ones pass in full. The rule on each function says so, with level offsets (§3.2). Four levels: nominal, variable, severe, not performed."
-                  }
-                ],
-                [
-                  {
-                    "kind": "strong",
-                    "text": "Reachability"
-                  },
-                  {
-                    "kind": "text",
-                    "text": ": every deviation reaches everything downstream. A baseline."
-                  }
-                ],
-                [
-                  {
-                    "kind": "strong",
-                    "text": "FMI (binary)"
-                  },
-                  {
-                    "kind": "text",
-                    "text": ": performed or not, with the file's All / Any / None profiles."
-                  }
-                ]
               ]
             },
             {

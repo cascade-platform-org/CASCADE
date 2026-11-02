@@ -562,21 +562,18 @@ runs: choose one you trust with your organisation's names.
 
 File → Import → **Import FRAM model (.xfmv)** opens a model saved by the FRAM
 Model Visualiser and replaces the current project with it. Each function
-becomes a node where you drew it; each of its outputs becomes a small node of
-its own, and each coupling an edge. Two functions producing the same output
-text are alternatives: the consumer stays up while either does. If you
+becomes a node where you drew it, and each coupling an edge (a function with
+several different outputs gets a small node per output). Two functions
+producing the same output text are alternatives: the consumer stays up while either does. If you
 grouped functions in FMV, each group becomes a Canvas of its own (a nested
 group joins its outermost one); ungrouped functions and background functions
 get a Canvas each. In the **All** view, collapse a Canvas to read the model
 group by group (§2.6).
 
-Choose how the model is read:
-
-- **Damping + resonance** (default): one degraded input is absorbed by a level,
-  two coinciding ones pass in full. The rule on each function says so, with
-  level offsets (§3.2). Four levels: nominal, variable, severe, not performed.
-- **Reachability**: every deviation reaches everything downstream. A baseline.
-- **FMI (binary)**: performed or not, with the file's All / Any / None profiles.
+The rule on each function says that one degraded input is absorbed by a
+level, while two coinciding ones pass in full (with level offsets, §3.2).
+Four levels: nominal, variable, severe, not performed. The file's FMI profiles
+(All / Any / None) are ignored.
 
 A FRAM file holds no scenario. To run one, add an Event (Config → Events) and
 set the vulnerability of the functions it reaches: a function the analysis
