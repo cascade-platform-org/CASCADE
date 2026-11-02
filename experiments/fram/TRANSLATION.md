@@ -187,6 +187,34 @@ With these choices the logical part is the N = 4 model on the odd levels {1, 3, 
 
 **Outputs.** `results/decision_scale.csv`: per (N, option, s, d) the F20 level before and after the mutual aid; the timeline and Shapley at the reference point at N = 7.
 
+## 4f. Declared 2026-11-02: the Koriyama decision model (paper §5, second case)
+
+The same procedure as §4d on Togawa et al. 2023 (CC BY-NC-ND: the transcription stays in `data/private/`; numbers and script are tracked).
+
+**What the source gives, and what it does not.** Two recommendations, both qualitative (§4.5): **R1** review public communication (better and earlier information, so the levels 3 and 4 alerts do not misfire); **R2** a framework that minimises variability in evacuation behaviour (neighbours urging neighbours). No capacities, no call counts, no deadline: the quantity-and-time steps of the procedure (steps 1 and 2) have nothing to import here, and the case tests the remaining steps (3 to 5) on structure alone. The paper says so.
+
+**Imported.** The converted FRAM under v2 and the event of RQ1 (§3): Public Communication levels 3 and 4 (T1, T2), the immediate environment, the night restriction and the 119-call load, each at 3.
+
+**Options** (edits, as in the claims C4–C6): **K0** the event as it happened; **K1** R1 (T1 and T2 do not deviate); **K2** R2 (T6 holds nominal: the framework absorbs what reaches it, the source's own words, §4.5.2); **K3** R1 + R2.
+
+**The assumption the FRAM leaves implicit, made explicit and swept.** The FRAM treats the 119-call load as an external function, unrelated to evacuation, while the case narrative says the backlog came from residents who did not evacuate. Two readings are run: **A** (calls exogenous, as drawn): the call load stays at level 3 in every option; **B** (calls follow evacuation): the call load sits at the level T6 reaches in the option (two passes: T6 does not depend on the calls). The paper reports which answers hold under both.
+
+**Sweeps.** Severity: each event element independently at 1, 2, 3 (A: 3⁵ = 243 points; B: the call load is tied to T6, 3⁴ = 81); the scale: N = 4 and N = 7 (v2 rescaled as in §4e: damping absorbs 2 levels, imposed level L → 2L − 1).
+
+**Outputs** (`decide_koriyama.py`; `results/koriyama_options.csv`, `koriyama_grid.csv`, `koriyama_shapley.csv`).
+- Per (N, reading, option): the level of every function and Operativity (function levels, normalised (L − 1)/(N − 1)).
+- Per (N, reading, option): over the grid, the share of points where Rescue (T9) is nominal, and mean Operativity; plus whether the order K0 ≤ K1, K2 ≤ K3 holds at every point.
+- Shapley attribution of the Operativity loss of K0 (declared coding) to the five event elements.
+
+**Recorded before running: the hand reading** (N = 4, declared coding).
+- A: no option restores Rescue (T9 stays at 3 because night and the 119 calls, both at 3, coincide). K1: T5 = 4, T6 = 3 (environment and night coincide at T6), T9 = 3. K2: T6 = 4, T5 = 3, T9 = 3. K3: T5 = 4, T6 = 4, T9 = 3.
+- B: calls sit at T6's level. K0, K1: T9 = 3. K2, K3: calls nominal, only night deviates at T9 and is absorbed: T9 = 4. So **under B, R2 restores Rescue and R1 alone does not**.
+- Operativity order at the declared coding: K0 < K2 < K1 < K3 under A (K1 repairs T1, T2, T5; K2 repairs T6 alone); under B, K2 gains T9 and passes K1 or ties it (not predicted).
+- N = 7: the same pattern (the logical part maps exactly onto the odd levels).
+- Over the grids the order K0 ≤ K1, K2 ≤ K3 holds at every point: each option only removes a deviation and the engine is monotone. This is entailed, and the paper says so.
+- The Shapley ranking is not predicted.
+- What would count against the reading: under B, K1 restoring T9; under A, any option restoring it.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -206,4 +234,5 @@ With these choices the logical part is the N = 4 model on the odd levels {1, 3, 
 | 7f5c33a | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |
 | 44fc0bc | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
 | 882d4a1 | the Zheng decision model: options, added layer, sweeps, outputs (§4d) |
-| (this commit) | scale sensitivity of the decision model, N = 7 with v2 rescaled (§4e) |
+| e084d58 | scale sensitivity of the decision model, N = 7 with v2 rescaled (§4e) |
+| (this commit) | the Koriyama decision model: options, call-load assumption, severity grid, scale (§4f) |
