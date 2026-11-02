@@ -215,6 +215,8 @@ The same procedure as §4d on Togawa et al. 2023 (CC BY-NC-ND: the transcription
 - The Shapley ranking is not predicted.
 - What would count against the reading: under B, K1 restoring T9; under A, any option restoring it.
 
+**Re-encoding, declared 2026-11-02 before running.** Reading B becomes a model edit in place of the harness's two passes: an edge from Evacuation Behaviour (T6) to the 119-call node, at full dependency (no damping, no rule), so the call load follows T6 within one propagation. It is the explicit form of the assumption the paper names. Expected: every `koriyama_*.csv` byte-identical.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -235,4 +237,5 @@ The same procedure as §4d on Togawa et al. 2023 (CC BY-NC-ND: the transcription
 | 44fc0bc | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
 | 882d4a1 | the Zheng decision model: options, added layer, sweeps, outputs (§4d) |
 | e084d58 | scale sensitivity of the decision model, N = 7 with v2 rescaled (§4e) |
-| (this commit) | the Koriyama decision model: options, call-load assumption, severity grid, scale (§4f) |
+| abd3314 | the Koriyama decision model: options, call-load assumption, severity grid, scale (§4f) |
+| (this commit) | Koriyama reading B as a model edit, results expected identical (§4f re-encoding) |
