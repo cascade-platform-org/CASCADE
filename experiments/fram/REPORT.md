@@ -170,6 +170,23 @@ The four options open in the app with their Temporal Simulation: `CASCADE-app/sa
 - **Belongs to the scale:** the plan's exact threshold (1/4, 1/7: the smallest shortfall the scale registers); the exact two-way threshold (1/2, 3/7; it tends to 1/3, the share one damping step absorbs, so the damping's size is the assumption); how degraded F20 is beyond it; and how far mutual aid reaches under severe telecom damage (60 % against 30 %).
 - **Entailed:** the order of the options (each removes a deviation or adds supply; the engine is monotone).
 
+## Decision model: Koriyama's recommendations on structure alone (`decide_koriyama.py`; declared at abd3314, TRANSLATION.md §4f)
+
+Togawa et al. give two qualitative recommendations and no capacities, call counts or deadline, so the procedure runs on structure: options K0 (as happened), K1 (R1, public communication), K2 (R2, evacuation behaviour held nominal), K3 (both), under reading A (119-call load exogenous, as the FRAM draws it) and B (calls follow evacuation, as the case narrative says). Every line of the hand reading held.
+
+| Declared coding, N = 4 | T5 | T6 | T9 (Rescue) | Operativity A | Operativity B |
+|---|---|---|---|---|---|
+| K0 | 3 | 3 | 3 | 0.815 | 0.815 |
+| K1 (R1) | 4 | 3 | 3 | 0.926 | 0.926 |
+| K2 (R2) | 3 | 4 | A: 3, **B: 4** | 0.852 | 0.889 |
+| K3 (both) | 4 | 4 | A: 3, **B: 4** | 0.963 | 1.000 |
+
+- **Under A no option restores Rescue** (night and the 119 calls coincide at T9). **Under B only R2 does**; R1 repairs more functions (T1, T2, T5) and leaves T6 and T9 degraded, because the environment and the night coincide at T6.
+- **Severity grid** (`koriyama_grid.csv`): K0 and K1 never restore Rescue; K2 and K3 restore it at 27 of 81 points under B and never under A. The order K0 ≤ K1, K2 ≤ K3 holds at every point (entailed).
+- **Scale:** N = 7 gives the same table (normalised values identical).
+- **Shapley of K0** (loss 0.185): T1 0.060, T2 0.051, environment 0.041, night 0.026, 119 calls 0.007.
+- What the integration shows: the FRAM draws the call load as exogenous, and under that reading none of the recommendations helps Rescue. The recommendations' effect on Rescue rests on an assumption the FRAM does not state (calls follow evacuation), which the model makes explicit.
+
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
 
 **Reference evaluator** (`results/reference_check.csv`): the printed formula, re-implemented without the engine, equals the engine in every function level of 13,864 Scenarios (8 semantics × the three grids and 100 random Scenarios on each of 13 `.xfmv` models). 0 differences.

@@ -1,0 +1,7 @@
+damage,shapley_operativity_loss
+T1,0.0599
+T2,0.0506
+X:Immediate environment,0.0414
+X:Function restricted during nighttime,0.0259
+X:Emergency call (119),0.0074
+(all together),0.1852
