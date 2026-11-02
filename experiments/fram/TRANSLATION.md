@@ -165,6 +165,28 @@ Compares the analysts' own recommendations under resources and time, on the conv
 - s = 2: telecom severe reaches F12 even under O1 and degrades F23; two-way updates stop sufficing once d ≥ 0.25, and mutual aid may arrive reduced.
 - These thresholds follow from v2's one-level damping and the linear served-ratio levels (ceil(ratio · 4)); the paper says so.
 
+## 4e. Declared 2026-11-02: scale sensitivity of the decision model
+
+**Question.** Which of §4d's answers belong to Zheng's case and which to the 4-level scale? The thresholds d = 0.25 and 0.5 are steps of ceil(ratio · 4); a reviewer can derive them on paper.
+
+**What changes.** The decision model of §4d is rebuilt at N = 7 with v2 rescaled, everything else unchanged:
+- damping absorbs 2 levels (`dependency_level` N − 2), the same third of the range one level absorbs at N = 4;
+- every imposed level maps as L7 = 2·L4 − 1: telecom s = 3 → 5, s = 2 → 3; F5 one-way 3 → 5; the F20 rule reads "F12 and F17 below 7 → F20 at 3" (severe);
+- the crews flow, its priorities and the sweeps are those of §4d; Operativity is normalised, (L − 1)/(N − 1).
+
+With these choices the logical part is the N = 4 model on the odd levels {1, 3, 5, 7}: min(worst + 2, second worst) maps them onto each other exactly. Only the served ratio of the crews flow gains the even levels, so the test isolates the resolution of the one quantity the decision turns on. (Kim, the one N = 7 case of RQ1, used one level of damping; that semantics is a different rule and is not tested here.)
+
+**Recorded before running: the hand reading** (L17 = ceil(7·(1 − d)) = 7, 7, 6, 5, 5, 4, 3, 3 for d = 0 … 0.7; at N = 4: 4, 4, 4, 3, 3, 2, 2, 2).
+- O0, s = 3: F20 severe from d = 0.2 (N = 4: from 0.3), as soon as F17 is below 7. The plan's threshold moves from 1/4 to 1/7.
+- O1, s = 3: F20 = min(L17 + 2, 7): nominal for d ≤ 0.4, 6 at d = 0.5, 5 at 0.6 and 0.7. On the grid two-way updates suffice up to d = 0.4 at both scales (exact threshold 1/2 at N = 4, 3/7 at N = 7). Beyond, F20 is never severe and is graded (6, 5, 5 against 3, 3, 3 at N = 4).
+- O2, O3, s = 3: as O1 until a; F23 is nominal (Radio at 5, absorbed), so the mutual aid supplies 100·d in full and F20 is nominal from a for every d. The deadline verdicts equal §4d's.
+- O1, s = 2: F12 deviates, so the rule fires from d = 0.2 (N = 4: 0.3).
+- O2, O3, s = 2: F23 at 5, the mutual aid carries (5 − 0.5)/7 of its supply, F17 is served 1 − 0.357·d. F20 is nominal from a for d ≤ 0.3, and not for d ≥ 0.5; d = 0.4 serves exactly 6/7, so its outcome is the flow's rounding. At N = 4 the mutual aid sufficed up to d = 0.6. **The claim "mutual aid restores F20 under severe telecom damage up to 60 % drawn away" belongs to the scale.**
+- Reference point (d = 0.4, a = 30, s = 3): every level maps exactly (L17 = 5 ↔ 3), so the timeline and the Shapley shares equal §4d's.
+- The order of the options cannot change at any N: each option removes a deviation or adds supply, and the engine is monotone. It is entailed, and the paper says so.
+
+**Outputs.** `results/decision_scale.csv`: per (N, option, s, d) the F20 level before and after the mutual aid; the timeline and Shapley at the reference point at N = 7.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -183,4 +205,5 @@ Compares the analysts' own recommendations under resources and time, on the conv
 | (re-encoding, no new test) | v2 and the sensitivity written with level offsets (ADR-0025); all results byte-identical |
 | 7f5c33a | S0 on the claims; Falegnami and Simone in V1; Falegnami's Katz ranking (§4b) |
 | 44fc0bc | ablation family, severity grid, claim tiers, reference evaluator, new held-out protocol and decision rule (§4c) |
-| (this commit) | the Zheng decision model: options, added layer, sweeps, outputs (§4d) |
+| 882d4a1 | the Zheng decision model: options, added layer, sweeps, outputs (§4d) |
+| (this commit) | scale sensitivity of the decision model, N = 7 with v2 rescaled (§4e) |
