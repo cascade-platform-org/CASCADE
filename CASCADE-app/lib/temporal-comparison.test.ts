@@ -28,19 +28,27 @@ describe("compareRuns", () => {
 
   it("writes one CSV line per Simulation and column", () => {
     expect(comparisonCsv(comparison).split("\n")).toEqual([
-      "simulation,parameter,value,metric,end,mean,min,max,total",
-      "Baseline,,,Owed,-15,-15,-20,-10,-45",
-      "Baseline,,,Settled,,2.5,0,5,5",
-      "Threshold,,,Settled,3,2.5,2,3,5",
-      "Threshold,,,Only here,1,1,1,1,2",
+      "simulation,metric,end,mean,min,max,total",
+      "Baseline,Owed,-15,-15,-20,-10,-45",
+      "Baseline,Settled,,2.5,0,5,5",
+      "Threshold,Settled,3,2.5,2,3,5",
+      "Threshold,Only here,1,1,1,1,2",
     ]);
   });
 });
 
 describe("a Parameter Sweep in the comparison", () => {
-  it("names each run's Parameter and value in the CSV", () => {
-    const c = compareRuns([{ id: "a", name: "A · share = 0.4", warnings: [], table: table(["X"], [[1]]), sweep: { parameter: "share", value: 0.4 } }]);
-    expect(c.rows[0].sweep).toEqual({ parameter: "share", value: 0.4 });
-    expect(comparisonCsv(c).split("\n")[1]).toBe("A · share = 0.4,share,0.4,X,1,1,1,1,1");
+  it("gives each swept Parameter a CSV column, empty for the runs that do not sweep it", () => {
+    const c = compareRuns([
+      { id: "a", name: "A", warnings: [], table: table(["X"], [[2]]) },
+      { id: "a", name: "A · share = 0.4, months = 6", warnings: [], table: table(["X"], [[1]]),
+        sweep: [{ parameter: "share", value: 0.4 }, { parameter: "months", value: 6 }] },
+    ]);
+    expect(c.rows[1].sweep).toEqual([{ parameter: "share", value: 0.4 }, { parameter: "months", value: 6 }]);
+    expect(comparisonCsv(c).split("\n")).toEqual([
+      "simulation,share,months,metric,end,mean,min,max,total",
+      "A,,,X,2,2,2,2,2",
+      '"A · share = 0.4, months = 6",0.4,6,X,1,1,1,1,1',
+    ]);
   });
 });

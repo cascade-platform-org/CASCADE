@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, GitCompare, Square } from "lucide-react";
+import { Download, GitCompare, Plus, Square, X } from "lucide-react";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { usePropagationGate } from "@/hooks/usePropagate";
 import { brandColor } from "@/lib/brand";
@@ -9,7 +9,7 @@ import { CATEGORY_COLORS } from "@/lib/colors";
 import { formatMetric } from "@/lib/temporal-metrics";
 import { STATISTICS, compareRuns, type Comparison, type Statistic } from "@/lib/temporal-comparison";
 import { cancelComparison, exportComparisonCsv, startComparison } from "@/lib/temporal-simulation-run";
-import { compareRequests, parameterReads, parseSweepValues } from "@/lib/temporal-sweep";
+import { MAX_SWEEP_RUNS, compareRequests, parameterReads, parseSweepValues, pointLabel, sweepSize, type SweepAxis } from "@/lib/temporal-sweep";
 import { useConfigStore } from "@/store/config-store";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { EXPLAIN_COMPARE, explainStatistic } from "@/lib/temporal-simulation-explainers";
@@ -43,13 +43,9 @@ export function CompareTab() {
   const ticked = simulations.filter((x) => !unticked.has(x.id)).map((x) => x.id);
   const [statistic, setStatistic] = useState<Statistic>("mean");
   const comparison = useMemo(() => (result ? compareRuns(result.runs) : null), [result]);
-  const [sweep, setSweep] = useState<{ simulationId: string; parameter: string; text: string } | null>(null);
-  const sweepValues = sweep ? parseSweepValues(sweep.text) : null;
-  const requests = compareRequests(
-    simulations,
-    ticked,
-    sweep && sweepValues && "values" in sweepValues ? { simulationId: sweep.simulationId, parameter: sweep.parameter, values: sweepValues.values } : undefined,
-  );
+  const [sweep, setSweep] = useState<SweepDraft | null>(null);
+  const axes = sweep ? parsedAxes(sweep) : null;
+  const requests = compareRequests(simulations, ticked, sweep && axes ? { simulationId: sweep.simulationId, axes } : undefined);
   const [chosen, setChosen] = useState<string | null>(null);
   const metric = comparison && chosen && comparison.columns.includes(chosen) ? chosen : comparison ? firstVarying(comparison) : null;
   const stale = result !== null && result.from !== simulations;
@@ -77,7 +73,7 @@ export function CompareTab() {
         </div>
       </div>
 
-      <SweepRow simulations={simulations} sweep={sweep} values={sweepValues} onChange={setSweep} />
+      <SweepRow simulations={simulations} sweep={sweep} onChange={setSweep} />
 
       <div className="flex flex-wrap items-center gap-2">
         <SmallButton
@@ -244,20 +240,35 @@ function ComparisonChart({ comparison, metric }: { comparison: Comparison; metri
   );
 }
 
+/** The sweep as typed: a Simulation and, per swept Parameter, the text of its values. */
+interface SweepDraft {
+  simulationId: string;
+  axes: { parameter: string; text: string }[];
+}
+
+/** The draft's axes when every one reads as values, else null. */
+function parsedAxes(draft: SweepDraft): SweepAxis[] | null {
+  const axes: SweepAxis[] = [];
+  for (const axis of draft.axes) {
+    const read = parseSweepValues(axis.text);
+    if (!("values" in read)) return null;
+    axes.push({ parameter: axis.parameter, values: read.values });
+  }
+  return axes.length > 0 ? axes : null;
+}
+
 /**
- * Sweep a Parameter: one Simulation (one with Parameters), one of its
- * Parameters and the values to run it at; each value is one more run.
+ * Sweep Parameters: one Simulation (one with Parameters), one or more of its
+ * Parameters and the values to run each at; every combination is one more run.
  */
 function SweepRow({
   simulations,
   sweep,
-  values,
   onChange,
 }: {
   simulations: readonly StoredTemporalSimulation[];
-  sweep: { simulationId: string; parameter: string; text: string } | null;
-  values: ReturnType<typeof parseSweepValues> | null;
-  onChange: (s: { simulationId: string; parameter: string; text: string } | null) => void;
+  sweep: SweepDraft | null;
+  onChange: (s: SweepDraft | null) => void;
 }) {
   const events = useConfigStore((s) => s.config.events);
   const withParameters = simulations.filter((x) => x.parameters.length > 0);
@@ -265,69 +276,137 @@ function SweepRow({
     return <p className="text-[11px] text-zinc-400">To sweep a Parameter, declare one in a Temporal Simulation (Timeline tab → Parameters).</p>;
   }
   const chosen = withParameters.find((x) => x.id === sweep?.simulationId);
-  const reads = chosen && sweep ? parameterReads(Object.values(chosen.profile).flat(), chosen.timeline.steps, sweep.parameter, (id) => events.find((e) => e.id === id)?.attribute_operations ?? []) : null;
   const pick = (simulationId: string) => {
     const x = withParameters.find((y) => y.id === simulationId);
-    onChange(x ? { simulationId, parameter: x.parameters[0].name, text: sweep?.text ?? "" } : null);
+    onChange(x ? { simulationId, axes: [{ parameter: x.parameters[0].name, text: sweep?.axes[0]?.text ?? "" }] } : null);
   };
+  const setAxis = (i: number, change: Partial<SweepDraft["axes"][number]>) =>
+    sweep && onChange({ ...sweep, axes: sweep.axes.map((a, k) => (k === i ? { ...a, ...change } : a)) });
+  const used = new Set(sweep?.axes.map((a) => a.parameter));
+  const free = chosen?.parameters.filter((p) => !used.has(p.name)) ?? [];
+  const axes = sweep ? parsedAxes(sweep) : null;
+  const runs = axes ? sweepSize(axes) : 0;
   return (
     <div className="space-y-1 rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-medium text-zinc-600 dark:text-zinc-300">Sweep a Parameter</span>
+        <span className="font-medium text-zinc-600 dark:text-zinc-300">Sweep Parameters</span>
         <select className={`${inputCls} w-auto`} value={sweep?.simulationId ?? ""} onChange={(e) => pick(e.target.value)}>
           <option value="">none</option>
           {withParameters.map((x) => <option key={x.id} value={x.id}>{x.timeline.name || x.id}</option>)}
         </select>
-        {chosen && sweep && (
-          <>
-            <select className={`${inputCls} w-auto font-mono`} value={sweep.parameter} onChange={(e) => onChange({ ...sweep, parameter: e.target.value })}>
-              {chosen.parameters.map((p) => <option key={p.name} value={p.name}>{p.name} ({p.value})</option>)}
-            </select>
-            <input
-              className={`${inputCls} w-64`}
-              value={sweep.text}
-              placeholder="0.10, 0.15, 0.20 — or 0.1 to 0.3 step 0.05"
-              onChange={(e) => onChange({ ...sweep, text: e.target.value })}
-            />
-            {values && "values" in values && <span className="text-zinc-500">{values.values.length} run{values.values.length === 1 ? "" : "s"}</span>}
-          </>
+        {axes && (
+          <span className={runs > MAX_SWEEP_RUNS ? "text-red-600 dark:text-red-400" : "text-zinc-500"}>
+            {runs} run{runs === 1 ? "" : "s"}{runs > MAX_SWEEP_RUNS && ` — at most ${MAX_SWEEP_RUNS}`}
+          </span>
         )}
       </div>
-      {sweep?.text && values && "error" in values && <p className="text-[11px] text-red-600 dark:text-red-400">{values.error}</p>}
-      {reads === 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">Nothing in this Simulation reads {sweep?.parameter}: every run would be the same.</p>}
+      {chosen && sweep && sweep.axes.map((axis, i) => {
+        const read = axis.text ? parseSweepValues(axis.text) : null;
+        const reads = parameterReads(Object.values(chosen.profile).flat(), chosen.timeline.steps, axis.parameter, (id) => events.find((e) => e.id === id)?.attribute_operations ?? []);
+        return (
+          <div key={i} className="space-y-0.5">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <select className={`${inputCls} w-auto font-mono`} value={axis.parameter} onChange={(e) => setAxis(i, { parameter: e.target.value })}>
+                {chosen.parameters.filter((p) => p.name === axis.parameter || !used.has(p.name)).map((p) => (
+                  <option key={p.name} value={p.name}>{p.name} ({p.value})</option>
+                ))}
+              </select>
+              <input
+                className={`${inputCls} w-64`}
+                value={axis.text}
+                placeholder="0.10, 0.15, 0.20 — or 0.1 to 0.3 step 0.05"
+                onChange={(e) => setAxis(i, { text: e.target.value })}
+              />
+              {read && "values" in read && <span className="text-zinc-500">{read.values.length} value{read.values.length === 1 ? "" : "s"}</span>}
+              {sweep.axes.length > 1 && (
+                <SmallButton title="Stop sweeping this Parameter" onClick={() => onChange({ ...sweep, axes: sweep.axes.filter((_, k) => k !== i) })}>
+                  <X size={10} />
+                </SmallButton>
+              )}
+            </div>
+            {read && "error" in read && <p className="text-[11px] text-red-600 dark:text-red-400">{read.error}</p>}
+            {reads === 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">Nothing in this Simulation reads {axis.parameter}: its values would give the same runs.</p>}
+          </div>
+        );
+      })}
+      {chosen && sweep && free.length > 0 && (
+        <SmallButton title="Sweep another Parameter too: every combination of the values is one run" onClick={() => onChange({ ...sweep, axes: [...sweep.axes, { parameter: free[0].name, text: "" }] })}>
+          <Plus size={10} /> Parameter
+        </SmallButton>
+      )}
     </div>
   );
 }
 
-/** A statistic of one Metric against the swept value, one point per run of the sweep. */
+/**
+ * A statistic of one Metric against one swept Parameter: one point per run, and
+ * one line per combination of the other swept Parameters' values.
+ */
 function SweepChart({ comparison, metric, statistic }: { comparison: Comparison; metric: string; statistic: Statistic }) {
-  const points = comparison.rows
-    .filter((r) => r.sweep && r.stats[metric]?.[statistic] !== null && r.stats[metric]?.[statistic] !== undefined)
-    .map((r) => ({ x: r.sweep!.value, y: r.stats[metric][statistic] as number }))
-    .sort((a, b) => a.x - b.x);
-  if (points.length === 0) return null;
-  const parameter = comparison.rows.find((r) => r.sweep)!.sweep!.parameter;
-  const [xl, xh] = [points[0].x, points[points.length - 1].x];
-  const ys = points.map((p) => p.y);
+  const swept = [...new Set(comparison.rows.flatMap((r) => (r.sweep ?? []).map((p) => p.parameter)))];
+  const [picked, setPicked] = useState<string | null>(null);
+  const along = picked && swept.includes(picked) ? picked : swept[0];
+  const groups = new Map<string, { x: number; y: number }[]>();
+  for (const r of comparison.rows) {
+    const y = r.stats[metric]?.[statistic];
+    const x = r.sweep?.find((p) => p.parameter === along)?.value;
+    if (!r.sweep || x === undefined || y === null || y === undefined) continue;
+    const key = pointLabel(r.sweep.filter((p) => p.parameter !== along));
+    groups.set(key, [...(groups.get(key) ?? []), { x, y }]);
+  }
+  const lines = [...groups.entries()].map(([key, points], i) => ({
+    key, color: groups.size === 1 ? brandColor("accent", 600) : colorOf(i), points: points.sort((a, b) => a.x - b.x),
+  }));
+  const all = lines.flatMap((l) => l.points);
+  if (all.length === 0) return null;
+  const xs = all.map((p) => p.x);
+  const ys = all.map((p) => p.y);
+  const [xl, xh] = [Math.min(...xs), Math.max(...xs)];
   const [yl, yh] = [Math.min(...ys), Math.max(...ys)];
   const px = (v: number) => (xh === xl ? W / 2 : ((v - xl) / (xh - xl)) * (W - 2 * PAD) + PAD);
   const py = yScale(yl, yh);
-  const color = brandColor("accent", 600);
+  const caption = (
+    <span className="flex flex-wrap items-center gap-2">
+      {metric} — {STATISTIC_LABEL[statistic].toLowerCase()} of the run, against
+      {swept.length > 1 ? (
+        <select className={`${inputCls} w-auto font-mono`} value={along} onChange={(e) => setPicked(e.target.value)}>
+          {swept.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      ) : along}
+    </span>
+  );
   return (
-    <ChartFrame caption={`${metric} — ${STATISTIC_LABEL[statistic].toLowerCase()} of the run, against ${parameter}`} lo={yl} hi={yh} from={`${parameter} = ${xl}`} to={xh}>
+    <ChartFrame
+      caption={caption}
+      lo={yl}
+      hi={yh}
+      from={`${along} = ${xl}`}
+      to={xh}
+      footer={lines.length > 1 && (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          {lines.map(({ key, color }) => (
+            <span key={key} className="flex items-center gap-1 text-[10px] text-zinc-500">
+              <span className="h-0.5 w-3" style={{ backgroundColor: color }} />{key}
+            </span>
+          ))}
+        </div>
+      )}
+    >
         <div className="relative h-40 w-full">
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`${metric} against ${parameter}`}>
-            <polyline points={points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={`${metric} against ${along}`}>
+            {lines.map(({ key, color, points }) => (
+              <polyline key={key} points={points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
+            ))}
           </svg>
           {/* Markers outside the stretched SVG, so they stay round. */}
-          {points.map((p) => (
+          {lines.flatMap(({ key, color, points }) => points.map((p) => (
             <span
-              key={p.x}
-              title={`${parameter} = ${p.x}: ${formatMetric(p.y)}`}
+              key={`${key}-${p.x}`}
+              title={`${along} = ${p.x}${key ? `, ${key}` : ""}: ${formatMetric(p.y)}`}
               className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{ left: `${(px(p.x) / W) * 100}%`, top: `${(py(p.y) / H) * 100}%`, backgroundColor: color }}
             />
-          ))}
+          )))}
         </div>
     </ChartFrame>
   );

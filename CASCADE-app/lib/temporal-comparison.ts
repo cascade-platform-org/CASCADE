@@ -11,6 +11,7 @@
  */
 
 import { columnSummaries, csvCell, type RunTable } from "@/lib/temporal-metrics";
+import type { SweepPoint } from "@/lib/temporal-sweep";
 
 export const STATISTICS = ["end", "mean", "min", "max", "total"] as const;
 export type Statistic = (typeof STATISTICS)[number];
@@ -22,8 +23,8 @@ export interface ComparedRun {
   table: RunTable | null;
   error?: string;
   warnings: string[];
-  /** For one value of a Parameter Sweep: the Parameter and its value. */
-  sweep?: { parameter: string; value: number };
+  /** For one run of a Parameter Sweep: its grid point. */
+  sweep?: SweepPoint;
 }
 
 interface ComparisonRow {
@@ -35,7 +36,7 @@ interface ComparisonRow {
   periods: string[];
   /** Column name → the column's values in period order; absent when this run has no such column. */
   values: Record<string, (number | null)[]>;
-  sweep?: { parameter: string; value: number };
+  sweep?: SweepPoint;
   /** Column name → statistic → value; null when the run has no value for it. */
   stats: Record<string, Record<Statistic, number | null>>;
 }
@@ -75,14 +76,17 @@ export function compareRuns(runs: readonly ComparedRun[]): Comparison {
 
 /**
  * The comparison as CSV: one line per run and column, with the five
- * statistics; a sweep's run names its Parameter and value. Empty cells for no value.
+ * statistics; a column per swept Parameter holds each sweep run's value. Empty
+ * cells for no value.
  */
 export function comparisonCsv(c: Comparison): string {
-  const lines: (string | number | null)[][] = [["simulation", "parameter", "value", "metric", ...STATISTICS]];
+  const swept = [...new Set(c.rows.flatMap((r) => (r.sweep ?? []).map((p) => p.parameter)))];
+  const lines: (string | number | null)[][] = [["simulation", ...swept, "metric", ...STATISTICS]];
   for (const row of c.rows) {
+    const at = (parameter: string) => row.sweep?.find((p) => p.parameter === parameter)?.value ?? null;
     for (const column of c.columns) {
       const stats = row.stats[column];
-      if (stats) lines.push([row.name, row.sweep?.parameter ?? null, row.sweep?.value ?? null, column, ...STATISTICS.map((s) => stats[s])]);
+      if (stats) lines.push([row.name, ...swept.map(at), column, ...STATISTICS.map((s) => stats[s])]);
     }
   }
   return lines.map((l) => l.map(csvCell).join(",")).join("\n");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_SWEEP_VALUES, compareRequests, parameterReads, parseSweepValues } from "./temporal-sweep";
+import { MAX_SWEEP_RUNS, MAX_SWEEP_VALUES, compareRequests, parameterReads, parseSweepValues, sweepPoints, sweepSize } from "./temporal-sweep";
 import type { StoredTemporalSimulation } from "./schemas/temporal-simulation";
 
 describe("sweep values", () => {
@@ -24,11 +24,28 @@ const sim = (id: string, name: string, over: Partial<StoredTemporalSimulation> =
 describe("the runs Compare makes", () => {
   it("are the ticked Simulations, then one per swept value with its override", () => {
     const sims = [sim("a", "Art. 8"), sim("b", "Twice")];
-    expect(compareRequests(sims, ["b"], { simulationId: "a", parameter: "share", values: [0.4, 0.6] })).toEqual([
+    expect(compareRequests(sims, ["b"], { simulationId: "a", axes: [{ parameter: "share", values: [0.4, 0.6] }] })).toEqual([
       { simulationId: "b", name: "Twice" },
-      { simulationId: "a", name: "Art. 8 · share = 0.4", sweep: { parameter: "share", value: 0.4 } },
-      { simulationId: "a", name: "Art. 8 · share = 0.6", sweep: { parameter: "share", value: 0.6 } },
+      { simulationId: "a", name: "Art. 8 · share = 0.4", sweep: [{ parameter: "share", value: 0.4 }] },
+      { simulationId: "a", name: "Art. 8 · share = 0.6", sweep: [{ parameter: "share", value: 0.6 }] },
     ]);
+  });
+
+  it("sweep a grid: every combination of the Parameters' values, the first varying slowest", () => {
+    const axes = [{ parameter: "share", values: [0.4, 0.6] }, { parameter: "months", values: [3, 6, 9] }];
+    expect(sweepSize(axes)).toBe(6);
+    expect(sweepPoints(axes).map((p) => p.map((q) => q.value))).toEqual([[0.4, 3], [0.4, 6], [0.4, 9], [0.6, 3], [0.6, 6], [0.6, 9]]);
+    const runs = compareRequests([sim("a", "A")], [], { simulationId: "a", axes });
+    expect(runs).toHaveLength(6);
+    expect(runs[1]).toEqual({ simulationId: "a", name: "A · share = 0.4, months = 6", sweep: [{ parameter: "share", value: 0.4 }, { parameter: "months", value: 6 }] });
+  });
+
+  it("add no run for a grid over the limit, or one naming a Parameter twice", () => {
+    const big = [{ parameter: "share", values: Array.from({ length: 50 }, (_, i) => i) }, { parameter: "months", values: Array.from({ length: 11 }, (_, i) => i) }];
+    expect(sweepSize(big)).toBeGreaterThan(MAX_SWEEP_RUNS);
+    expect(compareRequests([sim("a", "A")], [], { simulationId: "a", axes: big })).toEqual([]);
+    const twice = [{ parameter: "share", values: [1] }, { parameter: "share", values: [2] }];
+    expect(compareRequests([sim("a", "A")], [], { simulationId: "a", axes: twice })).toEqual([]);
   });
 
   it("count what reads the Parameter: profile operations and the operations of the Events its Phases fire", () => {

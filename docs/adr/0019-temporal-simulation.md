@@ -351,3 +351,22 @@ over some 800 literal profile operations.
   table and chart line the runs up as for several Simulations, and a chart plots a statistic
   of a column against the value. A sweep belongs to the session, like the comparison; its CSV
   carries `parameter` and `value` columns.
+
+## Revision (2026-11-02): grid sweeps
+
+The FRAM paper's decision model has three unknowns (share of a brigade drawn away, arrival
+time, damage level), and one Parameter at a time could only show slices of its map.
+
+- A Parameter Sweep now names **one or more** distinct Parameters of the Simulation, each with
+  its values (at most 50 each, as before); the runs are **every combination** of the values
+  (the first Parameter varying slowest), at most **500** runs per sweep. A run is named
+  `<Simulation> · <p1> = <v1>, <p2> = <v2>`.
+- The chart of a statistic against the value picks the swept Parameter on its x axis and draws
+  one line per combination of the others.
+- The CSV has **one column per swept Parameter**, headed by its name, in place of `parameter`
+  and `value`; a run that does not sweep it leaves the cell empty.
+- Nothing else changes: each run is a Compare run as before, on its own Reset copy, and the
+  sweep still belongs to the session. Saved sweeps stay deferred.
+- Cost: a grid multiplies Engine Evaluations (runs × propagating Phases), within the role's
+  per-minute budget (ADR-0008); the progress bar counts the Propagations before the first
+  runs.

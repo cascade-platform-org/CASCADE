@@ -4302,11 +4302,11 @@ export const USER_MANUAL: ManualDoc = {
               "spans": [
                 {
                   "kind": "strong",
-                  "text": "Sweep a Parameter"
+                  "text": "Sweep Parameters"
                 },
                 {
                   "kind": "text",
-                  "text": " runs one Temporal Simulation once per value of one of its Parameters, beside the ticked ones: choose it, its Parameter, and the values ("
+                  "text": " runs one Temporal Simulation once per combination of values of its Parameters, beside the ticked ones: choose it, a Parameter and its values ("
                 },
                 {
                   "kind": "code",
@@ -4322,23 +4322,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": "; at most 50). Each value is one run, named after it. A second chart then plots the chosen statistic of the chosen Metric against the value, and the CSV has "
+                  "text": "; at most 50), and add more Parameters with "
                 },
                 {
-                  "kind": "code",
-                  "text": "parameter"
-                },
-                {
-                  "kind": "text",
-                  "text": " and "
-                },
-                {
-                  "kind": "code",
-                  "text": "value"
+                  "kind": "strong",
+                  "text": "+ Parameter"
                 },
                 {
                   "kind": "text",
-                  "text": " columns."
+                  "text": ". Every combination is one run, named after its values, up to 500 runs. A second chart then plots the chosen statistic of the chosen Metric against one swept Parameter (pick it in the chart's title), with a line for each combination of the others. The CSV has a column per swept Parameter."
                 }
               ]
             },

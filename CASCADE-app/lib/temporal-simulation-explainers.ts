@@ -360,7 +360,7 @@ export const EXPLAIN_PARAMETERS: Explanation = {
   lines: [
     "A Parameter is a named number this Temporal Simulation's operations read: name it in a profile row's × Parameter, or in an Event's operation, and change it here once.",
     "The operand is the cell's value times each factor the row names (a Parameter, a Series at the period, a field of the Element), so a policy's number lives in one place.",
-    "An Event fired in a Phase reads the Simulation's value; fired by hand it uses the defaults it declares. Compare can sweep a Parameter over several values.",
+    "An Event fired in a Phase reads the Simulation's value; fired by hand it uses the defaults it declares. Compare can sweep one or more Parameters over several values, every combination one run.",
     "Names are letters, digits and _ (not starting with a digit), so they work as spreadsheet headers too. Renaming one renames it in this Simulation's profile rows.",
   ],
   refs: ["ADR-0019", "ADR-0021"],

@@ -1,28 +1,53 @@
 /**
- * temporal-sweep.ts — a Parameter Sweep (ADR-0019, revised 2026-10-12): one
- * Temporal Simulation run once per value of one of its Parameters, beside the
- * Simulations ticked as they are. Pure: values parsed from text, and the list
- * of runs Compare makes.
+ * temporal-sweep.ts — a Parameter Sweep (ADR-0019, revised 2026-10-12 and
+ * 2026-11-02): one Temporal Simulation run once per combination of the values
+ * of one or more of its Parameters (a grid), beside the Simulations ticked as
+ * they are. Pure: values parsed from text, and the list of runs Compare makes.
  */
 
 import type { StoredTemporalSimulation, Timeline } from "@/lib/schemas/temporal-simulation";
 import { withDecimalPoint } from "@/lib/decimal-comma";
 
-/** The most values one sweep runs: each is a whole run. */
+/** The most values one swept Parameter takes. */
 export const MAX_SWEEP_VALUES = 50;
+/** The most runs one sweep makes (the product of its Parameters' value counts): each is a whole run. */
+export const MAX_SWEEP_RUNS = 500;
 
-/** One run Compare makes: a saved Simulation, with its swept Parameter's value when it is one value of a sweep. */
+/** One grid point of a sweep: each swept Parameter with its value, in the sweep's order. */
+export type SweepPoint = { parameter: string; value: number }[];
+
+/** One run Compare makes: a saved Simulation, with its grid point when it is one run of a sweep. */
 export interface CompareRequest {
   simulationId: string;
   name: string;
-  sweep?: { parameter: string; value: number };
+  sweep?: SweepPoint;
+}
+
+/** One swept Parameter and its values. */
+export interface SweepAxis {
+  parameter: string;
+  values: number[];
 }
 
 export interface SweepSpec {
   simulationId: string;
-  parameter: string;
-  values: number[];
+  /** Distinct Parameters; the runs are every combination of their values. */
+  axes: SweepAxis[];
 }
+
+/** How many runs the axes make: the product of their value counts (0 with no axis). */
+export const sweepSize = (axes: readonly SweepAxis[]): number => (axes.length === 0 ? 0 : axes.reduce((n, a) => n * a.values.length, 1));
+
+/** Every combination of the axes' values, the first axis varying slowest. */
+export function sweepPoints(axes: readonly SweepAxis[]): SweepPoint[] {
+  return axes.reduce<SweepPoint[]>(
+    (points, axis) => points.flatMap((point) => axis.values.map((value) => [...point, { parameter: axis.parameter, value }])),
+    [[]],
+  );
+}
+
+/** A grid point in words: `share = 0.4, months = 6`. */
+export const pointLabel = (point: SweepPoint): string => point.map((p) => `${p.parameter} = ${p.value}`).join(", ");
 
 const round = (x: number) => Number(x.toFixed(10));
 const number = (t: string) => Number(withDecimalPoint(t));
@@ -57,14 +82,19 @@ export function parseSweepValues(text: string): { values: number[] } | { error: 
   return { values };
 }
 
-/** The runs: each ticked Simulation as it is, then one run per value of the sweep. */
+/**
+ * The runs: each ticked Simulation as it is, then one run per grid point of the
+ * sweep. A sweep over more than MAX_SWEEP_RUNS points, or naming a Parameter
+ * twice, adds no run (the Compare tab says why).
+ */
 export function compareRequests(simulations: readonly StoredTemporalSimulation[], ticked: readonly string[], sweep?: SweepSpec): CompareRequest[] {
   const name = (s: StoredTemporalSimulation) => s.timeline.name || s.id;
   const out: CompareRequest[] = simulations.filter((s) => ticked.includes(s.id)).map((s) => ({ simulationId: s.id, name: name(s) }));
   const swept = sweep && simulations.find((s) => s.id === sweep.simulationId);
-  if (sweep && swept) {
-    for (const value of sweep.values) {
-      out.push({ simulationId: swept.id, name: `${name(swept)} · ${sweep.parameter} = ${value}`, sweep: { parameter: sweep.parameter, value } });
+  const distinct = sweep && new Set(sweep.axes.map((a) => a.parameter)).size === sweep.axes.length;
+  if (sweep && swept && distinct && sweepSize(sweep.axes) <= MAX_SWEEP_RUNS) {
+    for (const point of sweepPoints(sweep.axes)) {
+      out.push({ simulationId: swept.id, name: `${name(swept)} · ${pointLabel(point)}`, sweep: point });
     }
   }
   return out;

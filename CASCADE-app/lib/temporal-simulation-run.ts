@@ -215,7 +215,7 @@ export async function startComparison(requests: readonly CompareRequest[]): Prom
     }
     const before = done;
     try {
-      const parameters = parameterValues(checked.doc, sweep ? { [sweep.parameter]: sweep.value } : {});
+      const parameters = parameterValues(checked.doc, Object.fromEntries((sweep ?? []).map((p) => [p.parameter, p.value])));
       const record = await runOn(input, checked.doc, plan, parameters, {
         signal: mine.signal,
         stopped: () => mine.signal.aborted,
