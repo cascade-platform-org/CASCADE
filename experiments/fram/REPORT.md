@@ -12,7 +12,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_ablation.py` | ablations, severity grid, claim tiers, reference check | ~60 min (Grabbe under the cumulative members) |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
-| `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) and its scale sensitivity | 15 s |
+| `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) and its scale sensitivity, every grid point a Temporal Simulation run | 6 min |
 | `export_bundles.py` | the core cases as projects for the platform, with `CHECKS.md` | 5 s |
 
 ## Research questions

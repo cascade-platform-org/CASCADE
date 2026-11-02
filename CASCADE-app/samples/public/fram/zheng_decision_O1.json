@@ -3,7 +3,7 @@
   "version": "2.0",
   "meta": {
    "name": "Zheng 2024 Natech: decision model, O1 (two-way updates)",
-   "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) converted under v2, with firefighters as a flow. Reference point: 40 % of the brigade drawn away, mutual aid at 30 min, telecom at level 3."
+   "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) converted under v2, with firefighters as a flow. Parameters: drawn_away_pct (share of the brigade drawn away), arrival_min (mutual-aid arrival), telecom_level (telecom damage, on the 4-level reading)."
   },
   "nodes": {
    "fn_0": {
@@ -1681,10 +1681,59 @@
     },
     "profile": {},
     "metrics": [],
-    "scope": "global"
+    "scope": "global",
+    "parameters": [
+     {
+      "name": "drawn_away_pct",
+      "value": 40
+     },
+     {
+      "name": "arrival_min",
+      "value": 30
+     },
+     {
+      "name": "telecom_level",
+      "value": 3
+     }
+    ]
    }
   ],
-  "series": [],
+  "series": [
+   {
+    "name": "period_end_min",
+    "unit": "min",
+    "description": "The minute each period ends.",
+    "rows": {
+     "*": {
+      "t+000 min": 5,
+      "t+005 min": 10,
+      "t+010 min": 15,
+      "t+015 min": 20,
+      "t+020 min": 25,
+      "t+025 min": 30,
+      "t+030 min": 35,
+      "t+035 min": 40,
+      "t+040 min": 45,
+      "t+045 min": 50,
+      "t+050 min": 55,
+      "t+055 min": 60,
+      "t+060 min": 65,
+      "t+065 min": 70,
+      "t+070 min": 75,
+      "t+075 min": 80,
+      "t+080 min": 85,
+      "t+085 min": 90,
+      "t+090 min": 95,
+      "t+095 min": 100,
+      "t+100 min": 105,
+      "t+105 min": 110,
+      "t+110 min": 115,
+      "t+115 min": 120,
+      "t+120 min": 125
+     }
+    }
+   }
+  ],
   "expectations": []
  },
  "config": {
@@ -1922,7 +1971,8 @@
        "functionality"
       ],
       "op": "set",
-      "value": 3
+      "value": 1,
+      "parameter": "telecom_level"
      },
      {
       "element": "fn_31",
@@ -1930,7 +1980,8 @@
        "functionality"
       ],
       "op": "set",
-      "value": 3
+      "value": 1,
+      "parameter": "telecom_level"
      },
      {
       "element": "other_areas",
@@ -1940,9 +1991,15 @@
        "demand"
       ],
       "op": "set",
-      "value": 40
+      "value": 1.0,
+      "parameter": "drawn_away_pct"
      }
-    ]
+    ],
+    "parameter_defaults": {
+     "drawn_away_pct": 40.0,
+     "arrival_min": 30.0,
+     "telecom_level": 3.0
+    }
    }
   ],
   "graph_types": [

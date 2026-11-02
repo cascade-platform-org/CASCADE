@@ -12,9 +12,13 @@ draw 100·d first, and under O2/O3 mutual-aid crews supply 100·d from minute a 
 gated by the mobilising function F23. Swept: d, a, telecom severity s. Deadline
 from the source: Tank 63 fails 2,000–7,000 s after exposure (33–117 min).
 
-Nothing changes in time except the mutual aid's arrival, so a scenario has two
-states (before and after a); the reference point's full timeline and the
-projects for the app use 5-minute periods.
+The sweeps run as the app runs them: each option is a project with one
+Temporal Simulation (5-minute periods, 0-120 min) whose Parameters are the
+three unknowns, drawn_away_pct (d), arrival_min (a) and telecom_level (s). The
+earthquake Event reads d and s; the mutual aid's arrival is a profile operation
+per period reading a and the Series period_end_min. Each grid point is one run
+of the app's step operator (`ts/run_timeline.ts`, `engine_worker.py`). Shapley
+is not a sweep: it stays a set of single propagations.
 
 Scale sensitivity (TRANSLATION.md §4e): the same model at N = 7 with v2
 rescaled (two levels absorbed, every imposed level L -> 2L - 1).
@@ -32,6 +36,8 @@ import csv
 import itertools
 import json
 import math
+import subprocess
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -58,6 +64,8 @@ S_GRID = (3, 2)
 PERIODS = list(range(0, 121, 5))
 TTF_MIN, TTF_MAX = 2000 / 60, 7000 / 60
 REF = {"d": 0.4, "a": 30, "s": 3}
+SIM = "simulation-natech"
+TS_RUNNER = HERE / "ts" / "run_timeline.ts"
 
 
 def level(n: int, l4: int) -> int:
@@ -137,18 +145,6 @@ def build(option: str, n: int = N) -> Translated:
     return replace(t, project=project, config=config)
 
 
-def ops(t: Translated, option: str, d: float, s: int, arrived: bool) -> list[tuple[str, list[str], float]]:
-    """The imposed state: the event, the firefighters drawn away, the mutual aid if arrived."""
-    n = top(t)
-    out = [(t.fn_node[RADIO], ["functionality"], level(n, s)), (t.fn_node[NET], ["functionality"], level(n, s)),
-           ("other_areas", ["category_dependency_profiles", "crews", "demand"], round(NEED * d))]
-    if option == "O0":
-        out.append((t.fn_node["F5"], ["functionality"], level(n, 3)))
-    if arrived and option in ("O2", "O3"):
-        out.append(("mutual_aid", ["supply_capacity", "crews"], round(NEED * d)))
-    return out
-
-
 def apply(t: Translated, operations) -> Translated:
     data = t.project.model_dump(mode="json")
     for element, path, value in operations:
@@ -159,10 +155,6 @@ def apply(t: Translated, operations) -> Translated:
             target = target[key]
         target[path[-1]] = value
     return replace(t, project=Project.model_validate(data))
-
-
-def state(t: Translated, option: str, d: float, s: int, arrived: bool) -> dict[str, int]:
-    return propagate(apply(t, ops(t, option, d, s, arrived)))
 
 
 def operativity(t: Translated, lv: dict[str, int]) -> float:
@@ -176,19 +168,101 @@ def verdict(t_f20: float | None) -> str:
     return "met for the whole band" if t_f20 <= TTF_MIN else "met for part of the band"
 
 
+def label(m: int) -> str:
+    return f"t+{m:03d} min"
+
+
+def simulation_bundle(option: str, n: int = N) -> dict:
+    """The option as a project with its Temporal Simulation; d, a, s are its Parameters."""
+    t = build(option, n)
+    step = (n - 1) // (N - 1)                         # telecom level L -> 1 + (L - 1)·step
+    quake = [{"element": t.fn_node[x], "path": ["functionality"], "op": "set", "value": step,
+              "parameter": "telecom_level"} for x in (RADIO, NET)]
+    if step != 1:
+        quake += [{"element": t.fn_node[x], "path": ["functionality"], "op": "add", "value": 1 - step}
+                  for x in (RADIO, NET)]
+    quake.append({"element": "other_areas", "path": ["category_dependency_profiles", "crews", "demand"],
+                  "op": "set", "value": NEED / 100, "parameter": "drawn_away_pct"})
+    if option == "O0":
+        quake.append({"element": t.fn_node["F5"], "path": ["functionality"], "op": "set", "value": level(n, 3)})
+    defaults = {"drawn_away_pct": round(REF["d"] * 100), "arrival_min": REF["a"], "telecom_level": REF["s"]}
+    events = [EventDefinition(id="evt-earthquake", type="hazard", parameter_defaults=defaults,
+                              label="Earthquake: telecom damaged, firefighters drawn away"
+                              + (", F5 one-way" if option == "O0" else ""), attribute_operations=quake)]
+    config = t.config.model_copy(update={"events": events})
+    ModelConfiguration.model_validate(config.model_dump())
+    # Mutual aid from minute a on: 1 when the period ends after a, else 0, times d (all values stay >= 0).
+    arrival = [{"element": "mutual_aid", "path": ["supply_capacity", "crews"], "op": op, "value": v, **extra}
+               for op, v, extra in (("set", 1, {"series": "period_end_min"}),
+                                    ("at_least", 1, {"parameter": "arrival_min"}),
+                                    ("add", -1, {"parameter": "arrival_min"}),
+                                    ("at_most", 1, {}),
+                                    ("mul", NEED / 100, {"parameter": "drawn_away_pct"}))]
+    steps = [{"label": label(m), "unit": "none", "repeat": 1,
+              "phases": [{"events": [{"event": "evt-earthquake", "every": 1}] if m == 0 else [], "propagate": True}]}
+             for m in PERIODS]
+    timeline_ = {"name": f"Natech response, 0-120 min, {OPTIONS[option]}", "steps": steps}
+    Timeline.model_validate(timeline_)
+    meta = t.project.meta.model_copy(update={
+        "name": f"Zheng 2024 Natech: decision model, {option} ({OPTIONS[option]})",
+        "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) converted under v2, with firefighters "
+                       "as a flow. Parameters: drawn_away_pct (share of the brigade drawn away), arrival_min "
+                       "(mutual-aid arrival), telecom_level (telecom damage, on the 4-level reading)."})
+    project = t.project.model_copy(update={"meta": meta}).model_dump(mode="json", exclude_none=True)
+    project["series"] = [{"name": "period_end_min", "unit": "min", "description": "The minute each period ends.",
+                          "rows": {"*": {label(m): m + 5 for m in PERIODS}}}]
+    project["temporal_simulations"] = [{
+        "id": SIM, "format": "cascade.temporal-simulation/v1", "timeline": timeline_,
+        "profile": {label(m): arrival for m in PERIODS} if option in ("O2", "O3") else {},
+        "metrics": [], "scope": "global",
+        "parameters": [{"name": k, "value": v} for k, v in defaults.items()]}]
+    return {"project": project, "config": config.model_dump(mode="json", exclude_none=True)}
+
+
+def run_points(option: str, n: int, points: list[dict[str, float]]) -> list[list[dict[str, int]]]:
+    """One Temporal Simulation run per point (d, a, s): each run's node levels per period."""
+    runs = [{"bundle": "b", "simulation": SIM, "parameters": {
+        "drawn_away_pct": round(p["d"] * 100), "arrival_min": p.get("a", REF["a"]), "telecom_level": p["s"]}}
+        for p in points]
+    with tempfile.TemporaryDirectory() as tmp:
+        src, dst = Path(tmp) / "in.json", Path(tmp) / "out.json"
+        src.write_text(json.dumps({"bundles": {"b": simulation_bundle(option, n)}, "runs": runs}))
+        subprocess.run(["npx", "--yes", "tsx", str(TS_RUNNER), str(src), str(dst)],
+                       cwd=readers.REPO / "CASCADE-app", check=True)
+        out = json.loads(dst.read_text())
+    for r in out:
+        if r["warnings"]:
+            raise RuntimeError(f"{option}: {r['warnings'][:3]}")
+    return [[p["functionality"] for p in r["periods"]] for r in out]
+
+
+def t_nominal(periods: list[dict[str, int]], nid: str, n: int) -> int | None:
+    """The first minute from which `nid` stays nominal to the end of the window, or None."""
+    first = None
+    for m, lv in zip(PERIODS, periods):
+        if lv[nid] == n:
+            first = m if first is None else first
+        else:
+            first = None
+    return first
+
+
+def grid(option: str) -> list[dict[str, float]]:
+    aids = A_GRID if option in ("O2", "O3") else [REF["a"]]
+    return [{"s": s, "d": d, "a": a} for s, d, a in itertools.product(S_GRID, D_GRID, aids)]
+
+
 def decision_map() -> list[dict[str, object]]:
     rows = []
     for option in OPTIONS:
-        t = build(option)
-        f20 = t.fn_node["F20"]
-        for s, d in itertools.product(S_GRID, D_GRID):
-            before = state(t, option, d, s, arrived=False)
-            after = state(t, option, d, s, arrived=True) if option in ("O2", "O3") else before
-            for a in (A_GRID if option in ("O2", "O3") else [None]):
-                t_f20 = 0 if before[f20] == N else (a if after[f20] == N else None)
-                rows.append({"option": option, "s": s, "d": d, "a": a if a is not None else "-",
-                             "F20_before": before[f20], "F20_after": after[f20],
-                             "t_F20_min": t_f20 if t_f20 is not None else "never", "deadline": verdict(t_f20)})
+        f20 = build(option).fn_node["F20"]
+        points = grid(option)
+        for p, periods in zip(points, run_points(option, N, points)):
+            t_f20 = t_nominal(periods, f20, N)
+            rows.append({"option": option, "s": p["s"], "d": p["d"],
+                         "a": p["a"] if option in ("O2", "O3") else "-",
+                         "F20_before": periods[0][f20], "F20_after": periods[-1][f20],
+                         "t_F20_min": t_f20 if t_f20 is not None else "never", "deadline": verdict(t_f20)})
     return rows
 
 
@@ -196,12 +270,12 @@ def timeline(n: int = N) -> list[dict[str, object]]:
     rows = []
     for option in OPTIONS:
         t = build(option, n)
-        states = {arr: state(t, option, REF["d"], REF["s"], arr) for arr in (False, True)}
-        for m in PERIODS:
-            lv = states[m >= REF["a"]]
+        periods = run_points(option, n, [REF])[0]
+        for m, lv in zip(PERIODS, periods):
+            fn = {x: lv[nid] for x, nid in t.fn_node.items()}
             rows.append({"option": option, "minute": m, "operativity": round(operativity(t, lv), 3),
-                         **{x: lv[t.fn_node[x]] for x in ("F12", "F17", "F20")},
-                         "F23": lv[t.fn_node["F23"]] if "F23" in t.fn_node else "-"})
+                         **{x: fn[x] for x in ("F12", "F17", "F20")},
+                         "F23": fn["F23"] if "F23" in fn else "-"})
     return rows
 
 
@@ -229,51 +303,18 @@ def scale() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """§4e: F20 per (N, option, s, d) before and after the mutual aid; the reference point at N = 7."""
     rows = []
     for n, option in itertools.product((N, 7), OPTIONS):
-        t = build(option, n)
-        f20 = t.fn_node["F20"]
-        for s, d in itertools.product(S_GRID, D_GRID):
-            before = state(t, option, d, s, arrived=False)
-            after = state(t, option, d, s, arrived=True) if option in ("O2", "O3") else before
-            rows.append({"N": n, "option": option, "s_at_N4": s, "d": d, "F20_before": before[f20],
-                         "F20_after": after[f20], "F20_before_normalised": round((before[f20] - 1) / (n - 1), 3),
-                         "F20_after_normalised": round((after[f20] - 1) / (n - 1), 3)})
+        f20 = build(option, n).fn_node["F20"]
+        points = [{"s": s, "d": d, "a": REF["a"]} for s, d in itertools.product(S_GRID, D_GRID)]
+        for p, periods in zip(points, run_points(option, n, points)):
+            before, after = periods[0][f20], periods[-1][f20]
+            rows.append({"N": n, "option": option, "s_at_N4": p["s"], "d": p["d"], "F20_before": before,
+                         "F20_after": after, "F20_before_normalised": round((before - 1) / (n - 1), 3),
+                         "F20_after_normalised": round((after - 1) / (n - 1), 3)})
     ref = [{"N": n, "what": f"operativity {r['option']} minute {r['minute']}", "value": r["operativity"]}
            for n in (N, 7) for r in timeline(n) if r["minute"] in (0, REF["a"])]
     ref += [{"N": n, "what": f"shapley {r['damage']}", "value": r["shapley_operativity_loss"]}
             for n in (N, 7) for r in shapley(n)]
     return rows, ref
-
-
-def bundle(option: str) -> dict:
-    """The option at the reference point, with its Temporal Simulation in 5-minute periods."""
-    t = build(option)
-    first = ops(t, option, REF["d"], REF["s"], arrived=False)
-    events = [EventDefinition(id="evt-earthquake", label="Earthquake: telecom damaged, firefighters drawn away"
-                              + (", F5 one-way" if option == "O0" else ""), type="hazard",
-                              attribute_operations=[{"element": e, "path": p, "op": "set", "value": v}
-                                                    for e, p, v in first])]
-    if option in ("O2", "O3"):
-        events.append(EventDefinition(
-            id="evt-mutual-aid", label="Mutual-aid firefighters arrive", type="disservice", temporal_simulation_only=True,
-            attribute_operations=[{"element": "mutual_aid", "path": ["supply_capacity", "crews"], "op": "set",
-                                   "value": round(NEED * REF["d"])}]))
-    config = t.config.model_copy(update={"events": events})
-    ModelConfiguration.model_validate(config.model_dump())
-    steps = [{"label": f"t+{m:03d} min", "unit": "none", "repeat": 1,
-              "phases": [{"events": ([{"event": "evt-earthquake", "every": 1}] if m == 0 else [])
-                          + ([{"event": "evt-mutual-aid", "every": 1}] if m == REF["a"] and option in ("O2", "O3")
-                             else []), "propagate": True}]} for m in PERIODS]
-    timeline_ = {"name": f"Natech response, 0-120 min, {OPTIONS[option]}", "steps": steps}
-    Timeline.model_validate(timeline_)
-    meta = t.project.meta.model_copy(update={
-        "name": f"Zheng 2024 Natech: decision model, {option} ({OPTIONS[option]})",
-        "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) converted under v2, with firefighters "
-                       f"as a flow. Reference point: {round(REF['d'] * 100)} % of the brigade drawn away, "
-                       f"mutual aid at {REF['a']} min, telecom at level {REF['s']}."})
-    project = t.project.model_copy(update={"meta": meta}).model_dump(mode="json", exclude_none=True)
-    project["temporal_simulations"] = [{"id": "simulation-natech", "format": "cascade.temporal-simulation/v1",
-                                        "timeline": timeline_, "profile": {}, "metrics": [], "scope": "global"}]
-    return {"project": project, "config": config.model_dump(mode="json", exclude_none=True)}
 
 
 def write(name: str, rows: list[dict[str, object]]) -> None:
@@ -295,7 +336,7 @@ def main() -> None:
     print(f"== decision_scale.csv: {len(rows)} rows")
     APP.mkdir(parents=True, exist_ok=True)
     for option in OPTIONS:
-        (APP / f"zheng_decision_{option}.json").write_text(json.dumps(bundle(option), indent=1))
+        (APP / f"zheng_decision_{option}.json").write_text(json.dumps(simulation_bundle(option), indent=1))
 
 
 if __name__ == "__main__":
