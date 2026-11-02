@@ -12,7 +12,8 @@ FRAM leaves implicit (does the 119-call load follow evacuation?), the severity
 grid and the scale.
 
   A  the call load is exogenous, as drawn: level 3 in every option
-  B  the call load follows evacuation: it sits at the level T6 reaches
+  B  the call load follows evacuation: a model edit, an edge from T6 to the
+     119-call node at full dependency, so the calls sit at T6's level
 
   results/koriyama_options.csv, koriyama_grid.csv, koriyama_shapley.csv
 
@@ -30,6 +31,7 @@ from decide_zheng import N, config_at, level
 from framkit import readers
 from framkit.engine import function_levels, propagate
 from framkit.translate import Translated, translate
+from schemas.network import Edge
 from run_rq2 import barrier
 
 RESULTS = Path(__file__).resolve().parent / "results"
@@ -41,10 +43,13 @@ READINGS = ("A", "B")
 SCALES = (N, 7)
 
 
-def build(option: str, n: int) -> Translated:
+def build(option: str, n: int, reading: str = "A") -> Translated:
     t = translate(readers.read_togawa(), config_at(n))
     if option in ("K2", "K3"):
         barrier(t, "T6")
+    if reading == "B":                                   # the calls follow evacuation
+        t.project.edges["e_calls_follow_t6"] = Edge(id="e_calls_follow_t6", source=t.fn_node["T6"],
+                                                    target=t.fn_node[CALLS], functionality=n)
     return t
 
 
@@ -54,16 +59,11 @@ def fn_levels(t: Translated, start: dict[str, int]) -> dict[str, int]:
 
 def run(option: str, n: int, reading: str, sev: dict[str, int]) -> dict[str, int]:
     """Function levels under the option, the event at `sev` (an N = 4 level per element)."""
-    t = build(option, n)
-    start = {e: level(n, sev[e]) for e in EVENT}
+    t = build(option, n, reading)
+    start = {e: level(n, sev[e]) for e in EVENT if not (reading == "B" and e == CALLS)}
     if option in ("K1", "K3"):
         start.pop("T1"), start.pop("T2")
-    if reading == "B":                                   # the calls follow T6
-        start.pop(CALLS)
-        t6 = fn_levels(t, start)["T6"]
-        if t6 < n:
-            start[CALLS] = t6
-    return {f: v for f, v in fn_levels(t, start).items()}
+    return fn_levels(t, start)
 
 
 def operativity(lv: dict[str, int], n: int) -> float:

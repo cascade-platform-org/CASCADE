@@ -172,7 +172,7 @@ The four options open in the app with their Temporal Simulation: `CASCADE-app/sa
 
 ## Decision model: Koriyama's recommendations on structure alone (`decide_koriyama.py`; declared at abd3314, TRANSLATION.md §4f)
 
-Togawa et al. give two qualitative recommendations and no capacities, call counts or deadline, so the procedure runs on structure: options K0 (as happened), K1 (R1, public communication), K2 (R2, evacuation behaviour held nominal), K3 (both), under reading A (119-call load exogenous, as the FRAM draws it) and B (calls follow evacuation, as the case narrative says). Every line of the hand reading held.
+Togawa et al. give two qualitative recommendations and no capacities, call counts or deadline, so the procedure runs on structure: options K0 (as happened), K1 (R1, public communication), K2 (R2, evacuation behaviour held nominal), K3 (both), under reading A (119-call load exogenous, as the FRAM draws it) and B (calls follow evacuation, as the case narrative says: one model edit, an edge T6 → 119 calls at full dependency; re-encoded from two harness passes at d2adf31, results identical). Every line of the hand reading held.
 
 | Declared coding, N = 4 | T5 | T6 | T9 (Rescue) | Operativity A | Operativity B |
 |---|---|---|---|---|---|
