@@ -16,7 +16,11 @@ Nothing changes in time except the mutual aid's arrival, so a scenario has two
 states (before and after a); the reference point's full timeline and the
 projects for the app use 5-minute periods.
 
-  results/decision_map.csv, decision_timeline.csv, decision_shapley.csv
+Scale sensitivity (TRANSLATION.md §4e): the same model at N = 7 with v2
+rescaled (two levels absorbed, every imposed level L -> 2L - 1).
+
+  results/decision_map.csv, decision_timeline.csv, decision_shapley.csv,
+  decision_scale.csv, decision_scale_ref.csv
   CASCADE-app/samples/public/fram/zheng_decision_O*.json
 
 Run from the repository root:
@@ -33,8 +37,9 @@ from pathlib import Path
 
 from framkit import readers
 from framkit.engine import propagate
-from framkit.translate import Translated, resonance_config, translate
+from framkit.translate import Translated, TranslationConfig, resonance_config, translate
 from core.importers.xfmv.map import layout
+from core.importers.xfmv.model import ASPECTS
 from schemas.config import CategoryDefinition, EventDefinition, ModelConfiguration
 from schemas.network import Canvas, CategoryDependencyProfile, Edge, Graph, Node, Position, Project
 from schemas.temporal_simulation import Timeline
@@ -55,7 +60,23 @@ TTF_MIN, TTF_MAX = 2000 / 60, 7000 / 60
 REF = {"d": 0.4, "a": 30, "s": 3}
 
 
-def build(option: str) -> Translated:
+def level(n: int, l4: int) -> int:
+    """A level of the 4-level reading on an n-level scale (n = 4 or 7: L -> 2L - 1)."""
+    return 1 + (l4 - 1) * (n - 1) // (N - 1)
+
+
+def config_at(n: int) -> TranslationConfig:
+    """v2 on an n-level scale, damping the same third of the range one level does at N = 4."""
+    if n == N:
+        return resonance_config()
+    return TranslationConfig(n=n, dep={a: n - (n - 1) // (N - 1) for a in ASPECTS}, resonance=True)
+
+
+def top(t: Translated) -> int:
+    return max(t.labels)
+
+
+def build(option: str, n: int = N) -> Translated:
     model = readers.read_zheng()
     if option == "O3":                                 # F5 cancelled: F7 takes F4's output (as C9)
         model.couplings = [c for c in model.couplings if not (c.source == "F5" and c.target == "F7")]
@@ -65,22 +86,23 @@ def build(option: str) -> Translated:
         model.add_function("F23", "Locate and mobilise firefighters from other organisations").group = "Mobilization"
         model.add_coupling("F2", "Immediate action guidelines", "F23", "I")
         model.add_coupling(RADIO, "Radio/Telephone", "F23", "R")
-    t = translate(model, resonance_config())
+    t = translate(model, config_at(n))
     t = replace(t, project=layout(model, t))           # the importer's layout, readable in the app
     f = t.fn_node
     nodes, edges = dict(t.project.nodes), dict(t.project.edges)
     nodes[f["F20"]] = nodes[f["F20"]].model_copy(update={"rules": list(nodes[f["F20"]].rules or []) + [
-        f"if {f['F12']}.functionality is <4 and {f['F17']}.functionality is <4 then {f['F20']} is severe"]})
+        f"if {f['F12']}.functionality is <{n} and {f['F17']}.functionality is <{n} "
+        f"then {f['F20']} is {t.labels[level(n, 2)]}"]})
 
     def node(nid, label, **kw):
-        nodes[nid] = Node(id=nid, label=label, functionality=N, node_categories=["crews"], **kw)
+        nodes[nid] = Node(id=nid, label=label, functionality=n, node_categories=["crews"], **kw)
 
     def edge(eid, s, d):
-        edges[eid] = Edge(id=eid, source=s, target=d, functionality=N)
+        edges[eid] = Edge(id=eid, source=s, target=d, functionality=n)
 
     def demand(nid, priority):
         prof = dict(nodes[nid].category_dependency_profiles or {})
-        prof["crews"] = CategoryDependencyProfile(dependency_level=N, demand=0 if nid == "other_areas" else NEED,
+        prof["crews"] = CategoryDependencyProfile(dependency_level=n, demand=0 if nid == "other_areas" else NEED,
                                                   priority=priority)
         nodes[nid] = nodes[nid].model_copy(update={"category_dependency_profiles": prof})
 
@@ -117,10 +139,11 @@ def build(option: str) -> Translated:
 
 def ops(t: Translated, option: str, d: float, s: int, arrived: bool) -> list[tuple[str, list[str], float]]:
     """The imposed state: the event, the firefighters drawn away, the mutual aid if arrived."""
-    out = [(t.fn_node[RADIO], ["functionality"], s), (t.fn_node[NET], ["functionality"], s),
+    n = top(t)
+    out = [(t.fn_node[RADIO], ["functionality"], level(n, s)), (t.fn_node[NET], ["functionality"], level(n, s)),
            ("other_areas", ["category_dependency_profiles", "crews", "demand"], round(NEED * d))]
     if option == "O0":
-        out.append((t.fn_node["F5"], ["functionality"], 3))
+        out.append((t.fn_node["F5"], ["functionality"], level(n, 3)))
     if arrived and option in ("O2", "O3"):
         out.append(("mutual_aid", ["supply_capacity", "crews"], round(NEED * d)))
     return out
@@ -144,7 +167,7 @@ def state(t: Translated, option: str, d: float, s: int, arrived: bool) -> dict[s
 
 def operativity(t: Translated, lv: dict[str, int]) -> float:
     fns = [fid for fid in t.fn_node if not fid.startswith("X:")]
-    return sum((lv[t.fn_node[x]] - 1) / (N - 1) for x in fns) / len(fns)
+    return sum((lv[t.fn_node[x]] - 1) / (top(t) - 1) for x in fns) / len(fns)
 
 
 def verdict(t_f20: float | None) -> str:
@@ -169,10 +192,10 @@ def decision_map() -> list[dict[str, object]]:
     return rows
 
 
-def timeline() -> list[dict[str, object]]:
+def timeline(n: int = N) -> list[dict[str, object]]:
     rows = []
     for option in OPTIONS:
-        t = build(option)
+        t = build(option, n)
         states = {arr: state(t, option, REF["d"], REF["s"], arr) for arr in (False, True)}
         for m in PERIODS:
             lv = states[m >= REF["a"]]
@@ -182,12 +205,12 @@ def timeline() -> list[dict[str, object]]:
     return rows
 
 
-def shapley() -> list[dict[str, object]]:
+def shapley(n: int = N) -> list[dict[str, object]]:
     """The plan (O0) at the reference point, t = 0: each damage's share of the Operativity loss."""
-    t = build("O0")
-    damages = {"telecom damaged": [(t.fn_node[RADIO], ["functionality"], REF["s"]),
-                                   (t.fn_node[NET], ["functionality"], REF["s"])],
-               "F5 one-way communication": [(t.fn_node["F5"], ["functionality"], 3)],
+    t = build("O0", n)
+    damages = {"telecom damaged": [(t.fn_node[RADIO], ["functionality"], level(n, REF["s"])),
+                                   (t.fn_node[NET], ["functionality"], level(n, REF["s"]))],
+               "F5 one-way communication": [(t.fn_node["F5"], ["functionality"], level(n, 3))],
                "firefighters drawn away": [("other_areas", ["category_dependency_profiles", "crews", "demand"],
                                             round(NEED * REF["d"]))]}
     names = list(damages)
@@ -200,6 +223,25 @@ def shapley() -> list[dict[str, object]]:
         for k in range(n) for c in itertools.combinations([q for q in names if q != p], k)), 4)} for p in names]
     rows.sort(key=lambda r: -r["shapley_operativity_loss"])
     return rows + [{"damage": "(all together)", "shapley_operativity_loss": round(v[frozenset(names)], 4)}]
+
+
+def scale() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """§4e: F20 per (N, option, s, d) before and after the mutual aid; the reference point at N = 7."""
+    rows = []
+    for n, option in itertools.product((N, 7), OPTIONS):
+        t = build(option, n)
+        f20 = t.fn_node["F20"]
+        for s, d in itertools.product(S_GRID, D_GRID):
+            before = state(t, option, d, s, arrived=False)
+            after = state(t, option, d, s, arrived=True) if option in ("O2", "O3") else before
+            rows.append({"N": n, "option": option, "s_at_N4": s, "d": d, "F20_before": before[f20],
+                         "F20_after": after[f20], "F20_before_normalised": round((before[f20] - 1) / (n - 1), 3),
+                         "F20_after_normalised": round((after[f20] - 1) / (n - 1), 3)})
+    ref = [{"N": n, "what": f"operativity {r['option']} minute {r['minute']}", "value": r["operativity"]}
+           for n in (N, 7) for r in timeline(n) if r["minute"] in (0, REF["a"])]
+    ref += [{"N": n, "what": f"shapley {r['damage']}", "value": r["shapley_operativity_loss"]}
+            for n in (N, 7) for r in shapley(n)]
+    return rows, ref
 
 
 def bundle(option: str) -> dict:
@@ -247,6 +289,10 @@ def main() -> None:
         rows = fn()
         write(name, rows)
         print(f"== {name}: {len(rows)} rows")
+    rows, ref = scale()
+    write("decision_scale.csv", rows)
+    write("decision_scale_ref.csv", ref)
+    print(f"== decision_scale.csv: {len(rows)} rows")
     APP.mkdir(parents=True, exist_ok=True)
     for option in OPTIONS:
         (APP / f"zheng_decision_{option}.json").write_text(json.dumps(bundle(option), indent=1))

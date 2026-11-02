@@ -17,7 +17,7 @@ models (plan: `docs/paper/FRAM/PLAN.md`, gitignored). It calls the real engine
 | `check_falegnami.py` | Falegnami et al. 2020's Katz ranking reproduced from the authors' private edge list, then with structure only |
 | `check_kim.py` | Kim & Yoon's "F11 is critical" on our re-implementation of their simulation (a footnote) |
 | `export_bundles.py` | the core cases as projects to check in the platform, each with its event as Events and each claim's edit applied, plus `CHECKS.md` (what to fire, what to expect); written by licence to `CASCADE-app/samples/public/fram/` (CC BY sources) or the gitignored `samples/private/fram/` |
-| `decide_zheng.py` | decision model: Zheng's recommendations compared under firefighters and time; writes `CASCADE-app/samples/public/fram/zheng_decision_O*.json` (open in the app) |
+| `decide_zheng.py` | decision model: Zheng's recommendations compared under firefighters and time, and its scale sensitivity (N = 7); writes `CASCADE-app/samples/public/fram/zheng_decision_O*.json` (open in the app) |
 | `data/` | the transcriptions (Zheng, Zinetullina: CC BY) and the frozen RQ2 claim list; sources and licences in `data/README.md` |
 | `results/` | CSV outputs |
 

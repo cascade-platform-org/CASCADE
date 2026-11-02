@@ -12,7 +12,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `run_ablation.py` | ablations, severity grid, claim tiers, reference check | ~60 min (Grabbe under the cumulative members) |
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
-| `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) | 6 s |
+| `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) and its scale sensitivity | 15 s |
 | `export_bundles.py` | the core cases as projects for the platform, with `CHECKS.md` | 5 s |
 
 ## Research questions
@@ -154,6 +154,21 @@ Replaces the earlier demonstration, whose telecom and fire-water canvases and qu
 **Shapley on the plan at t = 0** (`results/decision_shapley.csv`; Operativity loss 0.197): F5 one-way 0.083, telecom 0.068, firefighters drawn away 0.046.
 
 The four options open in the app with their Temporal Simulation: `CASCADE-app/samples/public/fram/zheng_decision_O*.json`.
+
+**Scale sensitivity** (declared at e084d58, TRANSLATION.md §4e; `results/decision_scale.csv`, `decision_scale_ref.csv`). The same model at N = 7 with v2 rescaled (two levels absorbed, imposed levels L → 2L − 1). Every line of the hand reading held; d = 0.4 under severe telecom, which serves exactly 6/7, came out not restored.
+
+| F20 (before → after the mutual aid) | N = 4 | N = 7 |
+|---|---|---|
+| O0, plan fails from | d = 0.3 | d = 0.2 |
+| O1 suffices up to (grid) | d = 0.4 | d = 0.4 |
+| O1 beyond, F20 at (normalised) | 0.67 | 0.83, 0.67, 0.67 |
+| O2/O3, s = 3 | nominal from a, every d | nominal from a, every d |
+| O2/O3, s = 2, restored up to | d = 0.6 | d = 0.3 |
+| reference point: Operativity, Shapley | 0.803 / 0.985 / 0.986 → 1.0; 0.083, 0.068, 0.046 | identical |
+
+- **Holds at both scales:** under the plan any shortfall of firefighters the scale registers fails F20 (Zheng's rule: late guidelines and missing firefighters together); two-way updates suffice up to 40 % drawn away on the grid; beyond, only mutual aid restores F20, within Tank 63's deadline when it arrives by 30 minutes; O2 = O3; Shapley puts F5's one-way communication first.
+- **Belongs to the scale:** the plan's exact threshold (1/4, 1/7: the smallest shortfall the scale registers); the exact two-way threshold (1/2, 3/7; it tends to 1/3, the share one damping step absorbs, so the damping's size is the assumption); how degraded F20 is beyond it; and how far mutual aid reaches under severe telecom damage (60 % against 30 %).
+- **Entailed:** the order of the options (each removes a deviation or adds supply; the engine is monotone).
 
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
 
