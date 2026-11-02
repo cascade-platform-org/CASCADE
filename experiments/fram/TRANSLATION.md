@@ -146,7 +146,7 @@ Compares the analysts' own recommendations under resources and time, on the conv
 - The converted FRAM under v2 with the F20 rule (§2): F20 is severe when F12 and F17 both deviate.
 - The event: Radio/Telephone and Internet/Telephone damaged (level 3), F5's one-way communication (level 3), firefighters limited because some are sent to other earthquake-affected areas (§4.2.1).
 - Firefighters are F17's Resource (Table 1); F20 receives them only through F17's output.
-- The deadline: Tank 63 and its neighbours fail 2,000–7,000 s after exposure (Fig. 6, after Cozzani 2006).
+- The deadline: Tank 63 and its neighbours fail 2,000–7,000 s after exposure (Fig. 6, after Cozzani 2006). (Note 2026-11-02, reading the source: Tank 63 itself at 2,000–2,500 s, Baser & Behnam 2020 Table 8; the band is the ring's. No result changes.)
 - The options, from §4.2.1–4.2.2: **O0** the plan; **O1** two-way updates (F5 not deviating); **O2** the first-round remedy (Fig. 9): O1 plus a function locating and mobilising other organisations' firefighters (F23: Input F2's guidelines, Resource Radio/Telephone); **O3** the second round: F5 cancelled (F7 takes F4's output, as C9) plus F23.
 
 **The added layer.** Firefighters as a SourceToDemands flow, in units of F17's need (100): the brigade supplies 100; the other affected areas draw 100·d and are served first (priority); F17 demands 100, its served level entering its rule undamped (a shortfall is a shortfall). The event's level-3 on F17's background resource is replaced by this flow. Under O2 and O3 a mutual-aid source supplies 100·d from the arrival time a on, through a Requisite coupling from F23 (no mobilisation, no mutual aid). Nothing else is added.

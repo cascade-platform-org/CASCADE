@@ -134,7 +134,7 @@ Coincidence, redundancy and capacity, the model's own content, appear only when 
 
 ## Decision model: Zheng's recommendations under firefighters and time (`decide_zheng.py`; declared at 882d4a1, TRANSLATION.md §4d)
 
-Replaces the earlier demonstration, whose telecom and fire-water canvases and quantities were ours (Table 1 gives F20 no water aspect). Imported: the converted FRAM and its event, firefighters as F17's Resource with other affected areas served first, Tank 63's time to failure (33–117 min), the four options. Swept: share of the brigade drawn away d, mutual-aid arrival a, telecom severity s.
+Replaces the earlier demonstration, whose telecom and fire-water canvases and quantities were ours (Table 1 gives F20 no water aspect). Imported: the converted FRAM and its event, firefighters as F17's Resource with other affected areas served first, the exposed ring's time to failure (33–117 min; Tank 63 at 33–42 min, Baser & Behnam 2020 Table 8), the four options. Swept: share of the brigade drawn away d, mutual-aid arrival a, telecom severity s.
 
 **F20 by option** (`results/decision_map.csv`), telecom at the declared level 3:
 
@@ -166,7 +166,7 @@ The four options open in the app with their Temporal Simulation: `CASCADE-app/sa
 | O2/O3, s = 2, restored up to | d = 0.6 | d = 0.3 |
 | reference point: Operativity, Shapley | 0.803 / 0.985 / 0.986 → 1.0; 0.083, 0.068, 0.046 | identical |
 
-- **Holds at both scales:** under the plan any shortfall of firefighters the scale registers fails F20 (Zheng's rule: late guidelines and missing firefighters together); two-way updates suffice up to 40 % drawn away on the grid; beyond, only mutual aid restores F20, within Tank 63's deadline when it arrives by 30 minutes; O2 = O3; Shapley puts F5's one-way communication first.
+- **Holds at both scales:** under the plan any shortfall of firefighters the scale registers fails F20 (Zheng's rule: late guidelines and missing firefighters together); two-way updates suffice up to 40 % drawn away on the grid; beyond, only mutual aid restores F20, before the whole ring's deadline, Tank 63's included, when it arrives by 30 minutes; O2 = O3; Shapley puts F5's one-way communication first.
 - **Belongs to the scale:** the plan's exact threshold (1/4, 1/7: the smallest shortfall the scale registers); the exact two-way threshold (1/2, 3/7; it tends to 1/3, the share one damping step absorbs, so the damping's size is the assumption); how degraded F20 is beyond it; and how far mutual aid reaches under severe telecom damage (60 % against 30 %).
 - **Entailed:** the order of the options (each removes a deviation or adds supply; the engine is monotone).
 

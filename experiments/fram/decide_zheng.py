@@ -10,7 +10,8 @@ Firefighters are F17's Resource (Table 1), a SourceToDemands flow in units of
 F17's need (100): the brigade supplies 100, the other earthquake-affected areas
 draw 100·d first, and under O2/O3 mutual-aid crews supply 100·d from minute a on,
 gated by the mobilising function F23. Swept: d, a, telecom severity s. Deadline
-from the source: Tank 63 fails 2,000–7,000 s after exposure (33–117 min).
+from the source: the ring of exposed tanks fails 2,000–7,000 s after exposure
+(33–117 min); Tank 63 at 2,000–2,500 s (Baser & Behnam 2020, Table 8).
 
 The sweeps run as the app runs them: each option is a project with one
 Temporal Simulation (5-minute periods, 0-120 min) whose Parameters are the
