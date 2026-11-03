@@ -138,14 +138,14 @@ Replaces the earlier demonstration, whose telecom and fire-water canvases and qu
 
 **F20 by option** (`results/decision_map.csv`), telecom at the declared level 3:
 
-| d | O0 plan | O1 two-way updates | O2, O3 + mutual aid |
+| d | I0 plan | I1 two-way updates | I2, I3 + mutual aid |
 |---|---|---|---|
 | < 0.25 | nominal | nominal | nominal |
 | 0.25–0.49 | severe (F12 and F17 coincide: the rule) | nominal | nominal |
 | ≥ 0.5 | severe | 3 | 3, nominal from a: the whole deadline band if a ≤ 30 min, part of it if a ≤ 110 |
 
 - Telecom at 2: two-way updates stop sufficing from d = 0.3 (F12 degrades again); mutual aid restores F20 up to d = 0.6 and not at 0.7, where the damaged telecom degrades the mobilisation.
-- O2 and O3 coincide everywhere: cancelling F5 and making it two-way have the same effect here.
+- I2 and I3 coincide everywhere: cancelling F5 and making it two-way have the same effect here.
 - Every line of the hand reading recorded at 882d4a1 held.
 - The thresholds 0.25 and 0.5 are the 4-level scale's served-ratio steps (ceil(ratio · 4)) acting through v2's damping; the paper reports them as where the choice changes on this scale.
 
@@ -153,38 +153,38 @@ Replaces the earlier demonstration, whose telecom and fire-water canvases and qu
 
 **Shapley on the plan at t = 0** (`results/decision_shapley.csv`; Operativity loss 0.197): F5 one-way 0.083, telecom 0.068, firefighters drawn away 0.046.
 
-The four options open in the app with their Temporal Simulation: `CASCADE-app/samples/public/fram/zheng_decision_O*.json`.
+The four options open in the app with their Temporal Simulation: `CASCADE-app/samples/public/fram/zheng_I*.json`.
 
 **Scale sensitivity** (declared at e084d58, TRANSLATION.md §4e; `results/decision_scale.csv`, `decision_scale_ref.csv`). The same model at N = 7 with v2 rescaled (two levels absorbed, imposed levels L → 2L − 1). Every line of the hand reading held; d = 0.4 under severe telecom, which serves exactly 6/7, came out not restored.
 
 | F20 (before → after the mutual aid) | N = 4 | N = 7 |
 |---|---|---|
-| O0, plan fails from | d = 0.3 | d = 0.2 |
-| O1 suffices up to (grid) | d = 0.4 | d = 0.4 |
-| O1 beyond, F20 at (normalised) | 0.67 | 0.83, 0.67, 0.67 |
-| O2/O3, s = 3 | nominal from a, every d | nominal from a, every d |
-| O2/O3, s = 2, restored up to | d = 0.6 | d = 0.3 |
+| I0, plan fails from | d = 0.3 | d = 0.2 |
+| I1 suffices up to (grid) | d = 0.4 | d = 0.4 |
+| I1 beyond, F20 at (normalised) | 0.67 | 0.83, 0.67, 0.67 |
+| I2/I3, s = 3 | nominal from a, every d | nominal from a, every d |
+| I2/I3, s = 2, restored up to | d = 0.6 | d = 0.3 |
 | reference point: Operativity, Shapley | 0.803 / 0.985 / 0.986 → 1.0; 0.083, 0.068, 0.046 | identical |
 
-- **Holds at both scales:** under the plan any shortfall of firefighters the scale registers fails F20 (Zheng's rule: late guidelines and missing firefighters together); two-way updates suffice up to 40 % drawn away on the grid; beyond, only mutual aid restores F20, before the whole ring's deadline, Tank 63's included, when it arrives by 30 minutes; O2 = O3; Shapley puts F5's one-way communication first.
+- **Holds at both scales:** under the plan any shortfall of firefighters the scale registers fails F20 (Zheng's rule: late guidelines and missing firefighters together); two-way updates suffice up to 40 % drawn away on the grid; beyond, only mutual aid restores F20, before the whole ring's deadline, Tank 63's included, when it arrives by 30 minutes; I2 = I3; Shapley puts F5's one-way communication first.
 - **Belongs to the scale:** the plan's exact threshold (1/4, 1/7: the smallest shortfall the scale registers); the exact two-way threshold (1/2, 3/7; it tends to 1/3, the share one damping step absorbs, so the damping's size is the assumption); how degraded F20 is beyond it; and how far mutual aid reaches under severe telecom damage (60 % against 30 %).
 - **Entailed:** the order of the options (each removes a deviation or adds supply; the engine is monotone).
 
 ## Decision model: Koriyama's recommendations on structure alone (`decide_koriyama.py`; declared at abd3314, TRANSLATION.md §4f)
 
-Togawa et al. give two qualitative recommendations and no capacities, call counts or deadline, so the procedure runs on structure: options K0 (as happened), K1 (R1, public communication), K2 (R2, evacuation behaviour held nominal), K3 (both), under reading A (119-call load exogenous, as the FRAM draws it) and B (calls follow evacuation, as the case narrative says: one model edit, an edge T6 → 119 calls at full dependency; re-encoded from two harness passes at d2adf31, results identical). Every line of the hand reading held.
+Togawa et al. give two qualitative recommendations and no capacities, call counts or deadline, so the procedure runs on structure: options I0 (as happened), I1 (R1, public communication), I2 (R2, evacuation behaviour held nominal), I3 (both), under reading A (119-call load exogenous, as the FRAM draws it) and B (calls follow evacuation, as the case narrative says: one model edit, an edge T6 → 119 calls at full dependency; re-encoded from two harness passes at d2adf31, results identical). Every line of the hand reading held.
 
 | Declared coding, N = 4 | T5 | T6 | T9 (Rescue) | Operativity A | Operativity B |
 |---|---|---|---|---|---|
-| K0 | 3 | 3 | 3 | 0.815 | 0.815 |
-| K1 (R1) | 4 | 3 | 3 | 0.926 | 0.926 |
-| K2 (R2) | 3 | 4 | A: 3, **B: 4** | 0.852 | 0.889 |
-| K3 (both) | 4 | 4 | A: 3, **B: 4** | 0.963 | 1.000 |
+| I0 | 3 | 3 | 3 | 0.815 | 0.815 |
+| I1 (R1) | 4 | 3 | 3 | 0.926 | 0.926 |
+| I2 (R2) | 3 | 4 | A: 3, **B: 4** | 0.852 | 0.889 |
+| I3 (both) | 4 | 4 | A: 3, **B: 4** | 0.963 | 1.000 |
 
 - **Under A no option restores Rescue** (night and the 119 calls coincide at T9). **Under B only R2 does**; R1 repairs more functions (T1, T2, T5) and leaves T6 and T9 degraded, because the environment and the night coincide at T6.
-- **Severity grid** (`koriyama_grid.csv`): K0 and K1 never restore Rescue; K2 and K3 restore it at 27 of 81 points under B and never under A. The order K0 ≤ K1, K2 ≤ K3 holds at every point (entailed).
+- **Severity grid** (`koriyama_grid.csv`): I0 and I1 never restore Rescue; I2 and I3 restore it at 27 of 81 points under B and never under A. The order I0 ≤ I1, I2 ≤ I3 holds at every point (entailed).
 - **Scale:** N = 7 gives the same table (normalised values identical).
-- **Shapley of K0** (loss 0.185): T1 0.060, T2 0.051, environment 0.041, night 0.026, 119 calls 0.007.
+- **Shapley of I0** (loss 0.185): T1 0.060, T2 0.051, environment 0.041, night 0.026, 119 calls 0.007.
 - What the integration shows: the FRAM draws the call load as exogenous, and under that reading none of the recommendations helps Rescue. The recommendations' effect on Rescue rests on an assumption the FRAM does not state (calls follow evacuation), which the model makes explicit.
 
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)

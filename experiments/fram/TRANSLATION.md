@@ -1,5 +1,7 @@
 # Translation v2 and per-case mappings
 
+> Notation (2026-11-03): the interventions are labelled I0–I3 in both cases, following the paper; they were O0–O3 (Zheng) and K0–K3 (Koriyama) when declared. The rule variant K2 keeps its name. The git history keeps each declaration verbatim.
+
 The single translation the paper uses (approved at Gate 1, 2026-10-27). Every
 experiment was declared in this file and committed **before** it ran; the git
 history keeps each declaration verbatim (log at the end). Code: the product's FMV importer, `CASCADE-backend/core/importers/xfmv/map.py` (ADR-0026), which `framkit/translate.py` re-exports; moving it there changed no result.
@@ -147,9 +149,9 @@ Compares the analysts' own recommendations under resources and time, on the conv
 - The event: Radio/Telephone and Internet/Telephone damaged (level 3), F5's one-way communication (level 3), firefighters limited because some are sent to other earthquake-affected areas (§4.2.1).
 - Firefighters are F17's Resource (Table 1); F20 receives them only through F17's output.
 - The deadline: Tank 63 and its neighbours fail 2,000–7,000 s after exposure (Fig. 6, after Cozzani 2006). (Note 2026-11-02, reading the source: Tank 63 itself at 2,000–2,500 s, Baser & Behnam 2020 Table 8; the band is the ring's. No result changes.)
-- The options, from §4.2.1–4.2.2: **O0** the plan; **O1** two-way updates (F5 not deviating); **O2** the first-round remedy (Fig. 9): O1 plus a function locating and mobilising other organisations' firefighters (F23: Input F2's guidelines, Resource Radio/Telephone); **O3** the second round: F5 cancelled (F7 takes F4's output, as C9) plus F23.
+- The options, from §4.2.1–4.2.2: **I0** the plan; **I1** two-way updates (F5 not deviating); **I2** the first-round remedy (Fig. 9): I1 plus a function locating and mobilising other organisations' firefighters (F23: Input F2's guidelines, Resource Radio/Telephone); **I3** the second round: F5 cancelled (F7 takes F4's output, as C9) plus F23.
 
-**The added layer.** Firefighters as a SourceToDemands flow, in units of F17's need (100): the brigade supplies 100; the other affected areas draw 100·d and are served first (priority); F17 demands 100, its served level entering its rule undamped (a shortfall is a shortfall). The event's level-3 on F17's background resource is replaced by this flow. Under O2 and O3 a mutual-aid source supplies 100·d from the arrival time a on, through a Requisite coupling from F23 (no mobilisation, no mutual aid). Nothing else is added.
+**The added layer.** Firefighters as a SourceToDemands flow, in units of F17's need (100): the brigade supplies 100; the other affected areas draw 100·d and are served first (priority); F17 demands 100, its served level entering its rule undamped (a shortfall is a shortfall). The event's level-3 on F17's background resource is replaced by this flow. Under I2 and I3 a mutual-aid source supplies 100·d from the arrival time a on, through a Requisite coupling from F23 (no mobilisation, no mutual aid). Nothing else is added.
 
 **Assumed and swept.** d ∈ {0, 0.1, …, 0.7} (share of the brigade drawn away); a ∈ {10, 20, …, 120} min; telecom severity s ∈ {3 (declared), 2}. Telecom is not repaired within the window. Time: 5-minute periods from 0 to 120 min.
 
@@ -159,10 +161,10 @@ Compares the analysts' own recommendations under resources and time, on the conv
 - The four options as projects with their Temporal Simulation, opening in the app (`CASCADE-app/samples/public/fram/`, Zheng is CC BY).
 
 **Recorded before running: the hand reading.**
-- O0: whenever more than a quarter of the brigade is drawn away (d ≥ 0.25: served ratio ≤ 0.75, F17 below nominal), F12 and F17 deviate together and the rule holds F20 severe: never met. With d < 0.25 F20 is nominal at once.
-- O1: F12 is nominal (as C8), so the rule never fires; F17's shortfall alone is damped. F20 nominal at once for d < 0.5, held at 3 for d ≥ 0.5: two-way updates suffice up to about half the brigade drawn away.
-- O2, O3: as O1 until the mutual aid arrives, nominal from a for every d. The deadline is met for d ≥ 0.5 only when a ≤ 117 min, and for the whole band when a ≤ 33 min.
-- s = 2: telecom severe reaches F12 even under O1 and degrades F23; two-way updates stop sufficing once d ≥ 0.25, and mutual aid may arrive reduced.
+- I0: whenever more than a quarter of the brigade is drawn away (d ≥ 0.25: served ratio ≤ 0.75, F17 below nominal), F12 and F17 deviate together and the rule holds F20 severe: never met. With d < 0.25 F20 is nominal at once.
+- I1: F12 is nominal (as C8), so the rule never fires; F17's shortfall alone is damped. F20 nominal at once for d < 0.5, held at 3 for d ≥ 0.5: two-way updates suffice up to about half the brigade drawn away.
+- I2, I3: as I1 until the mutual aid arrives, nominal from a for every d. The deadline is met for d ≥ 0.5 only when a ≤ 117 min, and for the whole band when a ≤ 33 min.
+- s = 2: telecom severe reaches F12 even under I1 and degrades F23; two-way updates stop sufficing once d ≥ 0.25, and mutual aid may arrive reduced.
 - These thresholds follow from v2's one-level damping and the linear served-ratio levels (ceil(ratio · 4)); the paper says so.
 
 ## 4e. Declared 2026-11-02: scale sensitivity of the decision model
@@ -177,11 +179,11 @@ Compares the analysts' own recommendations under resources and time, on the conv
 With these choices the logical part is the N = 4 model on the odd levels {1, 3, 5, 7}: min(worst + 2, second worst) maps them onto each other exactly. Only the served ratio of the crews flow gains the even levels, so the test isolates the resolution of the one quantity the decision turns on. (Kim, the one N = 7 case of RQ1, used one level of damping; that semantics is a different rule and is not tested here.)
 
 **Recorded before running: the hand reading** (L17 = ceil(7·(1 − d)) = 7, 7, 6, 5, 5, 4, 3, 3 for d = 0 … 0.7; at N = 4: 4, 4, 4, 3, 3, 2, 2, 2).
-- O0, s = 3: F20 severe from d = 0.2 (N = 4: from 0.3), as soon as F17 is below 7. The plan's threshold moves from 1/4 to 1/7.
-- O1, s = 3: F20 = min(L17 + 2, 7): nominal for d ≤ 0.4, 6 at d = 0.5, 5 at 0.6 and 0.7. On the grid two-way updates suffice up to d = 0.4 at both scales (exact threshold 1/2 at N = 4, 3/7 at N = 7). Beyond, F20 is never severe and is graded (6, 5, 5 against 3, 3, 3 at N = 4).
-- O2, O3, s = 3: as O1 until a; F23 is nominal (Radio at 5, absorbed), so the mutual aid supplies 100·d in full and F20 is nominal from a for every d. The deadline verdicts equal §4d's.
-- O1, s = 2: F12 deviates, so the rule fires from d = 0.2 (N = 4: 0.3).
-- O2, O3, s = 2: F23 at 5, the mutual aid carries (5 − 0.5)/7 of its supply, F17 is served 1 − 0.357·d. F20 is nominal from a for d ≤ 0.3, and not for d ≥ 0.5; d = 0.4 serves exactly 6/7, so its outcome is the flow's rounding. At N = 4 the mutual aid sufficed up to d = 0.6. **The claim "mutual aid restores F20 under severe telecom damage up to 60 % drawn away" belongs to the scale.**
+- I0, s = 3: F20 severe from d = 0.2 (N = 4: from 0.3), as soon as F17 is below 7. The plan's threshold moves from 1/4 to 1/7.
+- I1, s = 3: F20 = min(L17 + 2, 7): nominal for d ≤ 0.4, 6 at d = 0.5, 5 at 0.6 and 0.7. On the grid two-way updates suffice up to d = 0.4 at both scales (exact threshold 1/2 at N = 4, 3/7 at N = 7). Beyond, F20 is never severe and is graded (6, 5, 5 against 3, 3, 3 at N = 4).
+- I2, I3, s = 3: as I1 until a; F23 is nominal (Radio at 5, absorbed), so the mutual aid supplies 100·d in full and F20 is nominal from a for every d. The deadline verdicts equal §4d's.
+- I1, s = 2: F12 deviates, so the rule fires from d = 0.2 (N = 4: 0.3).
+- I2, I3, s = 2: F23 at 5, the mutual aid carries (5 − 0.5)/7 of its supply, F17 is served 1 − 0.357·d. F20 is nominal from a for d ≤ 0.3, and not for d ≥ 0.5; d = 0.4 serves exactly 6/7, so its outcome is the flow's rounding. At N = 4 the mutual aid sufficed up to d = 0.6. **The claim "mutual aid restores F20 under severe telecom damage up to 60 % drawn away" belongs to the scale.**
 - Reference point (d = 0.4, a = 30, s = 3): every level maps exactly (L17 = 5 ↔ 3), so the timeline and the Shapley shares equal §4d's.
 - The order of the options cannot change at any N: each option removes a deviation or adds supply, and the engine is monotone. It is entailed, and the paper says so.
 
@@ -195,25 +197,25 @@ The same procedure as §4d on Togawa et al. 2023 (CC BY-NC-ND: the transcription
 
 **Imported.** The converted FRAM under v2 and the event of RQ1 (§3): Public Communication levels 3 and 4 (T1, T2), the immediate environment, the night restriction and the 119-call load, each at 3.
 
-**Options** (edits, as in the claims C4–C6): **K0** the event as it happened; **K1** R1 (T1 and T2 do not deviate); **K2** R2 (T6 holds nominal: the framework absorbs what reaches it, the source's own words, §4.5.2); **K3** R1 + R2.
+**Options** (edits, as in the claims C4–C6): **I0** the event as it happened; **I1** R1 (T1 and T2 do not deviate); **I2** R2 (T6 holds nominal: the framework absorbs what reaches it, the source's own words, §4.5.2); **I3** R1 + R2.
 
 **The assumption the FRAM leaves implicit, made explicit and swept.** The FRAM treats the 119-call load as an external function, unrelated to evacuation, while the case narrative says the backlog came from residents who did not evacuate. Two readings are run: **A** (calls exogenous, as drawn): the call load stays at level 3 in every option; **B** (calls follow evacuation): the call load sits at the level T6 reaches in the option (two passes: T6 does not depend on the calls). The paper reports which answers hold under both.
 
 **Sweeps.** Severity: each event element independently at 1, 2, 3 (A: 3⁵ = 243 points; B: the call load is tied to T6, 3⁴ = 81); the scale: N = 4 and N = 7 (v2 rescaled as in §4e: damping absorbs 2 levels, imposed level L → 2L − 1).
 
-**Outputs** (`decide_koriyama.py`; `results/koriyama_options.csv`, `koriyama_grid.csv`, `koriyama_shapley.csv`).
+**Outputs** (`decide_koriyama.py`; `results/koriyama_interventions.csv`, `koriyama_grid.csv`, `koriyama_shapley.csv`).
 - Per (N, reading, option): the level of every function and Operativity (function levels, normalised (L − 1)/(N − 1)).
-- Per (N, reading, option): over the grid, the share of points where Rescue (T9) is nominal, and mean Operativity; plus whether the order K0 ≤ K1, K2 ≤ K3 holds at every point.
-- Shapley attribution of the Operativity loss of K0 (declared coding) to the five event elements.
+- Per (N, reading, option): over the grid, the share of points where Rescue (T9) is nominal, and mean Operativity; plus whether the order I0 ≤ I1, I2 ≤ I3 holds at every point.
+- Shapley attribution of the Operativity loss of I0 (declared coding) to the five event elements.
 
 **Recorded before running: the hand reading** (N = 4, declared coding).
-- A: no option restores Rescue (T9 stays at 3 because night and the 119 calls, both at 3, coincide). K1: T5 = 4, T6 = 3 (environment and night coincide at T6), T9 = 3. K2: T6 = 4, T5 = 3, T9 = 3. K3: T5 = 4, T6 = 4, T9 = 3.
-- B: calls sit at T6's level. K0, K1: T9 = 3. K2, K3: calls nominal, only night deviates at T9 and is absorbed: T9 = 4. So **under B, R2 restores Rescue and R1 alone does not**.
-- Operativity order at the declared coding: K0 < K2 < K1 < K3 under A (K1 repairs T1, T2, T5; K2 repairs T6 alone); under B, K2 gains T9 and passes K1 or ties it (not predicted).
+- A: no option restores Rescue (T9 stays at 3 because night and the 119 calls, both at 3, coincide). I1: T5 = 4, T6 = 3 (environment and night coincide at T6), T9 = 3. I2: T6 = 4, T5 = 3, T9 = 3. I3: T5 = 4, T6 = 4, T9 = 3.
+- B: calls sit at T6's level. I0, I1: T9 = 3. I2, I3: calls nominal, only night deviates at T9 and is absorbed: T9 = 4. So **under B, R2 restores Rescue and R1 alone does not**.
+- Operativity order at the declared coding: I0 < I2 < I1 < I3 under A (I1 repairs T1, T2, T5; I2 repairs T6 alone); under B, I2 gains T9 and passes I1 or ties it (not predicted).
 - N = 7: the same pattern (the logical part maps exactly onto the odd levels).
-- Over the grids the order K0 ≤ K1, K2 ≤ K3 holds at every point: each option only removes a deviation and the engine is monotone. This is entailed, and the paper says so.
+- Over the grids the order I0 ≤ I1, I2 ≤ I3 holds at every point: each option only removes a deviation and the engine is monotone. This is entailed, and the paper says so.
 - The Shapley ranking is not predicted.
-- What would count against the reading: under B, K1 restoring T9; under A, any option restoring it.
+- What would count against the reading: under B, I1 restoring T9; under A, any option restoring it.
 
 **Re-encoding, declared 2026-11-02 before running.** Reading B becomes a model edit in place of the harness's two passes: an edge from Evacuation Behaviour (T6) to the 119-call node, at full dependency (no damping, no rule), so the call load follows T6 within one propagation. It is the explicit form of the assumption the paper names. Expected: every `koriyama_*.csv` byte-identical.
 

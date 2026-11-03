@@ -1,417 +1,417 @@
-option,s,d,a,F20_before,F20_after,t_F20_min,deadline
-O0,3,0.0,-,4,4,0,met for the whole band
-O0,3,0.1,-,4,4,0,met for the whole band
-O0,3,0.2,-,4,4,0,met for the whole band
-O0,3,0.3,-,2,2,never,not met
-O0,3,0.4,-,2,2,never,not met
-O0,3,0.5,-,2,2,never,not met
-O0,3,0.6,-,2,2,never,not met
-O0,3,0.7,-,2,2,never,not met
-O0,2,0.0,-,4,4,0,met for the whole band
-O0,2,0.1,-,4,4,0,met for the whole band
-O0,2,0.2,-,4,4,0,met for the whole band
-O0,2,0.3,-,2,2,never,not met
-O0,2,0.4,-,2,2,never,not met
-O0,2,0.5,-,2,2,never,not met
-O0,2,0.6,-,2,2,never,not met
-O0,2,0.7,-,2,2,never,not met
-O1,3,0.0,-,4,4,0,met for the whole band
-O1,3,0.1,-,4,4,0,met for the whole band
-O1,3,0.2,-,4,4,0,met for the whole band
-O1,3,0.3,-,4,4,0,met for the whole band
-O1,3,0.4,-,4,4,0,met for the whole band
-O1,3,0.5,-,3,3,never,not met
-O1,3,0.6,-,3,3,never,not met
-O1,3,0.7,-,3,3,never,not met
-O1,2,0.0,-,4,4,0,met for the whole band
-O1,2,0.1,-,4,4,0,met for the whole band
-O1,2,0.2,-,4,4,0,met for the whole band
-O1,2,0.3,-,2,2,never,not met
-O1,2,0.4,-,2,2,never,not met
-O1,2,0.5,-,2,2,never,not met
-O1,2,0.6,-,2,2,never,not met
-O1,2,0.7,-,2,2,never,not met
-O2,3,0.0,10,4,4,0,met for the whole band
-O2,3,0.0,20,4,4,0,met for the whole band
-O2,3,0.0,30,4,4,0,met for the whole band
-O2,3,0.0,40,4,4,0,met for the whole band
-O2,3,0.0,50,4,4,0,met for the whole band
-O2,3,0.0,60,4,4,0,met for the whole band
-O2,3,0.0,70,4,4,0,met for the whole band
-O2,3,0.0,80,4,4,0,met for the whole band
-O2,3,0.0,90,4,4,0,met for the whole band
-O2,3,0.0,100,4,4,0,met for the whole band
-O2,3,0.0,110,4,4,0,met for the whole band
-O2,3,0.0,120,4,4,0,met for the whole band
-O2,3,0.1,10,4,4,0,met for the whole band
-O2,3,0.1,20,4,4,0,met for the whole band
-O2,3,0.1,30,4,4,0,met for the whole band
-O2,3,0.1,40,4,4,0,met for the whole band
-O2,3,0.1,50,4,4,0,met for the whole band
-O2,3,0.1,60,4,4,0,met for the whole band
-O2,3,0.1,70,4,4,0,met for the whole band
-O2,3,0.1,80,4,4,0,met for the whole band
-O2,3,0.1,90,4,4,0,met for the whole band
-O2,3,0.1,100,4,4,0,met for the whole band
-O2,3,0.1,110,4,4,0,met for the whole band
-O2,3,0.1,120,4,4,0,met for the whole band
-O2,3,0.2,10,4,4,0,met for the whole band
-O2,3,0.2,20,4,4,0,met for the whole band
-O2,3,0.2,30,4,4,0,met for the whole band
-O2,3,0.2,40,4,4,0,met for the whole band
-O2,3,0.2,50,4,4,0,met for the whole band
-O2,3,0.2,60,4,4,0,met for the whole band
-O2,3,0.2,70,4,4,0,met for the whole band
-O2,3,0.2,80,4,4,0,met for the whole band
-O2,3,0.2,90,4,4,0,met for the whole band
-O2,3,0.2,100,4,4,0,met for the whole band
-O2,3,0.2,110,4,4,0,met for the whole band
-O2,3,0.2,120,4,4,0,met for the whole band
-O2,3,0.3,10,4,4,0,met for the whole band
-O2,3,0.3,20,4,4,0,met for the whole band
-O2,3,0.3,30,4,4,0,met for the whole band
-O2,3,0.3,40,4,4,0,met for the whole band
-O2,3,0.3,50,4,4,0,met for the whole band
-O2,3,0.3,60,4,4,0,met for the whole band
-O2,3,0.3,70,4,4,0,met for the whole band
-O2,3,0.3,80,4,4,0,met for the whole band
-O2,3,0.3,90,4,4,0,met for the whole band
-O2,3,0.3,100,4,4,0,met for the whole band
-O2,3,0.3,110,4,4,0,met for the whole band
-O2,3,0.3,120,4,4,0,met for the whole band
-O2,3,0.4,10,4,4,0,met for the whole band
-O2,3,0.4,20,4,4,0,met for the whole band
-O2,3,0.4,30,4,4,0,met for the whole band
-O2,3,0.4,40,4,4,0,met for the whole band
-O2,3,0.4,50,4,4,0,met for the whole band
-O2,3,0.4,60,4,4,0,met for the whole band
-O2,3,0.4,70,4,4,0,met for the whole band
-O2,3,0.4,80,4,4,0,met for the whole band
-O2,3,0.4,90,4,4,0,met for the whole band
-O2,3,0.4,100,4,4,0,met for the whole band
-O2,3,0.4,110,4,4,0,met for the whole band
-O2,3,0.4,120,4,4,0,met for the whole band
-O2,3,0.5,10,3,4,10,met for the whole band
-O2,3,0.5,20,3,4,20,met for the whole band
-O2,3,0.5,30,3,4,30,met for the whole band
-O2,3,0.5,40,3,4,40,met for part of the band
-O2,3,0.5,50,3,4,50,met for part of the band
-O2,3,0.5,60,3,4,60,met for part of the band
-O2,3,0.5,70,3,4,70,met for part of the band
-O2,3,0.5,80,3,4,80,met for part of the band
-O2,3,0.5,90,3,4,90,met for part of the band
-O2,3,0.5,100,3,4,100,met for part of the band
-O2,3,0.5,110,3,4,110,met for part of the band
-O2,3,0.5,120,3,4,120,not met
-O2,3,0.6,10,3,4,10,met for the whole band
-O2,3,0.6,20,3,4,20,met for the whole band
-O2,3,0.6,30,3,4,30,met for the whole band
-O2,3,0.6,40,3,4,40,met for part of the band
-O2,3,0.6,50,3,4,50,met for part of the band
-O2,3,0.6,60,3,4,60,met for part of the band
-O2,3,0.6,70,3,4,70,met for part of the band
-O2,3,0.6,80,3,4,80,met for part of the band
-O2,3,0.6,90,3,4,90,met for part of the band
-O2,3,0.6,100,3,4,100,met for part of the band
-O2,3,0.6,110,3,4,110,met for part of the band
-O2,3,0.6,120,3,4,120,not met
-O2,3,0.7,10,3,4,10,met for the whole band
-O2,3,0.7,20,3,4,20,met for the whole band
-O2,3,0.7,30,3,4,30,met for the whole band
-O2,3,0.7,40,3,4,40,met for part of the band
-O2,3,0.7,50,3,4,50,met for part of the band
-O2,3,0.7,60,3,4,60,met for part of the band
-O2,3,0.7,70,3,4,70,met for part of the band
-O2,3,0.7,80,3,4,80,met for part of the band
-O2,3,0.7,90,3,4,90,met for part of the band
-O2,3,0.7,100,3,4,100,met for part of the band
-O2,3,0.7,110,3,4,110,met for part of the band
-O2,3,0.7,120,3,4,120,not met
-O2,2,0.0,10,4,4,0,met for the whole band
-O2,2,0.0,20,4,4,0,met for the whole band
-O2,2,0.0,30,4,4,0,met for the whole band
-O2,2,0.0,40,4,4,0,met for the whole band
-O2,2,0.0,50,4,4,0,met for the whole band
-O2,2,0.0,60,4,4,0,met for the whole band
-O2,2,0.0,70,4,4,0,met for the whole band
-O2,2,0.0,80,4,4,0,met for the whole band
-O2,2,0.0,90,4,4,0,met for the whole band
-O2,2,0.0,100,4,4,0,met for the whole band
-O2,2,0.0,110,4,4,0,met for the whole band
-O2,2,0.0,120,4,4,0,met for the whole band
-O2,2,0.1,10,4,4,0,met for the whole band
-O2,2,0.1,20,4,4,0,met for the whole band
-O2,2,0.1,30,4,4,0,met for the whole band
-O2,2,0.1,40,4,4,0,met for the whole band
-O2,2,0.1,50,4,4,0,met for the whole band
-O2,2,0.1,60,4,4,0,met for the whole band
-O2,2,0.1,70,4,4,0,met for the whole band
-O2,2,0.1,80,4,4,0,met for the whole band
-O2,2,0.1,90,4,4,0,met for the whole band
-O2,2,0.1,100,4,4,0,met for the whole band
-O2,2,0.1,110,4,4,0,met for the whole band
-O2,2,0.1,120,4,4,0,met for the whole band
-O2,2,0.2,10,4,4,0,met for the whole band
-O2,2,0.2,20,4,4,0,met for the whole band
-O2,2,0.2,30,4,4,0,met for the whole band
-O2,2,0.2,40,4,4,0,met for the whole band
-O2,2,0.2,50,4,4,0,met for the whole band
-O2,2,0.2,60,4,4,0,met for the whole band
-O2,2,0.2,70,4,4,0,met for the whole band
-O2,2,0.2,80,4,4,0,met for the whole band
-O2,2,0.2,90,4,4,0,met for the whole band
-O2,2,0.2,100,4,4,0,met for the whole band
-O2,2,0.2,110,4,4,0,met for the whole band
-O2,2,0.2,120,4,4,0,met for the whole band
-O2,2,0.3,10,2,4,10,met for the whole band
-O2,2,0.3,20,2,4,20,met for the whole band
-O2,2,0.3,30,2,4,30,met for the whole band
-O2,2,0.3,40,2,4,40,met for part of the band
-O2,2,0.3,50,2,4,50,met for part of the band
-O2,2,0.3,60,2,4,60,met for part of the band
-O2,2,0.3,70,2,4,70,met for part of the band
-O2,2,0.3,80,2,4,80,met for part of the band
-O2,2,0.3,90,2,4,90,met for part of the band
-O2,2,0.3,100,2,4,100,met for part of the band
-O2,2,0.3,110,2,4,110,met for part of the band
-O2,2,0.3,120,2,4,120,not met
-O2,2,0.4,10,2,4,10,met for the whole band
-O2,2,0.4,20,2,4,20,met for the whole band
-O2,2,0.4,30,2,4,30,met for the whole band
-O2,2,0.4,40,2,4,40,met for part of the band
-O2,2,0.4,50,2,4,50,met for part of the band
-O2,2,0.4,60,2,4,60,met for part of the band
-O2,2,0.4,70,2,4,70,met for part of the band
-O2,2,0.4,80,2,4,80,met for part of the band
-O2,2,0.4,90,2,4,90,met for part of the band
-O2,2,0.4,100,2,4,100,met for part of the band
-O2,2,0.4,110,2,4,110,met for part of the band
-O2,2,0.4,120,2,4,120,not met
-O2,2,0.5,10,2,4,10,met for the whole band
-O2,2,0.5,20,2,4,20,met for the whole band
-O2,2,0.5,30,2,4,30,met for the whole band
-O2,2,0.5,40,2,4,40,met for part of the band
-O2,2,0.5,50,2,4,50,met for part of the band
-O2,2,0.5,60,2,4,60,met for part of the band
-O2,2,0.5,70,2,4,70,met for part of the band
-O2,2,0.5,80,2,4,80,met for part of the band
-O2,2,0.5,90,2,4,90,met for part of the band
-O2,2,0.5,100,2,4,100,met for part of the band
-O2,2,0.5,110,2,4,110,met for part of the band
-O2,2,0.5,120,2,4,120,not met
-O2,2,0.6,10,2,4,10,met for the whole band
-O2,2,0.6,20,2,4,20,met for the whole band
-O2,2,0.6,30,2,4,30,met for the whole band
-O2,2,0.6,40,2,4,40,met for part of the band
-O2,2,0.6,50,2,4,50,met for part of the band
-O2,2,0.6,60,2,4,60,met for part of the band
-O2,2,0.6,70,2,4,70,met for part of the band
-O2,2,0.6,80,2,4,80,met for part of the band
-O2,2,0.6,90,2,4,90,met for part of the band
-O2,2,0.6,100,2,4,100,met for part of the band
-O2,2,0.6,110,2,4,110,met for part of the band
-O2,2,0.6,120,2,4,120,not met
-O2,2,0.7,10,2,2,never,not met
-O2,2,0.7,20,2,2,never,not met
-O2,2,0.7,30,2,2,never,not met
-O2,2,0.7,40,2,2,never,not met
-O2,2,0.7,50,2,2,never,not met
-O2,2,0.7,60,2,2,never,not met
-O2,2,0.7,70,2,2,never,not met
-O2,2,0.7,80,2,2,never,not met
-O2,2,0.7,90,2,2,never,not met
-O2,2,0.7,100,2,2,never,not met
-O2,2,0.7,110,2,2,never,not met
-O2,2,0.7,120,2,2,never,not met
-O3,3,0.0,10,4,4,0,met for the whole band
-O3,3,0.0,20,4,4,0,met for the whole band
-O3,3,0.0,30,4,4,0,met for the whole band
-O3,3,0.0,40,4,4,0,met for the whole band
-O3,3,0.0,50,4,4,0,met for the whole band
-O3,3,0.0,60,4,4,0,met for the whole band
-O3,3,0.0,70,4,4,0,met for the whole band
-O3,3,0.0,80,4,4,0,met for the whole band
-O3,3,0.0,90,4,4,0,met for the whole band
-O3,3,0.0,100,4,4,0,met for the whole band
-O3,3,0.0,110,4,4,0,met for the whole band
-O3,3,0.0,120,4,4,0,met for the whole band
-O3,3,0.1,10,4,4,0,met for the whole band
-O3,3,0.1,20,4,4,0,met for the whole band
-O3,3,0.1,30,4,4,0,met for the whole band
-O3,3,0.1,40,4,4,0,met for the whole band
-O3,3,0.1,50,4,4,0,met for the whole band
-O3,3,0.1,60,4,4,0,met for the whole band
-O3,3,0.1,70,4,4,0,met for the whole band
-O3,3,0.1,80,4,4,0,met for the whole band
-O3,3,0.1,90,4,4,0,met for the whole band
-O3,3,0.1,100,4,4,0,met for the whole band
-O3,3,0.1,110,4,4,0,met for the whole band
-O3,3,0.1,120,4,4,0,met for the whole band
-O3,3,0.2,10,4,4,0,met for the whole band
-O3,3,0.2,20,4,4,0,met for the whole band
-O3,3,0.2,30,4,4,0,met for the whole band
-O3,3,0.2,40,4,4,0,met for the whole band
-O3,3,0.2,50,4,4,0,met for the whole band
-O3,3,0.2,60,4,4,0,met for the whole band
-O3,3,0.2,70,4,4,0,met for the whole band
-O3,3,0.2,80,4,4,0,met for the whole band
-O3,3,0.2,90,4,4,0,met for the whole band
-O3,3,0.2,100,4,4,0,met for the whole band
-O3,3,0.2,110,4,4,0,met for the whole band
-O3,3,0.2,120,4,4,0,met for the whole band
-O3,3,0.3,10,4,4,0,met for the whole band
-O3,3,0.3,20,4,4,0,met for the whole band
-O3,3,0.3,30,4,4,0,met for the whole band
-O3,3,0.3,40,4,4,0,met for the whole band
-O3,3,0.3,50,4,4,0,met for the whole band
-O3,3,0.3,60,4,4,0,met for the whole band
-O3,3,0.3,70,4,4,0,met for the whole band
-O3,3,0.3,80,4,4,0,met for the whole band
-O3,3,0.3,90,4,4,0,met for the whole band
-O3,3,0.3,100,4,4,0,met for the whole band
-O3,3,0.3,110,4,4,0,met for the whole band
-O3,3,0.3,120,4,4,0,met for the whole band
-O3,3,0.4,10,4,4,0,met for the whole band
-O3,3,0.4,20,4,4,0,met for the whole band
-O3,3,0.4,30,4,4,0,met for the whole band
-O3,3,0.4,40,4,4,0,met for the whole band
-O3,3,0.4,50,4,4,0,met for the whole band
-O3,3,0.4,60,4,4,0,met for the whole band
-O3,3,0.4,70,4,4,0,met for the whole band
-O3,3,0.4,80,4,4,0,met for the whole band
-O3,3,0.4,90,4,4,0,met for the whole band
-O3,3,0.4,100,4,4,0,met for the whole band
-O3,3,0.4,110,4,4,0,met for the whole band
-O3,3,0.4,120,4,4,0,met for the whole band
-O3,3,0.5,10,3,4,10,met for the whole band
-O3,3,0.5,20,3,4,20,met for the whole band
-O3,3,0.5,30,3,4,30,met for the whole band
-O3,3,0.5,40,3,4,40,met for part of the band
-O3,3,0.5,50,3,4,50,met for part of the band
-O3,3,0.5,60,3,4,60,met for part of the band
-O3,3,0.5,70,3,4,70,met for part of the band
-O3,3,0.5,80,3,4,80,met for part of the band
-O3,3,0.5,90,3,4,90,met for part of the band
-O3,3,0.5,100,3,4,100,met for part of the band
-O3,3,0.5,110,3,4,110,met for part of the band
-O3,3,0.5,120,3,4,120,not met
-O3,3,0.6,10,3,4,10,met for the whole band
-O3,3,0.6,20,3,4,20,met for the whole band
-O3,3,0.6,30,3,4,30,met for the whole band
-O3,3,0.6,40,3,4,40,met for part of the band
-O3,3,0.6,50,3,4,50,met for part of the band
-O3,3,0.6,60,3,4,60,met for part of the band
-O3,3,0.6,70,3,4,70,met for part of the band
-O3,3,0.6,80,3,4,80,met for part of the band
-O3,3,0.6,90,3,4,90,met for part of the band
-O3,3,0.6,100,3,4,100,met for part of the band
-O3,3,0.6,110,3,4,110,met for part of the band
-O3,3,0.6,120,3,4,120,not met
-O3,3,0.7,10,3,4,10,met for the whole band
-O3,3,0.7,20,3,4,20,met for the whole band
-O3,3,0.7,30,3,4,30,met for the whole band
-O3,3,0.7,40,3,4,40,met for part of the band
-O3,3,0.7,50,3,4,50,met for part of the band
-O3,3,0.7,60,3,4,60,met for part of the band
-O3,3,0.7,70,3,4,70,met for part of the band
-O3,3,0.7,80,3,4,80,met for part of the band
-O3,3,0.7,90,3,4,90,met for part of the band
-O3,3,0.7,100,3,4,100,met for part of the band
-O3,3,0.7,110,3,4,110,met for part of the band
-O3,3,0.7,120,3,4,120,not met
-O3,2,0.0,10,4,4,0,met for the whole band
-O3,2,0.0,20,4,4,0,met for the whole band
-O3,2,0.0,30,4,4,0,met for the whole band
-O3,2,0.0,40,4,4,0,met for the whole band
-O3,2,0.0,50,4,4,0,met for the whole band
-O3,2,0.0,60,4,4,0,met for the whole band
-O3,2,0.0,70,4,4,0,met for the whole band
-O3,2,0.0,80,4,4,0,met for the whole band
-O3,2,0.0,90,4,4,0,met for the whole band
-O3,2,0.0,100,4,4,0,met for the whole band
-O3,2,0.0,110,4,4,0,met for the whole band
-O3,2,0.0,120,4,4,0,met for the whole band
-O3,2,0.1,10,4,4,0,met for the whole band
-O3,2,0.1,20,4,4,0,met for the whole band
-O3,2,0.1,30,4,4,0,met for the whole band
-O3,2,0.1,40,4,4,0,met for the whole band
-O3,2,0.1,50,4,4,0,met for the whole band
-O3,2,0.1,60,4,4,0,met for the whole band
-O3,2,0.1,70,4,4,0,met for the whole band
-O3,2,0.1,80,4,4,0,met for the whole band
-O3,2,0.1,90,4,4,0,met for the whole band
-O3,2,0.1,100,4,4,0,met for the whole band
-O3,2,0.1,110,4,4,0,met for the whole band
-O3,2,0.1,120,4,4,0,met for the whole band
-O3,2,0.2,10,4,4,0,met for the whole band
-O3,2,0.2,20,4,4,0,met for the whole band
-O3,2,0.2,30,4,4,0,met for the whole band
-O3,2,0.2,40,4,4,0,met for the whole band
-O3,2,0.2,50,4,4,0,met for the whole band
-O3,2,0.2,60,4,4,0,met for the whole band
-O3,2,0.2,70,4,4,0,met for the whole band
-O3,2,0.2,80,4,4,0,met for the whole band
-O3,2,0.2,90,4,4,0,met for the whole band
-O3,2,0.2,100,4,4,0,met for the whole band
-O3,2,0.2,110,4,4,0,met for the whole band
-O3,2,0.2,120,4,4,0,met for the whole band
-O3,2,0.3,10,2,4,10,met for the whole band
-O3,2,0.3,20,2,4,20,met for the whole band
-O3,2,0.3,30,2,4,30,met for the whole band
-O3,2,0.3,40,2,4,40,met for part of the band
-O3,2,0.3,50,2,4,50,met for part of the band
-O3,2,0.3,60,2,4,60,met for part of the band
-O3,2,0.3,70,2,4,70,met for part of the band
-O3,2,0.3,80,2,4,80,met for part of the band
-O3,2,0.3,90,2,4,90,met for part of the band
-O3,2,0.3,100,2,4,100,met for part of the band
-O3,2,0.3,110,2,4,110,met for part of the band
-O3,2,0.3,120,2,4,120,not met
-O3,2,0.4,10,2,4,10,met for the whole band
-O3,2,0.4,20,2,4,20,met for the whole band
-O3,2,0.4,30,2,4,30,met for the whole band
-O3,2,0.4,40,2,4,40,met for part of the band
-O3,2,0.4,50,2,4,50,met for part of the band
-O3,2,0.4,60,2,4,60,met for part of the band
-O3,2,0.4,70,2,4,70,met for part of the band
-O3,2,0.4,80,2,4,80,met for part of the band
-O3,2,0.4,90,2,4,90,met for part of the band
-O3,2,0.4,100,2,4,100,met for part of the band
-O3,2,0.4,110,2,4,110,met for part of the band
-O3,2,0.4,120,2,4,120,not met
-O3,2,0.5,10,2,4,10,met for the whole band
-O3,2,0.5,20,2,4,20,met for the whole band
-O3,2,0.5,30,2,4,30,met for the whole band
-O3,2,0.5,40,2,4,40,met for part of the band
-O3,2,0.5,50,2,4,50,met for part of the band
-O3,2,0.5,60,2,4,60,met for part of the band
-O3,2,0.5,70,2,4,70,met for part of the band
-O3,2,0.5,80,2,4,80,met for part of the band
-O3,2,0.5,90,2,4,90,met for part of the band
-O3,2,0.5,100,2,4,100,met for part of the band
-O3,2,0.5,110,2,4,110,met for part of the band
-O3,2,0.5,120,2,4,120,not met
-O3,2,0.6,10,2,4,10,met for the whole band
-O3,2,0.6,20,2,4,20,met for the whole band
-O3,2,0.6,30,2,4,30,met for the whole band
-O3,2,0.6,40,2,4,40,met for part of the band
-O3,2,0.6,50,2,4,50,met for part of the band
-O3,2,0.6,60,2,4,60,met for part of the band
-O3,2,0.6,70,2,4,70,met for part of the band
-O3,2,0.6,80,2,4,80,met for part of the band
-O3,2,0.6,90,2,4,90,met for part of the band
-O3,2,0.6,100,2,4,100,met for part of the band
-O3,2,0.6,110,2,4,110,met for part of the band
-O3,2,0.6,120,2,4,120,not met
-O3,2,0.7,10,2,2,never,not met
-O3,2,0.7,20,2,2,never,not met
-O3,2,0.7,30,2,2,never,not met
-O3,2,0.7,40,2,2,never,not met
-O3,2,0.7,50,2,2,never,not met
-O3,2,0.7,60,2,2,never,not met
-O3,2,0.7,70,2,2,never,not met
-O3,2,0.7,80,2,2,never,not met
-O3,2,0.7,90,2,2,never,not met
-O3,2,0.7,100,2,2,never,not met
-O3,2,0.7,110,2,2,never,not met
-O3,2,0.7,120,2,2,never,not met
+intervention,s,d,a,F20_before,F20_after,t_F20_min,deadline
+I0,3,0.0,-,4,4,0,met for the whole band
+I0,3,0.1,-,4,4,0,met for the whole band
+I0,3,0.2,-,4,4,0,met for the whole band
+I0,3,0.3,-,2,2,never,not met
+I0,3,0.4,-,2,2,never,not met
+I0,3,0.5,-,2,2,never,not met
+I0,3,0.6,-,2,2,never,not met
+I0,3,0.7,-,2,2,never,not met
+I0,2,0.0,-,4,4,0,met for the whole band
+I0,2,0.1,-,4,4,0,met for the whole band
+I0,2,0.2,-,4,4,0,met for the whole band
+I0,2,0.3,-,2,2,never,not met
+I0,2,0.4,-,2,2,never,not met
+I0,2,0.5,-,2,2,never,not met
+I0,2,0.6,-,2,2,never,not met
+I0,2,0.7,-,2,2,never,not met
+I1,3,0.0,-,4,4,0,met for the whole band
+I1,3,0.1,-,4,4,0,met for the whole band
+I1,3,0.2,-,4,4,0,met for the whole band
+I1,3,0.3,-,4,4,0,met for the whole band
+I1,3,0.4,-,4,4,0,met for the whole band
+I1,3,0.5,-,3,3,never,not met
+I1,3,0.6,-,3,3,never,not met
+I1,3,0.7,-,3,3,never,not met
+I1,2,0.0,-,4,4,0,met for the whole band
+I1,2,0.1,-,4,4,0,met for the whole band
+I1,2,0.2,-,4,4,0,met for the whole band
+I1,2,0.3,-,2,2,never,not met
+I1,2,0.4,-,2,2,never,not met
+I1,2,0.5,-,2,2,never,not met
+I1,2,0.6,-,2,2,never,not met
+I1,2,0.7,-,2,2,never,not met
+I2,3,0.0,10,4,4,0,met for the whole band
+I2,3,0.0,20,4,4,0,met for the whole band
+I2,3,0.0,30,4,4,0,met for the whole band
+I2,3,0.0,40,4,4,0,met for the whole band
+I2,3,0.0,50,4,4,0,met for the whole band
+I2,3,0.0,60,4,4,0,met for the whole band
+I2,3,0.0,70,4,4,0,met for the whole band
+I2,3,0.0,80,4,4,0,met for the whole band
+I2,3,0.0,90,4,4,0,met for the whole band
+I2,3,0.0,100,4,4,0,met for the whole band
+I2,3,0.0,110,4,4,0,met for the whole band
+I2,3,0.0,120,4,4,0,met for the whole band
+I2,3,0.1,10,4,4,0,met for the whole band
+I2,3,0.1,20,4,4,0,met for the whole band
+I2,3,0.1,30,4,4,0,met for the whole band
+I2,3,0.1,40,4,4,0,met for the whole band
+I2,3,0.1,50,4,4,0,met for the whole band
+I2,3,0.1,60,4,4,0,met for the whole band
+I2,3,0.1,70,4,4,0,met for the whole band
+I2,3,0.1,80,4,4,0,met for the whole band
+I2,3,0.1,90,4,4,0,met for the whole band
+I2,3,0.1,100,4,4,0,met for the whole band
+I2,3,0.1,110,4,4,0,met for the whole band
+I2,3,0.1,120,4,4,0,met for the whole band
+I2,3,0.2,10,4,4,0,met for the whole band
+I2,3,0.2,20,4,4,0,met for the whole band
+I2,3,0.2,30,4,4,0,met for the whole band
+I2,3,0.2,40,4,4,0,met for the whole band
+I2,3,0.2,50,4,4,0,met for the whole band
+I2,3,0.2,60,4,4,0,met for the whole band
+I2,3,0.2,70,4,4,0,met for the whole band
+I2,3,0.2,80,4,4,0,met for the whole band
+I2,3,0.2,90,4,4,0,met for the whole band
+I2,3,0.2,100,4,4,0,met for the whole band
+I2,3,0.2,110,4,4,0,met for the whole band
+I2,3,0.2,120,4,4,0,met for the whole band
+I2,3,0.3,10,4,4,0,met for the whole band
+I2,3,0.3,20,4,4,0,met for the whole band
+I2,3,0.3,30,4,4,0,met for the whole band
+I2,3,0.3,40,4,4,0,met for the whole band
+I2,3,0.3,50,4,4,0,met for the whole band
+I2,3,0.3,60,4,4,0,met for the whole band
+I2,3,0.3,70,4,4,0,met for the whole band
+I2,3,0.3,80,4,4,0,met for the whole band
+I2,3,0.3,90,4,4,0,met for the whole band
+I2,3,0.3,100,4,4,0,met for the whole band
+I2,3,0.3,110,4,4,0,met for the whole band
+I2,3,0.3,120,4,4,0,met for the whole band
+I2,3,0.4,10,4,4,0,met for the whole band
+I2,3,0.4,20,4,4,0,met for the whole band
+I2,3,0.4,30,4,4,0,met for the whole band
+I2,3,0.4,40,4,4,0,met for the whole band
+I2,3,0.4,50,4,4,0,met for the whole band
+I2,3,0.4,60,4,4,0,met for the whole band
+I2,3,0.4,70,4,4,0,met for the whole band
+I2,3,0.4,80,4,4,0,met for the whole band
+I2,3,0.4,90,4,4,0,met for the whole band
+I2,3,0.4,100,4,4,0,met for the whole band
+I2,3,0.4,110,4,4,0,met for the whole band
+I2,3,0.4,120,4,4,0,met for the whole band
+I2,3,0.5,10,3,4,10,met for the whole band
+I2,3,0.5,20,3,4,20,met for the whole band
+I2,3,0.5,30,3,4,30,met for the whole band
+I2,3,0.5,40,3,4,40,met for part of the band
+I2,3,0.5,50,3,4,50,met for part of the band
+I2,3,0.5,60,3,4,60,met for part of the band
+I2,3,0.5,70,3,4,70,met for part of the band
+I2,3,0.5,80,3,4,80,met for part of the band
+I2,3,0.5,90,3,4,90,met for part of the band
+I2,3,0.5,100,3,4,100,met for part of the band
+I2,3,0.5,110,3,4,110,met for part of the band
+I2,3,0.5,120,3,4,120,not met
+I2,3,0.6,10,3,4,10,met for the whole band
+I2,3,0.6,20,3,4,20,met for the whole band
+I2,3,0.6,30,3,4,30,met for the whole band
+I2,3,0.6,40,3,4,40,met for part of the band
+I2,3,0.6,50,3,4,50,met for part of the band
+I2,3,0.6,60,3,4,60,met for part of the band
+I2,3,0.6,70,3,4,70,met for part of the band
+I2,3,0.6,80,3,4,80,met for part of the band
+I2,3,0.6,90,3,4,90,met for part of the band
+I2,3,0.6,100,3,4,100,met for part of the band
+I2,3,0.6,110,3,4,110,met for part of the band
+I2,3,0.6,120,3,4,120,not met
+I2,3,0.7,10,3,4,10,met for the whole band
+I2,3,0.7,20,3,4,20,met for the whole band
+I2,3,0.7,30,3,4,30,met for the whole band
+I2,3,0.7,40,3,4,40,met for part of the band
+I2,3,0.7,50,3,4,50,met for part of the band
+I2,3,0.7,60,3,4,60,met for part of the band
+I2,3,0.7,70,3,4,70,met for part of the band
+I2,3,0.7,80,3,4,80,met for part of the band
+I2,3,0.7,90,3,4,90,met for part of the band
+I2,3,0.7,100,3,4,100,met for part of the band
+I2,3,0.7,110,3,4,110,met for part of the band
+I2,3,0.7,120,3,4,120,not met
+I2,2,0.0,10,4,4,0,met for the whole band
+I2,2,0.0,20,4,4,0,met for the whole band
+I2,2,0.0,30,4,4,0,met for the whole band
+I2,2,0.0,40,4,4,0,met for the whole band
+I2,2,0.0,50,4,4,0,met for the whole band
+I2,2,0.0,60,4,4,0,met for the whole band
+I2,2,0.0,70,4,4,0,met for the whole band
+I2,2,0.0,80,4,4,0,met for the whole band
+I2,2,0.0,90,4,4,0,met for the whole band
+I2,2,0.0,100,4,4,0,met for the whole band
+I2,2,0.0,110,4,4,0,met for the whole band
+I2,2,0.0,120,4,4,0,met for the whole band
+I2,2,0.1,10,4,4,0,met for the whole band
+I2,2,0.1,20,4,4,0,met for the whole band
+I2,2,0.1,30,4,4,0,met for the whole band
+I2,2,0.1,40,4,4,0,met for the whole band
+I2,2,0.1,50,4,4,0,met for the whole band
+I2,2,0.1,60,4,4,0,met for the whole band
+I2,2,0.1,70,4,4,0,met for the whole band
+I2,2,0.1,80,4,4,0,met for the whole band
+I2,2,0.1,90,4,4,0,met for the whole band
+I2,2,0.1,100,4,4,0,met for the whole band
+I2,2,0.1,110,4,4,0,met for the whole band
+I2,2,0.1,120,4,4,0,met for the whole band
+I2,2,0.2,10,4,4,0,met for the whole band
+I2,2,0.2,20,4,4,0,met for the whole band
+I2,2,0.2,30,4,4,0,met for the whole band
+I2,2,0.2,40,4,4,0,met for the whole band
+I2,2,0.2,50,4,4,0,met for the whole band
+I2,2,0.2,60,4,4,0,met for the whole band
+I2,2,0.2,70,4,4,0,met for the whole band
+I2,2,0.2,80,4,4,0,met for the whole band
+I2,2,0.2,90,4,4,0,met for the whole band
+I2,2,0.2,100,4,4,0,met for the whole band
+I2,2,0.2,110,4,4,0,met for the whole band
+I2,2,0.2,120,4,4,0,met for the whole band
+I2,2,0.3,10,2,4,10,met for the whole band
+I2,2,0.3,20,2,4,20,met for the whole band
+I2,2,0.3,30,2,4,30,met for the whole band
+I2,2,0.3,40,2,4,40,met for part of the band
+I2,2,0.3,50,2,4,50,met for part of the band
+I2,2,0.3,60,2,4,60,met for part of the band
+I2,2,0.3,70,2,4,70,met for part of the band
+I2,2,0.3,80,2,4,80,met for part of the band
+I2,2,0.3,90,2,4,90,met for part of the band
+I2,2,0.3,100,2,4,100,met for part of the band
+I2,2,0.3,110,2,4,110,met for part of the band
+I2,2,0.3,120,2,4,120,not met
+I2,2,0.4,10,2,4,10,met for the whole band
+I2,2,0.4,20,2,4,20,met for the whole band
+I2,2,0.4,30,2,4,30,met for the whole band
+I2,2,0.4,40,2,4,40,met for part of the band
+I2,2,0.4,50,2,4,50,met for part of the band
+I2,2,0.4,60,2,4,60,met for part of the band
+I2,2,0.4,70,2,4,70,met for part of the band
+I2,2,0.4,80,2,4,80,met for part of the band
+I2,2,0.4,90,2,4,90,met for part of the band
+I2,2,0.4,100,2,4,100,met for part of the band
+I2,2,0.4,110,2,4,110,met for part of the band
+I2,2,0.4,120,2,4,120,not met
+I2,2,0.5,10,2,4,10,met for the whole band
+I2,2,0.5,20,2,4,20,met for the whole band
+I2,2,0.5,30,2,4,30,met for the whole band
+I2,2,0.5,40,2,4,40,met for part of the band
+I2,2,0.5,50,2,4,50,met for part of the band
+I2,2,0.5,60,2,4,60,met for part of the band
+I2,2,0.5,70,2,4,70,met for part of the band
+I2,2,0.5,80,2,4,80,met for part of the band
+I2,2,0.5,90,2,4,90,met for part of the band
+I2,2,0.5,100,2,4,100,met for part of the band
+I2,2,0.5,110,2,4,110,met for part of the band
+I2,2,0.5,120,2,4,120,not met
+I2,2,0.6,10,2,4,10,met for the whole band
+I2,2,0.6,20,2,4,20,met for the whole band
+I2,2,0.6,30,2,4,30,met for the whole band
+I2,2,0.6,40,2,4,40,met for part of the band
+I2,2,0.6,50,2,4,50,met for part of the band
+I2,2,0.6,60,2,4,60,met for part of the band
+I2,2,0.6,70,2,4,70,met for part of the band
+I2,2,0.6,80,2,4,80,met for part of the band
+I2,2,0.6,90,2,4,90,met for part of the band
+I2,2,0.6,100,2,4,100,met for part of the band
+I2,2,0.6,110,2,4,110,met for part of the band
+I2,2,0.6,120,2,4,120,not met
+I2,2,0.7,10,2,2,never,not met
+I2,2,0.7,20,2,2,never,not met
+I2,2,0.7,30,2,2,never,not met
+I2,2,0.7,40,2,2,never,not met
+I2,2,0.7,50,2,2,never,not met
+I2,2,0.7,60,2,2,never,not met
+I2,2,0.7,70,2,2,never,not met
+I2,2,0.7,80,2,2,never,not met
+I2,2,0.7,90,2,2,never,not met
+I2,2,0.7,100,2,2,never,not met
+I2,2,0.7,110,2,2,never,not met
+I2,2,0.7,120,2,2,never,not met
+I3,3,0.0,10,4,4,0,met for the whole band
+I3,3,0.0,20,4,4,0,met for the whole band
+I3,3,0.0,30,4,4,0,met for the whole band
+I3,3,0.0,40,4,4,0,met for the whole band
+I3,3,0.0,50,4,4,0,met for the whole band
+I3,3,0.0,60,4,4,0,met for the whole band
+I3,3,0.0,70,4,4,0,met for the whole band
+I3,3,0.0,80,4,4,0,met for the whole band
+I3,3,0.0,90,4,4,0,met for the whole band
+I3,3,0.0,100,4,4,0,met for the whole band
+I3,3,0.0,110,4,4,0,met for the whole band
+I3,3,0.0,120,4,4,0,met for the whole band
+I3,3,0.1,10,4,4,0,met for the whole band
+I3,3,0.1,20,4,4,0,met for the whole band
+I3,3,0.1,30,4,4,0,met for the whole band
+I3,3,0.1,40,4,4,0,met for the whole band
+I3,3,0.1,50,4,4,0,met for the whole band
+I3,3,0.1,60,4,4,0,met for the whole band
+I3,3,0.1,70,4,4,0,met for the whole band
+I3,3,0.1,80,4,4,0,met for the whole band
+I3,3,0.1,90,4,4,0,met for the whole band
+I3,3,0.1,100,4,4,0,met for the whole band
+I3,3,0.1,110,4,4,0,met for the whole band
+I3,3,0.1,120,4,4,0,met for the whole band
+I3,3,0.2,10,4,4,0,met for the whole band
+I3,3,0.2,20,4,4,0,met for the whole band
+I3,3,0.2,30,4,4,0,met for the whole band
+I3,3,0.2,40,4,4,0,met for the whole band
+I3,3,0.2,50,4,4,0,met for the whole band
+I3,3,0.2,60,4,4,0,met for the whole band
+I3,3,0.2,70,4,4,0,met for the whole band
+I3,3,0.2,80,4,4,0,met for the whole band
+I3,3,0.2,90,4,4,0,met for the whole band
+I3,3,0.2,100,4,4,0,met for the whole band
+I3,3,0.2,110,4,4,0,met for the whole band
+I3,3,0.2,120,4,4,0,met for the whole band
+I3,3,0.3,10,4,4,0,met for the whole band
+I3,3,0.3,20,4,4,0,met for the whole band
+I3,3,0.3,30,4,4,0,met for the whole band
+I3,3,0.3,40,4,4,0,met for the whole band
+I3,3,0.3,50,4,4,0,met for the whole band
+I3,3,0.3,60,4,4,0,met for the whole band
+I3,3,0.3,70,4,4,0,met for the whole band
+I3,3,0.3,80,4,4,0,met for the whole band
+I3,3,0.3,90,4,4,0,met for the whole band
+I3,3,0.3,100,4,4,0,met for the whole band
+I3,3,0.3,110,4,4,0,met for the whole band
+I3,3,0.3,120,4,4,0,met for the whole band
+I3,3,0.4,10,4,4,0,met for the whole band
+I3,3,0.4,20,4,4,0,met for the whole band
+I3,3,0.4,30,4,4,0,met for the whole band
+I3,3,0.4,40,4,4,0,met for the whole band
+I3,3,0.4,50,4,4,0,met for the whole band
+I3,3,0.4,60,4,4,0,met for the whole band
+I3,3,0.4,70,4,4,0,met for the whole band
+I3,3,0.4,80,4,4,0,met for the whole band
+I3,3,0.4,90,4,4,0,met for the whole band
+I3,3,0.4,100,4,4,0,met for the whole band
+I3,3,0.4,110,4,4,0,met for the whole band
+I3,3,0.4,120,4,4,0,met for the whole band
+I3,3,0.5,10,3,4,10,met for the whole band
+I3,3,0.5,20,3,4,20,met for the whole band
+I3,3,0.5,30,3,4,30,met for the whole band
+I3,3,0.5,40,3,4,40,met for part of the band
+I3,3,0.5,50,3,4,50,met for part of the band
+I3,3,0.5,60,3,4,60,met for part of the band
+I3,3,0.5,70,3,4,70,met for part of the band
+I3,3,0.5,80,3,4,80,met for part of the band
+I3,3,0.5,90,3,4,90,met for part of the band
+I3,3,0.5,100,3,4,100,met for part of the band
+I3,3,0.5,110,3,4,110,met for part of the band
+I3,3,0.5,120,3,4,120,not met
+I3,3,0.6,10,3,4,10,met for the whole band
+I3,3,0.6,20,3,4,20,met for the whole band
+I3,3,0.6,30,3,4,30,met for the whole band
+I3,3,0.6,40,3,4,40,met for part of the band
+I3,3,0.6,50,3,4,50,met for part of the band
+I3,3,0.6,60,3,4,60,met for part of the band
+I3,3,0.6,70,3,4,70,met for part of the band
+I3,3,0.6,80,3,4,80,met for part of the band
+I3,3,0.6,90,3,4,90,met for part of the band
+I3,3,0.6,100,3,4,100,met for part of the band
+I3,3,0.6,110,3,4,110,met for part of the band
+I3,3,0.6,120,3,4,120,not met
+I3,3,0.7,10,3,4,10,met for the whole band
+I3,3,0.7,20,3,4,20,met for the whole band
+I3,3,0.7,30,3,4,30,met for the whole band
+I3,3,0.7,40,3,4,40,met for part of the band
+I3,3,0.7,50,3,4,50,met for part of the band
+I3,3,0.7,60,3,4,60,met for part of the band
+I3,3,0.7,70,3,4,70,met for part of the band
+I3,3,0.7,80,3,4,80,met for part of the band
+I3,3,0.7,90,3,4,90,met for part of the band
+I3,3,0.7,100,3,4,100,met for part of the band
+I3,3,0.7,110,3,4,110,met for part of the band
+I3,3,0.7,120,3,4,120,not met
+I3,2,0.0,10,4,4,0,met for the whole band
+I3,2,0.0,20,4,4,0,met for the whole band
+I3,2,0.0,30,4,4,0,met for the whole band
+I3,2,0.0,40,4,4,0,met for the whole band
+I3,2,0.0,50,4,4,0,met for the whole band
+I3,2,0.0,60,4,4,0,met for the whole band
+I3,2,0.0,70,4,4,0,met for the whole band
+I3,2,0.0,80,4,4,0,met for the whole band
+I3,2,0.0,90,4,4,0,met for the whole band
+I3,2,0.0,100,4,4,0,met for the whole band
+I3,2,0.0,110,4,4,0,met for the whole band
+I3,2,0.0,120,4,4,0,met for the whole band
+I3,2,0.1,10,4,4,0,met for the whole band
+I3,2,0.1,20,4,4,0,met for the whole band
+I3,2,0.1,30,4,4,0,met for the whole band
+I3,2,0.1,40,4,4,0,met for the whole band
+I3,2,0.1,50,4,4,0,met for the whole band
+I3,2,0.1,60,4,4,0,met for the whole band
+I3,2,0.1,70,4,4,0,met for the whole band
+I3,2,0.1,80,4,4,0,met for the whole band
+I3,2,0.1,90,4,4,0,met for the whole band
+I3,2,0.1,100,4,4,0,met for the whole band
+I3,2,0.1,110,4,4,0,met for the whole band
+I3,2,0.1,120,4,4,0,met for the whole band
+I3,2,0.2,10,4,4,0,met for the whole band
+I3,2,0.2,20,4,4,0,met for the whole band
+I3,2,0.2,30,4,4,0,met for the whole band
+I3,2,0.2,40,4,4,0,met for the whole band
+I3,2,0.2,50,4,4,0,met for the whole band
+I3,2,0.2,60,4,4,0,met for the whole band
+I3,2,0.2,70,4,4,0,met for the whole band
+I3,2,0.2,80,4,4,0,met for the whole band
+I3,2,0.2,90,4,4,0,met for the whole band
+I3,2,0.2,100,4,4,0,met for the whole band
+I3,2,0.2,110,4,4,0,met for the whole band
+I3,2,0.2,120,4,4,0,met for the whole band
+I3,2,0.3,10,2,4,10,met for the whole band
+I3,2,0.3,20,2,4,20,met for the whole band
+I3,2,0.3,30,2,4,30,met for the whole band
+I3,2,0.3,40,2,4,40,met for part of the band
+I3,2,0.3,50,2,4,50,met for part of the band
+I3,2,0.3,60,2,4,60,met for part of the band
+I3,2,0.3,70,2,4,70,met for part of the band
+I3,2,0.3,80,2,4,80,met for part of the band
+I3,2,0.3,90,2,4,90,met for part of the band
+I3,2,0.3,100,2,4,100,met for part of the band
+I3,2,0.3,110,2,4,110,met for part of the band
+I3,2,0.3,120,2,4,120,not met
+I3,2,0.4,10,2,4,10,met for the whole band
+I3,2,0.4,20,2,4,20,met for the whole band
+I3,2,0.4,30,2,4,30,met for the whole band
+I3,2,0.4,40,2,4,40,met for part of the band
+I3,2,0.4,50,2,4,50,met for part of the band
+I3,2,0.4,60,2,4,60,met for part of the band
+I3,2,0.4,70,2,4,70,met for part of the band
+I3,2,0.4,80,2,4,80,met for part of the band
+I3,2,0.4,90,2,4,90,met for part of the band
+I3,2,0.4,100,2,4,100,met for part of the band
+I3,2,0.4,110,2,4,110,met for part of the band
+I3,2,0.4,120,2,4,120,not met
+I3,2,0.5,10,2,4,10,met for the whole band
+I3,2,0.5,20,2,4,20,met for the whole band
+I3,2,0.5,30,2,4,30,met for the whole band
+I3,2,0.5,40,2,4,40,met for part of the band
+I3,2,0.5,50,2,4,50,met for part of the band
+I3,2,0.5,60,2,4,60,met for part of the band
+I3,2,0.5,70,2,4,70,met for part of the band
+I3,2,0.5,80,2,4,80,met for part of the band
+I3,2,0.5,90,2,4,90,met for part of the band
+I3,2,0.5,100,2,4,100,met for part of the band
+I3,2,0.5,110,2,4,110,met for part of the band
+I3,2,0.5,120,2,4,120,not met
+I3,2,0.6,10,2,4,10,met for the whole band
+I3,2,0.6,20,2,4,20,met for the whole band
+I3,2,0.6,30,2,4,30,met for the whole band
+I3,2,0.6,40,2,4,40,met for part of the band
+I3,2,0.6,50,2,4,50,met for part of the band
+I3,2,0.6,60,2,4,60,met for part of the band
+I3,2,0.6,70,2,4,70,met for part of the band
+I3,2,0.6,80,2,4,80,met for part of the band
+I3,2,0.6,90,2,4,90,met for part of the band
+I3,2,0.6,100,2,4,100,met for part of the band
+I3,2,0.6,110,2,4,110,met for part of the band
+I3,2,0.6,120,2,4,120,not met
+I3,2,0.7,10,2,2,never,not met
+I3,2,0.7,20,2,2,never,not met
+I3,2,0.7,30,2,2,never,not met
+I3,2,0.7,40,2,2,never,not met
+I3,2,0.7,50,2,2,never,not met
+I3,2,0.7,60,2,2,never,not met
+I3,2,0.7,70,2,2,never,not met
+I3,2,0.7,80,2,2,never,not met
+I3,2,0.7,90,2,2,never,not met
+I3,2,0.7,100,2,2,never,not met
+I3,2,0.7,110,2,2,never,not met
+I3,2,0.7,120,2,2,never,not met
