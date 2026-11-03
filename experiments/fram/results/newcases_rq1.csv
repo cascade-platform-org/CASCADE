@@ -1,0 +1,37 @@
+case,member,declared,grid_mean,grid_min,codings
+Adhita,S0,0.5,0.5,0.5,27
+Adhita (reading B),S0,0.5,0.5,0.5,81
+Nayak,S0,0.651,0.624,0.575,243
+Adhita,D1,0.5,0.592,0.125,27
+Adhita (reading B),D1,0.5,0.653,0.125,81
+Nayak,D1,0.516,0.478,0.349,243
+Adhita,K2,0.5,0.5,0.5,27
+Adhita (reading B),K2,0.625,0.625,0.625,81
+Nayak,K2,0.5,0.5,0.5,243
+Adhita,v2,0.5,0.55,0.125,27
+Adhita (reading B),v2,0.625,0.625,0.25,81
+Nayak,v2,0.73,0.553,0.377,243
+Adhita,v2-D2,0.5,0.508,0.125,27
+Adhita (reading B),v2-D2,0.625,0.625,0.25,81
+Nayak,v2-D2,0.544,0.514,0.444,243
+Adhita,v2-typed,0.5,0.5,0.5,27
+Adhita (reading B),v2-typed,0.5,0.5,0.5,81
+Nayak,v2-typed,0.651,0.624,0.611,243
+Adhita,v2+3,0.5,0.467,0.0,27
+Adhita (reading B),v2+3,0.625,0.542,0.125,81
+Nayak,v2+3,0.702,0.558,0.377,243
+Adhita,v2+c,0.5,0.467,0.0,27
+Adhita (reading B),v2+c,0.625,0.542,0.125,81
+Nayak,v2+c,0.702,0.558,0.377,243
+Adhita,FMI,0.5,0.567,0.0,27
+Adhita (reading B),FMI,0.5,0.667,0.0,81
+Nayak,FMI,0.591,0.589,0.5,243
+mean of six (declared),S0,0.65,-,-,-
+mean of six (declared),D1,0.68,-,-,-
+mean of six (declared),K2,0.646,-,-,-
+mean of six (declared),v2,0.851,-,-,-
+mean of six (declared),v2-D2,0.725,-,-,-
+mean of six (declared),v2-typed,0.65,-,-,-
+mean of six (declared),v2+3,0.846,-,-,-
+mean of six (declared),v2+c,0.846,-,-,-
+mean of six (declared),FMI,0.515,-,-,-

@@ -211,7 +211,27 @@ Togawa et al. give two qualitative recommendations and no capacities, call count
 
 **Claims by tier** (`results/ablation_claims.csv`): rule-decided C1; entailed C12, C13; discriminating C2, C4–C6, C8–C10, C14. Agreements on the 8 discriminating: S0 1, v2-typed 1, D1 3, **v2 4**, K2 4, v2+3 5, v2-D2 5, v2+c 6. The claims separate coincidence-based rules from reachability, not v2 from its variants. Strict verdict: C5 is 1/3 under v2 (2/3 under v2+3, v2+c).
 
-**New held-out cases:** none qualified (TRANSLATION.md §4c); by the declared rule the v2 / v2+3 / v2+c contest is inconclusive and v2 stays.
+**New held-out cases:** none qualified in the first screening (TRANSLATION.md §4c). The second, systematic screening found three; two entered after reading (§4g, below).
+
+## New held-out cases (`run_newcases.py`; declared at 43b0532, TRANSLATION.md §4g)
+
+Balanced accuracy at the declared coding (mean / minimum over all codings), `results/newcases_rq1.csv`. No Specific Rules: neither source states one.
+
+| | Adhita (2 encounters) | Adhita, reading B | Nayak (fipronil) | mean of six, declared |
+|---|---|---|---|---|
+| S0 reachability | 0.50 (0.50/0.50) | 0.50 | 0.65 (0.62/0.57) | 0.65 |
+| D1 damping only | 0.50 (0.59/0.12) | 0.50 | 0.52 (0.48/0.35) | 0.68 |
+| K2 coincidence only | 0.50 (0.50/0.50) | 0.62 | 0.50 (0.50/0.50) | 0.65 |
+| **v2** | **0.50** (0.55/0.12) | **0.62** | **0.73** (0.55/0.38) | **0.85** |
+| v2-D2 | 0.50 (0.51/0.12) | 0.62 | 0.54 (0.51/0.44) | 0.73 |
+| v2-typed (FRW) | 0.50 (0.50/0.50) | 0.50 | 0.65 (0.62/0.61) | 0.65 |
+| v2+3, v2+c | 0.50 (0.47/0.00) | 0.62 | 0.70 (0.56/0.38) | 0.85 |
+| FMI | 0.50 (0.57/0.00) | 0.50 | 0.59 (0.59/0.50) | 0.52 |
+
+- **Decision rule (§4c):** mean over the two new cases at the declared coding, v2 0.615, v2+3 and v2+c 0.601: **v2 stays**, now decided rather than by default.
+- **Adhita does not separate the rules.** As in the hand reading: v2 keeps all four encounter-1 functions nominal (specificity 1) and marks none of encounter 2's five (recall 0); reachability does the reverse. Encounter 2's single deviations reach their consumers alone or through a loop, so damping absorbs them; the authors see them resonate. Under reading B (WAT_A a third, coincident deviation) the coincidence rules reach 0.62.
+- **Nayak:** v2 marks N4.3, N4.4, N4.5, N4.10 and misses N4.1, N4.2, N4.9 (each fed by a function drawn as performed, so the drop is damped on the way); its two false positives are N3.5 and N3.6, downstream of the functions with no input activity (level 1).
+- The six-case mean uses Tian with its Specific Rules (§4c table). Without them (`run_ablation.no_description_rules`, checked 2026-11-03) Tian is v2 0.62, v2+3 0.75, and the six-case mean is v2 0.79, v2+3 0.80.
 
 ## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 
