@@ -107,6 +107,16 @@ def read_togawa() -> FramModel:
     return read_long(PRIVATE / "togawa_2023_koriyama.csv", "togawa_2023_koriyama")
 
 
+def read_adhita(meeting: int) -> FramModel:
+    """Adhita & Furusho 2021 Tables 2-3: encounter 1 (A meets C) or 2 (A meets B)."""
+    return read_long(PRIVATE / f"adhita_2021_meeting{meeting}.csv", f"adhita_2021_meeting{meeting}")
+
+
+def read_nayak() -> FramModel:
+    """Nayak et al. 2022 Appendix 3 (work-as-done, Fig. 3), couplings by matching labels."""
+    return read_long(PRIVATE / "nayak_2022_fipronil.csv", "nayak_2022_fipronil")
+
+
 def read_kim() -> tuple[FramModel, list[dict[str, str]]]:
     """Kim & Yoon 2021 Table 3. The upstream set of each rule is the coupling
     list; aspect types are only in Fig. 5, so every coupling is read as I."""
