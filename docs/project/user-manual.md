@@ -733,8 +733,11 @@ values (`0.10, 0.15, 0.20`, or `0.1 to 0.3 step 0.05`; at most 50), and add more
 Parameters with **+ Parameter**. Every combination is one run, named after its
 values, up to 500 runs. A second chart then plots the chosen statistic of the
 chosen Metric against one swept Parameter (pick it in the chart's title), with
-a line for each combination of the others. The CSV has a column per swept
-Parameter.
+a line for each combination of the others. With two or more swept Parameters,
+the **Sweep Map** lays the same statistic out over two of them, one cell per
+run: pick the Parameter across and the one up in the map's title, and the value
+of each other swept Parameter beside them. Darker is higher; hover a cell for
+its values. The CSV has a column per swept Parameter.
 
 **Level Mode** (Canvas colours → Level) recolours each Stock by its level, or
 its change over the period, divided by its reference: its own *level reference*

@@ -370,3 +370,19 @@ time, damage level), and one Parameter at a time could only show slices of its m
 - Cost: a grid multiplies Engine Evaluations (runs × propagating Phases), within the role's
   per-minute budget (ADR-0008); the progress bar counts the Propagations before the first
   runs.
+
+## Revision (2026-11-03): the Sweep Map
+
+A grid over two Parameters is a map, and a chart with one line per value of the other
+Parameter hides where an answer changes (the FRAM paper's "where an intervention suffices").
+
+- When a sweep has **two or more** Parameters, Compare also draws a **Sweep Map**: the chosen
+  statistic of the chosen Metric, one cell per run, over two swept Parameters picked in its
+  title (across and up; picking the other axis's Parameter swaps them). Every other swept
+  Parameter is held at a value picked beside them.
+- Cells run light to dark on the accent ramp of the Analysis Heatmap, from the lowest value on
+  the map to the highest; a legend gives the two ends and hovering a cell gives its values. A
+  cell with no run, or no value, is grey.
+- A verdict with thresholds (the paper's "all, some or no tanks in time") is a Metric's
+  statistic read against those thresholds: the map shows the statistic, and the thresholds
+  stay with the reader. Pure layout in `lib/temporal-comparison.ts::sweepMap`.

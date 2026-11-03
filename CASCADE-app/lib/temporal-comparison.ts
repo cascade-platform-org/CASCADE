@@ -80,7 +80,7 @@ export function compareRuns(runs: readonly ComparedRun[]): Comparison {
  * cells for no value.
  */
 export function comparisonCsv(c: Comparison): string {
-  const swept = [...new Set(c.rows.flatMap((r) => (r.sweep ?? []).map((p) => p.parameter)))];
+  const swept = sweptParameters(c);
   const lines: (string | number | null)[][] = [["simulation", ...swept, "metric", ...STATISTICS]];
   for (const row of c.rows) {
     const at = (parameter: string) => row.sweep?.find((p) => p.parameter === parameter)?.value ?? null;
@@ -90,4 +90,46 @@ export function comparisonCsv(c: Comparison): string {
     }
   }
   return lines.map((l) => l.map(csvCell).join(",")).join("\n");
+}
+
+/** The Parameters a comparison's runs sweep, in the order first met. */
+export function sweptParameters(c: Comparison): string[] {
+  return [...new Set(c.rows.flatMap((r) => (r.sweep ?? []).map((p) => p.parameter)))];
+}
+
+/** The values a comparison's runs give one swept Parameter, ascending. */
+export function sweptValues(c: Comparison, parameter: string): number[] {
+  const values = c.rows.flatMap((r) => r.sweep?.filter((p) => p.parameter === parameter).map((p) => p.value) ?? []);
+  return [...new Set(values)].sort((a, b) => a - b);
+}
+
+/** One statistic of one Metric over two swept Parameters: `cells[i][j]` is the run at ys[i], xs[j]. */
+export interface SweepMap {
+  xs: number[];
+  ys: number[];
+  cells: (number | null)[][];
+  /** The range of the cells' values; null when every cell is empty. */
+  lo: number | null;
+  hi: number | null;
+}
+
+/**
+ * A statistic of one Metric laid out over two swept Parameters, every other
+ * swept Parameter held at its value in `fixed`. A cell is empty where the grid
+ * has no run, or the run has no value; runs outside the sweep are ignored.
+ */
+export function sweepMap(c: Comparison, metric: string, statistic: Statistic, x: string, y: string, fixed: Readonly<Record<string, number>>): SweepMap {
+  const xs = sweptValues(c, x);
+  const ys = sweptValues(c, y);
+  const cells: (number | null)[][] = ys.map(() => xs.map(() => null));
+  for (const row of c.rows) {
+    if (!row.sweep) continue;
+    const at = (parameter: string) => row.sweep?.find((p) => p.parameter === parameter)?.value;
+    const held = Object.entries(fixed).every(([p, v]) => p === x || p === y || at(p) === v);
+    const i = ys.indexOf(at(y) ?? NaN);
+    const j = xs.indexOf(at(x) ?? NaN);
+    if (held && i >= 0 && j >= 0) cells[i][j] = row.stats[metric]?.[statistic] ?? null;
+  }
+  const present = cells.flat().filter((v): v is number => v !== null);
+  return { xs, ys, cells, lo: present.length ? Math.min(...present) : null, hi: present.length ? Math.max(...present) : null };
 }

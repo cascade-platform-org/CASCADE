@@ -7,7 +7,7 @@ import { usePropagationGate } from "@/hooks/usePropagate";
 import { brandColor } from "@/lib/brand";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { formatMetric } from "@/lib/temporal-metrics";
-import { STATISTICS, compareRuns, type Comparison, type Statistic } from "@/lib/temporal-comparison";
+import { STATISTICS, compareRuns, sweptParameters, type Comparison, type Statistic } from "@/lib/temporal-comparison";
 import { cancelComparison, exportComparisonCsv, startComparison } from "@/lib/temporal-simulation-run";
 import { MAX_SWEEP_RUNS, compareRequests, parameterReads, parseSweepValues, pointLabel, sweepSize, type SweepAxis } from "@/lib/temporal-sweep";
 import { useConfigStore } from "@/store/config-store";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { StoredTemporalSimulation } from "@/lib/schemas/temporal-simulation";
 import { EXPLAIN_COMPARE, explainStatistic } from "@/lib/temporal-simulation-explainers";
 import { Notices, Segmented, SmallButton, inputCls } from "./fields";
+import { SweepMap } from "./sweep-map";
 
 const STATISTIC_LABEL: Record<Statistic, string> = { end: "End", mean: "Mean", min: "Min", max: "Max", total: "Total" };
 // Three hues apart (the palette is ten even hues), so neighbouring rows never get neighbouring colours.
@@ -116,6 +117,7 @@ export function CompareTab() {
           <SummaryTable comparison={comparison} statistic={statistic} metric={metric} onPick={setChosen} />
           {metric && <ComparisonChart comparison={comparison} metric={metric} />}
           {metric && comparison.rows.some((r) => r.sweep) && <SweepChart comparison={comparison} metric={metric} statistic={statistic} />}
+          {metric && sweptParameters(comparison).length >= 2 && <SweepMap comparison={comparison} metric={metric} statistic={statistic} statisticLabel={STATISTIC_LABEL[statistic]} />}
         </>
       )}
     </div>
@@ -344,7 +346,7 @@ function SweepRow({
  * one line per combination of the other swept Parameters' values.
  */
 function SweepChart({ comparison, metric, statistic }: { comparison: Comparison; metric: string; statistic: Statistic }) {
-  const swept = [...new Set(comparison.rows.flatMap((r) => (r.sweep ?? []).map((p) => p.parameter)))];
+  const swept = sweptParameters(comparison);
   const [picked, setPicked] = useState<string | null>(null);
   const along = picked && swept.includes(picked) ? picked : swept[0];
   const groups = new Map<string, { x: number; y: number }[]>();

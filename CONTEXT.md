@@ -138,7 +138,7 @@ A project-wide table of numbers by Element and period label (hours worked per ac
 _Avoid_: "time series" bare (a Run table column is a Metric), "dataset", "profile" (the profile is a Simulation's operations)
 
 **Parameter Sweep**:
-One Temporal Simulation run by Compare once per combination of the values of one or more of its Parameters (a grid), each run named after its values, kept for the session like the comparison. ADR-0019.
+One Temporal Simulation run by Compare once per combination of the values of one or more of its Parameters (a grid), each run named after its values, kept for the session like the comparison. Over two or more Parameters, Compare also draws it as a **Sweep Map**: a statistic over two swept Parameters, the others held at chosen values. ADR-0019.
 _Avoid_: "Sweep" bare (that is the EPANET importer's demand-multiplier Sweep), "sensitivity analysis"
 
 **Timeline**:

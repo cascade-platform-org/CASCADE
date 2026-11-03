@@ -4330,7 +4330,15 @@ export const USER_MANUAL: ManualDoc = {
                 },
                 {
                   "kind": "text",
-                  "text": ". Every combination is one run, named after its values, up to 500 runs. A second chart then plots the chosen statistic of the chosen Metric against one swept Parameter (pick it in the chart's title), with a line for each combination of the others. The CSV has a column per swept Parameter."
+                  "text": ". Every combination is one run, named after its values, up to 500 runs. A second chart then plots the chosen statistic of the chosen Metric against one swept Parameter (pick it in the chart's title), with a line for each combination of the others. With two or more swept Parameters, the "
+                },
+                {
+                  "kind": "strong",
+                  "text": "Sweep Map"
+                },
+                {
+                  "kind": "text",
+                  "text": " lays the same statistic out over two of them, one cell per run: pick the Parameter across and the one up in the map's title, and the value of each other swept Parameter beside them. Darker is higher; hover a cell for its values. The CSV has a column per swept Parameter."
                 }
               ]
             },

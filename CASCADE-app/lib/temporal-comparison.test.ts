@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareRuns, comparisonCsv } from "./temporal-comparison";
+import { compareRuns, comparisonCsv, sweepMap, sweptParameters, sweptValues } from "./temporal-comparison";
 import type { RunTable } from "./temporal-metrics";
 
 const table = (columns: string[], rows: (number | null)[][]): RunTable => ({
@@ -50,5 +50,38 @@ describe("a Parameter Sweep in the comparison", () => {
       "A,,,X,2,2,2,2,2",
       '"A · share = 0.4, months = 6",0.4,6,X,1,1,1,1,1',
     ]);
+  });
+});
+
+describe("sweepMap", () => {
+  // A 2 × 2 grid over share and months, at two values of a third Parameter, level.
+  const run = (share: number, months: number, level: number, x: number) => ({
+    id: "a", name: `A · share = ${share}, months = ${months}, level = ${level}`, warnings: [],
+    table: table(["X"], [[x], [x + 1]]),
+    sweep: [{ parameter: "share", value: share }, { parameter: "months", value: months }, { parameter: "level", value: level }],
+  });
+  const c = compareRuns([
+    { id: "b", name: "Not swept", warnings: [], table: table(["X"], [[100]]) },
+    run(0.1, 6, 1, 1), run(0.2, 6, 1, 2), run(0.1, 12, 1, 3), run(0.2, 12, 1, 4),
+    run(0.1, 6, 2, 10), run(0.2, 6, 2, 20), run(0.1, 12, 2, 30),
+  ]);
+
+  it("lists the swept Parameters in the order first met, and each one's values in order", () => {
+    expect(sweptParameters(c)).toEqual(["share", "months", "level"]);
+    expect(sweptValues(c, "months")).toEqual([6, 12]);
+  });
+
+  it("lays one statistic out over two Parameters, the others held at the chosen values", () => {
+    const m = sweepMap(c, "X", "end", "share", "months", { level: 1 });
+    expect(m.xs).toEqual([0.1, 0.2]);
+    expect(m.ys).toEqual([6, 12]);
+    expect(m.cells).toEqual([[2, 3], [4, 5]]);
+    expect([m.lo, m.hi]).toEqual([2, 5]);
+  });
+
+  it("leaves a cell empty where the grid has no run, and ignores runs outside the sweep", () => {
+    const m = sweepMap(c, "X", "mean", "share", "months", { level: 2 });
+    expect(m.cells).toEqual([[10.5, 20.5], [30.5, null]]);
+    expect([m.lo, m.hi]).toEqual([10.5, 30.5]);
   });
 });
