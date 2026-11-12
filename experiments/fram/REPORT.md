@@ -13,6 +13,7 @@ Re-run from the repository root, each with `CASCADE-backend/.venv/bin/python`:
 | `check_kim.py` | Kim's F11 claim (footnote) | ~4 min |
 | `check_falegnami.py` | Falegnami 2020's Katz ranking (private data) | 5 s |
 | `decide_zheng.py` | decision model (Zheng's recommendations under firefighters and time) and its scale sensitivity, every grid point a Temporal Simulation run | 6 min |
+| `decide_rules.py` | both decision models under the alternative rules S0, D1, K2 | ~15 min |
 | `export_bundles.py` | the core cases as projects for the platform, with `CHECKS.md` | 5 s |
 
 ## Research questions
@@ -186,6 +187,33 @@ Togawa et al. give two qualitative recommendations and no capacities, call count
 - **Scale:** N = 7 gives the same table (normalised values identical).
 - **Shapley of I0** (loss 0.185): T1 0.060, T2 0.051, environment 0.041, night 0.026, 119 calls 0.007.
 - What the integration shows: the FRAM draws the call load as exogenous, and under that reading none of the recommendations helps Rescue. The recommendations' effect on Rescue rests on an assumption the FRAM does not state (calls follow evacuation), which the model makes explicit.
+
+## The decision models under the alternative rules (`decide_rules.py`; declared at 3187cdb, TRANSLATION.md §4h)
+
+Does the conversion rule RQ1 checks matter to what the comparisons conclude? Both models rebuilt with the rule swapped; everything else unchanged (`results/decision_rules_zheng.csv`, `decision_rules_koriyama.csv`).
+
+**Zheng** (F20; telecom at 3, a = 30 min):
+
+| Rule | I0 the plan | I1 two-way updates | I2, I3 + mutual aid | What the comparison would recommend |
+|---|---|---|---|---|
+| **Eq. (1)** | severe from d = 0.3 | nominal to d = 0.4, then 3 | restored on arrival | each intervention has its region |
+| S0 reachability | severe at every d | severe at every d | severe at every d | nothing helps: the telecom damage alone reaches F12, F17 and F20 |
+| D1 damping only | nominal to d = 0.4, then 3 | same as the plan | restored on arrival | two-way updates have no effect (F12 never deviates) |
+| K2 coincidence only | severe from d = 0.3 | nominal at every d | nominal at every d | two-way updates always suffice; mutual aid is never needed |
+
+Every Zheng line of the hand reading held. Telecom at 2 (not predicted): D1 and K2 give the same rows as at 3; S0 stays severe everywhere.
+
+**Koriyama** (T9, Rescue; declared coding):
+
+| Rule | Reading A | Reading B |
+|---|---|---|
+| **Eq. (1)** | no intervention restores T9 | I2 and I3 restore T9 |
+| S0 | no intervention restores T9 | I2 and I3 restore T9 |
+| D1 | T9 nominal in every intervention, I0 included | same |
+| K2 | no intervention restores T9 | I2 and I3 restore T9 |
+
+- **One line of the hand reading failed.** S0 was predicted to leave T9 degraded under both readings; under B it restores T9 with I2 and I3, as Eq. (1) does. The night restriction enters T9 through a Time aspect, which S0 damps by one step. S0 differs from Eq. (1) elsewhere (I1 does not restore T5; Operativity 0.741 against 0.815 under I0), and not at T9.
+- **What it shows.** On Zheng the rule decides the comparison: each of the three alternatives changes what it recommends. On Koriyama the answer about Rescue is the same under three of the four rules and differs only under damping only, where the event degrades nothing downstream. The link between RQ1 and RQ2 is strong on the case with quantities and weak on the structural one, whose finding (the answer turns on whether calls follow evacuation) is robust to the rule.
 
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
 
