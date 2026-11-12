@@ -266,6 +266,14 @@ From the second screening (§4c). The owner approved the three passing candidate
 
 **Outputs.** `decide_rules.py`; `results/decision_rules_zheng.csv`, `decision_rules_koriyama.csv`.
 
+## 4i. Declared 2026-11-12: a second, independent coding of the analysed scenarios
+
+**Question.** The coding of each analysed scenario is the first author's reading of the analysts' words, and it is the largest sensitivity of RQ1 (§4c, §4g). How far does a second reader agree, and do the scores hold under the second coding?
+
+**Protocol.** A second coder who has not seen the declared coding (S. Grimaz) receives, per case, the list of the scenario's elements, where the source describes each, and the convention of §2: delayed, imprecise, degraded or variable is level 3; not performed or not delivered is level 1; an element the coder judges an effect of another, and not a starting deviation, is marked "effect". The sheet is `docs/paper/FRAM/SECOND_CODING.md` (private: it quotes the sources). Tian is excluded: its scenarios are the source's own model-checking inputs. The sheet lists 18 elements: Zheng 4, Li 2, Togawa 5, Adhita 2 (and WAT_A, the declared coding's "effect"), Nayak 5.
+
+**Reported, whatever the outcome.** The share of elements coded identically and Cohen's kappa over the three answers (3, 1, effect); the balanced accuracy of every rule of the paper's Fig. 2 on each case under the second coding, beside the declared one. The declared coding stays the paper's main result. No hand reading: the outcome depends on the coder.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -289,4 +297,5 @@ From the second screening (§4c). The owner approved the three passing candidate
 | abd3314 | the Koriyama decision model: options, call-load assumption, severity grid, scale (§4f) |
 | d2adf31 | Koriyama reading B as a model edit, results expected identical (§4f re-encoding) |
 | 43b0532 | two new held-out cases, Adhita & Furusho 2021 and Nayak et al. 2022; Koo et al. 2021 dropped (§4g) |
-| (this commit) | the decision models under the alternative rules S0, D1, K2 (§4h) |
+| 3187cdb | the decision models under the alternative rules S0, D1, K2 (§4h) |
+| (this commit) | protocol for a second, independent coding of the analysed scenarios (§4i) |
