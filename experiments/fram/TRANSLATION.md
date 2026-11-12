@@ -249,6 +249,23 @@ From the second screening (§4c). The owner approved the three passing candidate
 
 **Hand reading, recorded before running (v2, Adhita).** Encounter 1: every function receiving MAN_A has another input at nominal, so nothing below nominal: specificity 1. Encounter 2: MAN_A's only consumer is BCM_A, whose other input WAT_A depends on BCM_A, and BCM_B's consumers WAT_B and ECN_B each receive it alone; so v2 marks none of the five: recall 0, balanced accuracy 0.50. Reachability expected at recall 1 and specificity 0. Under reading B, BCM_A has two deviating inputs and passes.
 
+## 4h. Declared 2026-11-12: the decision models under the alternative rules
+
+**Question.** RQ1 scores the automatic conversion without Specific Rules; the comparisons of §4d and §4f add a Specific Rule, a flow and a model edit. Does the conversion rule matter to what the comparisons conclude? If the three alternative rules of the paper's Fig. 2 gave the same comparison, the two halves of the paper would be independent.
+
+**What changes.** The models of §4d (Zheng) and §4f (Koriyama) are rebuilt with the conversion rule swapped for S0 (reachability), D1 (damping only) and K2 (coincidence only), as defined in §4c. Everything else is unchanged: Zheng's F20 Specific Rule, the crews flow (F17 takes its served level undamped under every rule), the mutual aid, Koriyama's barrier at T6 and the edge of reading B. N = 4. Zheng: every intervention at d = 0 … 0.7, s = 3 and 2, a = 30 min; F20 at minute 0 and at minute 120. Koriyama: every intervention under readings A and B at the declared coding; T9.
+
+**Recorded before running: the hand reading.**
+- Zheng, S0. The telecom damage alone reaches F12, F17 and F20 through undamped couplings, so the F20 rule fires in every cell: F20 is severe under every intervention, at every d, before and after the mutual aid. No intervention is distinguishable from the plan. (Less sure: a cell where the damage reaches F12 or F17 only through Control or Time couplings, which S0 damps; then F20 is 3.)
+- Zheng, D1. A single deviation is absorbed and coincident ones are too, so F5's one-way updates and the telecom damage never reach F12, and the rule never fires. F20 = min(F17 + 1, 4) under every intervention: nominal for d ≤ 0.4, 3 from d = 0.5, restored by the mutual aid under I2 and I3. **The plan equals two-way updates: I1 has no effect.**
+- Zheng, K2. F12 deviates under the plan as under Eq. (1) (F5 and telecom coincide), so I0 is severe from d = 0.3. Under I1 the shortfall of F17 reaches F20 alone and K2 ignores a lone input: F20 nominal at every d. **Two-way updates always suffice and the mutual aid is never needed.** s = 2: not predicted.
+- Koriyama, S0. Night at 3 reaches T9 undamped: T9 below nominal under every intervention and both readings.
+- Koriyama, D1. Every deviation is absorbed within one coupling: T9 nominal under every intervention, I0 included, in both readings; there is nothing to restore.
+- Koriyama, K2. As Eq. (1): T9 at 3 under A in every intervention; nominal under B for I2 and I3 only.
+- If the reading holds, each alternative rule changes what the comparison recommends on Zheng, and two of three on Koriyama. What would count against the link: an alternative rule reproducing Eq. (1)'s Zheng map.
+
+**Outputs.** `decide_rules.py`; `results/decision_rules_zheng.csv`, `decision_rules_koriyama.csv`.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -271,4 +288,5 @@ From the second screening (§4c). The owner approved the three passing candidate
 | e084d58 | scale sensitivity of the decision model, N = 7 with v2 rescaled (§4e) |
 | abd3314 | the Koriyama decision model: options, call-load assumption, severity grid, scale (§4f) |
 | d2adf31 | Koriyama reading B as a model edit, results expected identical (§4f re-encoding) |
-| (this commit) | two new held-out cases, Adhita & Furusho 2021 and Nayak et al. 2022; Koo et al. 2021 dropped (§4g) |
+| 43b0532 | two new held-out cases, Adhita & Furusho 2021 and Nayak et al. 2022; Koo et al. 2021 dropped (§4g) |
+| (this commit) | the decision models under the alternative rules S0, D1, K2 (§4h) |
