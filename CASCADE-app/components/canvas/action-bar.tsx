@@ -3,7 +3,7 @@
 /**
  * ActionBar — sits below the Topbar.
  *
- * Main:    [Global ▾ | ▶ Propagate | Simulate | Analyse]   one shared scope
+ * Main:    [Global ▾ | ▶ Propagate 🎬 | Simulate | Analyse]   one shared scope; 🎬 = Animate
  * Model:   [↺ Reset] [−Xh] [Undo] [Redo]
  * Divider
  * Changes: [⏱ Time ▾] [⚡ Ev1] ... [⚡ Ev5] [More ▼] [+]
@@ -11,7 +11,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Wrench, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2, CalendarClock } from "lucide-react";
+import { Clapperboard, Play, RotateCcw, Plus, ChevronDown, Zap, Waves, Wrench, Undo2, Redo2, Clock, SkipForward, ChevronsRight, BarChart2, CalendarClock } from "lucide-react";
 import { resolveIcon, subscribeIconsReady } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { FloatingWindow } from "@/components/ui/floating-window";
@@ -34,6 +34,7 @@ import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { usePropagate, usePropagationGate } from "@/hooks/usePropagate";
 import { resetFunctionality } from "@/lib/network-utils";
 import { ACTION_TONE, GroupButton, ScopePicker } from "./scope-picker";
+import { usePlaybackStore } from "@/store/playback-store";
 
 // Shared core for both revert call-sites (bar button + panel button).
 // Restores the pre-jump snapshot, records a history entry, and clears elapsed
@@ -106,6 +107,7 @@ export function ActionBar() {
             onClick={propagate}
             disabled={propagateBlocked !== null || isPropagating || simulationRunning}
           />
+          <AnimateToggle />
         </span>
         {/* Temporal Simulation window (ADR-0019) */}
         <GroupButton
@@ -689,6 +691,33 @@ function ActionButton({
       )}
     >
       {children}
+    </button>
+  );
+}
+
+/**
+ * The Propagation animation's on/off switch (ADR-0027), a preference of this
+ * browser. On: Propagate also plays what each engine round did. Off: as before.
+ */
+function AnimateToggle() {
+  const animate = usePlaybackStore((s) => s.animate);
+  const setAnimate = usePlaybackStore((s) => s.setAnimate);
+  const t = ACTION_TONE;
+  return (
+    <button
+      type="button"
+      aria-pressed={animate}
+      aria-label="Animate propagation"
+      onClick={() => setAnimate(!animate)}
+      title={animate
+        ? "Animation on: Propagate plays each round of the cascade. Click to turn off."
+        : "Animation off. Click so Propagate plays each round of the cascade, with the flow from Sources to demand."}
+      className={cn(
+        "mr-1 flex h-5 w-6 items-center justify-center rounded transition-colors",
+        animate ? "bg-blue-600 text-white dark:bg-blue-500" : cn(t.text, t.hover, "opacity-60"),
+      )}
+    >
+      <Clapperboard size={12} />
     </button>
   );
 }

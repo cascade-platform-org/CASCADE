@@ -35,7 +35,7 @@ import { runWithHistory } from "@/lib/run-with-history";
 import { useCanvasStore, selectActiveCanvas } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
 import { useLevelPaint } from "@/hooks/useLevelPaint";
-import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
+import { PlaybackPaint } from "@/components/canvas/playback-paint";
 import { useNetworkHistory } from "@/hooks/useNetworkHistory";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { NodeSearch } from "./node-search";
@@ -657,8 +657,9 @@ function FlowCanvas() {
         />
       )}
 
-      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
-      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours.
+          A Propagation playback (ADR-0027) paints its frame over both. */}
+      <PlaybackPaint fallback={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -709,7 +710,7 @@ function FlowCanvas() {
           }}
         />
       </ReactFlow>
-      </SnapshotColorsProvider>
+      </PlaybackPaint>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms */}
       <CanvasLegend />

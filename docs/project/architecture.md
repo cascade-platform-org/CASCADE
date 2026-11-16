@@ -72,7 +72,7 @@ The core modelling primitive is a **multi-canvas**: multiple Canvases, each repr
 
 ### State Management — Zustand
 
-All application state is managed through twelve Zustand stores:
+All application state is managed through fourteen Zustand stores:
 
 - **`canvas-store`** — global element registry (`nodes`, `edges`), Canvas list, active Canvas, serialisation to/from `Project`. Hosts `undo()`/`redo()` (they must write the registry) but the history data itself lives in `history-store`.
 - **`history-store`** — the Any Graph Update ring buffer (`update_history`) plus the session-only redo stack. Capped at 20 entries **and** at a byte budget, because entries are variable-size Graph Diffs and one bulk deletion can exceed twenty ordinary edits (ADR-0017). Evicted entries are retired into a Scenario Baseline map on the way out, so a scenario can outlive the buffer (ADR-0016).
@@ -85,6 +85,7 @@ All application state is managed through twelve Zustand stores:
 - **`agent-store`** — an agent in the loop (ADR-0024): pending and settled Proposals, the agent's activity this session, the Agent Bridge's connection and the agents it announced. Never persisted. The tools are `lib/agent-tools.ts` (typed entries over an `AgentHost`); `lib/agent-host.ts` is the live host and the only path from a Proposal to the model (`applyProposal`, through `checkProposal` and `applyModelBundle`); `lib/agent-bridge.ts` is the tab's socket.
 - **`analysis-store`** — ephemeral Analysis-page state (selected metric, results, heatmap colours). Never persisted.
 - **`clipboard-store`** — transient copy/paste state. Never persisted.
+- **`playback-store`** — the Propagation Playback (ADR-0027): the Animate preference (localStorage, per browser) and the open session — the frames `lib/propagation-playback.ts` laid out from the engine's `rounds`, and the frame shown. Never persisted with a project. `components/canvas/playback-paint.tsx` paints the frame through the SnapshotColors context; it never writes the model, and any model change other than a move ends the session.
 - **`auth-store`** — user profile, current role, session lifecycle. Holds no tokens — the session lives in httpOnly cookies set by the backend; JavaScript never sees a token. UI permission gating uses the `permissions` list served by `GET /api/auth/me` (computed in `auth/rbac.py`) — there is no client-side role→permission map to drift.
 - **`ui-store`** — panel visibility, active tool, propagation scope, category filter, toast queue.
 

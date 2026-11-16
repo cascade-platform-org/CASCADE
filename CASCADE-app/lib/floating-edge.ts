@@ -19,6 +19,8 @@ export interface FloatingPath {
   path: string;
   /** The point halfway along the curve, where a label goes. */
   mid: Point;
+  /** Length of the curve, in px: start → control → end, which a gentle bow barely exceeds. */
+  length: number;
 }
 
 export function floatingPath(source: Outline, target: Outline, bowed: boolean): FloatingPath {
@@ -35,5 +37,6 @@ export function floatingPath(source: Outline, target: Outline, bowed: boolean): 
   const t = borderPoint(target, c);
   // A quadratic bezier at its halfway point: ¼·start + ½·control + ¼·end.
   const mid = { x: (s.x + 2 * c.x + t.x) / 4, y: (s.y + 2 * c.y + t.y) / 4 };
-  return { path: `M ${s.x} ${s.y} Q ${c.x} ${c.y} ${t.x} ${t.y}`, mid };
+  const length = bowed ? Math.hypot(c.x - s.x, c.y - s.y) + Math.hypot(t.x - c.x, t.y - c.y) : Math.hypot(t.x - s.x, t.y - s.y);
+  return { path: `M ${s.x} ${s.y} Q ${c.x} ${c.y} ${t.x} ${t.y}`, mid, length };
 }

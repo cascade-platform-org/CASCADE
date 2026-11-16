@@ -89,6 +89,14 @@ _Avoid_: Simulation
 Integer hours on an Element signalling pending timed degradation: > 0 means functional now, drops to 1 when the countdown (advanced only by Temporal Jumps, not wall-clock) reaches zero. Set by the engine (backup exhaustion) or manually as a what-if.
 _Avoid_: Time warning, countdown, timer
 
+**Round**:
+One pass of the engine's loop within a Propagation: edges take their sources' levels, each SourceToDemands Category's flow is solved once, then every node proposes, guards and commits in list order (a later node sees an earlier one's change). Rounds repeat until one changes nothing; `iterations` counts them. ADR-0003, ADR-0027.
+_Avoid_: iteration (in prose), wave, step (a Step is a Temporal Simulation term)
+
+**Propagation Playback**:
+The canvas replaying, Round by Round, what one Propagation did, from the engine's own record: each Round's flow travelling from the Sources, then its other changes in commit order. Turned on by the Animate switch; a view only — the model already holds the result, and Done or any model edit ends it. ADR-0027.
+_Avoid_: replay, animation mode, Run View (that is a Temporal Simulation run)
+
 **Propagation Context**:
 Everything a **Propagation** reads besides the Scenario's Elements: the project's Canvases, the Model Configuration, the scope and the Canvas a local scope trims to. Read from the app once and passed to every engine call, so a caller that propagates many times (a Temporal Simulation run, Compare, a model-based Analysis) captures it at its start and no edit made meanwhile reaches it. Local scope needs a Canvas to trim to; with none, the scope is global. `lib/propagation-call.ts`.
 _Avoid_: "propagation config" (the Model Configuration is one part of it), "engine settings"

@@ -38,7 +38,8 @@ import "@xyflow/react/dist/style.css";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
 import { useLevelPaint } from "@/hooks/useLevelPaint";
-import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
+import { PlaybackPaint, usePlayback, isDimmed, DIMMED_OPACITY } from "@/components/canvas/playback-paint";
+import { useElementHeatmapColor } from "@/components/canvas/snapshot-colors";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { useShallow } from "zustand/react/shallow";
@@ -172,6 +173,9 @@ function GlobalEdge({
 }) {
   // Border to border, from a node's shape or a collapsed Canvas's box (lib/floating-edge.ts).
   const floating = useFloatingPath(source, target);
+  // A Propagation playback (ADR-0027) or Level Mode repaints a single edge; a bundle keeps its colour.
+  const painted = useElementHeatmapColor(id, null);
+  const dimmed = isDimmed(usePlayback(), id);
   if (!floating) return null;
 
   return (
@@ -182,9 +186,11 @@ function GlobalEdge({
       labelX={floating.mid.x}
       labelY={floating.mid.y}
       style={{
-        stroke: selected ? brandColor("accent", 500) : (data?.color ?? brandColor("neutral", 400)),
+        stroke: selected ? brandColor("accent", 500) : (painted ?? data?.color ?? brandColor("neutral", 400)),
         strokeWidth: selected ? 2.5 : 1.5,
         strokeDasharray: data?.isInterCanvas ? "6 3" : undefined,
+        opacity: dimmed ? DIMMED_OPACITY : 1,
+        transition: "opacity 0.3s",
       }}
       markerEnd={markerEnd}
     />
@@ -395,8 +401,9 @@ function GlobalViewCanvas() {
 
   return (
     <div className="h-full w-full">
-      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
-      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours.
+          A Propagation playback (ADR-0027) paints its frame over both. */}
+      <PlaybackPaint fallback={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -419,7 +426,7 @@ function GlobalViewCanvas() {
         <ZoomSlider />
         <CanvasMiniMap />
       </ReactFlow>
-      </SnapshotColorsProvider>
+      </PlaybackPaint>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
           Every canvas view needs it: an Analysis Heatmap applies to the Element

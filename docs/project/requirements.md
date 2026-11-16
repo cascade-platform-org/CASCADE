@@ -333,6 +333,19 @@ The engine records for each degraded Element which upstream Elements or Events a
 - Distinction between directly damaged (`direct_damage = true`) and indirectly affected Elements.
 - Input to intervention prioritisation (§10).
 
+### 7.6 Propagation Playback *(implemented, ADR-0027)*
+
+An **Animate** switch beside Propagate (off by default, remembered by the browser). Off, Propagate is unchanged. On, the request asks the engine for its round record (`trace`), and once the result is applied — if the run lowered at least one node (by flow, logical aggregation or a Rule; edges taking their sources' levels, or a backup countdown, alone do not count) — a **playback bar** opens over the canvas: play/pause, step, speed (0.5×–4×), a slider with one tick per engine round, and Done.
+
+Each round plays as the engine ran it:
+
+1. **Flow — one screen.** Edges take their sources' levels; then each SourceToDemands Category's flow, as the round solved it, leaves the Sources as balls in the Category's colour; a ball's area is proportional to the edge's share of the largest amount that Category carries in the run, and a longer edge carries more balls. The front crosses one edge per hop-time (2.8 s at 1×): an edge's balls leave when the front reaches its source and cross it in one hop-time. A consumer whose new level the flow decided changes as the balls land. With reduced motion the balls stand still.
+2. **Logical changes.** The remaining changes (logical aggregation, a specific Rule, a backup deferral) in the engine's commit order, each pulsing along the edges from the elements responsible for it.
+
+On each screen that degrades something, its targets stay at full strength and every other node and edge fades at once, so what is about to change stands out before it does (the balls and pulses never fade); each target takes its new colour only when its animation ends — the balls landing on it, or the pulse from its cause arriving. A view with none of the screen's targets on screen — they are on another Canvas, or panned away — fades nothing.
+
+The last screen, *Converged*, is the canvas as the model holds it, with the final flow standing; the engine's last round, which re-solves the same flow and lowers no node, is shown there rather than as a round. The playback only paints: the model holds the Propagation's result throughout, Done returns to it, and any model change other than moving a node ends the playback. Not animated: Temporal Simulation runs and Analysis.
+
 ---
 
 ## 8. CRUD and Canvas Editing
@@ -343,14 +356,6 @@ The engine records for each degraded Element which upstream Elements or Events a
 - Add / edit / remove edges (direction, capacity, vulnerability levels).
 - Undo/redo stack. Every hand edit of an Element is undoable: each Inspector field (node and edge), its Rules editor, and every Active Rules panel action. A run of edits to the same fields of one Element (typing a label, dragging the Functionality slider) is one undo step; a click such as toggling or deleting a Rule is a step of its own (`lib/element-edit.ts`). The same history holds what the project saves beyond the graph (ADR-0017 §1a): every Temporal Simulation edit (typing in one field is one step; adding, duplicating or deleting one is a step), every Series edit (a rename with the references that follow it is one step), the Config window's Apply, and an LLM Design edit, each one step.
 
-### 8.1b Drawing edges *(implemented)*
-
-With the Add Edge tool (`E`), the whole shape of a node is where an edge starts or ends: drag from one node to another, or click one and then the other. Under the pointer, the shape tints; while dragging, the node about to receive the edge tints harder, and the line in progress already runs border to border, as the edge will. A node cannot connect to itself (`EDGE_SELF_LOOP`).
-
-Edges are **floating**: an edge stores no attachment point, and every view draws it from the source's outline to the target's along the line between their centres (`lib/node-outline.ts` for each Node Type's shape, `lib/floating-edge.ts` for the path). Moving a node re-aims its edges as it moves, so no layout command exists. When both `a → b` and `b → a` exist, each bows out to its own side so the two stay apart and selectable. In the All view, edges reach a collapsed Canvas's cluster box the same way, and a bundled edge carries its ×k label at its midpoint.
-
-Files from before this change carry `sourceHandle`/`targetHandle` on edges (the six connection dots of the previous design); loading drops them.
-
 ### 8.1a Navigating the canvas *(implemented)*
 
 Zoom is on the scroll wheel and the zoom cluster (bottom-left), from 5 % to 400 % in every view (`zoom-slider.tsx` holds the range; a georeferenced Canvas keeps a higher floor for its map); panning is on the **middle
@@ -359,6 +364,14 @@ no middle button at all, so the cluster also carries a **Fit** control (`F`, or 
 that frames the whole network — the way back from a canvas scrolled off-screen. Every view also carries a **minimap** (bottom left, above the zoom cluster; `canvas-minimap.tsx`), folded to a *Map* button by default and for the session once toggled: nodes painted at their level, Canvas regions and clusters in their colour, pannable and zoomable, left out of canvas captures. React Flow's MiniMap draws only nodes that carry a size, and the views rebuild nodes from the store, so `toRFNode` and the Grouped view give theirs `initialWidth`/`initialHeight`. Starting a
 tour requests the same fit, because a project file carries the viewport it was saved with and
 that viewport is wrong on any other screen size.
+
+### 8.1b Drawing edges *(implemented)*
+
+With the Add Edge tool (`E`), the whole shape of a node is where an edge starts or ends: drag from one node to another, or click one and then the other. Under the pointer, the shape tints; while dragging, the node about to receive the edge tints harder, and the line in progress already runs border to border, as the edge will. A node cannot connect to itself (`EDGE_SELF_LOOP`).
+
+Edges are **floating**: an edge stores no attachment point, and every view draws it from the source's outline to the target's along the line between their centres (`lib/node-outline.ts` for each Node Type's shape, `lib/floating-edge.ts` for the path). Moving a node re-aims its edges as it moves, so no layout command exists. When both `a → b` and `b → a` exist, each bows out to its own side so the two stay apart and selectable. In the All view, edges reach a collapsed Canvas's cluster box the same way, and a bundled edge carries its ×k label at its midpoint.
+
+Files from before this change carry `sourceHandle`/`targetHandle` on edges (the six connection dots of the previous design); loading drops them.
 
 ### 8.2 Selection
 

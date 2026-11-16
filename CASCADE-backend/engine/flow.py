@@ -266,6 +266,43 @@ def storage_exchange(
     return {nid: (filled.get(nid, 0) / SCALE, drawn.get(nid, 0) / SCALE) for nid in stores}
 
 
+def route_flows(
+    category: str,
+    nodes: dict[str, Node],
+    edges: list[Edge],
+    node_func: dict[str, int],
+    edge_func: dict[str, int],
+    n: int,
+    storage: StorageFill | None,
+    delivered: dict[str, int],
+) -> dict[str, float]:
+    """Edge id → amount carried, in model units: one routing of `delivered`
+    (a solve's per-consumer amounts) through the same network, for the
+    Propagation animation (ADR-0027). Allocation decides who receives how much;
+    many routings deliver those amounts, so this one is a picture, never an
+    input: the min-cost tie-break (friction 1 per hop) prefers short paths.
+    Parallel edges between one pair share the pair's flow equally — the solver
+    graph has a single arc per pair."""
+    built = _build_graph(category, nodes, edges, node_func, edge_func, n, storage)
+    if built is None:
+        return {}
+    graph, consumers, _draws = built
+    for nid in consumers:
+        graph.add_edge((nid, "in"), _SINK, capacity=delivered.get(nid, 0), weight=0)
+    flow = nx.max_flow_min_cost(graph, _SRC, _SINK)
+    pairs: dict[tuple[str, str], list[str]] = {}
+    for edge in edges:
+        if graph.has_edge((edge.source, "out"), (edge.target, "in")):
+            pairs.setdefault((edge.source, edge.target), []).append(edge.id)
+    routed: dict[str, float] = {}
+    for (source, target), ids in pairs.items():
+        amount = flow.get((source, "out"), {}).get((target, "in"), 0) / SCALE
+        if amount > 0:
+            for eid in ids:
+                routed[eid] = amount / len(ids)
+    return routed
+
+
 def _least_draw(graph: nx.DiGraph, draws: dict[str, int], target: int, big: int) -> dict[str, int]:
     """Each storage's draw when stored water is used last: the smallest common
     fraction f of every draw that still delivers `target`, then a min-cost flow

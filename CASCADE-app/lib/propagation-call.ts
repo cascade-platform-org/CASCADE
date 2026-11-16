@@ -30,6 +30,9 @@ import type { ModelConfiguration } from "@/lib/schemas/config";
 import type { PropagationRequest } from "@/lib/schemas/api";
 import type { PropagationScope } from "@/lib/schemas/primitives";
 import type { Propagated } from "@/lib/step-operator";
+import type { PropagationRound } from "@/lib/schemas/propagation";
+import { usePlaybackStore, type PlaybackSession } from "@/store/playback-store";
+import { buildTimeline, hasDegradation } from "@/lib/propagation-playback";
 
 /** Everything a Propagation reads besides the Scenario's Elements, fixed when captured. */
 export interface PropagationContext {
@@ -121,6 +124,22 @@ export async function propagateBatch(
   );
 }
 
+/** The animation's session for one Propagation: the state the engine was sent, and its rounds laid out as frames. */
+function playbackSession(payload: PropagationRequest, rounds: PropagationRound[]): PlaybackSession {
+  const { nodes, edges } = payload.project;
+  const levels: Record<string, number> = {};
+  const functionalityTime: Record<string, number> = {};
+  for (const n of Object.values(nodes)) {
+    levels[n.id] = n.functionality;
+    functionalityTime[n.id] = n.functionality_time ?? 0;
+  }
+  for (const e of Object.values(edges)) levels[e.id] = e.functionality;
+  return {
+    timeline: buildTimeline(rounds, Object.values(edges).map(({ id, source, target }) => ({ id, source, target }))),
+    start: { levels, functionalityTime },
+  };
+}
+
 export type CommitOutcome =
   | { status: "done"; scope: PropagationScope; updated: number; warnings: string[] }
   | { status: "busy" }
@@ -150,14 +169,20 @@ export async function commitPropagation(): Promise<CommitOutcome> {
     return { status: "failed", message: `Cannot propagate: ${err instanceof Error ? err.message : String(err)}` };
   }
 
+  // With the animation on, the engine also returns what each round did (ADR-0027).
+  const animate = usePlaybackStore.getState().animate;
+  if (animate) payload = { ...payload, trace: true };
+
   ui.setIsPropagating(true);
   try {
-    const result = await postPropagate(payload);
+    const { rounds, ...result } = await postPropagate(payload);
     runWithHistory(
       () => useCanvasStore.getState().applyPropagationResult(result),
       `Propagation (${ctx.scope})`,
       { updateType: "propagation", scope: ctx.scope, canvasId: ctx.canvasId },
     );
+    // Only a run that lowered some node has a cascade to play.
+    if (animate && rounds && hasDegradation(rounds)) usePlaybackStore.getState().begin(playbackSession(payload, rounds));
     return { status: "done", scope: ctx.scope, updated: result.updates.length, warnings: result.warnings ?? [] };
   } catch (err) {
     return { status: "failed", message: `Propagation failed — ${err instanceof Error ? err.message : "unexpected error"}` };

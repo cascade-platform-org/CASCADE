@@ -2540,6 +2540,22 @@
           "description": "Per storage node and Category: what it filled and drew (ADR-0020 \u00a71c).",
           "title": "Stored",
           "type": "object"
+        },
+        "rounds": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/PropagationRound"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Present only when the request asked for `trace` (ADR-0027): one entry per round.",
+          "title": "Rounds"
         }
       },
       "required": [
@@ -2549,6 +2565,42 @@
         "iterations"
       ],
       "title": "PropagationResult",
+      "type": "object"
+    },
+    "PropagationRound": {
+      "description": "One engine round, for the animation (ADR-0027): the flow solved at its start\nand the changes its node pass committed, in order.",
+      "properties": {
+        "flows": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "description": "SourceToDemands Category \u2192 edge id \u2192 amount carried, in model units: one routing of what this round's flow solve delivered (another routing may deliver the same amounts).",
+          "title": "Flows",
+          "type": "object"
+        },
+        "served_ratio": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "description": "Flow consumer \u2192 Category \u2192 delivered \u00f7 demand in this round's solve.",
+          "title": "Served Ratio",
+          "type": "object"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/RoundChange"
+          },
+          "title": "Changes",
+          "type": "array"
+        }
+      },
+      "title": "PropagationRound",
       "type": "object"
     },
     "PropagationScorecardEntry": {
@@ -2755,6 +2807,68 @@
         "op"
       ],
       "title": "RecordDiff",
+      "type": "object"
+    },
+    "RoundChange": {
+      "description": "One Functionality change an engine round committed, in commit order (ADR-0027).\n\n`cause` says what decided it: `edge` \u2014 an edge took its source's worse level at\nthe start of the round (ADR-0004); `flow` \u2014 a SourceToDemands flow shortfall;\n`logical` \u2014 logical aggregation; `rule` \u2014 a specific-rule override; `backup` \u2014\nthe drop was deferred into functionality_time, the level holding.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "functionality": {
+          "minimum": 1,
+          "title": "Functionality",
+          "type": "integer"
+        },
+        "functionality_time": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Functionality Time"
+        },
+        "cause": {
+          "enum": [
+            "edge",
+            "flow",
+            "logical",
+            "rule",
+            "backup"
+          ],
+          "title": "Cause",
+          "type": "string"
+        },
+        "responsibility_share": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Responsibility Share"
+        }
+      },
+      "required": [
+        "id",
+        "functionality",
+        "cause"
+      ],
+      "title": "RoundChange",
       "type": "object"
     },
     "ScenarioCheck": {

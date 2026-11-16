@@ -46,6 +46,14 @@ class PropagationRequest(BaseModel):
             "other sources cannot cover; filling comes after every consumer."
         ),
     )
+    trace: bool = Field(
+        default=False,
+        description=(
+            "Also return `rounds`: what each engine round did, for the Propagation "
+            "animation (ADR-0027). Off by default; the rest of the result is the same "
+            "either way."
+        ),
+    )
 
     @model_validator(mode="after")
     def _numbers_only(self):
@@ -117,6 +125,38 @@ class StoredAmount(BaseModel):
     drawn: float = Field(..., ge=0)
 
 
+class RoundChange(BaseModel):
+    """One Functionality change an engine round committed, in commit order (ADR-0027).
+
+    `cause` says what decided it: `edge` — an edge took its source's worse level at
+    the start of the round (ADR-0004); `flow` — a SourceToDemands flow shortfall;
+    `logical` — logical aggregation; `rule` — a specific-rule override; `backup` —
+    the drop was deferred into functionality_time, the level holding."""
+    id: str
+    functionality: int = Field(..., ge=1)
+    functionality_time: Optional[int] = Field(default=None, ge=0)
+    cause: Literal["edge", "flow", "logical", "rule", "backup"]
+    responsibility_share: Optional[ResponsibilityShare] = None
+
+
+class PropagationRound(BaseModel):
+    """One engine round, for the animation (ADR-0027): the flow solved at its start
+    and the changes its node pass committed, in order."""
+    flows: dict[str, dict[str, float]] = Field(
+        default_factory=dict,
+        description=(
+            "SourceToDemands Category → edge id → amount carried, in model units: one "
+            "routing of what this round's flow solve delivered (another routing may "
+            "deliver the same amounts)."
+        ),
+    )
+    served_ratio: dict[str, dict[str, float]] = Field(
+        default_factory=dict,
+        description="Flow consumer → Category → delivered ÷ demand in this round's solve.",
+    )
+    changes: list[RoundChange] = Field(default_factory=list)
+
+
 class PropagationResult(BaseModel):
     scope: Literal["local", "global"]
     updates: list[ElementUpdate]
@@ -138,6 +178,10 @@ class PropagationResult(BaseModel):
     stored: dict[str, dict[str, StoredAmount]] = Field(
         default_factory=dict,
         description="Per storage node and Category: what it filled and drew (ADR-0020 §1c).",
+    )
+    rounds: Optional[list[PropagationRound]] = Field(
+        default=None,
+        description="Present only when the request asked for `trace` (ADR-0027): one entry per round.",
     )
 
 

@@ -26,6 +26,7 @@ import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
 import { nodeSize, SHAPE_INSET_X, OCTAGON_CUT } from "@/lib/node-outline";
+import { usePlayback, isDimmed, changeDelay, DIMMED_OPACITY } from "./playback-paint";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -78,18 +79,20 @@ export function toRFNode(node: CascadeNode, selected: boolean): RFNode {
 interface ShapeProps {
   size: number;
   fill: string;
+  style?: React.CSSProperties;
   stroke?: string;
   strokeWidth?: number;
   strokeDasharray?: string;
   strokeDashoffset?: number;
 }
 
-function Diamond({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Diamond({ size, fill, style, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const h = size * 0.5;
   return (
     <polygon
       points={`${h},0 ${size},${h} ${h},${size} 0,${h}`}
       fill={fill}
+      style={style}
       stroke={stroke}
       strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
@@ -98,7 +101,7 @@ function Diamond({ size, fill, stroke = brandColor("neutral", 200), strokeWidth 
   );
 }
 
-function Octagon({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Octagon({ size, fill, style, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const o = size * OCTAGON_CUT;
   const e = size - o;
   const points = [
@@ -109,6 +112,7 @@ function Octagon({ size, fill, stroke = brandColor("neutral", 200), strokeWidth 
     <polygon
       points={points}
       fill={fill}
+      style={style}
       stroke={stroke}
       strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
@@ -117,12 +121,13 @@ function Octagon({ size, fill, stroke = brandColor("neutral", 200), strokeWidth 
   );
 }
 
-function Circle({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Circle({ size, fill, style, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   const r = size * 0.5;
   return (
     <circle
       cx={r} cy={r} r={r - 1}
       fill={fill}
+      style={style}
       stroke={stroke}
       strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
@@ -131,12 +136,13 @@ function Circle({ size, fill, stroke = brandColor("neutral", 200), strokeWidth =
   );
 }
 
-function Square({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
+function Square({ size, fill, style, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
   return (
     <rect
       x={1} y={1}
       width={size - 2} height={size - 2}
       fill={fill}
+      style={style}
       stroke={stroke}
       strokeWidth={strokeWidth}
       strokeDasharray={strokeDasharray}
@@ -267,7 +273,13 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
     icon: configCategories.find((c) => c.name === name)?.icon,
   }));
 
-  const hasTimeWarning = (data.functionality_time ?? 0) > 0;
+  // The Propagation animation's frame, when one is playing (ADR-0027): this node's
+  // countdown then, and — when this screen degrades it — how long it waits to change.
+  const playback = usePlayback();
+  const functionalityTime = playback?.functionalityTime[data.id] ?? data.functionality_time;
+  const changeAfter = playback ? changeDelay(playback, data.id) : 0;
+
+  const hasTimeWarning = (functionalityTime ?? 0) > 0;
   const hasDamage = data.direct_damage === true;
 
   // Crack geometry — computed once; coordinates are in SVG root space (shape offset = 8px)
@@ -290,8 +302,14 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
     zIndex: 1,  // above the shape's SVG, or the pointer would land on the SVG instead
   };
 
+  // Not a target of this playback screen: fade, so the targets stand out.
+  const dimmed = isDimmed(playback, data.id);
+
   return (
-    <div style={{ position: "relative", width: size + 16, height: size + 24 }}>
+    <div style={{
+      position: "relative", width: size + 16, height: size + 24,
+      opacity: dimmed ? DIMMED_OPACITY : 1, transition: "opacity 0.3s",
+    }}>
       <Handle
         type="source"
         position={Position.Top}
@@ -353,7 +371,15 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
         {/* Filled shape (functionality colour) — masked to show crack gap */}
         <g mask={crack ? `url(#${maskId})` : undefined}>
           <g transform="translate(8,0)">
-            <Shape size={size} fill={levelColor} stroke="none" />
+            <Shape
+              size={size}
+              fill={levelColor}
+              stroke="none"
+              // A consumer the flow decided changes colour when the flow reaches it.
+              // A target of this screen changes colour when its animation ends: when the
+              // flow's balls land on it, or the pulse from its cause arrives.
+              style={changeAfter > 0 ? { transition: `fill 0.25s ease ${changeAfter}s` } : undefined}
+            />
           </g>
         </g>
 

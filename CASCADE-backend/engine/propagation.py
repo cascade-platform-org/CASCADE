@@ -33,12 +33,20 @@ from engine.flow import (
     CategorySolve,
     is_flow_consumer,
     resolve_ratio_thresholds,
+    route_flows,
     solve_category,
     storage_exchange,
 )
 from engine.logical import compose_categories, eval_nested_func_ast, logical_category_candidates, parent_categories
 from engine.rules_eval import RuleContext
-from schemas.results import ElementUpdate, PropagationRequest, PropagationResult, StoredAmount
+from schemas.results import (
+    ElementUpdate,
+    PropagationRequest,
+    PropagationResult,
+    PropagationRound,
+    RoundChange,
+    StoredAmount,
+)
 
 # The heuristic id (api/propagation_routes.py's capability catalog) whose
 # `allocation` param selects the flow pass's scarcity strategy.
@@ -143,20 +151,31 @@ def run(request: PropagationRequest) -> PropagationResult:
     solves: dict[str, CategorySolve] = {}
 
     # --- fixed-point iteration --------------------------------------------
+    # The animation's record (ADR-0027), kept only when the request asks for it.
+    # It observes the loop and never feeds back into it.
+    trace: list[PropagationRound] | None = [] if request.trace else None
+
     iterations = 0
     converged = False
     while iterations < max_rounds:
         iterations += 1
         changed = False
+        round_record = PropagationRound() if trace is not None else None
 
         # Refresh effective edge Functionality from current source levels.
         for edge in edges:
             source_level = node_func.get(edge.source)
-            edge_func[edge.id] = (
+            refreshed = (
                 min(edge_intrinsic[edge.id], source_level)
                 if source_level is not None
                 else edge_intrinsic[edge.id]
             )
+            if round_record is not None and refreshed < edge_func[edge.id]:
+                round_record.changes.append(RoundChange(
+                    id=edge.id, functionality=refreshed, cause="edge",
+                    responsibility_share={edge.source: 1.0},
+                ))
+            edge_func[edge.id] = refreshed
 
         # Solve flow once per SourceToDemands category; collect per-node candidates.
         flow_candidates: dict[str, dict[str, tuple[int, dict[str, float]]]] = {}
@@ -169,6 +188,11 @@ def run(request: PropagationRequest) -> PropagationResult:
             )
             for nid, candidate in solves[category].candidates.items():
                 flow_candidates.setdefault(nid, {})[category] = candidate
+            if round_record is not None:
+                _record_flow(round_record, category, solves[category], nodes, edges,
+                             node_func, edge_func, scale_size, storage)
+        if trace is not None and round_record is not None:
+            trace.append(round_record)
 
         # Resolver for specific-rule conditions against the current round's state.
         resolve = _make_resolver(
@@ -193,11 +217,17 @@ def run(request: PropagationRequest) -> PropagationResult:
             )
             # 2. SourceToDemands flow pass: additive layer. Merge each flow candidate
             #    into the running dict via worst_of so neither pass silently overwrites.
+            #    `flow_set` names the categories whose level the flow pass set (alone
+            #    or tied with logical); only the animation's `cause` reads it.
+            flow_set: set[str] = set()
             for category, (flow_level, flow_shares) in flow_candidates.get(nid, {}).items():
                 if category not in candidates:
                     candidates[category] = (flow_level, flow_shares)
+                    flow_set.add(category)
                 else:
                     log_level, log_shares = candidates[category]
+                    if flow_level <= log_level:
+                        flow_set.add(category)
                     if flow_level < log_level:
                         candidates[category] = (flow_level, flow_shares)
                     elif flow_level == log_level:
@@ -259,6 +289,7 @@ def run(request: PropagationRequest) -> PropagationResult:
                 for category in binding
                 if (d := guards.backup_duration(node, category)) is not None
             ]
+            ft_before = node_ft[nid]
             if durations:
                 # Worse (shortest) reserve wins: the node degrades when the
                 # FIRST backup runs out. An already-running countdown is
@@ -279,15 +310,27 @@ def run(request: PropagationRequest) -> PropagationResult:
                     nested = eval_nested_func_ast(nested_ast, unbacked, nodes, scale_size)
                     if nested is not None:
                         fallback = nested
-                if fallback is None:
-                    continue  # every candidate was backed — pure deferral
-                level, responsibility, _unbacked_binding = fallback
-                if level >= current:
-                    continue  # the unbacked categories alone worsen nothing now
+                if fallback is None or fallback[0] >= current:
+                    # Every candidate was backed (pure deferral), or the unbacked
+                    # categories alone worsen nothing now: the level holds.
+                    if round_record is not None and node_ft[nid] != ft_before:
+                        round_record.changes.append(RoundChange(
+                            id=nid, functionality=current, functionality_time=node_ft[nid],
+                            cause="backup", responsibility_share=responsibility or None,
+                        ))
+                    continue
+                level, responsibility, binding = fallback
 
             node_func[nid] = level
             node_resp[nid] = responsibility
             changed = True
+            if round_record is not None:
+                round_record.changes.append(RoundChange(
+                    id=nid, functionality=level,
+                    functionality_time=node_ft[nid] if node_ft[nid] != ft_before else None,
+                    cause="rule" if override is not None else ("flow" if binding & flow_set else "logical"),
+                    responsibility_share=responsibility or None,
+                ))
 
         # Generic attribute-set rules (ADR-0015): apply every firing assignment
         # as a set-once latch. Evaluated after the functionality sub-step so a
@@ -383,7 +426,18 @@ def run(request: PropagationRequest) -> PropagationResult:
         warnings=warnings,
         served_ratio=served_ratio,
         stored=stored,
+        rounds=trace,
     )
+
+
+def _record_flow(round_record, category, solve, nodes, edges, node_func, edge_func, n, storage):
+    """Write one category's flow solve into the animation's round record (ADR-0027):
+    the served ratios, and a routing of the delivered amounts along the edges."""
+    for nid, ratio in solve.served_ratio.items():
+        round_record.served_ratio.setdefault(nid, {})[category] = ratio
+    routed = route_flows(category, nodes, edges, node_func, edge_func, n, storage, solve.delivered)
+    if routed:
+        round_record.flows[category] = routed
 
 
 def _stored_attribute(nodes, edges_by_id, element_id, attribute):

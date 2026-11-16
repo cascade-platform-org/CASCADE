@@ -22,6 +22,7 @@ import { AttributeScanPanel } from "@/components/canvas/attribute-scan-panel";
 import { AnalysisPage } from "@/components/analysis/analysis-page";
 import { TemporalSimulationWindow } from "@/components/temporal/temporal-simulation-window";
 import { RunViewBanner } from "@/components/temporal/run-view-banner";
+import { PlaybackBar } from "./playback-bar";
 import { ToastContainer } from "./toast-container";
 import { AnonymousBanner } from "@/components/auth/AnonymousBanner";
 import { useAuthStore } from "@/store/auth-store";
@@ -140,6 +141,7 @@ export function EditorShell() {
             : <GroupedViewCanvasWithProvider />
           }
           <SituationWindow />
+          <PlaybackBar />
           {shouldOffer && <TourPrompt onDismiss={dismiss} />}
         </div>
 

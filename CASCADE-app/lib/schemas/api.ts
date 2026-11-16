@@ -120,6 +120,8 @@ export const PropagationRequestSchema = z.object({
    * Propagation. Written by `buildPropagationPayload` from storage Stocks.
    */
   storage: z.record(z.string(), z.record(z.string(), z.number())).optional(),
+  /** Also return `rounds`, what each engine round did, for the Propagation animation (ADR-0027). */
+  trace: z.boolean().optional(),
 });
 
 /**

@@ -34,7 +34,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore, selectOrderedCanvases } from "@/store/canvas-store";
 import { useShownElements } from "@/hooks/useShownElements";
 import { useLevelPaint } from "@/hooks/useLevelPaint";
-import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
+import { PlaybackPaint } from "@/components/canvas/playback-paint";
 import { useTemporalSimulationStore } from "@/store/temporal-simulation-store";
 import { runWithHistory } from "@/lib/run-with-history";
 import { useNetworkStore } from "@/store/network-store";
@@ -373,8 +373,9 @@ function MergedViewCanvas() {
         <GeoMapBackground key={geoCanvasId} canvasId={geoCanvasId} />
       )}
 
-      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours. */}
-      <SnapshotColorsProvider value={levelPaint?.colors ?? null}>
+      {/* Level Mode paints Stocks by the Level Scale (ADR-0019 §6); null = the live colours.
+          A Propagation playback (ADR-0027) paints its frame over both. */}
+      <PlaybackPaint fallback={levelPaint?.colors ?? null}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -419,7 +420,7 @@ function MergedViewCanvas() {
           }}
         />
       </ReactFlow>
-      </SnapshotColorsProvider>
+      </PlaybackPaint>
 
       {/* Legend overlay — bottom right, outside ReactFlow so it never pans/zooms.
           Every canvas view needs it: an Analysis Heatmap applies to the Element

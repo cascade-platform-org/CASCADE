@@ -360,7 +360,16 @@ firing and normal propagation takes over.
    that is not filled in.
 2. **Pick the scope** — *Local* or *Global* (§2.6).
 3. **Apply** the Event. Several can be stacked before propagating.
-4. **Propagate.**
+4. **Propagate.** To watch the cascade instead of only its end, turn on the
+   clapperboard switch beside Propagate first (it stays on in this browser):
+   when the run degrades anything, a bar over the canvas plays it round by round,
+   fading everything except what is about to change. In each round the
+   flow leaves the Sources as balls in its category's colour, bigger where an
+   edge carries more, and a consumer the flow leaves short changes as the balls
+   reach it; then the round's other changes follow one by one, each changing
+   when the pulse from its cause arrives along the edge.
+   Drag the slider or click a round's number to jump; **Done** closes the bar
+   on the result, which the canvas already holds. Editing the model also closes it.
 5. **Advance time** if anything is on backup: **Temporal Jump** moves the clock
    by hand, *Auto-advance* jumps to the next expiry and re-propagates until
    nothing is left holding.

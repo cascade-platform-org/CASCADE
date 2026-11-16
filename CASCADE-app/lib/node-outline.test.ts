@@ -63,6 +63,7 @@ describe("floatingPath", () => {
 
   it("runs straight from border to border when unbowed", () => {
     expect(floatingPath(a, b, false).path).toBe("M 20 0 Q 100 0 180 0");
+    expect(floatingPath(a, b, false).length).toBe(160);
   });
 
   it("bows the two edges of an opposite pair to opposite sides, with distinct ends", () => {

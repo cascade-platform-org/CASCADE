@@ -379,3 +379,23 @@ body {
 .react-flow__handle.cascade-connect.connectingto {
   background: color-mix(in oklch, var(--color-blue-500) 40%, transparent);
 }
+
+/* ── Propagation animation (ADR-0027) ────────────────────────────────
+ * (The flow's balls move by SVG animateMotion — cascade-edge.tsx.)
+ * .cascade-pulse   a change arriving along an edge: one dash travelling
+ *                  the edge once (the path has pathLength=100)
+ * (Durations and delays come inline, scaled by the playback speed, ADR-0027.)
+ * ------------------------------------------------------------------ */
+.cascade-pulse {
+  stroke-dasharray: 22 100;
+  pointer-events: none;
+  animation: cascade-pulse-travel 1.4s ease-in forwards; /* duration set inline by speed */
+}
+@keyframes cascade-pulse-travel {
+  from { stroke-dashoffset: 22; opacity: 1; }
+  90% { opacity: 1; }
+  to { stroke-dashoffset: -100; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cascade-pulse { animation: none; stroke-dasharray: none; opacity: 0.6; }
+}

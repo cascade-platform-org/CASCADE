@@ -52,6 +52,29 @@ export const PropagationMetaSchema = z.object({
 /** What one storage exchanged with the network in one Propagation (ADR-0020 §1c). */
 export const StoredAmountSchema = z.object({ filled: z.number().min(0), drawn: z.number().min(0) });
 
+/**
+ * One Functionality change an engine round committed, in commit order (ADR-0027).
+ * `cause`: `edge` took its source's worse level at the round's start (ADR-0004);
+ * `flow` a SourceToDemands shortfall; `logical` logical aggregation; `rule` a
+ * specific-rule override; `backup` a drop deferred into functionality_time.
+ */
+export const RoundChangeSchema = z.object({
+  id: z.string(),
+  functionality: z.number().int().min(1),
+  functionality_time: z.number().int().min(0).optional(),
+  cause: z.enum(["edge", "flow", "logical", "rule", "backup"]),
+  responsibility_share: z.record(z.string(), z.number().gt(0).lte(1)).optional(),
+});
+
+/** One engine round, for the Propagation animation (ADR-0027). */
+export const PropagationRoundSchema = z.object({
+  /** SourceToDemands Category → edge id → amount carried: one routing of the round's solve. */
+  flows: z.record(z.string(), z.record(z.string(), z.number())).default({}),
+  /** Flow consumer → Category → delivered ÷ demand in this round's solve. */
+  served_ratio: z.record(z.string(), z.record(z.string(), z.number())).default({}),
+  changes: z.array(RoundChangeSchema).default([]),
+});
+
 export const PropagationResultSchema = PropagationMetaSchema.extend({
   /** Deltas from the engine — apply these on top of the project state. */
   updates: z.array(ElementUpdateSchema),
@@ -59,11 +82,15 @@ export const PropagationResultSchema = PropagationMetaSchema.extend({
   served_ratio: z.record(z.string(), z.record(z.string(), z.number())).default({}),
   /** Per storage node and Category: what it filled and drew (ADR-0020 §1c). */
   stored: z.record(z.string(), z.record(z.string(), StoredAmountSchema)).default({}),
+  /** Present only when the request asked for `trace` (ADR-0027): one entry per round. */
+  rounds: z.array(PropagationRoundSchema).optional(),
 });
 
 export type ElementUpdate = z.infer<typeof ElementUpdateSchema>;
 export type PropagationMeta = z.infer<typeof PropagationMetaSchema>;
 export type PropagationResult = z.infer<typeof PropagationResultSchema>;
+export type RoundChange = z.infer<typeof RoundChangeSchema>;
+export type PropagationRound = z.infer<typeof PropagationRoundSchema>;
 
 /** Response of POST /api/propagate/batch — one result per coalition, in order. */
 export const BatchPropagationResultSchema = z.object({

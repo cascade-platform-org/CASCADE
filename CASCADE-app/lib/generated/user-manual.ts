@@ -2508,6 +2508,18 @@ export const USER_MANUAL: ManualDoc = {
               {
                 "kind": "strong",
                 "text": "Propagate."
+              },
+              {
+                "kind": "text",
+                "text": " To watch the cascade instead of only its end, turn on the clapperboard switch beside Propagate first (it stays on in this browser): when the run degrades anything, a bar over the canvas plays it round by round, fading everything except what is about to change. In each round the flow leaves the Sources as balls in its category's colour, bigger where an edge carries more, and a consumer the flow leaves short changes as the balls reach it; then the round's other changes follow one by one, each changing when the pulse from its cause arrives along the edge. Drag the slider or click a round's number to jump; "
+              },
+              {
+                "kind": "strong",
+                "text": "Done"
+              },
+              {
+                "kind": "text",
+                "text": " closes the bar on the result, which the canvas already holds. Editing the model also closes it."
               }
             ],
             [
