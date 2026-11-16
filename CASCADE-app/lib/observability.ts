@@ -17,6 +17,23 @@
  */
 import * as Sentry from "@sentry/browser";
 
+/**
+ * Errors thrown by scripts the visitor's BROWSER injects into the page, which
+ * surface through our global error handler although no line of CASCADE is on
+ * the stack. Each pattern names a global only the injecting browser defines:
+ *
+ *  - `__firefox__` — Firefox for iOS injects helper scripts (reader mode,
+ *    night mode) that reference `window.__firefox__`; when the page is loaded
+ *    in a context where that object is missing, the helper throws.
+ *  - `window.ethereum` — crypto-wallet browsers and extensions inject a
+ *    provider object under this name and their own script trips over it.
+ *
+ * Matched against the event's "Type: message" text and dropped in the browser,
+ * before anything is sent. Keep the patterns this specific: a broad one
+ * ("undefined is not an object") would also swallow our own bugs.
+ */
+export const INJECTED_SCRIPT_ERRORS: RegExp[] = [/__firefox__/, /window\.ethereum/];
+
 let initialized = false;
 
 /** Idempotent — safe to call from more than one root layout's mount effect. */
@@ -35,5 +52,6 @@ export function initObservability(): void {
     integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.2,
     sendDefaultPii: false,
+    ignoreErrors: INJECTED_SCRIPT_ERRORS,
   });
 }

@@ -442,6 +442,12 @@ processed as a real event; a bare `{}` means it had none, which is what a
 *session* envelope looks like and is silently ignored (GlitchTip does not
 support sessions). Both return 200, so the status alone tells you nothing.
 
+**Browser-injected noise.** Some reports come from scripts the visitor's
+browser injects, with no CASCADE code involved — Firefox for iOS
+(`__firefox__`) and crypto-wallet browsers (`window.ethereum`). The frontend
+drops these before sending, via `INJECTED_SCRIPT_ERRORS` in
+`CASCADE-app/lib/observability.ts`; add a pattern there when a new one shows up.
+
 Because of the blocking above, expect real-user error counts to **undercount**
 by whatever share of visitors run a blocker. The fix, if that matters, is the
 SDK's `tunnel` option pointed at a first-party path proxied by Caddy, so the
