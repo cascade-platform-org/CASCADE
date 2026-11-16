@@ -343,6 +343,14 @@ The engine records for each degraded Element which upstream Elements or Events a
 - Add / edit / remove edges (direction, capacity, vulnerability levels).
 - Undo/redo stack. Every hand edit of an Element is undoable: each Inspector field (node and edge), its Rules editor, and every Active Rules panel action. A run of edits to the same fields of one Element (typing a label, dragging the Functionality slider) is one undo step; a click such as toggling or deleting a Rule is a step of its own (`lib/element-edit.ts`). The same history holds what the project saves beyond the graph (ADR-0017 §1a): every Temporal Simulation edit (typing in one field is one step; adding, duplicating or deleting one is a step), every Series edit (a rename with the references that follow it is one step), the Config window's Apply, and an LLM Design edit, each one step.
 
+### 8.1b Drawing edges *(implemented)*
+
+With the Add Edge tool (`E`), the whole shape of a node is where an edge starts or ends: drag from one node to another, or click one and then the other. Under the pointer, the shape tints; while dragging, the node about to receive the edge tints harder, and the line in progress already runs border to border, as the edge will. A node cannot connect to itself (`EDGE_SELF_LOOP`).
+
+Edges are **floating**: an edge stores no attachment point, and every view draws it from the source's outline to the target's along the line between their centres (`lib/node-outline.ts` for each Node Type's shape, `lib/floating-edge.ts` for the path). Moving a node re-aims its edges as it moves, so no layout command exists. When both `a → b` and `b → a` exist, each bows out to its own side so the two stay apart and selectable. In the All view, edges reach a collapsed Canvas's cluster box the same way, and a bundled edge carries its ×k label at its midpoint.
+
+Files from before this change carry `sourceHandle`/`targetHandle` on edges (the six connection dots of the previous design); loading drops them.
+
 ### 8.1a Navigating the canvas *(implemented)*
 
 Zoom is on the scroll wheel and the zoom cluster (bottom-left), from 5 % to 400 % in every view (`zoom-slider.tsx` holds the range; a georeferenced Canvas keeps a higher floor for its map); panning is on the **middle

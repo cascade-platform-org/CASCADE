@@ -47,18 +47,19 @@ import { useClipboardStore } from "@/store/clipboard-store";
 import { useConfigStore, selectN } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
-import { pickHandles } from "@/lib/edge-routing";
 import { CanvasContextMenu } from "./canvas-context-menu";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
 import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
-import { edgeTypes, toRFEdge } from "./cascade-edge";
+import { edgeTypes, toRFEdge, FloatingConnectionLine } from "./cascade-edge";
 import { CanvasLegend } from "./canvas-legend";
 
 
 // Stable reference — avoids new array on every render (which causes ReactFlow's
 // StoreUpdater to repeatedly call store.setState and trigger an infinite loop).
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
+
+const notSelfLoop = (c: { source: string; target: string }) => c.source !== c.target;
 
 // ---------------------------------------------------------------------------
 // Main FlowCanvas component
@@ -410,47 +411,22 @@ function FlowCanvas() {
   }, [setInspectorOpen]);
 
   // ── Add edge on connect ──
-  // When the user drags from an explicit handle dot, RF provides sourceHandle /
-  // targetHandle. When they use connectOnClick (clicking anywhere on a node),
-  // handles are null — we fall back to the position-based heuristic that picks
-  // the handle whose hexagon sector faces the other node.
-  const onConnect = useCallback((connection: {
-    source: string | null;
-    target: string | null;
-    sourceHandle: string | null;
-    targetHandle: string | null;
-  }) => {
+  // The whole node shape is the connection area (cascade-node.tsx), whether the
+  // user drags from one node to another or clicks one and then the other. The
+  // edge stores no attachment point: it is drawn border to border (floating).
+  const onConnect = useCallback((connection: { source: string | null; target: string | null }) => {
     if (!connection.source || !connection.target || !activeCanvas) return;
-
-    let sourceHandle = connection.sourceHandle ?? undefined;
-    let targetHandle = connection.targetHandle ?? undefined;
-
-    if (!sourceHandle || !targetHandle) {
-      const srcNode = allNodes[connection.source];
-      const tgtNode = allNodes[connection.target];
-      if (srcNode && tgtNode) {
-        const picked = pickHandles(
-          { position: srcNode.position ?? { x: 0, y: 0 } },
-          { position: tgtNode.position ?? { x: 0, y: 0 } },
-        );
-        sourceHandle = sourceHandle ?? picked.sourceHandle;
-        targetHandle = targetHandle ?? picked.targetHandle;
-      }
-    }
-
     const edge: CascadeEdge = {
       id: `edge-${nanoid(8)}`,
       source: connection.source,
       target: connection.target,
-      sourceHandle,
-      targetHandle,
       functionality: n,
     };
     runWithHistory(() => {
       upsertEdge(edge);
       addEdgeToCanvas(edge.id, activeCanvas.id);
     }, "Add edge", { updateType: "graph_update", canvasId: activeCanvas.id });
-  }, [activeCanvas, n, allNodes, upsertEdge, addEdgeToCanvas]);
+  }, [activeCanvas, n, upsertEdge, addEdgeToCanvas]);
 
   // ── Delete selected ──
   const deleteSelected = useCallback(() => {
@@ -701,6 +677,9 @@ function FlowCanvas() {
         selectionOnDrag={false}
         connectionMode={ConnectionMode.Loose}
         connectOnClick={activeTool === "add-edge"}
+        connectionLineComponent={FloatingConnectionLine}
+        // A self-loop is an invalid model (lib/project-validation.ts, EDGE_SELF_LOOP).
+        isValidConnection={notSelfLoop}
         // The Run View is read-only: no dragging or connecting (canvas-store refuses the writes anyway).
         nodesDraggable={!runShown}
         nodesConnectable={!runShown}

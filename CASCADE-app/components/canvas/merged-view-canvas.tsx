@@ -41,14 +41,14 @@ import { useNetworkStore } from "@/store/network-store";
 import { useConfigStore } from "@/store/config-store";
 import { useUiStore } from "@/store/ui-store";
 import { nodeTypes, toRFNode, expandBoundsForLabels } from "./cascade-node";
-import { edgeTypes } from "./cascade-edge";
+import { edgeTypes, toRFEdge } from "./cascade-edge";
 import { NodeSearch } from "./node-search";
 import { Lasso } from "./lasso";
 import { ZoomSlider, MIN_ZOOM, MAX_ZOOM } from "./zoom-slider";
 import { CanvasMiniMap } from "./canvas-minimap";
 import { CanvasLegend } from "./canvas-legend";
 import { GeoMapBackground } from "@/components/geo/geo-map-background";
-import type { Node as CascadeNode, Edge as CascadeEdge } from "@/lib/schemas/network";
+import type { Node as CascadeNode } from "@/lib/schemas/network";
 
 const PAN_ON_DRAG_MIDDLE: number[] = [1];
 import { anchorFlowToGeo } from "@/lib/geo-utils";
@@ -60,17 +60,6 @@ import { brandColor } from "@/lib/brand";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean): RFEdge {
-  return {
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    sourceHandle: edge.sourceHandle ?? null,
-    targetHandle: edge.targetHandle ?? null,
-    type: "cascadeEdge",
-    data: { ...edge, isInterCanvas },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Main component (must live inside ReactFlowProvider for useReactFlow)

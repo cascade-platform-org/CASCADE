@@ -151,9 +151,7 @@
         "target": "node-3dR9MeCn",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "tl",
-        "targetHandle": "bl"
+        "direct_damage": false
       },
       "edge-6YzHF_EQ": {
         "id": "edge-6YzHF_EQ",
@@ -162,8 +160,6 @@
         "functionality": 1,
         "functionality_time": 0,
         "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml",
         "responsibility_share": {
           "node-3dR9MeCn": 1.0
         }
@@ -175,8 +171,6 @@
         "functionality": 1,
         "functionality_time": 0,
         "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml",
         "responsibility_share": {
           "node-KM_lw8FE": 1.0
         }
@@ -188,8 +182,6 @@
         "functionality": 1,
         "functionality_time": 0,
         "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "tl",
         "responsibility_share": {
           "node-KM_lw8FE": 1.0
         }
@@ -200,9 +192,7 @@
         "target": "node-mYW8d9_h",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml"
+        "direct_damage": false
       },
       "edge-vztw1dsl": {
         "id": "edge-vztw1dsl",
@@ -210,9 +200,7 @@
         "target": "node-38A0gTLb",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "tr",
-        "targetHandle": "bl"
+        "direct_damage": false
       },
       "edge-0eDb-0Ir": {
         "id": "edge-0eDb-0Ir",
@@ -221,8 +209,6 @@
         "functionality": 1,
         "functionality_time": 0,
         "direct_damage": false,
-        "sourceHandle": "bl",
-        "targetHandle": "tl",
         "responsibility_share": {
           "node-KM_lw8FE": 1.0
         }
@@ -401,9 +387,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -411,9 +395,7 @@
               "target": "node-KM_lw8FE",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-NPsHMxNF": {
               "id": "edge-NPsHMxNF",
@@ -421,9 +403,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-f_tnBXBy": {
               "id": "edge-f_tnBXBy",
@@ -431,9 +411,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge-hRxIEYFn": {
               "id": "edge-hRxIEYFn",
@@ -441,9 +419,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -451,9 +427,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -461,9 +435,7 @@
               "target": "node-uJFHyvJ5",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -641,9 +613,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -652,8 +622,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node-3dR9MeCn": 1.0
               }
@@ -665,8 +633,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node-KM_lw8FE": 1.0
               }
@@ -678,8 +644,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node-KM_lw8FE": 1.0
               }
@@ -690,9 +654,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -700,9 +662,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -711,8 +671,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node-KM_lw8FE": 1.0
               }
@@ -898,9 +856,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -908,9 +864,7 @@
               "target": "node-KM_lw8FE",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-NPsHMxNF": {
               "id": "edge-NPsHMxNF",
@@ -918,9 +872,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-f_tnBXBy": {
               "id": "edge-f_tnBXBy",
@@ -928,9 +880,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge-hRxIEYFn": {
               "id": "edge-hRxIEYFn",
@@ -938,9 +888,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -948,9 +896,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -958,9 +904,7 @@
               "target": "node-uJFHyvJ5",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1130,9 +1074,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -1140,9 +1082,7 @@
               "target": "node-KM_lw8FE",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-NPsHMxNF": {
               "id": "edge-NPsHMxNF",
@@ -1150,9 +1090,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-f_tnBXBy": {
               "id": "edge-f_tnBXBy",
@@ -1160,9 +1098,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge-hRxIEYFn": {
               "id": "edge-hRxIEYFn",
@@ -1170,9 +1106,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -1180,9 +1114,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -1190,9 +1122,7 @@
               "target": "node-uJFHyvJ5",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1373,9 +1303,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -1383,9 +1311,7 @@
               "target": "node-KM_lw8FE",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-NPsHMxNF": {
               "id": "edge-NPsHMxNF",
@@ -1393,9 +1319,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-f_tnBXBy": {
               "id": "edge-f_tnBXBy",
@@ -1403,9 +1327,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge-hRxIEYFn": {
               "id": "edge-hRxIEYFn",
@@ -1413,9 +1335,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -1423,9 +1343,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -1433,9 +1351,7 @@
               "target": "node-uJFHyvJ5",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1605,9 +1521,7 @@
               "target": "node-3dR9MeCn",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-6YzHF_EQ": {
               "id": "edge-6YzHF_EQ",
@@ -1615,9 +1529,7 @@
               "target": "node-KM_lw8FE",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-NPsHMxNF": {
               "id": "edge-NPsHMxNF",
@@ -1625,9 +1537,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-f_tnBXBy": {
               "id": "edge-f_tnBXBy",
@@ -1635,9 +1545,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge-hRxIEYFn": {
               "id": "edge-hRxIEYFn",
@@ -1645,9 +1553,7 @@
               "target": "node-mYW8d9_h",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge-vztw1dsl": {
               "id": "edge-vztw1dsl",
@@ -1655,9 +1561,7 @@
               "target": "node-38A0gTLb",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge-0eDb-0Ir": {
               "id": "edge-0eDb-0Ir",
@@ -1665,9 +1569,7 @@
               "target": "node-uJFHyvJ5",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tl"
+              "direct_damage": false
             }
           },
           "canvases": [

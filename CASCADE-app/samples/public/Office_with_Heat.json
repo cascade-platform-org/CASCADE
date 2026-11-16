@@ -173,9 +173,7 @@
         "target": "node_1777028103615",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml"
+        "direct_damage": false
       },
       "edge_node_1777025959545_node_1777278151154_2": {
         "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -183,9 +181,7 @@
         "target": "node_1777278151154",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "tr",
-        "targetHandle": "bl"
+        "direct_damage": false
       },
       "edge_node_1777025985927_node_1777025959545_0": {
         "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -193,9 +189,7 @@
         "target": "node_1777025959545",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml"
+        "direct_damage": false
       },
       "edge_node_1777028040487_node_1762946753934_0": {
         "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -203,9 +197,7 @@
         "target": "node_1762946753934",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "ml",
-        "targetHandle": "mr"
+        "direct_damage": false
       },
       "edge_node_1777028103615_node_1762946753934_0": {
         "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -213,9 +205,7 @@
         "target": "node_1762946753934",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "tl",
-        "targetHandle": "br"
+        "direct_damage": false
       },
       "edge_node_1777278151154_node_1762946753934_0": {
         "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -223,9 +213,7 @@
         "target": "node_1762946753934",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "br",
-        "targetHandle": "tl"
+        "direct_damage": false
       },
       "edge_node_1777278212626_node_1777278151154_0": {
         "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -233,9 +221,7 @@
         "target": "node_1777278151154",
         "functionality": 3,
         "functionality_time": 0,
-        "direct_damage": false,
-        "sourceHandle": "mr",
-        "targetHandle": "ml"
+        "direct_damage": false
       }
     },
     "canvases": [
@@ -450,9 +436,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -460,9 +444,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -470,9 +452,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -481,8 +461,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1777028040487": 1
               }
@@ -494,8 +472,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -506,9 +482,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -516,9 +490,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -717,9 +689,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -727,9 +697,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -737,9 +705,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -747,9 +713,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -757,9 +721,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -767,9 +729,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -777,9 +737,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -992,9 +950,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -1002,9 +958,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -1012,9 +966,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -1022,9 +974,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -1032,9 +982,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -1042,9 +990,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -1052,9 +998,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1263,9 +1207,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -1273,9 +1215,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -1283,9 +1223,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -1294,8 +1232,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1777028040487": 1
               }
@@ -1307,8 +1243,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -1319,9 +1253,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -1329,9 +1261,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1537,9 +1467,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -1547,9 +1475,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -1557,9 +1483,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -1567,9 +1491,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -1577,9 +1499,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -1587,9 +1507,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -1597,9 +1515,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -1804,9 +1720,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -1814,9 +1728,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -1824,9 +1736,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -1834,9 +1744,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -1844,9 +1752,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -1854,9 +1760,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -1864,9 +1768,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -2092,9 +1994,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -2102,9 +2002,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -2112,9 +2010,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -2123,8 +2019,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1777028040487": 1
               }
@@ -2136,8 +2030,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -2148,9 +2040,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -2158,9 +2048,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -2359,9 +2247,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -2369,9 +2255,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -2379,9 +2263,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -2389,9 +2271,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -2399,9 +2279,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -2409,9 +2287,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -2419,9 +2295,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -2634,9 +2508,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -2644,9 +2516,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -2654,9 +2524,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -2664,9 +2532,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -2674,9 +2540,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -2684,9 +2548,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -2694,9 +2556,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -2905,9 +2765,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -2915,9 +2773,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -2925,9 +2781,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -2936,8 +2790,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr",
               "responsibility_share": {
                 "node_1777028040487": 1
               }
@@ -2949,8 +2801,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -2961,9 +2811,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -2971,9 +2819,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -3179,9 +3025,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -3189,9 +3033,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -3199,9 +3041,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -3209,9 +3049,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -3219,9 +3057,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -3229,9 +3065,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -3239,9 +3073,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -3446,9 +3278,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -3456,9 +3286,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -3466,9 +3294,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -3476,9 +3302,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -3486,9 +3310,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -3496,9 +3318,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -3506,9 +3326,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -3734,8 +3552,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -3747,8 +3563,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -3760,8 +3574,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -3772,9 +3584,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -3783,8 +3593,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -3796,8 +3604,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -3808,9 +3614,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -4009,9 +3813,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -4019,9 +3821,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -4029,9 +3829,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -4039,9 +3837,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -4049,9 +3845,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -4059,9 +3853,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -4069,9 +3861,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -4281,9 +4071,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -4291,9 +4079,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -4301,9 +4087,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -4311,9 +4095,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -4321,9 +4103,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -4331,9 +4111,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -4341,9 +4119,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -4556,8 +4332,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -4569,8 +4343,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -4582,8 +4354,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -4594,9 +4364,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -4605,8 +4373,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -4618,8 +4384,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -4630,9 +4394,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -4838,9 +4600,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -4848,9 +4608,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -4858,9 +4616,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -4868,9 +4624,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -4878,9 +4632,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -4888,9 +4640,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -4898,9 +4648,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -5102,9 +4850,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -5112,9 +4858,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -5122,9 +4866,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -5132,9 +4874,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -5142,9 +4882,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -5152,9 +4890,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -5162,9 +4898,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -5390,8 +5124,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -5403,8 +5135,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -5416,8 +5146,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -5428,9 +5156,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -5439,8 +5165,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -5452,8 +5176,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -5464,9 +5186,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -5665,9 +5385,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -5675,9 +5393,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -5685,9 +5401,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -5695,9 +5409,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -5705,9 +5417,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -5715,9 +5425,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -5725,9 +5433,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -5937,9 +5643,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -5947,9 +5651,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -5957,9 +5659,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -5967,9 +5667,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -5977,9 +5675,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -5987,9 +5683,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -5997,9 +5691,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -6212,8 +5904,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -6225,8 +5915,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -6238,8 +5926,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -6250,9 +5936,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -6261,8 +5945,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -6274,8 +5956,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -6286,9 +5966,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -6494,9 +6172,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -6504,9 +6180,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -6514,9 +6188,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -6524,9 +6196,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -6534,9 +6204,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -6544,9 +6212,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -6554,9 +6220,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -6758,9 +6422,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -6768,9 +6430,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -6778,9 +6438,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -6788,9 +6446,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -6798,9 +6454,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -6808,9 +6462,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -6818,9 +6470,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -7046,8 +6696,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -7059,8 +6707,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -7072,8 +6718,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -7084,9 +6728,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -7095,8 +6737,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -7108,8 +6748,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -7120,9 +6758,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -7321,9 +6957,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -7331,9 +6965,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -7341,9 +6973,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -7351,9 +6981,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -7361,9 +6989,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -7371,9 +6997,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -7381,9 +7005,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -7593,9 +7215,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -7603,9 +7223,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -7613,9 +7231,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -7623,9 +7239,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -7633,9 +7247,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -7643,9 +7255,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -7653,9 +7263,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -7868,8 +7476,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -7881,8 +7487,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -7894,8 +7498,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -7906,9 +7508,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -7917,8 +7517,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -7930,8 +7528,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl",
               "responsibility_share": {
                 "node_1777278151154": 1
               }
@@ -7942,9 +7538,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -8150,9 +7744,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -8160,9 +7752,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -8170,9 +7760,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -8180,9 +7768,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -8190,9 +7776,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -8200,9 +7784,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -8210,9 +7792,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -8414,9 +7994,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -8424,9 +8002,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -8434,9 +8010,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -8444,9 +8018,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -8454,9 +8026,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -8464,9 +8034,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -8474,9 +8042,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -8699,8 +8265,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -8712,8 +8276,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -8725,8 +8287,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -8737,9 +8297,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -8748,8 +8306,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -8760,9 +8316,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -8770,9 +8324,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -8971,9 +8523,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -8981,9 +8531,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -8991,9 +8539,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -9001,9 +8547,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -9011,9 +8555,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -9021,9 +8563,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -9031,9 +8571,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -9243,9 +8781,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -9253,9 +8789,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -9263,9 +8797,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -9273,9 +8805,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -9283,9 +8813,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -9293,9 +8821,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -9303,9 +8829,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -9515,8 +9039,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -9528,8 +9050,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl",
               "responsibility_share": {
                 "node_1777025959545": 1
               }
@@ -9541,8 +9061,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml",
               "responsibility_share": {
                 "node_1777025985927": 1
               }
@@ -9553,9 +9071,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -9564,8 +9080,6 @@
               "functionality": 1,
               "functionality_time": 0,
               "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br",
               "responsibility_share": {
                 "node_1777028103615": 1
               }
@@ -9576,9 +9090,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -9586,9 +9098,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -9794,9 +9304,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -9804,9 +9312,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -9814,9 +9320,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -9824,9 +9328,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -9834,9 +9336,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -9844,9 +9344,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -9854,9 +9352,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -10058,9 +9554,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -10068,9 +9562,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -10078,9 +9570,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -10088,9 +9578,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -10098,9 +9586,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -10108,9 +9594,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -10118,9 +9602,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -10332,9 +9814,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -10342,9 +9822,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -10352,9 +9830,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -10362,9 +9838,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -10372,9 +9846,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -10382,9 +9854,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -10392,9 +9862,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -10593,9 +10061,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -10603,9 +10069,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -10613,9 +10077,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -10623,9 +10085,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -10633,9 +10093,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -10643,9 +10101,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -10653,9 +10109,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -10861,9 +10315,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -10871,9 +10323,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -10881,9 +10331,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -10891,9 +10339,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -10901,9 +10347,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -10911,9 +10355,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -10921,9 +10363,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -11122,9 +10562,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -11132,9 +10570,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -11142,9 +10578,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -11152,9 +10586,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "ml",
-              "targetHandle": "mr"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -11162,9 +10594,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -11172,9 +10602,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "br",
-              "targetHandle": "tl"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -11182,9 +10610,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -11394,9 +10820,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -11404,9 +10828,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -11414,9 +10836,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -11424,9 +10844,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -11434,9 +10852,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -11444,9 +10860,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -11454,9 +10868,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -11667,9 +11079,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -11680,9 +11090,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              }
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -11693,9 +11101,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025985927": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -11703,9 +11109,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -11713,9 +11117,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -11726,9 +11128,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777278151154": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -11736,9 +11136,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -11946,9 +11344,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -11956,9 +11352,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -11966,9 +11360,7 @@
               "target": "node_1777025959545",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -11976,9 +11368,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -11986,9 +11376,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -11996,9 +11384,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -12006,9 +11392,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -12219,9 +11603,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -12232,9 +11614,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              }
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -12245,9 +11625,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025985927": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -12255,9 +11633,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -12265,9 +11641,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -12278,9 +11652,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777278151154": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -12288,9 +11660,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -12498,9 +11868,7 @@
               "target": "node_1777028103615",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -12508,9 +11876,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              "direct_damage": false
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -12518,9 +11884,7 @@
               "target": "node_1777025959545",
               "functionality": 1,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -12528,9 +11892,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              "direct_damage": false
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -12538,9 +11900,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              "direct_damage": false
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -12548,9 +11908,7 @@
               "target": "node_1762946753934",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -12558,9 +11916,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [
@@ -12774,9 +12130,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777025959545_node_1777278151154_2": {
               "id": "edge_node_1777025959545_node_1777278151154_2",
@@ -12787,9 +12141,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777025959545": 1
-              },
-              "sourceHandle": "mr",
-              "targetHandle": "ml"
+              }
             },
             "edge_node_1777025985927_node_1777025959545_0": {
               "id": "edge_node_1777025985927_node_1777025959545_0",
@@ -12797,9 +12149,7 @@
               "target": "node_1777025959545",
               "functionality": 1,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             },
             "edge_node_1777028040487_node_1762946753934_0": {
               "id": "edge_node_1777028040487_node_1762946753934_0",
@@ -12810,9 +12160,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777028040487": 1
-              },
-              "sourceHandle": "tl",
-              "targetHandle": "br"
+              }
             },
             "edge_node_1777028103615_node_1762946753934_0": {
               "id": "edge_node_1777028103615_node_1762946753934_0",
@@ -12823,9 +12171,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777028103615": 1
-              },
-              "sourceHandle": "tr",
-              "targetHandle": "bl"
+              }
             },
             "edge_node_1777278151154_node_1762946753934_0": {
               "id": "edge_node_1777278151154_node_1762946753934_0",
@@ -12836,9 +12182,7 @@
               "direct_damage": false,
               "responsibility_share": {
                 "node_1777278151154": 1
-              },
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              }
             },
             "edge_node_1777278212626_node_1777278151154_0": {
               "id": "edge_node_1777278212626_node_1777278151154_0",
@@ -12846,9 +12190,7 @@
               "target": "node_1777278151154",
               "functionality": 3,
               "functionality_time": 0,
-              "direct_damage": false,
-              "sourceHandle": "bl",
-              "targetHandle": "tr"
+              "direct_damage": false
             }
           },
           "canvases": [

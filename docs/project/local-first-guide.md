@@ -110,8 +110,6 @@ Inter-canvas edges are **not** a special type — they are stored as regular edg
       "id": "edge-pipe-1",
       "source": "node-reservoir",
       "target": "node-hospital",
-      "sourceHandle": "right",
-      "targetHandle": "left",
       "functionality": 3,
       "functionality_time": 0,
       "direct_damage": false,
@@ -338,7 +336,6 @@ Applied only if it worsens the current `functionality`.
 | --- | --- | --- |
 | `id` | `string` | Globally unique edge ID (global registry key). |
 | `source` / `target` | `string` | Node IDs in the global registry. |
-| `sourceHandle` / `targetHandle` | `string` (optional) | React Flow connection-dot ids the edge was drawn between. UI-only; ignored by the engine. |
 | `functionality` | `integer 1–N` | Effective level is `worst_of(intrinsic, source node)` — recomputed by the engine each run. |
 | `functionality_time` | `integer` (hours) | Same semantics as on nodes. |
 | `direct_damage` | `boolean` | Physical breakage set by a Hazard. |

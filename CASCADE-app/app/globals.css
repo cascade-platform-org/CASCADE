@@ -353,3 +353,29 @@ body {
     opacity: 0.14;
   }
 }
+
+/* ── Node connection area (cascade-node.tsx) ─────────────────────────
+ * One invisible React Flow handle covering a node's whole shape, clipped
+ * to that shape so only the shape itself starts or receives an edge. With
+ * the Add Edge tool, hovering tints it; while an edge is being drawn, the
+ * node under the pointer (.connectingto) is tinted harder as the drop target.
+ * ------------------------------------------------------------------ */
+.react-flow__handle.cascade-connect {
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  transition: background-color 0.12s;
+}
+.react-flow__handle.cascade-connect-circle { clip-path: circle(50%); }
+.react-flow__handle.cascade-connect-diamond { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.react-flow__handle.cascade-connect-octagon {
+  clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0 80%, 0 20%);
+}
+.react-flow__handle.cascade-connect.connectable:hover {
+  background: color-mix(in oklch, var(--color-blue-500) 22%, transparent);
+}
+.react-flow__handle.cascade-connect.connectingto {
+  background: color-mix(in oklch, var(--color-blue-500) 40%, transparent);
+}

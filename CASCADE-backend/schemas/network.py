@@ -258,20 +258,6 @@ class Edge(BaseModel):
     )
     # Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine.
     rules: Optional[list[str]] = None
-    sourceHandle: Optional[str] = Field(
-        default=None,
-        description=(
-            "React Flow handle id on the source node — which connection dot the edge "
-            "was drawn from. UI-only; ignored by the engine."
-        ),
-    )
-    targetHandle: Optional[str] = Field(
-        default=None,
-        description=(
-            "React Flow handle id on the target node — which connection dot the edge "
-            "attaches to. UI-only; ignored by the engine."
-        ),
-    )
     properties: Optional[dict[str, Any]] = None
     provenance: Optional[Provenance] = None  # set by LLM Design (ADR-0022); the engine never reads it
 

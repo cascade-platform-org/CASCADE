@@ -25,21 +25,15 @@ import { useElementHeatmapColor } from "./snapshot-colors";
 import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
+import { nodeSize, SHAPE_INSET_X, OCTAGON_CUT } from "@/lib/node-outline";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const MIN_SIZE = 24;
-const MAX_SIZE = 56;
-
 /** How far the backup pulse sits outside the shape, on every side. Small: the
  *  ring reads as part of the node rather than as a halo around it. */
 const PING_PAD = 3;
-function nodeSize(importance: number | undefined): number {
-  const imp = importance ?? 0.5;
-  return Math.round(MIN_SIZE + (MAX_SIZE - MIN_SIZE) * Math.min(1, Math.max(0, imp)));
-}
 
 // The node name renders centered below the shape (see "Label below") with this
 // max width, so it overflows the node's measured box by up to LABEL_MAX_WIDTH/2
@@ -105,7 +99,7 @@ function Diamond({ size, fill, stroke = brandColor("neutral", 200), strokeWidth 
 }
 
 function Octagon({ size, fill, stroke = brandColor("neutral", 200), strokeWidth = 2.5, strokeDasharray, strokeDashoffset }: ShapeProps) {
-  const o = size * 0.2;
+  const o = size * OCTAGON_CUT;
   const e = size - o;
   const points = [
     [o, 0], [e, 0], [size, o], [size, e],
@@ -158,6 +152,14 @@ function Square({ size, fill, stroke = brandColor("neutral", 200), strokeWidth =
 // ---------------------------------------------------------------------------
 
 type ShapeType = typeof Diamond | typeof Octagon | typeof Circle | typeof Square;
+
+/** The shape's name, for the connection area's CSS class (its clip-path). */
+function shapeName(Shape: ShapeType): "diamond" | "octagon" | "circle" | "square" {
+  if (Shape === Diamond) return "diamond";
+  if (Shape === Octagon) return "octagon";
+  if (Shape === Circle) return "circle";
+  return "square";
+}
 
 // ---------------------------------------------------------------------------
 // Category icons — rendered as absolutely-positioned Lucide icons inside the shape
@@ -273,45 +275,29 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
   // SVG IDs must not contain characters invalid in id/url() — replace anything non-alphanumeric
   const maskId = `frac-${data.id.replace(/[^a-zA-Z0-9]/g, "-")}`;
   const label = data.label ?? data.id;
-  const showHandles = activeTool === "add-edge";
+  const canConnect = activeTool === "add-edge";
 
-  // 6 connection points distributed around the shape perimeter.
-  // The shape is drawn inside the SVG with an 8px left offset, so:
-  //   shape left edge  = x=8, right edge = x=8+size
-  //   shape top = y=0, bottom = y=size
-  // All handles are type="source"; ConnectionMode.Loose allows them to act as
-  // targets too. Each carries a unique id so React Flow can pick the closest one.
-  const handleDot: React.CSSProperties = {
-    width: 10, height: 10,
-    background: brandColor("accent", 500),
-    border: "2px solid #fff",
-    borderRadius: "50%",
-    opacity: showHandles ? 1 : 0,
-    transition: "opacity 0.15s",
-    // We override position with left/top below; transform centers the dot.
-    transform: "translate(-50%, -50%)",
+  // One connection area covering the whole shape. Edges float (lib/floating-edge.ts),
+  // so where on the node an edge is drawn from or to carries no meaning: the
+  // whole shape is the place to start or finish one. It only takes the pointer
+  // with the Add Edge tool, so the rest of the time the node drags and selects
+  // as usual. Type "source" + ConnectionMode.Loose lets it be an edge's target
+  // too. Its look (hover and drop-target ring) is .cascade-connect in globals.css.
+  const connectArea: React.CSSProperties = {
+    left: SHAPE_INSET_X, top: 0, width: size, height: size,
+    transform: "none",
+    pointerEvents: canConnect ? "all" : "none",
+    zIndex: 1,  // above the shape's SVG, or the pointer would land on the SVG instead
   };
-  const handles = [
-    { id: "tl", pos: Position.Top,    x: 8 + size * 0.25, y: 0        },
-    { id: "tr", pos: Position.Top,    x: 8 + size * 0.75, y: 0        },
-    { id: "ml", pos: Position.Left,   x: 8,               y: size * 0.5 },
-    { id: "mr", pos: Position.Right,  x: 8 + size,        y: size * 0.5 },
-    { id: "bl", pos: Position.Bottom, x: 8 + size * 0.25, y: size     },
-    { id: "br", pos: Position.Bottom, x: 8 + size * 0.75, y: size     },
-  ];
 
   return (
     <div style={{ position: "relative", width: size + 16, height: size + 24 }}>
-      {handles.map(({ id, pos, x, y }) => (
-        <Handle
-          key={id}
-          id={id}
-          type="source"
-          position={pos}
-          style={{ ...handleDot, left: x, top: y }}
-        />
-      ))}
-
+      <Handle
+        type="source"
+        position={Position.Top}
+        className={`cascade-connect cascade-connect-${shapeName(Shape)}`}
+        style={connectArea}
+      />
 
       {/* Animated ping for backup state. The shape is drawn at x=8..8+size,
           y=0..size inside the SVG, so the ring is inset by PING_PAD on all four

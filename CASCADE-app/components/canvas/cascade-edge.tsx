@@ -3,28 +3,28 @@
 /**
  * cascade-edge.tsx — the CASCADE edge renderer for React Flow.
  *
- * Directed quadratic-bezier edge; colour = edge Functionality level (or the
- * Analysis Heatmap override). Inter-canvas edges render dashed. Exports
+ * Directed floating edge: it stores no attachment point and is drawn from
+ * border to border of its two nodes (lib/floating-edge.ts), bowing apart from
+ * an opposite edge. Colour = edge Functionality level (or the Analysis Heatmap
+ * override). Inter-canvas edges render dashed. Exports
  * `edgeTypes` (the React Flow registry) and `toRFEdge` (the CASCADE-edge →
- * RF-edge adapter) shared by the canvas variants.
+ * RF-edge adapter) and `FloatingConnectionLine`, shared by the canvas variants.
  */
 
-import { BaseEdge, Position, type EdgeTypes, type Edge as RFEdge } from "@xyflow/react";
+import { BaseEdge, type ConnectionLineComponentProps, type EdgeTypes, type Edge as RFEdge } from "@xyflow/react";
 import { useConfigStore, selectN, selectLevelColor } from "@/store/config-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { useElementHeatmapColor } from "./snapshot-colors";
 import type { Edge as CascadeEdge } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
+import { borderPoint } from "@/lib/node-outline";
+import { outlineOf, useFloatingPath } from "@/hooks/useFloatingPath";
 
 export function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean, targetCanvasLabel?: string): RFEdge {
   return {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    // Restore the handle ids stored when the edge was first drawn so React Flow
-    // routes the curve from/to the correct connection dot on each node.
-    sourceHandle: edge.sourceHandle ?? null,
-    targetHandle: edge.targetHandle ?? null,
     type: "cascadeEdge",
     data: { ...edge, isInterCanvas, targetCanvasLabel },
   };
@@ -35,37 +35,15 @@ export function toRFEdge(edge: CascadeEdge, isInterCanvas: boolean, targetCanvas
 // Custom edge
 // ---------------------------------------------------------------------------
 
-// Offset applied perpendicular-right of each edge direction so that antiparallel
-// pairs (A→B and B→A) land on opposite sides and are both selectable.
-const EDGE_CURVE_OFFSET = 4;
-
-function curvedEdgePath(
-  sx: number, sy: number,
-  tx: number, ty: number,
-): string {
-  const dx = tx - sx;
-  const dy = ty - sy;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  // Right-perpendicular unit vector of the direction sx→tx.
-  const px = dy / len;
-  const py = -dx / len;
-  // Quadratic bezier control point: midpoint shifted right-perpendicular.
-  const cx = (sx + tx) / 2 + px * EDGE_CURVE_OFFSET;
-  const cy = (sy + ty) / 2 + py * EDGE_CURVE_OFFSET;
-  return `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
-}
-
 function CascadeEdge({
-  id, sourceX, sourceY, targetX, targetY,
+  id, source, target,
   data,
   selected,
   markerEnd,
 }: {
   id: string;
-  sourceX: number; sourceY: number;
-  targetX: number; targetY: number;
-  sourcePosition: Position;
-  targetPosition: Position;
+  source: string;
+  target: string;
   data?: { functionality: number; isInterCanvas: boolean; targetCanvasLabel?: string };
   selected?: boolean;
   markerEnd?: string;
@@ -76,18 +54,43 @@ function CascadeEdge({
   const heatmapOverride = useElementHeatmapColor(id, liveHeatmap);
   const levelColor = heatmapOverride ?? functionalityColorEdge;
 
-  const edgePath = curvedEdgePath(sourceX, sourceY, targetX, targetY);
+  // Floating: drawn border to border from the nodes' live positions (lib/floating-edge.ts).
+  const floating = useFloatingPath(source, target);
+  if (!floating) return null;
 
   return (
     <BaseEdge
       id={id}
-      path={edgePath}
+      path={floating.path}
       style={{
         stroke: selected ? brandColor("accent", 500) : levelColor,
         strokeWidth: selected ? 2.5 : 1.5,
         strokeDasharray: data?.isInterCanvas ? "5,4" : undefined,
       }}
       markerEnd={markerEnd}
+    />
+  );
+}
+
+/**
+ * The line shown while an edge is being drawn: from the border of the node it
+ * starts at, towards the pointer — or to the hovered node's border once the
+ * pointer is over one, so the user sees exactly the edge they will get.
+ */
+export function FloatingConnectionLine({ fromNode, toNode, toX, toY }: ConnectionLineComponentProps) {
+  const from = outlineOf(fromNode);
+  const toOutline = toNode && toNode.id !== fromNode.id ? outlineOf(toNode) : null;
+  const end = toOutline
+    ? borderPoint(toOutline, { x: from.cx, y: from.cy })
+    : { x: toX, y: toY };
+  const start = borderPoint(from, end);
+  return (
+    <path
+      d={`M ${start.x} ${start.y} L ${end.x} ${end.y}`}
+      fill="none"
+      stroke={brandColor("accent", 500)}
+      strokeWidth={2}
+      strokeDasharray="5 4"
     />
   );
 }

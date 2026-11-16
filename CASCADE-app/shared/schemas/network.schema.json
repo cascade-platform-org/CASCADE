@@ -701,32 +701,6 @@
           "default": null,
           "title": "Rules"
         },
-        "sourceHandle": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "React Flow handle id on the source node \u2014 which connection dot the edge was drawn from. UI-only; ignored by the engine.",
-          "title": "Sourcehandle"
-        },
-        "targetHandle": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "React Flow handle id on the target node \u2014 which connection dot the edge attaches to. UI-only; ignored by the engine.",
-          "title": "Targethandle"
-        },
         "properties": {
           "anyOf": [
             {

@@ -21,7 +21,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "@/components/canvas/cascade-node";
-import { edgeTypes } from "@/components/canvas/cascade-edge";
+import { edgeTypes, toRFEdge } from "@/components/canvas/cascade-edge";
 import { SnapshotColorsProvider } from "@/components/canvas/snapshot-colors";
 import type { GraphSnapshot } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
@@ -57,13 +57,7 @@ function SnapshotFlow({ snapshot }: Props) {
   const rfEdges: RFEdge[] = useMemo(
     () =>
       Object.values(snapshot.edges).map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? null,
-        targetHandle: edge.targetHandle ?? null,
-        type: "cascadeEdge",
-        data: { ...edge, isInterCanvas: false },
+        ...toRFEdge(edge, false),
         selectable: false,
         focusable: false,
       })),
@@ -77,9 +71,9 @@ function SnapshotFlow({ snapshot }: Props) {
       edges={rfEdges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      // Handles are all type="source"; Loose lets them act as edge targets too
-      // (matches the editor and global view). Without this, target handles like
-      // "ml"/"mr" aren't found in Strict mode and edges silently drop (RF #008).
+      // A node's one handle is type="source"; Loose lets it be an edge's target
+      // too (matches the editor and global view). Without this, Strict mode finds
+      // no target handle and edges silently drop (RF #008).
       connectionMode={ConnectionMode.Loose}
       fitView
       fitViewOptions={{ padding: 0.25, minZoom: 0.1, maxZoom: 2 }}

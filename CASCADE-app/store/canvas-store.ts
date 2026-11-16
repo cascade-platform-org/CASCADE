@@ -28,7 +28,6 @@ import type {
 } from "@/lib/schemas";
 import type { PropagationResult, EventDefinition } from "@/lib/schemas";
 import { assignElementUpdate } from "@/lib/element-update";
-import { pickHandles } from "@/lib/edge-routing";
 import { nanoid } from "nanoid";
 import { applyEventToSnapshot, passTime, temporalJumpId } from "@/lib/event-application";
 import { applyGraphDiff } from "@/lib/graph-diff";
@@ -675,7 +674,7 @@ export const useCanvasStore = create<CanvasStore>()(
       const targetNode = state.nodes[targetNodeId];
       // Both endpoints and both canvases must exist. Validating the target the
       // same way as the source avoids registering an edge that points at a
-      // nonexistent node (which would route from (0,0) and dangle in history).
+      // nonexistent node (which would dangle in history).
       if (
         !sourceNode ||
         !targetNode ||
@@ -683,16 +682,10 @@ export const useCanvasStore = create<CanvasStore>()(
         !state.canvases[targetCanvasId]
       )
         return;
-      const { sourceHandle, targetHandle } = pickHandles(
-        { position: sourceNode.position ?? { x: 0, y: 0 } },
-        { position: targetNode.position ?? { x: 0, y: 0 } },
-      );
       const edge: Edge = {
         id: `edge-${nanoid(8)}`,
         source: sourceNodeId,
         target: targetNodeId,
-        sourceHandle,
-        targetHandle,
         functionality,
       };
       withHistory(

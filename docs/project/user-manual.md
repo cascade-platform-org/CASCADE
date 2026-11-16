@@ -29,6 +29,7 @@
 
 Select a node or edge and fill in the Inspector — the panel on the right. 
 An edge `a → b` means **a supplies b**. Common attributes with nodes have the same meaning.
+To draw one, press `E` and drag from `a` to `b`, or click `a` and then `b`. Anywhere on a node's shape works, and the edge follows the nodes when you move them.
 
 N.B. **Supply Capacity** appears once the node carries a Category (or is a Source), **Category Dependency Profiles**  appears once a Categorized node reaches it,  and **Canvas Membership** once the project has a second Canvas.
 

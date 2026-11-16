@@ -196,16 +196,6 @@ export const EdgeSchema = z.object({
   responsibility_share: z.record(z.string(), z.number().gt(0).lte(1)).optional(),
   /** Raw rule strings — authored with client-side autocomplete; parsed and evaluated by the engine. */
   rules: z.array(z.string()).optional(),
-  /**
-   * React Flow handle id on the source node — records which of the six
-   * connection dots the edge was drawn from. UI-only; ignored by the engine.
-   */
-  sourceHandle: z.string().optional(),
-  /**
-   * React Flow handle id on the target node — records which dot was connected to.
-   * UI-only; ignored by the engine.
-   */
-  targetHandle: z.string().optional(),
   properties: z.record(z.string(), z.unknown()).optional(),
   /** Set by LLM Design (ADR-0022); the engine never reads it. */
   provenance: ProvenanceSchema.optional(),

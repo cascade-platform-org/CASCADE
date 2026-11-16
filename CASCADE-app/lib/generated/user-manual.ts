@@ -32,7 +32,47 @@ export const USER_MANUAL: ManualDoc = {
             },
             {
               "kind": "text",
-              "text": ". Common attributes with nodes have the same meaning."
+              "text": ". Common attributes with nodes have the same meaning. To draw one, press "
+            },
+            {
+              "kind": "code",
+              "text": "E"
+            },
+            {
+              "kind": "text",
+              "text": " and drag from "
+            },
+            {
+              "kind": "code",
+              "text": "a"
+            },
+            {
+              "kind": "text",
+              "text": " to "
+            },
+            {
+              "kind": "code",
+              "text": "b"
+            },
+            {
+              "kind": "text",
+              "text": ", or click "
+            },
+            {
+              "kind": "code",
+              "text": "a"
+            },
+            {
+              "kind": "text",
+              "text": " and then "
+            },
+            {
+              "kind": "code",
+              "text": "b"
+            },
+            {
+              "kind": "text",
+              "text": ". Anywhere on a node's shape works, and the edge follows the nodes when you move them."
             }
           ]
         },

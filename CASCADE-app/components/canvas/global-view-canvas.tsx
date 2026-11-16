@@ -27,7 +27,6 @@ import {
   getViewportForBounds,
   type Node as RFNode,
   type Edge as RFEdge,
-  getBezierPath,
   BaseEdge,
   Handle,
   Position,
@@ -52,6 +51,7 @@ import { brandColor } from "@/lib/brand";
 import { clusterNodeId, clusterSummary, drawnEdges, homeCanvases } from "@/lib/canvas-clusters";
 import { operativityColor } from "@/lib/scorecard-utils";
 import { useAnalysisStore } from "@/store/analysis-store";
+import { useFloatingPath } from "@/hooks/useFloatingPath";
 
 // ---------------------------------------------------------------------------
 // Group node — coloured background labelled with the canvas name
@@ -122,6 +122,8 @@ interface ClusterData extends GroupData {
   levelColor: string;
 }
 
+const HIDDEN_HANDLE: React.CSSProperties = { opacity: 0, pointerEvents: "none" };
+
 function CanvasClusterNode({ data }: { data: ClusterData }) {
   return (
     <div
@@ -133,7 +135,8 @@ function CanvasClusterNode({ data }: { data: ClusterData }) {
         padding: "8px 10px",
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: data.color }} />
+      {/* Edges float to this box's border; the handles only satisfy React Flow. */}
+      <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} />
       <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: data.color }}>
         {data.onToggle && <ToggleButton collapsed onToggle={data.onToggle} color={data.color} />}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.label}</span>
@@ -144,40 +147,40 @@ function CanvasClusterNode({ data }: { data: ClusterData }) {
           Operativity · {data.count} nodes
         </span>
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: data.color }} />
+      <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Bezier edge shared by both intra- and inter-canvas edges in this view
+// Floating edge shared by intra- and inter-canvas edges in this view
 // ---------------------------------------------------------------------------
 
 function GlobalEdge({
-  id, sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition,
+  id, source, target, label,
   data,
   selected,
   markerEnd,
 }: {
   id: string;
-  sourceX: number; sourceY: number;
-  targetX: number; targetY: number;
-  sourcePosition: Parameters<typeof getBezierPath>[0]["sourcePosition"];
-  targetPosition: Parameters<typeof getBezierPath>[0]["targetPosition"];
+  source: string;
+  target: string;
+  label?: React.ReactNode;
   data?: { isInterCanvas: boolean; color: string };
   selected?: boolean;
   markerEnd?: string;
 }) {
-  const [edgePath] = getBezierPath({
-    sourceX, sourceY, sourcePosition,
-    targetX, targetY, targetPosition,
-  });
+  // Border to border, from a node's shape or a collapsed Canvas's box (lib/floating-edge.ts).
+  const floating = useFloatingPath(source, target);
+  if (!floating) return null;
 
   return (
     <BaseEdge
       id={id}
-      path={edgePath}
+      path={floating.path}
+      label={label}
+      labelX={floating.mid.x}
+      labelY={floating.mid.y}
       style={{
         stroke: selected ? brandColor("accent", 500) : (data?.color ?? brandColor("neutral", 400)),
         strokeWidth: selected ? 2.5 : 1.5,
@@ -375,15 +378,11 @@ function GlobalViewCanvas() {
     // Edges — once each; into a collapsed Canvas they are bundled onto its cluster.
     // isInterCanvas compares the endpoints' home canvases, not the edge's canvas lists.
     drawnEdges(canvases, allEdges, home, collapsed).forEach((d) => {
-      const single = d.members.length === 1 ? allEdges[d.members[0]] : undefined;
-      const exact = single !== undefined && single.source === d.source && single.target === d.target;
       const edgeColor = levelColor(scaleLevels, d.functionality);
       edges.push({
         id: d.id,
         source: d.source,
         target: d.target,
-        sourceHandle: exact ? single.sourceHandle ?? null : null,
-        targetHandle: exact ? single.targetHandle ?? null : null,
         type: "globalEdge",
         label: d.members.length > 1 ? `×${d.members.length}` : undefined,
         data: { isInterCanvas: d.isInterCanvas, color: edgeColor },

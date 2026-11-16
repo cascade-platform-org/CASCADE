@@ -9,15 +9,12 @@
 
 import { useCallback } from "react";
 import { useReactFlow, getNodesBounds } from "@xyflow/react";
-import { Waypoints, FileCode, ImageDown, BoxSelect, Spline, Bot } from "lucide-react";
+import { FileCode, ImageDown, BoxSelect, Spline, Bot } from "lucide-react";
 
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
-import { runWithHistory } from "@/lib/run-with-history";
 import { useUiStore } from "@/store/ui-store";
-import { pickHandles } from "@/lib/edge-routing";
 import { expandBoundsForLabels } from "./cascade-node";
-import type { Edge as CascadeEdge } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
 
 // ---------------------------------------------------------------------------
@@ -29,7 +26,7 @@ export interface CanvasContextMenuProps {
   y: number;
   /** All node IDs visible in this canvas view — used for Select all nodes. */
   nodeIds: string[];
-  /** All edge IDs visible in this canvas view — used for Select all edges and Edge Layout. */
+  /** All edge IDs visible in this canvas view — used for Select all edges. */
   edgeIds: string[];
   /** Filename stem used for downloads (no extension). */
   filename?: string;
@@ -60,34 +57,12 @@ function MenuItem({ onClick, children }: { onClick: () => void; children: React.
 export function CanvasContextMenu({
   x, y, nodeIds, edgeIds, filename = "canvas", onClose, containerRef,
 }: CanvasContextMenuProps) {
-  const { getNodes, getNode } = useReactFlow();
+  const { getNodes } = useReactFlow();
 
-  const allEdges = useCanvasStore((s) => s.edges);
-  const updateEdge = useCanvasStore((s) => s.updateEdge);
   const pushToast = useUiStore((s) => s.pushToast);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
 
   // --- Canvas section -------------------------------------------------------
-
-  const applyEdgeLayout = useCallback(() => {
-    onClose();
-    // Compute the patches first so a no-op layout pushes no history entry.
-    const patches: Array<[string, { sourceHandle: string; targetHandle: string }]> = [];
-    for (const eid of edgeIds) {
-      const edge = allEdges[eid] as CascadeEdge | undefined;
-      if (!edge) continue;
-      const srcRF = getNode(edge.source);
-      const tgtRF = getNode(edge.target);
-      if (!srcRF || !tgtRF) continue;
-      patches.push([eid, pickHandles(srcRF, tgtRF)]);
-    }
-    if (patches.length > 0) {
-      runWithHistory(() => {
-        for (const [eid, handles] of patches) updateEdge(eid, handles);
-      }, "Edge layout", { updateType: "graph_update" });
-      pushToast({ message: `Laid out ${patches.length} edge${patches.length !== 1 ? "s" : ""}`, variant: "success", durationMs: 3000 });
-    }
-  }, [edgeIds, allEdges, getNode, updateEdge, pushToast, onClose]);
 
   // LLM Design about the selection, or about the whole model when nothing is selected (ADR-0022).
   const selectedCount = useNetworkStore((s) => s.selectedNodeIds.size + s.selectedEdgeIds.size);
@@ -211,10 +186,6 @@ export function CanvasContextMenu({
         style={{ left: x, top: y }}
       >
         <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Canvas</p>
-        <MenuItem onClick={applyEdgeLayout}>
-          <Waypoints size={14} className="shrink-0 text-zinc-500" />
-          Edge Layout
-        </MenuItem>
         <MenuItem onClick={selectAllNodes}>
           <BoxSelect size={14} className="shrink-0 text-zinc-500" />
           Select all nodes
