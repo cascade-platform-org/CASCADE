@@ -303,6 +303,18 @@ From the second screening (§4c). The owner approved the three passing candidate
 - N = 7: c = ceil(7 · min(1, κ/ℓ)), two levels of damping; the night threshold becomes κ > (6/7) ℓ. The paper reports both scales.
 - What would count against the reading: I1 changing T9 at night; I2 failing to hold T9 at night when κ > 0.75 ℓ; under A, I2 holding T9 at night with κ ≤ 0.75.
 
+## 4k. Declared 2026-11-19: the capacity model of §4j under the alternative rules
+
+**Question.** §4h swapped the conversion rule on the Koriyama model without capacity or time. Does the answer of §4j (R2 holds rescue through the night once capacity is high enough or the calls fall enough) depend on Eq. (1)?
+
+**What changes.** The §4j model is rebuilt with the rule swapped for S0 (reachability), D1 (damping only) and K2 (coincidence only), as §4h does; everything else is unchanged (the flow, the timeline, the barrier at T6, assumptions A and B). N = 4; κ and r as in §4j. Output: per (rule, assumption, variant, κ, r), T9 by hour and whether it holds nominal through the night (22:00–06:00). `decide_rules.py`; `results/decision_rules_koriyama_capacity.csv`.
+
+**Recorded before running: the hand reading.** c is the call node's level, ceil(4 · min(1, κ/ℓ)).
+- S0 (lowest input; Control and Time read one level higher). The night reaches T9 through Time, so it is absorbed. The environment alone reaches Evacuation Behaviour (Input), so T6 is below nominal all day under I0 and I1 and holds T9 there: never nominal. Under I2 and I3, T9 = c: nominal at night once κ > 0.75 ℓ. **Same night answer as Eq. (1).** By day it differs: under I0 and I1, T9 is below nominal from 13:00, before any call.
+- D1 (one level above the lowest input). Every single deviation is absorbed, so Evacuation Behaviour is nominal under every variant, and under B the load is r under every variant. T9 = min(min(3, c) + 1, 4): nominal at night once c ≥ 3, κ > 0.5 ℓ. **The four variants give the same answer: no intervention matters.**
+- K2 (second-lowest input). At night under I0 and I1 the night and T6 are two inputs at 3, so T9 = 3 at every κ. Under I2 and I3, T9 = 4 only when c = 4 (κ > 0.75 ℓ). **Same night answer as Eq. (1).** After dawn a lone shortfall is ignored: I1, I2, I3 nominal at every κ.
+- So the night answer is the same under Eq. (1), S0 and K2, and D1 removes every difference between the interventions. What would count against the reading: S0 or K2 giving a different night answer from Eq. (1); D1 separating any two variants.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -329,3 +341,4 @@ From the second screening (§4c). The owner approved the three passing candidate
 | 3187cdb | the decision models under the alternative rules S0, D1, K2 (§4h) |
 | f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
 | 3532983 | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
+| (this commit) | the capacity model under the alternative rules S0, D1, K2 (§4k) |
