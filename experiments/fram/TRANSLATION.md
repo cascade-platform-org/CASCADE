@@ -328,4 +328,4 @@ From the second screening (§4c). The owner approved the three passing candidate
 | 43b0532 | two new held-out cases, Adhita & Furusho 2021 and Nayak et al. 2022; Koo et al. 2021 dropped (§4g) |
 | 3187cdb | the decision models under the alternative rules S0, D1, K2 (§4h) |
 | f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
-| (this commit) | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
+| 3532983 | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |

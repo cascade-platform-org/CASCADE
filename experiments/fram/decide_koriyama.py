@@ -32,7 +32,10 @@ from decide_zheng import N, config_at, level
 from framkit import readers
 from framkit.engine import function_levels, propagate
 from framkit.translate import Translated, translate
-from schemas.network import Edge
+from dataclasses import replace
+
+from schemas.config import CategoryDefinition
+from schemas.network import CategoryDependencyProfile, Edge, Node
 from run_rq2 import barrier
 
 RESULTS = Path(__file__).resolve().parent / "results"
@@ -120,6 +123,77 @@ def shapley() -> list[dict[str, object]]:
     return rows + [{"damage": "(all together)", "shapley_operativity_loss": round(v_all[frozenset(EVENT)], 4)}]
 
 
+
+# --- §4j: rescue capacity as a flow into the 119-call node, and the night, over hourly periods ---------
+HOURS = [13 + h for h in range(22)][:21]            # 13:00 .. 09:00 start of period (21 periods, to 10:00)
+NIGHT = lambda h: h % 24 >= 17 or h % 24 < 6        # dusk 17:00 to dawn 06:00
+CALLING = lambda h: h >= 22                          # overtopping 22:00, to the end of the window
+KAPPA = [round(0.1 * k, 1) for k in range(1, 13)]
+R = [0, 0.25, 0.5, 0.75, 1]
+UNIT = 100
+
+
+def build_flow(intervention: str, n: int, kappa: float) -> Translated:
+    """§4f's model (assumption A wiring) with rescue capacity supplying the 119-call node."""
+    t = build(intervention, n, "A")
+    nodes, edges = dict(t.project.nodes), dict(t.project.edges)
+    calls = t.fn_node[CALLS]
+    nodes["rescue_capacity"] = Node(id="rescue_capacity", label="Rescue capacity", functionality=n,
+                                    node_type="Personnel", node_categories=["rescue"],
+                                    supply_capacity={"rescue": round(kappa * UNIT)})
+    edges["e_rescue_calls"] = Edge(id="e_rescue_calls", source="rescue_capacity", target=calls, functionality=n)
+    nodes[calls] = nodes[calls].model_copy(update={"category_dependency_profiles": {
+        "rescue": CategoryDependencyProfile(dependency_level=n, demand=UNIT)}})
+    cv = t.project.canvases[0]
+    canvas = cv.model_copy(update={"graph": cv.graph.model_copy(update={
+        "node_ids": [*cv.graph.node_ids, "rescue_capacity"], "edge_ids": [*cv.graph.edge_ids, "e_rescue_calls"]})})
+    project = t.project.model_copy(update={"nodes": nodes, "edges": edges, "canvases": [canvas, *t.project.canvases[1:]]})
+    config = t.config.model_copy(update={"categories": [*t.config.categories,
+                                                        CategoryDefinition(name="rescue", category_type="SourceToDemands")]})
+    return replace(t, project=project, config=config)
+
+
+def with_load(t: Translated, load: float) -> Translated:
+    calls = t.fn_node[CALLS]
+    nodes = dict(t.project.nodes)
+    prof = dict(nodes[calls].category_dependency_profiles)
+    prof["rescue"] = prof["rescue"].model_copy(update={"demand": round(load * UNIT)})
+    nodes[calls] = nodes[calls].model_copy(update={"category_dependency_profiles": prof})
+    return replace(t, project=t.project.model_copy(update={"nodes": nodes}))
+
+
+def hour(t: Translated, intervention: str, n: int, assumption: str, r: float, h: int) -> dict[str, int]:
+    """One period: the imposed state of hour h, propagated; under B the load follows T6 (two passes)."""
+    start = {e: level(n, 3) for e in EVENT if e != CALLS}
+    if intervention in ("I1", "I3"):
+        start.pop("T1"), start.pop("T2")
+    if not NIGHT(h):
+        start.pop("X:Function restricted during nighttime")
+    imposed = {t.fn_node[f]: v for f, v in start.items()}
+    if not CALLING(h):
+        return function_levels(t, propagate(with_load(t, 0), imposed))
+    load = 1.0
+    if assumption == "B" and function_levels(t, propagate(with_load(t, 0), imposed))["T6"] == n:
+        load = r
+    return function_levels(t, propagate(with_load(t, load), imposed))
+
+
+def capacity_rows() -> list[dict[str, object]]:
+    rows = []
+    for n, intervention, kappa in itertools.product(SCALES, INTERVENTIONS, KAPPA):
+        t = build_flow(intervention, n, kappa)
+        for assumption in READINGS:
+            for r in (R if assumption == "B" else [1]):
+                t9 = [hour(t, intervention, n, assumption, r, h)["T9"] for h in HOURS]
+                night = [v for h, v in zip(HOURS, t9) if CALLING(h) and NIGHT(h)]
+                tail = [i for i, h in enumerate(HOURS) if CALLING(h) and all(v == n for v in t9[i:])]
+                rows.append({"N": n, "assumption": assumption, "intervention": intervention, "kappa": kappa, "r": r,
+                             "night_periods_nominal": f"{sum(v == n for v in night)}/{len(night)}",
+                             "T9_nominal_from": f"{HOURS[tail[0]] % 24:02d}:00" if tail else "never",
+                             "T9_by_hour": " ".join(str(v) for v in t9)})
+    return rows
+
+
 def write(name: str, rows: list[dict[str, object]]) -> None:
     with open(RESULTS / name, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))
@@ -134,6 +208,7 @@ def main() -> None:
     write("koriyama_interventions.csv", interventions_rows())
     write("koriyama_grid.csv", grid_rows())
     write("koriyama_shapley.csv", shapley())
+    write("koriyama_capacity.csv", capacity_rows())
 
 
 if __name__ == "__main__":

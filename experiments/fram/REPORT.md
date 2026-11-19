@@ -188,6 +188,20 @@ Togawa et al. give two qualitative recommendations and no capacities, call count
 - **Shapley of I0** (loss 0.185): T1 0.060, T2 0.051, environment 0.041, night 0.026, 119 calls 0.007.
 - What the integration shows: the FRAM draws the call load as exogenous, and under that reading none of the recommendations helps Rescue. The recommendations' effect on Rescue rests on an assumption the FRAM does not state (calls follow evacuation), which the model makes explicit.
 
+## Decision model: Koriyama with rescue capacity and the night (`decide_koriyama.py`; declared at 3532983, TRANSLATION.md §4j)
+
+§4f's model with rescue capacity supplying the 119-call node (κ, in units of the event's call load) and hourly periods 13:00–10:00: night 17:00–06:00, calls from 22:00. Under A the load stays 1; under B it drops to r once Evacuation Behaviour holds. 576 points (`results/koriyama_capacity.csv`); §4f's three files regenerate byte-identical.
+
+| T9 (Rescue) held through the night, 22:00–06:00 | Assumption A | Assumption B |
+|---|---|---|
+| I0 the event, I1 R1 | never: the night and Evacuation Behaviour coincide at T9 | never |
+| I2 R2, I3 R1 + R2 | once κ > 0.75 (N = 4), κ > 6/7 (N = 7) | once κ > 0.75 r (N = 4), κ > (6/7) r (N = 7) |
+
+After dawn (N = 4, A): I1, I2, I3 nominal once κ > 0.5; I0 once κ > 0.75 (Evacuation Behaviour still deviates by day under I0).
+
+- **Every line of the hand reading held**: 0 of 576 points differ on the night; I1 never changes T9 at night; the order I0 ≤ I1, I2 ≤ I3 holds at every hour of every point.
+- **What it shows.** §4f's answer was the case κ ≤ 0.75 of this one. With capacity in the model, R2 is the intervention that holds rescue at night under both assumptions, and what it needs differs: capacity for three quarters of the calls if calls are external (A), or a drop of the backlog to below κ/0.75 if they follow evacuation (B). R1 acts only after dawn.
+
 ## The decision models under the alternative rules (`decide_rules.py`; declared at 3187cdb, TRANSLATION.md §4h)
 
 Does the conversion rule RQ1 checks matter to what the comparisons conclude? Both models rebuilt with the rule swapped; everything else unchanged (`results/decision_rules_zheng.csv`, `decision_rules_koriyama.csv`).
