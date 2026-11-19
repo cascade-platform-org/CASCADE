@@ -274,6 +274,35 @@ From the second screening (§4c). The owner approved the three passing candidate
 
 **Reported, whatever the outcome.** The share of elements coded identically and Cohen's kappa over the three answers (3, 1, effect); the balanced accuracy of every rule of the paper's Fig. 2 on each case under the second coding, beside the declared one. The declared coding stays the paper's main result. No hand reading: the outcome depends on the coder.
 
+## 4j. Declared 2026-11-19: the Koriyama decision model with rescue capacity and the night (paper §5.2)
+
+§4f ran Koriyama on structure alone, so its comparison never involved a resource or a time limit, the terms of RQ2. The source describes both in words: the 119 line received more calls than Rescue Operations could serve, from residents who had not evacuated (21 % did not), and the levees were overtopped at night (river thresholds passed 20:00–22:00; level 3 alert at 13:00, evacuation order at 16:50). This section adds them as a flow and a timeline, with every quantity the source leaves open swept, as §4d does for Zheng.
+
+**Imported.** Everything in §4f: the converted FRAM under v2, the event elements at 3, the options I0–I3, assumptions A and B. From the source: the timeline above; the call backlog came from residents who stayed; 21 % did not evacuate.
+
+**The added layer.**
+- *Rescue capacity as a flow.* A source "Rescue capacity" supplies κ·100 of a SourceToDemands category `rescue`; the 119-call node demands the call load ℓ·100 and takes the Functionality of its served ratio (ceil(ratio · N), as F17 in §4d). The call node's imposed level 3 is replaced by this flow; it feeds T9 through its existing coupling, so Eq. (1) at T9 is unchanged.
+- *The call load.* Unit: the load of the event as it happened (ℓ = 1). Assumption A: ℓ = 1 under every option. Assumption B: ℓ = 1 while T6 is below nominal, ℓ = r while T6 is nominal, where r is the share of the original backlog that remains when evacuation behaviour holds (two passes per period: T6 does not depend on the calls).
+- *Time.* Hourly periods from 13:00 to 10:00 the next morning (21 periods). The night restriction is imposed from dusk (17:00) to dawn (06:00); the call demand from overtopping (22:00) to the end; the other event elements over the whole window.
+
+**Swept.** κ ∈ {0.1, 0.2, …, 1.2}; r ∈ {0, 0.25, 0.5, 0.75, 1}; N = 4 and N = 7 (v2 rescaled as §4e). The severity grid of §4f is not repeated here: the event elements stay at the declared coding.
+
+**Outputs** (`decide_koriyama.py`; `results/koriyama_capacity.csv`).
+- Per (N, assumption, option, κ, r): T9's level in every period; the number of night periods (22:00–06:00) with T9 nominal; the first period after 22:00 from which T9 is nominal to the end.
+- Whether the order I0 ≤ I1, I2 ≤ I3 holds at every point (checked; the flow makes it no longer entailed).
+
+**Recorded before running: the hand reading** (N = 4). Let c = ceil(4 · min(1, κ/ℓ)) be the call node's level once the demand starts. T9's degraded inputs can be the night, the calls and Evacuation Behaviour (T6, a Precondition of T9); T3 stays nominal. T6 is below nominal under I0 and I1 whenever two of its inputs deviate (I0: the level 4 alert and the environment all day, plus the night; I1: the environment and the night, so at night only), and nominal under I2 and I3.
+- 13:00–17:00 (no night, no calls): at most T6 deviates at T9, alone and damped: T9 = 4 under every option.
+- 17:00–22:00 (night, no calls): I0, I1: night and T6 coincide, T9 = 3 at every κ. I2, I3: the night alone, T9 = 4.
+- 22:00–06:00 (night and calls): I0, I1: T9 = 3 (2 if c = 1) at every κ: the night and T6 hold it. I2, I3: T9 = 4 if c = 4 (κ > 0.75 ℓ), 3 if c ∈ {2, 3}, 2 if c = 1.
+- 06:00–10:00 (calls, no night): I0: T6 and the calls; T9 = 4 if c = 4, else 3 (2 if c = 1). I1, I2, I3: T6 nominal, the calls alone; T9 = 4 once c ≥ 3 (κ > 0.5 ℓ).
+- A (ℓ = 1): **R2 holds rescue through the night exactly when κ > 0.75; R1 never does; below that capacity no option does.** §4f's finding under A (no option restores rescue) is the case κ ≤ 0.75.
+- B (ℓ = 1 while T6 is below nominal, r once it holds): I0 and I1 as under A at night. I2 and I3: ℓ = r, so **R2 holds rescue through the night once κ > 0.75 r**: at any κ when r = 0, as under A when r = 1.
+- So R2 is what holds rescue at night in every case, and it needs either enough capacity (κ > 0.75, under A) or a large enough drop in calls (r < κ/0.75, under B). R1 matters only after dawn.
+- At κ ∈ (0.5, 0.75] the night reproduces §4f's table (c = 3 under ℓ = 1). Reference point of the paper's figure: κ = 0.7, r = 0.25.
+- N = 7: c = ceil(7 · min(1, κ/ℓ)), two levels of damping; the night threshold becomes κ > (6/7) ℓ. The paper reports both scales.
+- What would count against the reading: I1 changing T9 at night; I2 failing to hold T9 at night when κ > 0.75 ℓ; under A, I2 holding T9 at night with κ ≤ 0.75.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -298,4 +327,5 @@ From the second screening (§4c). The owner approved the three passing candidate
 | d2adf31 | Koriyama reading B as a model edit, results expected identical (§4f re-encoding) |
 | 43b0532 | two new held-out cases, Adhita & Furusho 2021 and Nayak et al. 2022; Koo et al. 2021 dropped (§4g) |
 | 3187cdb | the decision models under the alternative rules S0, D1, K2 (§4h) |
-| (this commit) | protocol for a second, independent coding of the analysed scenarios (§4i) |
+| f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
+| (this commit) | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
