@@ -63,9 +63,27 @@ def koriyama() -> list[dict[str, object]]:
     return rows
 
 
+def koriyama_capacity() -> list[dict[str, object]]:
+    """§4k: the §4j capacity model under each rule, N = 4."""
+    dk = decide_koriyama
+    rows = []
+    for member, intervention, kappa in itertools.product(RULES, dk.INTERVENTIONS, dk.KAPPA):
+        with rule(member):
+            t = dk.build_flow(intervention, N, kappa)
+            for assumption in dk.READINGS:
+                for r in (dk.R if assumption == "B" else [1]):
+                    t9 = [dk.hour(t, intervention, N, assumption, r, h)["T9"] for h in dk.HOURS]
+                    night = [v for h, v in zip(dk.HOURS, t9) if dk.CALLING(h) and dk.NIGHT(h)]
+                    rows.append({"rule": member, "assumption": assumption, "intervention": intervention,
+                                 "kappa": kappa, "r": r, "night_held": all(v == N for v in night),
+                                 "T9_by_hour": " ".join(str(v) for v in t9)})
+    return rows
+
+
 def main() -> None:
     write("decision_rules_zheng.csv", zheng())
     write("decision_rules_koriyama.csv", koriyama())
+    write("decision_rules_koriyama_capacity.csv", koriyama_capacity())
 
 
 if __name__ == "__main__":

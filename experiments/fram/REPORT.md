@@ -229,6 +229,19 @@ Every Zheng line of the hand reading held. Telecom at 2 (not predicted): D1 and 
 - **One line of the hand reading failed.** S0 was predicted to leave T9 degraded under both readings; under B it restores T9 with I2 and I3, as Eq. (1) does. The night restriction enters T9 through a Time aspect, which S0 damps by one step. S0 differs from Eq. (1) elsewhere (I1 does not restore T5; Operativity 0.741 against 0.815 under I0), and not at T9.
 - **What it shows.** On Zheng the rule decides the comparison: each of the three alternatives changes what it recommends. On Koriyama the answer about Rescue is the same under three of the four rules and differs only under damping only, where the event degrades nothing downstream. The link between RQ1 and RQ2 is strong on the case with quantities and weak on the structural one, whose finding (the answer turns on whether calls follow evacuation) is robust to the rule.
 
+## The capacity model under the alternative rules (`decide_rules.py`; declared at ef68ae4, TRANSLATION.md §4k)
+
+§4j's model rebuilt with S0, D1 and K2; N = 4, every κ and r (`results/decision_rules_koriyama_capacity.csv`, 1,152 rows; §4h's two files regenerate byte-identical).
+
+| Rule | Rescue held through the night |
+|---|---|
+| **Eq. (1)**, S0, K2 | R2 (I2, I3) only, once κ > 0.75 ℓ; never under I0 or I1 |
+| D1 | every variant alike, once κ > 0.5 ℓ (ℓ = r under B for every variant) |
+
+- **Every line of the hand reading held** (0 of 1,152 points differ). S0 and K2 agree with Eq. (1) on the night at every point; D1 differs at 126 points and never separates two variants at any hour.
+- By day S0 differs: under I0 and I1, T9 is below nominal from 13:00, before any call.
+- **What it shows.** On Koriyama with capacity and time, the recommendation is the same under three of the four rules; damping only removes every difference between the interventions. On Zheng each alternative rule changes it (§4h).
+
 ## Ablations, severity grid, claim tiers, reference check (`run_ablation.py`; declared at 44fc0bc, TRANSLATION.md §4c)
 
 **Reference evaluator** (`results/reference_check.csv`): the printed formula, re-implemented without the engine, equals the engine in every function level of 13,864 Scenarios (8 semantics × the three grids and 100 random Scenarios on each of 13 `.xfmv` models). 0 differences.

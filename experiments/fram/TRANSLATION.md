@@ -341,4 +341,4 @@ From the second screening (§4c). The owner approved the three passing candidate
 | 3187cdb | the decision models under the alternative rules S0, D1, K2 (§4h) |
 | f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
 | 3532983 | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
-| (this commit) | the capacity model under the alternative rules S0, D1, K2 (§4k) |
+| ef68ae4 | the capacity model under the alternative rules S0, D1, K2 (§4k) |
