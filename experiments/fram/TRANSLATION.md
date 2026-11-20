@@ -393,4 +393,4 @@ From the second screening (§4c). The owner approved the three passing candidate
 | f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
 | 3532983 | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
 | ef68ae4 | the capacity model under the alternative rules S0, D1, K2 (§4k) |
-| (this commit) | RQ1 statistics: chance baselines, credible intervals, paired comparison, fragility, leave-one-case-out (§4l); the thresholds as N grows (§4m); the comparisons under every rule RQ1 cannot reject (§4n) |
+| a535e8a | RQ1 statistics: chance baselines, credible intervals, paired comparison, fragility, leave-one-case-out (§4l); the thresholds as N grows (§4m); the comparisons under every rule RQ1 cannot reject (§4n) |

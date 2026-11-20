@@ -1,0 +1,8 @@
+held_out,chosen,chosen_mean_on_rest,v2_mean_on_rest,v2_top_on_rest,chosen_score_on_held_out,v2_score_on_held_out
+Zheng,v2+3,0.79,0.771,False,0.875,0.875
+Tian,v2,0.821,0.821,True,0.625,0.625
+Li,v2+3,0.765,0.746,False,1.0,1.0
+Togawa,v2+3,0.765,0.746,False,1.0,1.0
+Adhita,v2+3,0.865,0.846,False,0.5,0.5
+Nayak,v2+3,0.825,0.8,False,0.702,0.73
+mean,,,,,0.784,0.788

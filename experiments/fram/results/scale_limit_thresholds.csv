@@ -1,0 +1,257 @@
+case,N,variant,condition,measure,value
+Zheng,4,I0,"s=3, before aid",F20 nominal fails from d =,0.25
+Zheng,4,I0,"s=3, after aid",F20 nominal fails from d =,0.25
+Zheng,4,I0,"s=2, before aid",F20 nominal fails from d =,0.25
+Zheng,4,I0,"s=2, after aid",F20 nominal fails from d =,0.25
+Zheng,4,I1,"s=3, before aid",F20 nominal fails from d =,0.50
+Zheng,4,I1,"s=3, after aid",F20 nominal fails from d =,0.50
+Zheng,4,I1,"s=2, before aid",F20 nominal fails from d =,0.25
+Zheng,4,I1,"s=2, after aid",F20 nominal fails from d =,0.25
+Zheng,4,I2,"s=3, before aid",F20 nominal fails from d =,0.50
+Zheng,4,I2,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,4,I2,"s=2, before aid",F20 nominal fails from d =,0.25
+Zheng,4,I2,"s=2, after aid",F20 nominal fails from d =,0.67
+Zheng,4,I3,"s=3, before aid",F20 nominal fails from d =,0.50
+Zheng,4,I3,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,4,I3,"s=2, before aid",F20 nominal fails from d =,0.25
+Zheng,4,I3,"s=2, after aid",F20 nominal fails from d =,0.67
+Zheng,7,I0,"s=3, before aid",F20 nominal fails from d =,0.15
+Zheng,7,I0,"s=3, after aid",F20 nominal fails from d =,0.15
+Zheng,7,I0,"s=2, before aid",F20 nominal fails from d =,0.15
+Zheng,7,I0,"s=2, after aid",F20 nominal fails from d =,0.15
+Zheng,7,I1,"s=3, before aid",F20 nominal fails from d =,0.43
+Zheng,7,I1,"s=3, after aid",F20 nominal fails from d =,0.43
+Zheng,7,I1,"s=2, before aid",F20 nominal fails from d =,0.15
+Zheng,7,I1,"s=2, after aid",F20 nominal fails from d =,0.15
+Zheng,7,I2,"s=3, before aid",F20 nominal fails from d =,0.43
+Zheng,7,I2,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,7,I2,"s=2, before aid",F20 nominal fails from d =,0.15
+Zheng,7,I2,"s=2, after aid",F20 nominal fails from d =,0.40
+Zheng,7,I3,"s=3, before aid",F20 nominal fails from d =,0.43
+Zheng,7,I3,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,7,I3,"s=2, before aid",F20 nominal fails from d =,0.15
+Zheng,7,I3,"s=2, after aid",F20 nominal fails from d =,0.40
+Zheng,10,I0,"s=3, before aid",F20 nominal fails from d =,0.10
+Zheng,10,I0,"s=3, after aid",F20 nominal fails from d =,0.10
+Zheng,10,I0,"s=2, before aid",F20 nominal fails from d =,0.10
+Zheng,10,I0,"s=2, after aid",F20 nominal fails from d =,0.10
+Zheng,10,I1,"s=3, before aid",F20 nominal fails from d =,0.40
+Zheng,10,I1,"s=3, after aid",F20 nominal fails from d =,0.40
+Zheng,10,I1,"s=2, before aid",F20 nominal fails from d =,0.10
+Zheng,10,I1,"s=2, after aid",F20 nominal fails from d =,0.10
+Zheng,10,I2,"s=3, before aid",F20 nominal fails from d =,0.40
+Zheng,10,I2,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,10,I2,"s=2, before aid",F20 nominal fails from d =,0.10
+Zheng,10,I2,"s=2, after aid",F20 nominal fails from d =,0.29
+Zheng,10,I3,"s=3, before aid",F20 nominal fails from d =,0.40
+Zheng,10,I3,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,10,I3,"s=2, before aid",F20 nominal fails from d =,0.10
+Zheng,10,I3,"s=2, after aid",F20 nominal fails from d =,0.29
+Zheng,13,I0,"s=3, before aid",F20 nominal fails from d =,0.08
+Zheng,13,I0,"s=3, after aid",F20 nominal fails from d =,0.08
+Zheng,13,I0,"s=2, before aid",F20 nominal fails from d =,0.08
+Zheng,13,I0,"s=2, after aid",F20 nominal fails from d =,0.08
+Zheng,13,I1,"s=3, before aid",F20 nominal fails from d =,0.39
+Zheng,13,I1,"s=3, after aid",F20 nominal fails from d =,0.39
+Zheng,13,I1,"s=2, before aid",F20 nominal fails from d =,0.08
+Zheng,13,I1,"s=2, after aid",F20 nominal fails from d =,0.08
+Zheng,13,I2,"s=3, before aid",F20 nominal fails from d =,0.39
+Zheng,13,I2,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,13,I2,"s=2, before aid",F20 nominal fails from d =,0.08
+Zheng,13,I2,"s=2, after aid",F20 nominal fails from d =,0.23
+Zheng,13,I3,"s=3, before aid",F20 nominal fails from d =,0.39
+Zheng,13,I3,"s=3, after aid",F20 nominal fails from d =,none
+Zheng,13,I3,"s=2, before aid",F20 nominal fails from d =,0.08
+Zheng,13,I3,"s=2, after aid",F20 nominal fails from d =,0.23
+Koriyama,4,I0,"A, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"A, day",T9 nominal from kappa =,0.76
+Koriyama,4,I0,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"B, r=0, day",T9 nominal from kappa =,0.76
+Koriyama,4,I0,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"B, r=0.25, day",T9 nominal from kappa =,0.76
+Koriyama,4,I0,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"B, r=0.5, day",T9 nominal from kappa =,0.76
+Koriyama,4,I0,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"B, r=0.75, day",T9 nominal from kappa =,0.76
+Koriyama,4,I0,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,4,I0,"B, r=1, day",T9 nominal from kappa =,0.76
+Koriyama,4,I1,"A, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"A, day",T9 nominal from kappa =,0.51
+Koriyama,4,I1,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,4,I1,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"B, r=0.25, day",T9 nominal from kappa =,0.13
+Koriyama,4,I1,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"B, r=0.5, day",T9 nominal from kappa =,0.26
+Koriyama,4,I1,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"B, r=0.75, day",T9 nominal from kappa =,0.38
+Koriyama,4,I1,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,4,I1,"B, r=1, day",T9 nominal from kappa =,0.51
+Koriyama,4,I2,"A, night",T9 nominal from kappa =,0.76
+Koriyama,4,I2,"A, day",T9 nominal from kappa =,0.51
+Koriyama,4,I2,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,4,I2,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,4,I2,"B, r=0.25, night",T9 nominal from kappa =,0.19
+Koriyama,4,I2,"B, r=0.25, day",T9 nominal from kappa =,0.13
+Koriyama,4,I2,"B, r=0.5, night",T9 nominal from kappa =,0.38
+Koriyama,4,I2,"B, r=0.5, day",T9 nominal from kappa =,0.26
+Koriyama,4,I2,"B, r=0.75, night",T9 nominal from kappa =,0.57
+Koriyama,4,I2,"B, r=0.75, day",T9 nominal from kappa =,0.38
+Koriyama,4,I2,"B, r=1, night",T9 nominal from kappa =,0.76
+Koriyama,4,I2,"B, r=1, day",T9 nominal from kappa =,0.51
+Koriyama,4,I3,"A, night",T9 nominal from kappa =,0.76
+Koriyama,4,I3,"A, day",T9 nominal from kappa =,0.51
+Koriyama,4,I3,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,4,I3,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,4,I3,"B, r=0.25, night",T9 nominal from kappa =,0.19
+Koriyama,4,I3,"B, r=0.25, day",T9 nominal from kappa =,0.13
+Koriyama,4,I3,"B, r=0.5, night",T9 nominal from kappa =,0.38
+Koriyama,4,I3,"B, r=0.5, day",T9 nominal from kappa =,0.26
+Koriyama,4,I3,"B, r=0.75, night",T9 nominal from kappa =,0.57
+Koriyama,4,I3,"B, r=0.75, day",T9 nominal from kappa =,0.38
+Koriyama,4,I3,"B, r=1, night",T9 nominal from kappa =,0.76
+Koriyama,4,I3,"B, r=1, day",T9 nominal from kappa =,0.51
+Koriyama,7,I0,"A, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"A, day",T9 nominal from kappa =,0.86
+Koriyama,7,I0,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"B, r=0, day",T9 nominal from kappa =,0.86
+Koriyama,7,I0,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"B, r=0.25, day",T9 nominal from kappa =,0.86
+Koriyama,7,I0,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"B, r=0.5, day",T9 nominal from kappa =,0.86
+Koriyama,7,I0,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"B, r=0.75, day",T9 nominal from kappa =,0.86
+Koriyama,7,I0,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,7,I0,"B, r=1, day",T9 nominal from kappa =,0.86
+Koriyama,7,I1,"A, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"A, day",T9 nominal from kappa =,0.58
+Koriyama,7,I1,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,7,I1,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"B, r=0.25, day",T9 nominal from kappa =,0.15
+Koriyama,7,I1,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"B, r=0.5, day",T9 nominal from kappa =,0.29
+Koriyama,7,I1,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"B, r=0.75, day",T9 nominal from kappa =,0.43
+Koriyama,7,I1,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,7,I1,"B, r=1, day",T9 nominal from kappa =,0.58
+Koriyama,7,I2,"A, night",T9 nominal from kappa =,0.86
+Koriyama,7,I2,"A, day",T9 nominal from kappa =,0.58
+Koriyama,7,I2,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,7,I2,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,7,I2,"B, r=0.25, night",T9 nominal from kappa =,0.22
+Koriyama,7,I2,"B, r=0.25, day",T9 nominal from kappa =,0.15
+Koriyama,7,I2,"B, r=0.5, night",T9 nominal from kappa =,0.43
+Koriyama,7,I2,"B, r=0.5, day",T9 nominal from kappa =,0.29
+Koriyama,7,I2,"B, r=0.75, night",T9 nominal from kappa =,0.65
+Koriyama,7,I2,"B, r=0.75, day",T9 nominal from kappa =,0.43
+Koriyama,7,I2,"B, r=1, night",T9 nominal from kappa =,0.86
+Koriyama,7,I2,"B, r=1, day",T9 nominal from kappa =,0.58
+Koriyama,7,I3,"A, night",T9 nominal from kappa =,0.86
+Koriyama,7,I3,"A, day",T9 nominal from kappa =,0.58
+Koriyama,7,I3,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,7,I3,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,7,I3,"B, r=0.25, night",T9 nominal from kappa =,0.22
+Koriyama,7,I3,"B, r=0.25, day",T9 nominal from kappa =,0.15
+Koriyama,7,I3,"B, r=0.5, night",T9 nominal from kappa =,0.43
+Koriyama,7,I3,"B, r=0.5, day",T9 nominal from kappa =,0.29
+Koriyama,7,I3,"B, r=0.75, night",T9 nominal from kappa =,0.65
+Koriyama,7,I3,"B, r=0.75, day",T9 nominal from kappa =,0.43
+Koriyama,7,I3,"B, r=1, night",T9 nominal from kappa =,0.86
+Koriyama,7,I3,"B, r=1, day",T9 nominal from kappa =,0.58
+Koriyama,10,I0,"A, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"A, day",T9 nominal from kappa =,0.91
+Koriyama,10,I0,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"B, r=0, day",T9 nominal from kappa =,0.91
+Koriyama,10,I0,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"B, r=0.25, day",T9 nominal from kappa =,0.91
+Koriyama,10,I0,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"B, r=0.5, day",T9 nominal from kappa =,0.91
+Koriyama,10,I0,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"B, r=0.75, day",T9 nominal from kappa =,0.91
+Koriyama,10,I0,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,10,I0,"B, r=1, day",T9 nominal from kappa =,0.91
+Koriyama,10,I1,"A, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"A, day",T9 nominal from kappa =,0.61
+Koriyama,10,I1,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,10,I1,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,10,I1,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,10,I1,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"B, r=0.75, day",T9 nominal from kappa =,0.46
+Koriyama,10,I1,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,10,I1,"B, r=1, day",T9 nominal from kappa =,0.61
+Koriyama,10,I2,"A, night",T9 nominal from kappa =,0.91
+Koriyama,10,I2,"A, day",T9 nominal from kappa =,0.61
+Koriyama,10,I2,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,10,I2,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,10,I2,"B, r=0.25, night",T9 nominal from kappa =,0.23
+Koriyama,10,I2,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,10,I2,"B, r=0.5, night",T9 nominal from kappa =,0.46
+Koriyama,10,I2,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,10,I2,"B, r=0.75, night",T9 nominal from kappa =,0.68
+Koriyama,10,I2,"B, r=0.75, day",T9 nominal from kappa =,0.46
+Koriyama,10,I2,"B, r=1, night",T9 nominal from kappa =,0.91
+Koriyama,10,I2,"B, r=1, day",T9 nominal from kappa =,0.61
+Koriyama,10,I3,"A, night",T9 nominal from kappa =,0.91
+Koriyama,10,I3,"A, day",T9 nominal from kappa =,0.61
+Koriyama,10,I3,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,10,I3,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,10,I3,"B, r=0.25, night",T9 nominal from kappa =,0.23
+Koriyama,10,I3,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,10,I3,"B, r=0.5, night",T9 nominal from kappa =,0.46
+Koriyama,10,I3,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,10,I3,"B, r=0.75, night",T9 nominal from kappa =,0.68
+Koriyama,10,I3,"B, r=0.75, day",T9 nominal from kappa =,0.46
+Koriyama,10,I3,"B, r=1, night",T9 nominal from kappa =,0.91
+Koriyama,10,I3,"B, r=1, day",T9 nominal from kappa =,0.61
+Koriyama,13,I0,"A, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"A, day",T9 nominal from kappa =,0.93
+Koriyama,13,I0,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"B, r=0, day",T9 nominal from kappa =,0.93
+Koriyama,13,I0,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"B, r=0.25, day",T9 nominal from kappa =,0.93
+Koriyama,13,I0,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"B, r=0.5, day",T9 nominal from kappa =,0.93
+Koriyama,13,I0,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"B, r=0.75, day",T9 nominal from kappa =,0.93
+Koriyama,13,I0,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,13,I0,"B, r=1, day",T9 nominal from kappa =,0.93
+Koriyama,13,I1,"A, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"A, day",T9 nominal from kappa =,0.62
+Koriyama,13,I1,"B, r=0, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,13,I1,"B, r=0.25, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,13,I1,"B, r=0.5, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,13,I1,"B, r=0.75, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"B, r=0.75, day",T9 nominal from kappa =,0.47
+Koriyama,13,I1,"B, r=1, night",T9 nominal from kappa =,never
+Koriyama,13,I1,"B, r=1, day",T9 nominal from kappa =,0.62
+Koriyama,13,I2,"A, night",T9 nominal from kappa =,0.93
+Koriyama,13,I2,"A, day",T9 nominal from kappa =,0.62
+Koriyama,13,I2,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,13,I2,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,13,I2,"B, r=0.25, night",T9 nominal from kappa =,0.24
+Koriyama,13,I2,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,13,I2,"B, r=0.5, night",T9 nominal from kappa =,0.47
+Koriyama,13,I2,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,13,I2,"B, r=0.75, night",T9 nominal from kappa =,0.70
+Koriyama,13,I2,"B, r=0.75, day",T9 nominal from kappa =,0.47
+Koriyama,13,I2,"B, r=1, night",T9 nominal from kappa =,0.93
+Koriyama,13,I2,"B, r=1, day",T9 nominal from kappa =,0.62
+Koriyama,13,I3,"A, night",T9 nominal from kappa =,0.93
+Koriyama,13,I3,"A, day",T9 nominal from kappa =,0.62
+Koriyama,13,I3,"B, r=0, night",T9 nominal from kappa =,0.01
+Koriyama,13,I3,"B, r=0, day",T9 nominal from kappa =,0.01
+Koriyama,13,I3,"B, r=0.25, night",T9 nominal from kappa =,0.24
+Koriyama,13,I3,"B, r=0.25, day",T9 nominal from kappa =,0.16
+Koriyama,13,I3,"B, r=0.5, night",T9 nominal from kappa =,0.47
+Koriyama,13,I3,"B, r=0.5, day",T9 nominal from kappa =,0.31
+Koriyama,13,I3,"B, r=0.75, night",T9 nominal from kappa =,0.70
+Koriyama,13,I3,"B, r=0.75, day",T9 nominal from kappa =,0.47
+Koriyama,13,I3,"B, r=1, night",T9 nominal from kappa =,0.93
+Koriyama,13,I3,"B, r=1, day",T9 nominal from kappa =,0.62

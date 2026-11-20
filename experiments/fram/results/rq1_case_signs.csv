@@ -1,0 +1,9 @@
+member,v2_higher,v2_lower,tied,sign_test_p_one_sided,per_case
+S0,4,1,1,0.188,Zheng:+0.38 Tian:-0.12 Li:+0.50 Togawa:+0.25 Adhita:+0.00 Nayak:+0.08
+D1,4,0,2,0.062,Zheng:+0.31 Tian:+0.12 Li:+0.00 Togawa:+0.50 Adhita:+0.00 Nayak:+0.21
+K2,3,0,3,0.125,Zheng:+0.00 Tian:+0.12 Li:+0.50 Togawa:+0.00 Adhita:+0.00 Nayak:+0.23
+v2-D2,3,0,3,0.125,Zheng:+0.00 Tian:+0.12 Li:+0.07 Togawa:+0.00 Adhita:+0.00 Nayak:+0.19
+v2-typed,4,1,1,0.188,Zheng:+0.38 Tian:-0.12 Li:+0.50 Togawa:+0.25 Adhita:+0.00 Nayak:+0.08
+v2+3,1,1,4,0.75,Zheng:+0.00 Tian:-0.12 Li:+0.00 Togawa:+0.00 Adhita:+0.00 Nayak:+0.03
+v2+c,1,1,4,0.75,Zheng:+0.00 Tian:-0.12 Li:+0.00 Togawa:+0.00 Adhita:+0.00 Nayak:+0.03
+FMI,5,0,1,0.031,Zheng:+0.38 Tian:+0.12 Li:+0.50 Togawa:+0.50 Adhita:+0.00 Nayak:+0.14

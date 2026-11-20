@@ -6,6 +6,8 @@ what the comparison of recommended interventions concludes?
 Each model of decide_zheng.py and decide_koriyama.py is rebuilt with the
 conversion rule swapped for S0 (reachability), D1 (damping only) and K2
 (coincidence only); v2 is run beside them. Everything else is unchanged.
+§4n (declared at a535e8a) adds the rest of the §4c family: v2-D2, v2-typed,
+v2+3 and v2+c, so the rules RQ1 cannot reject (run_stats.py) are covered.
 
   results/decision_rules_zheng.csv, decision_rules_koriyama.csv
 
@@ -23,7 +25,8 @@ import decide_zheng
 from decide_zheng import D_GRID, N, REF, S_GRID, write
 from run_ablation import FAMILY
 
-RULES = ("v2", "S0", "D1", "K2")
+RULES = ("v2", "S0", "D1", "K2",
+         "v2-D2", "v2-typed", "v2+3", "v2+c")          # §4n: the rest of the family, appended
 
 
 @contextlib.contextmanager

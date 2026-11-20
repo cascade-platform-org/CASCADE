@@ -286,7 +286,72 @@ Balanced accuracy at the declared coding (mean / minimum over all codings), `res
 - **Decision rule (§4c):** mean over the two new cases at the declared coding, v2 0.615, v2+3 and v2+c 0.601: **v2 stays**, now decided rather than by default.
 - **Adhita does not separate the rules.** As in the hand reading: v2 keeps all four encounter-1 functions nominal (specificity 1) and marks none of encounter 2's five (recall 0); reachability does the reverse. Encounter 2's single deviations reach their consumers alone or through a loop, so damping absorbs them; the authors see them resonate. Under reading B (WAT_A a third, coincident deviation) the coincidence rules reach 0.62.
 - **Nayak:** v2 marks N4.3, N4.4, N4.5, N4.10 and misses N4.1, N4.2, N4.9 (each fed by a function drawn as performed, so the drop is damped on the way); its two false positives are N3.5 and N3.6, downstream of the functions with no input activity (level 1).
-- The six-case mean uses Tian with its Specific Rules (§4c table). Without them (`run_ablation.no_description_rules`, checked 2026-11-03) Tian is v2 0.62, v2+3 0.75, and the six-case mean is v2 0.79, v2+3 0.80.
+- The six-case mean uses Tian with its Specific Rules (§4c table). Without them (`run_ablation.no_description_rules`, checked 2026-11-03) Tian is v2 0.62, v2+3 0.75, and the six-case mean is v2 0.79, v2+3 0.80. Now tracked: `results/rq1_norules.csv` (§4l).
+
+## How much the six cases establish (`run_stats.py`; declared at a535e8a, TRANSLATION.md §4l)
+
+No Specific Rules, declared coding (`results/rq1_norules.csv` reproduces Fig. 2: v2 0.875, 0.625, 1, 1, 0.5, 0.730; mean 0.788). Per-item predictions in `rq1_items.csv`. Pure functions in `framkit/stats.py`, tested against brute-force enumeration (`test_stats.py`, 13 tests).
+
+**Chance baselines** (`rq1_stats.csv`). v2's exact p against a random marker with the same number of marks: Zheng 0.0035, Li 0.028, Togawa 0.029, Nayak 0.032, Tian 0.67, Adhita 1. Combined: Fisher 9 × 10⁻⁴, pooled Monte Carlo < 10⁻⁵ (the floor of 200,000 draws). Against a random marker restricted to the labelled functions that reachability degrades: Togawa 0.10, Nayak 0.064, the rest unchanged; Fisher 3.5 × 10⁻³.
+| Member | mean | 95 % credible | Fisher (random) | Fisher (reachable) |
+|---|---|---|---|---|
+| v2+3, v2+c | 0.805 | [0.66, 0.82] | 1.0e-3 | 3.9e-3 |
+| **v2** | **0.788** | [0.65, 0.80] | 8.8e-4 | 3.5e-3 |
+| v2-D2 | 0.725 | [0.59, 0.75] | 1.6e-2 | 3.7e-2 |
+| K2 | 0.646 | [0.53, 0.67] | 0.10 | 0.20 |
+| S0, v2-typed | 0.608 | [0.51, 0.67] | 0.80 | 0.99 |
+| D1 | 0.596 | [0.50, 0.64] | 0.67 | 0.69 |
+| FMI | 0.515 | [0.44, 0.59] | 1.0 | 1.0 |
+
+Only the members with damping *and* coincidence agree with the analysts beyond chance across cases. The pooled Monte Carlo p is small for every member except FMI, because a single perfect case (Li for D1, Togawa for K2) outweighs the rest. Fisher's combination is the measure that asks for agreement in more than one case.
+
+**Paired comparison with v2** (`rq1_paired.csv`; stratified item bootstrap, the six cases held fixed). v2 minus member, 95 % interval: S0 +0.18 [0.11, 0.25], D1 +0.19 [0.14, 0.25], K2 +0.14 [0.10, 0.19], v2-D2 +0.06 [0.015, 0.12], v2-typed +0.18 [0.11, 0.25], FMI +0.27 [0.23, 0.32]; v2+3 and v2+c −0.016 [−0.058, 0.009]. **RQ1-supported set: v2, v2+3, v2+c.**
+
+**Post hoc, not declared: the cases as the unit** (`rq1_case_signs.csv`). v2 never scores below D1, K2, v2-D2 or FMI on any case (higher on 3 to 5 of six, tied on the rest); below S0 and v2-typed on Tian only. One-sided sign tests: FMI 0.031, D1 0.062, K2 and v2-D2 0.125, S0 0.19. The item bootstrap measures the uncertainty in the labels of these six cases. A new case drawn from the same population could differ more, and six cases cannot show it.
+
+**Fragility** (`rq1_fragility.csv`, exhaustive to 3 flips). v2-D2 reaches v2 after 2 label flips; S0, D1, K2, v2-typed and FMI need more than 3; v2+3 and v2+c are already above it (0 flips).
+
+**Leave one case out** (`rq1_loco.csv`). v2+3 is the top member on five of the six folds (v2 on the fold without Tian). Choosing the best member on five cases and scoring it on the sixth gives 0.784, against v2's fixed 0.788.
+
+**Hand reading.** Held: every exact null p; Fisher ≈ 10⁻³; null (b) weaker, Togawa 0.10; FMI, S0, D1 rejected; v2+3, v2+c supported, at 0 flips; leave-one-case-out choices and 0.784. Failed: K2 is rejected clearly ([0.10, 0.19], expected near 0) and v2-D2 is rejected (expected supported); K2 and D1 need more than 3 flips (expected 2 to 3); Li's credible lower bound is 0.62 (expected about 0.75).
+
+## The thresholds as the scale grows (`scale_limit.py`; declared at a535e8a, TRANSLATION.md §4m)
+
+Single propagations of the period states, fine grids (d step 0.01, κ step 0.01). Equal to the app-run `decision_scale.csv` and `koriyama_capacity.csv` at every shared point (0 differences). `results/scale_limit_*.csv`.
+
+| Threshold (first grid value where it changes) | N = 4 | 7 | 10 | 13 | closed form → limit |
+|---|---|---|---|---|---|
+| Zheng I0: F20 fails from d = | 0.25 | 0.15 | 0.10 | 0.08 | 1/N → 0 |
+| Zheng I1 (s = 3): F20 fails from d = | 0.50 | 0.43 | 0.40 | 0.39 | (N + 2)/3N → 1/3 |
+| Zheng I2, I3 after the aid (s = 3) | never fails | never | never | never | — |
+| Zheng I1 (s = 2): fails from d = | 0.25 | 0.15 | 0.10 | 0.08 | 1/N → 0 |
+| Zheng I2, I3 after the aid (s = 2): fails from d = | 0.67 | 0.40 | 0.29 | 0.23 | 6/(2N + 1) → 0 |
+| Koriyama I2, I3 night, A: T9 nominal from κ = | 0.76 | 0.86 | 0.91 | 0.93 | κ > (N − 1)/N → 1 |
+| Koriyama I2, I3 night, B, r = 0.25: from κ = | 0.19 | 0.22 | 0.23 | 0.24 | κ > (N − 1)r/N → r |
+| Koriyama I1–I3 day, A: from κ = | 0.51 | 0.58 | 0.61 | 0.62 | κ > (2N − 2)/3N → 2/3 |
+| Koriyama I0, I1 night | never | never | never | never | — |
+
+**Hand reading: held in full.** Every threshold moves monotonically to the predicted closed form. In the limit, a lone shortfall is absorbed up to the third of the scale one step of damping covers; a shortfall that coincides with another deviation (the night at T9; the F12 deviation under s = 2) is never absorbed. The N = 4 values are these limits plus the rounding of ⌈N·ratio⌉. The "60 %" reach of the mutual aid under severe telecom damage tends to 0. Also seen: under I0, rescue by day needs the same capacity as I2 at night (0.76 at N = 4), because Evacuation Behaviour and the calls coincide.
+
+## The comparisons under every rule RQ1 cannot reject (`decide_rules.py`; declared at a535e8a, TRANSLATION.md §4n)
+
+New rows appended to `decision_rules_*.csv`; no earlier row changed.
+
+**Zheng, F20 by share d = 0 … 0.7, a = 30 min** (before → after the aid; 4 nominal, 3 variable, 2 severe):
+
+| Rule (RQ1-supported?) | I0, s = 3 | I1, s = 3 | I2, s = 3 | I1, s = 2 | I2, s = 2 |
+|---|---|---|---|---|---|
+| v2 (yes) | 44422222 | 44444333 | 44444333 → 44444444 | 44422222 | 44422222 → 44444442 |
+| v2+3, v2+c (yes) | **22222222** | 44444333 | 44444333 → 44444444 | **22222222** | **22222222 → 22222222** |
+| v2-D2 (no, 2 flips) | 44422222 | **44444444** | 44444444 | **44444444** | 44444444 |
+| v2-typed (no) | 22222222 | 22222222 | 22222222 | 22222222 | 22222222 |
+
+- Under the analysts' severity (s = 3), the comparison of I1 and I2 is the same under every RQ1-supported rule: two-way updates suffice up to 40 %, mutual aid beyond. The plan fails at every share under v2+3 and v2+c, even with no firefighter drawn away. F12 receives three coincident deviations from the telecom damage (F9, F10, F11), falls to severe, and drags F17 and F19 down with it, so F20's Specific Rule fires. Two-way updates remove the third deviation.
+- Under severe telecom damage (s = 2), v2+3 and v2+c restore F20 under no intervention. v2's "mutual aid restores F20 up to 60 %" holds under v2 alone among the supported rules.
+- v2-D2, just outside the supported set (two flips), makes the mutual aid unnecessary at every share and both severities.
+- Koriyama (`decision_rules_koriyama_capacity.csv`): v2-D2, v2-typed, v2+3 and v2+c all give v2's night answer at every κ and r: R2 holds rescue through the night once κ > 0.75 (A) or κ > 0.75 r (B); I0 and I1 never.
+
+**Hand reading.** Held: v2-D2 on Zheng (I1 suffices at every share), v2-typed (F20 severe everywhere), every Koriyama answer. Failed: v2+3 and v2+c were expected identical to v2 on Zheng except possibly I0 at s = 2. They make the plan fail at every share under the declared severity, and remove every intervention's effect under severe damage. The hand reading missed F12's three coincident inputs.
 
 ## Design decisions behind v2 (exploration, in the git history before aebd4b0)
 
