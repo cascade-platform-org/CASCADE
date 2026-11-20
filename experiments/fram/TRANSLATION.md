@@ -315,6 +315,57 @@ From the second screening (§4c). The owner approved the three passing candidate
 - K2 (second-lowest input). At night under I0 and I1 the night and T6 are two inputs at 3, so T9 = 3 at every κ. Under I2 and I3, T9 = 4 only when c = 4 (κ > 0.75 ℓ). **Same night answer as Eq. (1).** After dawn a lone shortfall is ignored: I1, I2, I3 nominal at every κ.
 - So the night answer is the same under Eq. (1), S0 and K2, and D1 removes every difference between the interventions. What would count against the reading: S0 or K2 giving a different night answer from Eq. (1); D1 separating any two variants.
 
+## 4l. Declared 2026-11-20: how much the six cases establish (RQ1 statistics)
+
+**Question.** The paper reports Eq. (1)'s balanced accuracy on six cases with 6 to 25 labelled items each, with no uncertainty and no chance baseline, and its no-rule scores (Fig. 2: Tian 0.63, six-case mean 0.79) exist only as a hand check (REPORT, 2026-11-03). How far above chance is the agreement? Which alternative rules do the cases actually reject? How many labels would have to change to reverse the ranking?
+
+**Data.** Every member of the §4c family (S0, D1, K2, v2, v2-D2, v2-typed, v2+3, v2+c, FMI) on the six cases at the declared coding, **without Specific Rules** (`run_ablation.no_description_rules`), as the paper scores them. Per member and case, one prediction per labelled item: a function (Zheng, Li, Togawa, Nayak), a scenario (Tian) or an (encounter, function) pair (Adhita). Written to `results/rq1_items.csv`; the case scores to `results/rq1_norules.csv`, which become the source of Fig. 2.
+
+**Tests** (`run_stats.py`; `results/rq1_stats.csv`, `rq1_paired.csv`, `rq1_fragility.csv`, `rq1_loco.csv`).
+1. *Chance baselines, exact.* For a member that marks m of a case's labelled items: (a) **random marker**, m items drawn uniformly among the labelled ones; (b) **reachable random marker**, m items drawn uniformly among the labelled items that pure reachability (dependency N on every aspect, no resonance) degrades. Null (b) asks whether the rule picks *which* reachable functions are affected; every monotone member's marks are a subset of that set. Tian has no structural reachable set, so (b) = (a) there. Per case: p = P(balanced accuracy ≥ observed), exact (hypergeometric). Pooled: p of the six-case mean, 200,000 Monte Carlo draws with each case independent, and Fisher's combination of the per-case p.
+2. *Uncertainty.* Per case and for the six-case mean: a 95 % credible interval from independent Jeffreys Beta(½, ½) posteriors on recall and specificity (40,000 draws). This interval stays informative on perfect scores, where a bootstrap collapses to a point.
+3. *Paired comparison.* For v2 against every other member, the difference in six-case mean: a stratified bootstrap (10,000 resamples, items resampled within each case's affected and unaffected strata, the same resample for both members). Reported: the 95 % percentile interval and the share of resamples in which v2 is strictly higher. **The RQ1-supported set** is v2 plus every member whose interval contains 0.
+4. *Fragility.* The smallest number of label flips (affected ↔ unaffected, any items, any cases) after which a member's six-case mean reaches v2's. Exhaustive up to 3 flips; above that, reported as "> 3". Also leave-one-case-out: is v2 still the top member on the mean of the other five?
+5. *Leave-one-case-out selection.* For each case, the member with the highest mean on the other five is chosen (ties to the order S0, D1, K2, v2, v2-D2, v2-typed, v2+3, v2+c, FMI) and scored on the held-out case. The mean over the six folds estimates the procedure "pick the best rule on the cases you have", beside v2's fixed 0.79.
+
+**Check.** The no-rule scores reproduce Fig. 2 and REPORT's hand check (v2: Zheng 0.875, Tian 0.625, Li 1, Togawa 1, Adhita 0.5, Nayak 0.730; mean 0.788).
+
+**Recorded before running: the hand reading.**
+- v2 marks 10 of Zheng's 16 labelled items, 1 of Tian's 6, 7 of Li's 9, 3 of Togawa's 7, 0 of Adhita's 9 and 6 of Nayak's 25. Null (a), exact: Zheng p = 28/8008 ≈ 0.003; Li 1/36 ≈ 0.03; Togawa 1/35 ≈ 0.03; Nayak 5740/177100 ≈ 0.03; Tian ≈ 0.67; Adhita 1 (no marks: BA 0.5 under any draw). Fisher's combination ≈ 0.001; the pooled Monte Carlo of the same order.
+- Null (b) is weaker: on Togawa pure reachability degrades about five labelled items, so p ≈ 1/10; on Zheng and Li it marks all of them, so (b) = (a). Expected pooled p below 0.05 but above null (a)'s.
+- Credible intervals: wide. Li and Togawa have perfect scores on strata of 2 to 7 items, so their lower bounds fall near 0.75. Six-case mean interval about ±0.08.
+- Paired: v2 against FMI, S0 and D1, interval above 0. Against K2, close to 0: K2 differs on Li, Tian and Nayak. Against v2+3, v2+c and v2-D2, the interval contains 0, so the amplifying variants and two levels of damping stay in the RQ1-supported set. The paper's sentence "the six cases establish the form" becomes a measured statement.
+- Fragility: v2+3 and v2+c already reach 0.80 > 0.79 without rules (0 flips: Tian 0.75). Against K2 and D1, 2 or 3 flips. Against S0 and FMI, more than 3.
+- Leave-one-case-out selection: v2 is chosen when Tian is held out, v2+3 elsewhere (it gains on Tian more than it loses on Nayak). The procedure scores about 0.78, close to v2's fixed 0.79.
+- What would count against the reading: v2's null-(a) pooled p above 0.01, or K2, S0 or D1 inside the RQ1-supported set.
+
+## 4m. Declared 2026-11-20: the thresholds of §5 as the scale grows
+
+**Question.** The paper's thresholds (two-way updates suffice to d = 0.4–0.5; R2 needs κ > 0.75) differ at N = 4 and N = 7, and the paper reads them "as bands". Where does each one go as the scale refines, and which part is the case and which the discretisation?
+
+**What runs.** The Zheng and Koriyama variants at N ∈ {4, 7, 10, 13}. These are the N with (N − 1)/3 an integer, so damping absorbs exactly one third of the range and every imposed level of the 4-level reading maps exactly (`decide_zheng.level`, `config_at`). Zheng: single propagations of the period states, before the mutual aid (supply 0) and after it (supply 100·d), with d from 0 to 0.70 in steps of 0.01, a = 30 min, s ∈ {3, 2}. Koriyama: the §4j flow model at one night hour (23:00, night and calls) and one day hour (07:00, calls only), κ from 0.01 to 1.20 in steps of 0.01, assumptions A and B, r ∈ {0, 0.25, 0.5, 0.75, 1}. Rules: v2 only. Python propagation through `framkit.engine` in place of the TS step operator: each period of a Temporal Simulation is one such propagation. **Check:** at N = 4 and 7 on the existing grid points, F20 equals `results/decision_scale.csv`, and T9 at the two hours equals `results/koriyama_capacity.csv`. `scale_limit.py`; `results/scale_limit_zheng.csv`, `scale_limit_koriyama.csv`, and per (case, N, variant, assumption) the threshold found on the fine grid.
+
+**Recorded before running: the hand reading.** δ = (N − 1)/3 levels of damping, F17 = ⌈N(1 − d)⌉, the call node c = ⌈N·min(1, κ/ℓ)⌉.
+- Zheng I0, s = 3: F20 severe once F17 < N, i.e. d ≥ 1/N: 0.25, 0.14, 0.10, 0.08 → 0. **The plan fails at any shortfall.**
+- Zheng I1, s = 3: F20 = min(F17 + δ, N), nominal while d < (δ + 1)/N = (N + 2)/(3N): 0.50, 0.43, 0.40, 0.38 → **1/3, the share of the scale one step of damping absorbs.**
+- Zheng I2, I3, s = 3, after the aid: nominal at every d and every N.
+- Zheng s = 2: I1 fails from d ≥ 1/N, as the plan does. Under I2 and I3 the mutual aid passes through F23, which the severe telecom degrades. If the gated supply scales as §4e found ((F23 − ½)/N of its supply), restoration holds while d < 6/(2N + 1): 0.67, 0.40, 0.29, 0.22 → 0. The "60 %" of N = 4 has no limit.
+- Koriyama, night (I2, I3): T9 has the night and the calls as two deviating inputs, so it follows the second worst, c. It is nominal only when c = N, κ > (N − 1)ℓ/N: 0.75, 0.86, 0.90, 0.92 → **ℓ: at night the capacity must cover the whole call load.** I0, I1: never.
+- Koriyama, day (07:00, I1–I3): the calls arrive alone and are damped; nominal while κ > (N − δ − 1)/N = (2N − 2)/(3N): 0.50, 0.57, 0.60, 0.62 → 2/3.
+- So each threshold converges to a closed form in the damping share: a lone deviation is absorbed up to one third of the scale, and a coincident one is never absorbed. The N = 4 values are those limits plus a rounding. What would count against the reading: a threshold that does not move monotonically with N, or a limit different from the closed forms above.
+
+## 4n. Declared 2026-11-20: the comparisons under every rule RQ1 cannot reject
+
+**Question.** §4h showed that the rules RQ1 rejects (S0, D1, K2) change the Zheng recommendation. That leaves the converse: do the rules RQ1 does *not* reject (§4l's RQ1-supported set) agree with Eq. (1) on the comparisons? If they do, the recommendation is as firm as RQ1 is. If not, the comparisons depend on a choice the six cases leave open, and the paper should say which.
+
+**What runs.** `decide_rules.py`, the §4h and §4k models, with the rules extended to v2-D2, v2-typed, v2+3 and v2+c. All are reported, and each is flagged with whether §4l places it in the RQ1-supported set. N = 4, every other element unchanged. `results/decision_rules_zheng.csv`, `decision_rules_koriyama_capacity.csv` (the existing rows unchanged, new rows appended).
+
+**Recorded before running: the hand reading.**
+- v2+3, v2+c. The cumulative terms act only where three or more inputs deviate. Zheng: F20's answer is set by its Specific Rule and by F17. Expected identical to v2 at every d and s, except possibly I0 at s = 2, where F12 receives more deviations. Koriyama: under I0 and I1, T6 (four deviating inputs) and T9 fall further, still below nominal. Under I2 and I3, T9 has at most two deviating inputs. **Same recommendation as v2 on both cases.**
+- v2-D2 (two levels of damping). Zheng I1: F20 = min(F17 + 2, 4), nominal while F17 ≥ 2, at every tested d. Under I0, F12 still receives two coincident deviations, so the plan fails from d = 0.3 as under v2. **Two-way updates suffice at every tested share, and the mutual aid is never needed: v2-D2 changes the Zheng recommendation.** Koriyama night: unchanged (coincidence); day: the calls threshold falls to κ > 0.25.
+- v2-typed (I, P and R undamped). Close to S0: on Zheng the telecom damage reaches F12, F17 and F20 through Resource couplings, so F20 is severe under every variant. **Changes the recommendation.**
+- So if §4l keeps v2-D2 in the RQ1-supported set, the Zheng answer "beyond about 40 % drawn away, only mutual aid restores F20" rests on the amount of damping, which the six cases do not fix. §4m says the same from the other side: the threshold is the damping share. The paper then states the Zheng answer as conditional on the damping, and names a case that would fix it.
+
 ## 5. Declaration log
 
 | Commit | Declared |
@@ -342,3 +393,4 @@ From the second screening (§4c). The owner approved the three passing candidate
 | f1056e6 | protocol for a second, independent coding of the analysed scenarios (§4i) |
 | 3532983 | the Koriyama decision model with rescue capacity and the night: flow, timeline, κ and r swept (§4j) |
 | ef68ae4 | the capacity model under the alternative rules S0, D1, K2 (§4k) |
+| (this commit) | RQ1 statistics: chance baselines, credible intervals, paired comparison, fragility, leave-one-case-out (§4l); the thresholds as N grows (§4m); the comparisons under every rule RQ1 cannot reject (§4n) |
