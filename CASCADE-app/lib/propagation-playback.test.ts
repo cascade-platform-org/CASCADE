@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTimeline, fadesOn, hasDegradation, stateAt, type PlaybackEdge } from "./propagation-playback";
+import { buildTimeline, fadesOn, hasDegradation, screenSeconds, stateAt, type PlaybackEdge } from "./propagation-playback";
 import type { PropagationRound } from "@/lib/schemas/propagation";
 
 // s → a → c → d : water flows s→a→c; d depends logically on c.
@@ -96,5 +96,23 @@ describe("fadesOn", () => {
 
   it("fades nothing on Converged", () => {
     expect(fadesOn(t.frames[2], "s")).toBe(false);
+  });
+});
+
+describe("screenSeconds", () => {
+  const t = buildTimeline(rounds, edges);
+
+  it("ends a flow screen when the front reaches its farthest target, then pauses briefly", () => {
+    expect(screenSeconds(t.frames[0], 2, 1)).toBeCloseTo(2 * 2 + 0.6);  // c arrives at hop 2
+  });
+
+  it("gives a flow screen with no target one hop, a logical step its pulse", () => {
+    const quiet = { ...t.frames[0], focus: [] };
+    expect(screenSeconds(quiet, 2, 1)).toBeCloseTo(2 + 0.6);
+    expect(screenSeconds(t.frames[1], 2, 1)).toBeCloseTo(1 + 0.6);
+  });
+
+  it("holds Converged until Done", () => {
+    expect(screenSeconds(t.frames[2], 2, 1)).toBe(0);
   });
 });

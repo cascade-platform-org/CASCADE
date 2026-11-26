@@ -145,6 +145,14 @@ class Node(BaseModel):
     id: str
     functionality: int = Field(..., ge=1)
     label: Optional[str] = None
+    short_label: Optional[str] = Field(
+        default=None,
+        max_length=6,
+        description=(
+            "A few characters drawn inside the node's shape, e.g. a FRAM function's 'F20'. "
+            "Shown in place of the category icons; the engine never reads it."
+        ),
+    )
     node_type: Optional[str] = None
     node_categories: Optional[list[str]] = None
     functionality_time: Optional[int] = Field(default=None, ge=0, description="Hours")

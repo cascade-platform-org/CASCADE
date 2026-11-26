@@ -10,6 +10,7 @@
     "id": "fn_0",
     "functionality": 4,
     "label": "Confirm location of fire",
+    "short_label": "F1",
     "node_categories": [
      "fire_information"
     ],
@@ -25,11 +26,12 @@
     "id": "fn_1",
     "functionality": 4,
     "label": "Contact the control room and shift officer for immediate action guidelines",
+    "short_label": "F2",
     "node_categories": [
      "immediate_action_guidelines"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 0.0
     },
     "rules": [
@@ -40,11 +42,12 @@
     "id": "fn_2",
     "functionality": 4,
     "label": "Actuate siren",
+    "short_label": "F3",
     "node_categories": [
      "publication_of_information"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 0.0
     },
     "rules": [
@@ -55,6 +58,7 @@
     "id": "fn_3",
     "functionality": 4,
     "label": "Contact fire department",
+    "short_label": "F4",
     "node_categories": [
      "successful_connection_with_fire_departme"
     ],
@@ -70,11 +74,12 @@
     "id": "fn_4",
     "functionality": 4,
     "label": "Contact the fire marshal for instructions and actions",
+    "short_label": "F5",
     "node_categories": [
      "specific_action_description"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 0.0
     },
     "rules": [
@@ -85,6 +90,7 @@
     "id": "fn_5",
     "functionality": 4,
     "label": "Establish if any missing persons at assembly muster and advise fire officer",
+    "short_label": "F6",
     "node_categories": [
      "confirming_a_person_s_status"
     ],
@@ -100,11 +106,12 @@
     "id": "fn_6",
     "functionality": 4,
     "label": "Establish incident command post and advise fire team leaders",
+    "short_label": "F7",
     "node_categories": [
      "incident_command_post"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 0.0
     },
     "rules": [
@@ -115,11 +122,12 @@
     "id": "fn_7",
     "functionality": 4,
     "label": "Post the accident location and information",
+    "short_label": "F8",
     "node_categories": [
      "post_the_accident_location_and_informati"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 140.0
     },
     "rules": [
@@ -130,11 +138,12 @@
     "id": "fn_8",
     "functionality": 4,
     "label": "Check extent of fire and escalation potential",
+    "short_label": "F9",
     "node_categories": [
      "the_fire_risk_evaluation_results_and_pre"
     ],
     "position": {
-     "x": 960.0,
+     "x": 816.0,
      "y": 0.0
     },
     "rules": [
@@ -145,11 +154,12 @@
     "id": "fn_9",
     "functionality": 4,
     "label": "Evaluate the availability of equipment and resources",
+    "short_label": "F10",
     "node_categories": [
      "the_evaluation_results_on_available_equi"
     ],
     "position": {
-     "x": 960.0,
+     "x": 816.0,
      "y": 140.0
     },
     "rules": [
@@ -160,11 +170,12 @@
     "id": "fn_10",
     "functionality": 4,
     "label": "Assess flame or heat affected facilities",
+    "short_label": "F11",
     "node_categories": [
      "the_evaluation_results_of_facilities"
     ],
     "position": {
-     "x": 960.0,
+     "x": 816.0,
      "y": 280.0
     },
     "rules": [
@@ -175,11 +186,12 @@
     "id": "fn_11",
     "functionality": 4,
     "label": "Develop response guidelines",
+    "short_label": "F12",
     "node_categories": [
      "response_guidelines"
     ],
     "position": {
-     "x": 1280.0,
+     "x": 1088.0,
      "y": 0.0
     },
     "rules": [
@@ -190,6 +202,7 @@
     "id": "fn_12",
     "functionality": 4,
     "label": "Send technician to stand-by with equipment and resource",
+    "short_label": "F13",
     "node_categories": [
      "technician_standing_by"
     ],
@@ -205,11 +218,12 @@
     "id": "fn_13",
     "functionality": 4,
     "label": "Isolate equipment and commence shutdown of affected and related facilities",
+    "short_label": "F14",
     "node_categories": [
      "successfully_isolating_and_shutting_down"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 0.0
     },
     "rules": [
@@ -220,11 +234,12 @@
     "id": "fn_14",
     "functionality": 4,
     "label": "Pump the product of tanks 52, 53 and 54 to other tanks",
+    "short_label": "F15",
     "node_categories": [
      "successfully_transferring_the_product_to"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 140.0
     },
     "rules": [
@@ -235,11 +250,12 @@
     "id": "fn_15",
     "functionality": 4,
     "label": "Respond to the incident area for shutdown supervision",
+    "short_label": "F16",
     "node_categories": [
      "shutdown_supervision_in_real_time"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 0.0
     },
     "rules": [
@@ -250,6 +266,7 @@
     "id": "fn_16",
     "functionality": 4,
     "label": "Assemble the fire team with equipment and resource",
+    "short_label": "F17",
     "node_categories": [
      "successfully_assembling_enough_scbas_ppe"
     ],
@@ -272,11 +289,12 @@
     "id": "fn_17",
     "functionality": 4,
     "label": "All members don firefighting PPE, and SCBAS for firefighters in the hot zone",
+    "short_label": "F18",
     "node_categories": [
      "firefighters_wearing_ppe_and_scbas"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 280.0
     },
     "rules": [
@@ -287,11 +305,12 @@
     "id": "fn_18",
     "functionality": 4,
     "label": "Ensure all members don firefighting PPE",
+    "short_label": "F19",
     "node_categories": [
      "ensuring_that_firefighters_wear_ppe"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 140.0
     },
     "rules": [
@@ -302,11 +321,12 @@
     "id": "fn_19",
     "functionality": 4,
     "label": "Direct fire team to inject foam to the bund wall under fire",
+    "short_label": "F20",
     "node_categories": [
      "successfully_extinguishing_the_fire"
     ],
     "position": {
-     "x": 960.0,
+     "x": 816.0,
      "y": 0.0
     },
     "rules": [
@@ -318,11 +338,12 @@
     "id": "fn_20",
     "functionality": 4,
     "label": "Fire teams remain on standby until the area is declared safe",
+    "short_label": "F21",
     "node_categories": [
      "safe_storage_tank_area"
     ],
     "position": {
-     "x": 1280.0,
+     "x": 1088.0,
      "y": 0.0
     },
     "rules": [
@@ -333,11 +354,12 @@
     "id": "fn_21",
     "functionality": 4,
     "label": "Monitor the response actions",
+    "short_label": "F22",
     "node_categories": [
      "monitor_the_response_actions"
     ],
     "position": {
-     "x": 1600.0,
+     "x": 1360.0,
      "y": 0.0
     },
     "rules": [
@@ -448,7 +470,7 @@
      "fire_marshal_standing_by"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 0.0
     }
    },
@@ -460,7 +482,7 @@
      "internet_telephone"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 140.0
     }
    },
@@ -472,7 +494,7 @@
      "all_related_departments_standing_by"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 280.0
     }
    },
@@ -484,7 +506,7 @@
      "principles_of_releasing_accident_informa"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 420.0
     }
    },
@@ -496,7 +518,7 @@
      "experts_with_process_experience_and_know"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 560.0
     }
    },
@@ -508,7 +530,7 @@
      "information_on_fire_fuel_and_facilities"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 700.0
     }
    },
@@ -520,7 +542,7 @@
      "information_on_equipment_and_resources"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 840.0
     }
    },
@@ -532,7 +554,7 @@
      "sufficient_technician"
     ],
     "position": {
-     "x": 320.0,
+     "x": 272.0,
      "y": 980.0
     }
    },
@@ -544,7 +566,7 @@
      "information_on_equipment_and_facilities"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 0.0
     }
    },
@@ -556,7 +578,7 @@
      "pump_facilities"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 140.0
     }
    },
@@ -568,7 +590,7 @@
      "standard_of_pump_operation"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 280.0
     }
    },
@@ -580,7 +602,7 @@
      "technician"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 420.0
     }
    },
@@ -592,7 +614,7 @@
      "firetruck_firefighter_ppe_scbas_etc"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 560.0
     }
    },
@@ -604,7 +626,7 @@
      "standard_of_wearing_firefighting_ppe_and"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 700.0
     }
    },
@@ -616,7 +638,7 @@
      "standard_of_wearing_firefighting_ppe_scb"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 840.0
     }
    },
@@ -628,7 +650,7 @@
      "operation_specifications_of_firetrucks"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 980.0
     }
    },
@@ -640,7 +662,7 @@
      "standard_of_security"
     ],
     "position": {
-     "x": 960.0,
+     "x": 816.0,
      "y": 0.0
     }
    },
@@ -648,11 +670,12 @@
     "id": "fn_47",
     "functionality": 4,
     "label": "Locate and mobilise firefighters from other organisations",
+    "short_label": "F23",
     "node_categories": [
      "locate_and_mobilise_firefighters_from_ot"
     ],
     "position": {
-     "x": 640.0,
+     "x": 544.0,
      "y": 140.0
     },
     "rules": [
@@ -668,7 +691,7 @@
      "crews"
     ],
     "position": {
-     "x": -320.0,
+     "x": -272.0,
      "y": 0.0
     },
     "supply_capacity": {
@@ -684,7 +707,7 @@
      "crews"
     ],
     "position": {
-     "x": -320.0,
+     "x": -272.0,
      "y": 140.0
     },
     "category_dependency_profiles": {
@@ -704,7 +727,7 @@
      "crews"
     ],
     "position": {
-     "x": -320.0,
+     "x": -272.0,
      "y": 280.0
     },
     "supply_capacity": {

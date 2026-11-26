@@ -353,6 +353,13 @@ export function NodeInspector({ node }: { node: Node }) {
             placeholder="Node label"
           />
         </Field>
+        <Field label="Short label" hint="Up to 6 characters, drawn inside the node in place of the category icons.">
+          <TextInput
+            value={node.short_label ?? ""}
+            onChange={(v) => patch({ short_label: v.slice(0, 6) || undefined })}
+            placeholder="e.g. F20"
+          />
+        </Field>
         <Field label="Node Type">
           <select
             value={node.node_type ?? "Service"}

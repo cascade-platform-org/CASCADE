@@ -10,6 +10,7 @@ import type { GraphSnapshot } from "@/lib/schemas/network";
 import type { EventDefinition } from "@/lib/schemas/config";
 import { useNetworkStore } from "@/store/network-store";
 import type { Focus, RecipeId } from "@/lib/llm-recipes";
+import type { CaptureOptions } from "@/lib/canvas-export-style";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -228,7 +229,9 @@ export interface UiState {
    * Registered by FlowCanvas on mount. Captures the current global canvas view
    * as a PNG data-URL. Null when no canvas is mounted.
    */
-  captureCanvasFn: (() => Promise<string | undefined>) | null;
+  captureCanvasFn: ((opts?: CaptureOptions) => Promise<string | undefined>) | null;
+  /** The canvas Export menu's Print style: transparent background, larger node names. */
+  exportPrintStyle: boolean;
 }
 
 export interface Toast {
@@ -376,7 +379,8 @@ export interface UiActions {
   markSaved: () => void;
 
   // --- Canvas screenshot ---
-  registerCaptureCanvas: (fn: (() => Promise<string | undefined>) | null) => void;
+  registerCaptureCanvas: (fn: ((opts?: CaptureOptions) => Promise<string | undefined>) | null) => void;
+  setExportPrintStyle: (value: boolean) => void;
 }
 
 export type UiStore = UiState & UiActions;
@@ -429,6 +433,7 @@ const initialState: UiState = {
   propagationWarnings: [],
   toasts: [],
   captureCanvasFn: null,
+  exportPrintStyle: false,
   hasUnsavedChanges: false,
   selectedNodeTemplate: null,
 };
@@ -805,6 +810,10 @@ export const useUiStore = create<UiStore>()(
     registerCaptureCanvas(fn) {
       // Immer cannot store functions in state — assign directly on the raw store object.
       useUiStore.setState({ captureCanvasFn: fn });
+    },
+
+    setExportPrintStyle(value) {
+      set((state) => { state.exportPrintStyle = value; });
     },
 
     // -------------------------------------------------------------------------

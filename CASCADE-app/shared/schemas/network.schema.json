@@ -327,6 +327,20 @@
           "default": null,
           "title": "Label"
         },
+        "short_label": {
+          "anyOf": [
+            {
+              "maxLength": 6,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A few characters drawn inside the node's shape, e.g. a FRAM function's 'F20'. Shown in place of the category icons; the engine never reads it.",
+          "title": "Short Label"
+        },
         "node_type": {
           "anyOf": [
             {

@@ -15,20 +15,9 @@ import { useEffect } from "react";
 import { Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
 import { usePlaybackStore, PLAYBACK_SPEEDS } from "@/store/playback-store";
 import { useCanvasStore } from "@/store/canvas-store";
-import type { Frame } from "@/lib/propagation-playback";
+import { screenSeconds } from "@/lib/propagation-playback";
 import { HOP_SECONDS, PULSE_SECONDS } from "./playback-paint";
 import { cn } from "@/lib/utils";
-
-/**
- * How long a frame shows at speed 1, in ms. A flow screen lasts as long as its
- * front takes to cross (one hop-time per edge from the Sources, plus the last
- * edge), then lingers; a logical step lasts its pulse, then lingers on the change.
- */
-function frameMs(frame: Frame): number {
-  if (frame.phase === "converged") return 0;
-  if (frame.phase === "flow") return (frame.hops + 1) * HOP_SECONDS * 1000 + 1200;
-  return (PULSE_SECONDS + 0.9) * 1000;
-}
 
 /** True when `next` differs from `prev` only in where Elements are drawn. */
 function onlyMoved(prev: Record<string, object>, next: Record<string, object>): boolean {
@@ -57,7 +46,7 @@ export function PlaybackBar() {
     if (!session || !playing) return;
     const f = session.timeline.frames[frame];
     if (!f) return;
-    const timer = window.setTimeout(step, frameMs(f) / speed);
+    const timer = window.setTimeout(step, (screenSeconds(f, HOP_SECONDS, PULSE_SECONDS) * 1000) / speed);
     return () => window.clearTimeout(timer);
   }, [session, playing, frame, speed, step]);
 

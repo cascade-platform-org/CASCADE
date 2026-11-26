@@ -148,6 +148,34 @@ export const USER_MANUAL: ManualDoc = {
                   [
                     {
                       "kind": "strong",
+                      "text": "Short label"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Up to 6 characters drawn inside the node, e.g. "
+                    },
+                    {
+                      "kind": "code",
+                      "text": "F20"
+                    },
+                    {
+                      "kind": "text",
+                      "text": "."
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "text": "Replaces the category icons in the node. Display only."
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "kind": "strong",
                       "text": "Node Type"
                     }
                   ],
@@ -2511,7 +2539,7 @@ export const USER_MANUAL: ManualDoc = {
               },
               {
                 "kind": "text",
-                "text": " To watch the cascade instead of only its end, turn on the clapperboard switch beside Propagate first (it stays on in this browser): when the run degrades anything, a bar over the canvas plays it round by round, fading everything except what is about to change. In each round the flow leaves the Sources as balls in its category's colour, bigger where an edge carries more, and a consumer the flow leaves short changes as the balls reach it; then the round's other changes follow one by one, each changing when the pulse from its cause arrives along the edge. Drag the slider or click a round's number to jump; "
+                "text": " To watch the cascade instead of only its end, turn on the clapperboard switch beside Propagate first (it stays on in this browser): when the run degrades anything, a bar over the canvas plays it round by round, fading everything except what is about to change. In each round the flow leaves the Sources as its category's icon in the colour of its layer, bigger where an edge carries more, and a consumer the flow leaves short changes as the icons reach it; then the round's other changes follow one by one, each changing when the pulse from its cause arrives along the edge. Drag the slider or click a round's number to jump; "
               },
               {
                 "kind": "strong",
@@ -2965,6 +2993,43 @@ export const USER_MANUAL: ManualDoc = {
                 }
               ]
             ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "kind": "strong",
+              "text": "A picture of the canvas"
+            },
+            {
+              "kind": "text",
+              "text": ": right-click the Canvas and choose "
+            },
+            {
+              "kind": "strong",
+              "text": "Download SVG"
+            },
+            {
+              "kind": "text",
+              "text": " or "
+            },
+            {
+              "kind": "strong",
+              "text": "Download PNG"
+            },
+            {
+              "kind": "text",
+              "text": ". Tick "
+            },
+            {
+              "kind": "strong",
+              "text": "Print style"
+            },
+            {
+              "kind": "text",
+              "text": " first for a figure on a page: the background is transparent and the node names are larger."
+            }
           ]
         },
         {

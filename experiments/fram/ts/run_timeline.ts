@@ -8,7 +8,8 @@
  * payload, the same imposed layer. The harness only chooses the points.
  *
  * Input (JSON file): { bundles: { key: { project, config } }, runs: [{ bundle, simulation, parameters }] }
- * Output (JSON file): per run, the Functionality of every node at the end of each period, and the warnings.
+ * Output (JSON file): per run, the Functionality of every node at the end of each period, and the warnings;
+ * a run with `snapshot: true` also gets each period's full state (nodes and edges), for figures.
  *
  * Run from CASCADE-app/ (its tsconfig resolves `@/`):
  *   npx tsx ../experiments/fram/ts/run_timeline.ts <input.json> <output.json>
@@ -48,7 +49,7 @@ function engine() {
 
 interface Input {
   bundles: Record<string, { project: unknown; config: unknown }>;
-  runs: { bundle: string; simulation: string; parameters: Record<string, number> }[];
+  runs: { bundle: string; simulation: string; parameters: Record<string, number>; snapshot?: boolean }[];
 }
 
 async function main() {
@@ -91,10 +92,14 @@ async function main() {
       bundle: run.bundle,
       parameters: run.parameters,
       warnings: record.warnings,
-      periods: record.periods.map((p, k) => ({
-        label: p.label,
-        functionality: Object.fromEntries(Object.entries(periodState(record, k + 1).nodes).map(([id, node]) => [id, node.functionality])),
-      })),
+      periods: record.periods.map((p, k) => {
+        const state = periodState(record, k + 1);
+        return {
+          label: p.label,
+          functionality: Object.fromEntries(Object.entries(state.nodes).map(([id, node]) => [id, node.functionality])),
+          ...(run.snapshot ? { state: { nodes: state.nodes, edges: state.edges } } : {}),
+        };
+      }),
     });
   }
   worker.close();

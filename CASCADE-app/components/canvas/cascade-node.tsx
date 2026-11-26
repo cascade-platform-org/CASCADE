@@ -26,7 +26,8 @@ import { useUiStore } from "@/store/ui-store";
 import type { Node as CascadeNode } from "@/lib/schemas/network";
 import { brandColor } from "@/lib/brand";
 import { nodeSize, SHAPE_INSET_X, OCTAGON_CUT } from "@/lib/node-outline";
-import { usePlayback, isDimmed, changeDelay, DIMMED_OPACITY } from "./playback-paint";
+import { LABEL_SCALE_VAR } from "@/lib/canvas-export-style";
+import { usePlayback, isDimmed, changeDelay, useArrived, DIMMED_OPACITY } from "./playback-paint";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -44,11 +45,13 @@ const PING_PAD = 3;
 // expandBoundsForLabels below, used by every canvas export path.
 const LABEL_MAX_WIDTH = 200;
 
+// `scale` is the factor the export draws names at (lib/canvas-export-style.ts).
 export function expandBoundsForLabels<T extends { x: number; y: number; width: number; height: number }>(
   b: T,
+  scale = 1,
 ): { x: number; y: number; width: number; height: number } {
-  const h = LABEL_MAX_WIDTH / 2 + 16; // centered label reaches ~half its width past the node, plus margin
-  const v = 44;                        // label sits just below the shape; modest vertical pad
+  const h = (LABEL_MAX_WIDTH * scale) / 2 + 16; // centered label reaches ~half its width past the node, plus margin
+  const v = 44 * scale;                          // label sits just below the shape; modest vertical pad
   return { x: b.x - h, y: b.y - v, width: b.width + 2 * h, height: b.height + 2 * v };
 }
 
@@ -276,8 +279,12 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
   // The Propagation animation's frame, when one is playing (ADR-0027): this node's
   // countdown then, and — when this screen degrades it — how long it waits to change.
   const playback = usePlayback();
-  const functionalityTime = playback?.functionalityTime[data.id] ?? data.functionality_time;
   const changeAfter = playback ? changeDelay(playback, data.id) : 0;
+  // The countdown (Time-Warning) lands with the colour: until then, the frame before's.
+  const landed = useArrived(changeAfter, playback?.frameIndex ?? 0);
+  const functionalityTime = playback
+    ? (landed ? playback.functionalityTime : playback.functionalityTimeBefore)[data.id] ?? data.functionality_time
+    : data.functionality_time;
 
   const hasTimeWarning = (functionalityTime ?? 0) > 0;
   const hasDamage = data.direct_damage === true;
@@ -398,8 +405,21 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
 
       </svg>
 
-      {/* Category icons centered inside the shape */}
-      <CategoryIcons categories={nodeCategories} size={size} />
+      {/* Inside the shape: the short label when set, else the category icons */}
+      {data.short_label ? (
+        <div
+          style={{
+            position: "absolute", left: SHAPE_INSET_X, top: 0, width: size, height: size,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: Math.max(9, Math.floor(size * 0.34)), fontWeight: 600,
+            color: "black", pointerEvents: "none", whiteSpace: "nowrap",
+          }}
+        >
+          {data.short_label}
+        </div>
+      ) : (
+        <CategoryIcons categories={nodeCategories} size={size} />
+      )}
 
       {/* Label below */}
       <div
@@ -409,13 +429,14 @@ function CascadeNodeBase({ data, Shape, selected }: { data: NodeData; Shape: Sha
           left: "50%",
           transform: "translateX(-50%)",
           textAlign: "center",
-          fontSize: 13,
+          // A print-style export enlarges names through this variable (lib/canvas-export-style.ts).
+          fontSize: `calc(13px * var(${LABEL_SCALE_VAR}, 1))`,
           color: brandColor("neutral", 600),
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
-          maxWidth: LABEL_MAX_WIDTH,
-          lineHeight: "17px",
+          maxWidth: `calc(${LABEL_MAX_WIDTH}px * var(${LABEL_SCALE_VAR}, 1))`,
+          lineHeight: `calc(17px * var(${LABEL_SCALE_VAR}, 1))`,
         }}
       >
         {label.length > 30 ? label.slice(0, 29) + "…" : label}

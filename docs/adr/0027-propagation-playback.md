@@ -56,13 +56,19 @@ the canvas (`lib/propagation-playback.ts` lays the rounds
 out as frames; `store/playback-store.ts`; `components/canvas/playback-*`):
 
 - per round, **one flow screen**: edges take their sources' levels; then
-  the round's flow leaves the Sources as balls in the Category's colour, a
-  ball's area proportional to what its edge carries (relative to the largest
-  amount that Category carries in the run). The timing lives inside the
+  the round's flow leaves the Sources as markers — the Category's icon, the
+  one its Sources show (a plain ball when it has none), in the colour of the
+  edge's layer (its Canvas; the Category's colour when the Canvas has none) —
+  a marker's area proportional to what its edge carries (relative to the
+  largest amount that Category carries in the run). The timing lives inside the
   screen, never in extra screens: the front crosses one edge per hop-time
-  (2.8 s at 1×), an edge's balls leave when the front reaches its source and
+  (2.8 s at 1×), an edge's markers leave when the front reaches its source and
   each crosses the edge in one hop-time, and a consumer whose change the flow
-  decided changes as the balls land;
+  decided changes as the markers land;
+- a screen moves on as soon as its last change has landed, after a short
+  pause: a flow screen when the front reaches its farthest target (one
+  hop-time when it has none, enough to see the flow), a logical step when its
+  pulse arrives (`screenSeconds`);
 - then the **logical changes**: the other changes in the engine's commit
   order, each pulsing along the edges from the elements responsible for it
   (a long phase is grouped into at most 40 steps);
@@ -73,8 +79,9 @@ out as frames; `store/playback-store.ts`; `components/canvas/playback-*`):
 
 On a screen that degrades something, its **targets** stay at full strength
 and every other node and edge fades to 25% at once, so what is about to
-change stands out before it does; the balls and pulses never fade. Each
-target takes its new colour only when its animation ends: the balls landing
+change stands out before it does; the markers and pulses never fade. Each
+target takes its new colour, and its Time-Warning (backup countdown), only
+when its animation ends: the markers landing
 on it, or the pulse from its cause arriving (1.4 s at 1×). The fade marks
 the targets, so no ring or ripple is added to them. A view with none of the
 screen's targets on screen (on another Canvas, or panned away) fades nothing,

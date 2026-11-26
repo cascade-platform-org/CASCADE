@@ -295,6 +295,7 @@ model; results are computed when it runs and never saved.
 | --- | --- | --- |
 | `node_type` | `"Source"` \| `"Infrastructure"` \| `"Service"` \| `"Personnel"` | Display classification. Engine treats all types identically. |
 | `node_categories` | `string[]` | One or more category names from the config. |
+| `short_label` | `string` (≤ 6 chars) | Optional. Drawn inside the node's shape in place of the category icons (e.g. `"F20"`). Display only. |
 | `functionality` | `integer 1–N` | Current level: 1 = worst, N = fully operational. |
 | `functionality_time` | `integer` (hours) | Countdown to Functionality 1. 0 = no pending degradation. Set by engine or manually by the user. |
 | `direct_damage` | `boolean` | Physical breakage set by a Hazard; requires active repair. |

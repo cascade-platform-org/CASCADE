@@ -9,13 +9,14 @@
 
 import { useCallback } from "react";
 import { useReactFlow, getNodesBounds } from "@xyflow/react";
-import { FileCode, ImageDown, BoxSelect, Spline, Bot } from "lucide-react";
+import { FileCode, ImageDown, BoxSelect, Spline, Bot, Check, Printer } from "lucide-react";
 
 import { useCanvasStore } from "@/store/canvas-store";
 import { useNetworkStore } from "@/store/network-store";
 import { useUiStore } from "@/store/ui-store";
 import { expandBoundsForLabels } from "./cascade-node";
 import { brandColor } from "@/lib/brand";
+import { exportBackground, labelScale, withPrintStyle } from "@/lib/canvas-export-style";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,6 +62,8 @@ export function CanvasContextMenu({
 
   const pushToast = useUiStore((s) => s.pushToast);
   const setInspectorOpen = useUiStore((s) => s.setInspectorOpen);
+  const printStyle = useUiStore((s) => s.exportPrintStyle);
+  const setPrintStyle = useUiStore((s) => s.setExportPrintStyle);
 
   // --- Canvas section -------------------------------------------------------
 
@@ -92,7 +95,7 @@ export function CanvasContextMenu({
     onClose();
     const captureFn = useUiStore.getState().captureCanvasFn;
     if (!captureFn) return;
-    const dataUrl = await captureFn();
+    const dataUrl = await captureFn({ print: printStyle });
     if (!dataUrl) {
       pushToast({ message: "Failed to capture canvas", variant: "error", durationMs: 3000 });
       return;
@@ -101,12 +104,13 @@ export function CanvasContextMenu({
     link.download = `${filename}.png`;
     link.href = dataUrl;
     link.click();
-  }, [filename, pushToast, onClose]);
+  }, [filename, pushToast, onClose, printStyle]);
 
   const downloadSvg = useCallback(async () => {
     onClose();
     try {
       const { toSvg } = await import("html-to-image");
+      const exportOpts = { print: printStyle };
       const nodes = getNodes();
       if (nodes.length === 0) {
         pushToast({ message: "Nothing to export", variant: "info", durationMs: 2000 });
@@ -120,10 +124,10 @@ export function CanvasContextMenu({
 
       if (isGeoref && containerRef?.current) {
         const el = containerRef.current as HTMLElement;
-        const dataUrl = await toSvg(el, {
+        const dataUrl = await withPrintStyle(el, exportOpts, () => toSvg(el, {
           width: el.offsetWidth,
           height: el.offsetHeight,
-        });
+        }));
         const link = document.createElement("a");
         link.download = `${filename}.svg`;
         link.href = dataUrl;
@@ -140,7 +144,7 @@ export function CanvasContextMenu({
       }
       // Expand the node-box bounds so centered name labels are not clipped;
       // geometry lives with the label in cascade-node.tsx.
-      const bounds = expandBoundsForLabels(getNodesBounds(nodes));
+      const bounds = expandBoundsForLabels(getNodesBounds(nodes), labelScale(exportOpts));
       const PADDING = 48;
       const TARGET_MAX = 1600;
       const zoom = Math.min(2, Math.max(0.15, Math.min(TARGET_MAX / bounds.width, TARGET_MAX / bounds.height)));
@@ -152,8 +156,8 @@ export function CanvasContextMenu({
         Math.ceil(Math.max(0, bounds.y) + bounds.height) + PADDING,
         Math.round(bounds.height * zoom + 2 * PADDING),
       );
-      const dataUrl = await toSvg(viewport, {
-        backgroundColor: brandColor("neutral", 100),
+      const dataUrl = await withPrintStyle(viewport, exportOpts, () => toSvg(viewport, {
+        backgroundColor: exportBackground(exportOpts, brandColor("neutral", 100)),
         width: captureW,
         height: captureH,
         style: {
@@ -162,7 +166,7 @@ export function CanvasContextMenu({
           transform: `translate(${PADDING - bounds.x * zoom}px, ${PADDING - bounds.y * zoom}px) scale(${zoom})`,
           transformOrigin: "0 0",
         },
-      });
+      }));
       const link = document.createElement("a");
       link.download = `${filename}.svg`;
       link.href = dataUrl;
@@ -170,7 +174,7 @@ export function CanvasContextMenu({
     } catch {
       pushToast({ message: "SVG export failed — try PNG instead", variant: "error", durationMs: 3000 });
     }
-  }, [getNodes, filename, pushToast, onClose, containerRef]);
+  }, [getNodes, filename, pushToast, onClose, containerRef, printStyle]);
 
   // ---------------------------------------------------------------------------
 
@@ -207,6 +211,12 @@ export function CanvasContextMenu({
         <MenuItem onClick={downloadPng}>
           <ImageDown size={14} className="shrink-0 text-zinc-500" />
           Download PNG
+        </MenuItem>
+        {/* A toggle: the menu stays open so the download can follow. */}
+        <MenuItem onClick={() => setPrintStyle(!printStyle)}>
+          <Printer size={14} className="shrink-0 text-zinc-500" />
+          <span className="flex-1">Print style</span>
+          {printStyle && <Check size={14} className="shrink-0 text-accent" />}
         </MenuItem>
       </div>
     </>

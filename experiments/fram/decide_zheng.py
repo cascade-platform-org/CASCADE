@@ -71,7 +71,7 @@ TS_RUNNER = HERE / "ts" / "run_timeline.ts"
 
 
 def level(n: int, l4: int) -> int:
-    """A level of the 4-level reading on an n-level scale (n = 4 or 7: L -> 2L - 1)."""
+    """A level of the 4-level reading on an n-level scale, n = 1 mod 3 (n = 7: L -> 2L - 1)."""
     return 1 + (l4 - 1) * (n - 1) // (N - 1)
 
 
@@ -210,7 +210,8 @@ def simulation_bundle(intervention: str, n: int = N) -> dict:
         "description": "FRAM of Zheng et al. 2024 (CC BY 4.0, PSEP 188:514) converted under v2, with firefighters "
                        "as a flow. Parameters: drawn_away_pct (share of the brigade drawn away), arrival_min "
                        "(mutual-aid arrival), telecom_level (telecom damage, on the 4-level reading)."})
-    project = t.project.model_copy(update={"meta": meta}).model_dump(mode="json", exclude_none=True)
+    project = t.project.model_copy(update={"meta": meta, "nodes": figure_nodes(t)}).model_dump(
+        mode="json", exclude_none=True)
     project["series"] = [{"name": "period_end_min", "unit": "min", "description": "The minute each period ends.",
                           "rows": {"*": {label(m): m + 5 for m in PERIODS}}}]
     project["temporal_simulations"] = [{
@@ -219,6 +220,24 @@ def simulation_bundle(intervention: str, n: int = N) -> dict:
         "metrics": metrics(t, n), "scope": "global",
         "parameters": [{"name": k, "value": v} for k, v in defaults.items()]}]
     return {"project": project, "config": config.model_dump(mode="json", exclude_none=True)}
+
+
+X_SPACING = 0.85   # the importer's columns, pulled together so the paper's canvas screenshots read at column width
+
+
+def figure_nodes(t: Translated) -> dict[str, Node]:
+    """The nodes as the paper's screenshots show them: each function carries its source id (F12, F17,
+    F20) as its short label, drawn inside the node, and the columns sit closer together."""
+    code = {nid: fid for fid, nid in t.fn_node.items() if len(fid) <= 6}
+    nodes = {}
+    for nid, node in t.project.nodes.items():
+        update: dict = {}
+        if nid in code:
+            update["short_label"] = code[nid]
+        if node.position is not None:
+            update["position"] = Position(x=round(node.position.x * X_SPACING, 1), y=node.position.y)
+        nodes[nid] = node.model_copy(update=update)
+    return nodes
 
 
 def metrics(t: Translated, n: int) -> list[dict]:
@@ -350,6 +369,29 @@ def main() -> None:
     write("decision_scale.csv", rows)
     write("decision_scale_ref.csv", ref)
     print(f"== decision_scale.csv: {len(rows)} rows")
+    write_bundles()
+
+
+def figure_projects(out: Path, interventions: tuple[str, ...] = ("I0", "I1")) -> None:
+    """The paper's canvas screenshots (Fig. 4): each variant's project holding its state at the end of the first
+    period at the reference point, so the platform only draws it (open the file, Combat canvas, export)."""
+    point = {"drawn_away_pct": round(REF["d"] * 100), "arrival_min": REF["a"], "telecom_level": REF["s"]}
+    out.mkdir(parents=True, exist_ok=True)
+    for intervention in interventions:
+        bundle = simulation_bundle(intervention)
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp) / "in.json", Path(tmp) / "out.json"
+            src.write_text(json.dumps({"bundles": {"b": bundle}, "runs": [
+                {"bundle": "b", "simulation": SIM, "parameters": point, "snapshot": True}]}))
+            subprocess.run(["npx", "--yes", "tsx", str(TS_RUNNER), str(src), str(dst)],
+                           cwd=readers.REPO / "CASCADE-app", check=True)
+            state = json.loads(dst.read_text())[0]["periods"][0]["state"]
+        bundle["project"].update(nodes=state["nodes"], edges=state["edges"])
+        (out / f"figure_zheng_{intervention}.json").write_text(json.dumps(bundle, indent=1))
+
+
+def write_bundles() -> None:
+    """The four variants as platform projects (CASCADE-app/samples/public/fram/zheng_I*.json)."""
     APP.mkdir(parents=True, exist_ok=True)
     for intervention in INTERVENTIONS:
         (APP / f"zheng_{intervention}.json").write_text(json.dumps(simulation_bundle(intervention), indent=1))

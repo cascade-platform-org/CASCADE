@@ -218,6 +218,23 @@ export function fadesOn(frame: Frame, id: string): boolean {
   return !frame.focus.includes(id);
 }
 
+/** The pause after a screen's last change, before the next screen, in seconds at speed 1. */
+const LINGER_SECONDS = 0.6;
+
+/**
+ * How long `frame` plays at speed 1, in seconds, given the hop and pulse times.
+ * A screen moves on once its last change has landed: a flow screen when the
+ * front reaches its farthest target (one hop when it has none — long enough to
+ * see the flow), a logical step when its pulse arrives; then a short pause.
+ * Converged stays until Done.
+ */
+export function screenSeconds(frame: Frame, hopSeconds: number, pulseSeconds: number): number {
+  if (frame.phase === "converged") return 0;
+  if (frame.phase === "logical") return pulseSeconds + LINGER_SECONDS;
+  const lastArrival = Math.max(1, ...frame.focus.map((id) => frame.arrival[id] ?? 0));
+  return lastArrival * hopSeconds + LINGER_SECONDS;
+}
+
 /** Every Element's Functionality and countdown once `frame` shows. */
 export function stateAt(timeline: Timeline, start: PlaybackStart, frame: number): PlaybackStart {
   const levels = { ...start.levels };

@@ -39,6 +39,7 @@ N.B. **Supply Capacity** appears once the node carries a Category (or is a Sourc
 | Field                | Meaning                                                                                                                                                                                                                                              | Consequence                                                                                                                                   |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Label**      | The name shown on the canvas.                                                                                                                                                                                                                        | Rules can reference it.<br />Appears in the analysis.                                                                                         |
+| **Short label** | Up to 6 characters drawn inside the node, e.g. `F20`. | Replaces the category icons in the node. Display only. |
 | **Node Type**  | Source / Infrastructure / Service / Personnel.                                                                                                                                                                                                       | Rapid visual cues.                                                                                                                            |
 | **Categories** | The services the node provide (`e.g. water`,`manager`, …). To represent a resource flowing in a capacited infrastructure adopt **SourceToDemands** Category. To represent logical interdependencies, adopt **Requisite** Category. | Determines how the disservice propagates. See Section Propagation for details.                                                                            |
 
@@ -364,9 +365,9 @@ firing and normal propagation takes over.
    clapperboard switch beside Propagate first (it stays on in this browser):
    when the run degrades anything, a bar over the canvas plays it round by round,
    fading everything except what is about to change. In each round the
-   flow leaves the Sources as balls in its category's colour, bigger where an
-   edge carries more, and a consumer the flow leaves short changes as the balls
-   reach it; then the round's other changes follow one by one, each changing
+   flow leaves the Sources as its category's icon in the colour of its layer,
+   bigger where an edge carries more, and a consumer the flow leaves short
+   changes as the icons reach it; then the round's other changes follow one by one, each changing
    when the pulse from its cause arrives along the edge.
    Drag the slider or click a round's number to jump; **Done** closes the bar
    on the result, which the canvas already holds. Editing the model also closes it.
@@ -439,6 +440,10 @@ The **File** button in the Topbar opens four tabs.
 | **Cloud**  | Save to your account and open it on any device. Last 10 kept. Needs sign-in with Sync.                                                                |
 | **Import** | Build a project from an EPANET `.inp` file or a FRAM model (`.xfmv`, §7.4).                                                                           |
 | **New**    | Start a fresh project. The current one stays open until the setup is finished, so Cancel costs nothing.                                               |
+
+**A picture of the canvas**: right-click the Canvas and choose **Download SVG**
+or **Download PNG**. Tick **Print style** first for a figure on a page: the
+background is transparent and the node names are larger.
 
 Local and cloud saves are independent: clearing the browser does not touch the
 cloud saves, and deleting a cloud save does not touch the computer.

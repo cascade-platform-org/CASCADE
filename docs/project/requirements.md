@@ -131,6 +131,7 @@ Additional **node-only** attributes:
 |---|---|---|
 | `node_type` | enum | One of the four types above |
 | `node_categories` | list\<string\> | References to categories defined in config |
+| `short_label` | string, ≤ 6 chars | Optional. Drawn inside the node's shape in place of the category icons, e.g. a FRAM function's `F20`. Display only; the engine never reads it. *(implemented)* |
 | `importance` | numeric | Weight for scorecard. Optional; **0.5** when unset, which is also the size a node is drawn at. |
 | `cost_of_disservice_per_day` | numeric | Economic impact metric |
 
@@ -339,10 +340,12 @@ An **Animate** switch beside Propagate (off by default, remembered by the browse
 
 Each round plays as the engine ran it:
 
-1. **Flow — one screen.** Edges take their sources' levels; then each SourceToDemands Category's flow, as the round solved it, leaves the Sources as balls in the Category's colour; a ball's area is proportional to the edge's share of the largest amount that Category carries in the run, and a longer edge carries more balls. The front crosses one edge per hop-time (2.8 s at 1×): an edge's balls leave when the front reaches its source and cross it in one hop-time. A consumer whose new level the flow decided changes as the balls land. With reduced motion the balls stand still.
+1. **Flow — one screen.** Edges take their sources' levels; then each SourceToDemands Category's flow, as the round solved it, leaves the Sources as markers: the Category's icon (the one its Sources show; a plain ball when it has none), in the colour of the edge's layer (its Canvas; the Category's colour when the Canvas has none). A marker's area is proportional to the edge's share of the largest amount that Category carries in the run, and a longer edge carries more markers. The front crosses one edge per hop-time (2.8 s at 1×): an edge's markers leave when the front reaches its source and cross it in one hop-time. A consumer whose new level the flow decided changes as the markers land. With reduced motion the markers stand still.
 2. **Logical changes.** The remaining changes (logical aggregation, a specific Rule, a backup deferral) in the engine's commit order, each pulsing along the edges from the elements responsible for it.
 
-On each screen that degrades something, its targets stay at full strength and every other node and edge fades at once, so what is about to change stands out before it does (the balls and pulses never fade); each target takes its new colour only when its animation ends — the balls landing on it, or the pulse from its cause arriving. A view with none of the screen's targets on screen — they are on another Canvas, or panned away — fades nothing.
+Each screen moves on as soon as its last change has landed, after a short pause: a flow screen when the front reaches its farthest target (one hop-time if it degrades nothing), a logical step when its pulse arrives.
+
+On each screen that degrades something, its targets stay at full strength and every other node and edge fades at once, so what is about to change stands out before it does (the markers and pulses never fade); each target takes its new colour, and its Time-Warning, only when its animation ends — the markers landing on it, or the pulse from its cause arriving. A view with none of the screen's targets on screen — they are on another Canvas, or panned away — fades nothing.
 
 The last screen, *Converged*, is the canvas as the model holds it, with the final flow standing; the engine's last round, which re-solves the same flow and lowers no node, is shown there rather than as a round. The playback only paints: the model holds the Propagation's result throughout, Done returns to it, and any model change other than moving a node ends the playback. Not animated: Temporal Simulation runs and Analysis.
 
@@ -372,6 +375,10 @@ With the Add Edge tool (`E`), the whole shape of a node is where an edge starts 
 Edges are **floating**: an edge stores no attachment point, and every view draws it from the source's outline to the target's along the line between their centres (`lib/node-outline.ts` for each Node Type's shape, `lib/floating-edge.ts` for the path). Moving a node re-aims its edges as it moves, so no layout command exists. When both `a → b` and `b → a` exist, each bows out to its own side so the two stay apart and selectable. In the All view, edges reach a collapsed Canvas's cluster box the same way, and a bundled edge carries its ×k label at its midpoint.
 
 Files from before this change carry `sourceHandle`/`targetHandle` on edges (the six connection dots of the previous design); loading drops them.
+
+### 8.1c Canvas image export *(implemented)*
+
+The Canvas's right-click menu downloads the view as SVG or PNG. Its **Print style** toggle (session-only, `ui-store.exportPrintStyle`) makes the export a figure for a page: a transparent background and node names 15 px instead of 13 px. Names read their size from a CSS variable that the export sets on the captured element for the length of one capture (`lib/canvas-export-style.ts`), so the canvas on screen never changes; the Scorecard and Temporal Simulation captures always use the on-screen style.
 
 ### 8.2 Selection
 

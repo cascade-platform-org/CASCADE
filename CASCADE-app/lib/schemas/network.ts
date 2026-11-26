@@ -110,6 +110,8 @@ export const NodeSchema = z.object({
   /** Integer 1 (worst/critical) .. N (best/operational). */
   functionality: z.number().int().min(1),
   label: z.string().optional(),
+  /** A few characters drawn inside the node's shape, e.g. a FRAM function's "F20". Shown in place of the category icons. */
+  short_label: z.string().max(6).optional(),
   /** Free string — valid values defined in Client Configuration, not hardcoded in schema. */
   node_type: z.string().optional(),
   /** One or more category names from the ModelConfiguration. */

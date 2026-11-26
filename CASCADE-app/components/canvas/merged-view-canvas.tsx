@@ -55,6 +55,7 @@ import { anchorFlowToGeo } from "@/lib/geo-utils";
 import { CanvasContextMenu } from "./canvas-context-menu";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
+import { exportBackground, labelScale, withPrintStyle, type CaptureOptions } from "@/lib/canvas-export-style";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -125,7 +126,7 @@ function MergedViewCanvas() {
 
   // Register PNG capture for Scorecard / download button.
   useEffect(() => {
-    async function capture(): Promise<string | undefined> {
+    async function capture(opts?: CaptureOptions): Promise<string | undefined> {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
@@ -149,7 +150,7 @@ function MergedViewCanvas() {
         const hasGeoref = Object.values(isGeoref).some((c) => c.georeferenced);
         if (hasGeoref && containerRef.current) {
           const el = containerRef.current;
-          return await toPng(el, { width: el.offsetWidth, height: el.offsetHeight, filter });
+          return await withPrintStyle(el, opts, () => toPng(el, { width: el.offsetWidth, height: el.offsetHeight, filter }));
         }
 
         const viewport =
@@ -158,7 +159,7 @@ function MergedViewCanvas() {
         if (!viewport) return undefined;
         // Expand the node-box bounds so centered name labels are not clipped;
         // geometry lives with the label in cascade-node.tsx.
-        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes), labelScale(opts));
         const PADDING = 48;
         const TARGET_MAX = 1600;
         const zoom = Math.min(2, Math.max(0.15,
@@ -174,8 +175,8 @@ function MergedViewCanvas() {
         );
         const tx = PADDING - bounds.x * zoom;
         const ty = PADDING - bounds.y * zoom;
-        return await toPng(viewport, {
-          backgroundColor: brandColor("neutral", 100),
+        return await withPrintStyle(viewport, opts, () => toPng(viewport, {
+          backgroundColor: exportBackground(opts, brandColor("neutral", 100)),
           width: captureW,
           height: captureH,
           filter,
@@ -185,7 +186,7 @@ function MergedViewCanvas() {
             transform: `translate(${tx}px, ${ty}px) scale(${zoom})`,
             transformOrigin: "0 0",
           },
-        });
+        }));
       } catch {
         return undefined;
       }

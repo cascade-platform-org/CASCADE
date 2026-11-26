@@ -49,6 +49,7 @@ import { CanvasMiniMap } from "./canvas-minimap";
 import { CanvasLegend } from "./canvas-legend";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
+import { exportBackground, labelScale, withPrintStyle, type CaptureOptions } from "@/lib/canvas-export-style";
 import { clusterNodeId, clusterSummary, drawnEdges, homeCanvases } from "@/lib/canvas-clusters";
 import { operativityColor } from "@/lib/scorecard-utils";
 import { useAnalysisStore } from "@/store/analysis-store";
@@ -245,7 +246,7 @@ function GlobalViewCanvas() {
     const IMG_W = 1200;
     const IMG_H = 800;
 
-    async function capture(): Promise<string | undefined> {
+    async function capture(opts?: CaptureOptions): Promise<string | undefined> {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
@@ -263,12 +264,12 @@ function GlobalViewCanvas() {
 
         // Expand the node-box bounds so centered name labels are not clipped at
         // the edges of the fitted image; geometry lives in cascade-node.tsx.
-        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes), labelScale(opts));
         const { x, y, zoom } = getViewportForBounds(bounds, IMG_W, IMG_H, 0.5, 2, 20);
 
-        return await toPng(viewport, {
+        return await withPrintStyle(viewport, opts, () => toPng(viewport, {
           // Paper, not pure white: a snapshot should look like the canvas it came from.
-          backgroundColor: brandColor("neutral", 50),
+          backgroundColor: exportBackground(opts, brandColor("neutral", 50)),
           width: IMG_W,
           height: IMG_H,
           filter,
@@ -277,7 +278,7 @@ function GlobalViewCanvas() {
             height: `${IMG_H}px`,
             transform: `translate(${x}px, ${y}px) scale(${zoom})`,
           },
-        });
+        }));
       } catch {
         return undefined;
       }

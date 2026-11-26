@@ -136,7 +136,7 @@ function FlowCanvas() {
   // on screen — the user is responsible for being on the view they want to record.
   // Uses html-to-image (handles CSS transforms and SVG edges correctly).
   useEffect(() => {
-    async function capture(): Promise<string | undefined> {
+    async function capture(opts?: CaptureOptions): Promise<string | undefined> {
       try {
         const { toPng } = await import("html-to-image");
         const nodes = getNodes();
@@ -161,11 +161,11 @@ function FlowCanvas() {
 
         if (isGeoref && containerRef.current) {
           const el = containerRef.current;
-          return await toPng(el, {
+          return await withPrintStyle(el, opts, () => toPng(el, {
             width: el.offsetWidth,
             height: el.offsetHeight,
             filter,
-          });
+          }));
         }
 
         const viewport =
@@ -176,7 +176,7 @@ function FlowCanvas() {
         // Expand the node-box bounds so the name labels — centered below each
         // node and wider than the node itself — are never clipped in the output
         // image. Geometry lives with the label in cascade-node.tsx.
-        const bounds = expandBoundsForLabels(getNodesBounds(nodes));
+        const bounds = expandBoundsForLabels(getNodesBounds(nodes), labelScale(opts));
         const PADDING = 48;
         const TARGET_MAX = 1600;
 
@@ -200,8 +200,8 @@ function FlowCanvas() {
         const captureW = Math.max(Math.ceil(Math.max(0, bounds.x) + bounds.width) + PADDING, cropW);
         const captureH = Math.max(Math.ceil(Math.max(0, bounds.y) + bounds.height) + PADDING, cropH);
 
-        const dataUrl = await toPng(viewport, {
-          backgroundColor: brandColor("neutral", 100),
+        const dataUrl = await withPrintStyle(viewport, opts, () => toPng(viewport, {
+          backgroundColor: exportBackground(opts, brandColor("neutral", 100)),
           width: captureW,
           height: captureH,
           filter,
@@ -211,7 +211,7 @@ function FlowCanvas() {
             transform: `translate(${tx}px, ${ty}px) scale(${zoom})`,
             transformOrigin: "0 0",
           },
-        });
+        }));
 
         // If the capture canvas was larger than the desired output, crop it.
         if (cropW < captureW || cropH < captureH) {
@@ -738,6 +738,7 @@ function FlowCanvas() {
 import { ReactFlowProvider } from "@xyflow/react";
 import { levelColor } from "@/lib/colors";
 import { brandColor } from "@/lib/brand";
+import { exportBackground, labelScale, withPrintStyle, type CaptureOptions } from "@/lib/canvas-export-style";
 
 export function FlowCanvasWithProvider() {
   return (
