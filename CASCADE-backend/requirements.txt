@@ -48,6 +48,7 @@ networkx==3.6.1              # centrality, clustering, and topological analysis
 # ---------------------------------------------------------------------------
 
 wntr==1.5.0                  # EPANET parse, skeletonization, PDD hydraulics (BSD-3)
+six==1.17.0                  # wntr.epanet.io imports it without declaring it; no longer arrives transitively (MIT)
 pyproj==3.7.2                # CRS transform for georeferenced imports (MIT)
 
 # ---------------------------------------------------------------------------

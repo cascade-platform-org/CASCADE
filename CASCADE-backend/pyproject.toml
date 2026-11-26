@@ -22,7 +22,8 @@ exclude = [".venv", "test", ".pytest_cache", ".ruff_cache", "__pycache__"]
 #                   [standard] extras (websockets, watchfiles) are runtime-only.
 #   python-multipart — imported internally by FastAPI/Starlette to parse
 #                   multipart form bodies; our code never imports it directly.
-DEP002 = ["python-dotenv", "uvicorn", "python-multipart"]
+#   six           — imported by wntr.epanet.io, which forgets to declare it.
+DEP002 = ["python-dotenv", "uvicorn", "python-multipart", "six"]
 # DEP004 "imported but declared as a dev dependency" — correct, and intended.
 # `scripts/` holds dev-only harnesses (benchmarks, the paper's statistics), not
 # shipped service code, so their imports belong in requirements-dev.txt. deptry
